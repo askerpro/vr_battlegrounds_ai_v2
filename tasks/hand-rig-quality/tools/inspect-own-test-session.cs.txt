@@ -1,0 +1,23 @@
+// Чтение native metadata после потерянного ответа run_tests635. GetJob/clear_stuck не вызываются.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Не worker: " + UnityEngine.Application.dataPath);
+string raw = UnityEditor.SessionState.GetString("MCPForUnity.TestJobsV1", "");
+string current = UnityEditor.SessionState.GetString("MCPForUnity.CurrentTestJobIdV1", "");
+var editorAssembly = typeof(VrBattlegrounds.Editor.Avatars.GripExtraction).Assembly;
+var writer = editorAssembly.GetType("VrBattlegrounds.Editor.Avatars.GripRecordWriter", false);
+bool normalizerCompiled = writer != null && writer.GetMethod("NormalizeNetworkAssetId", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic) != null;
+string outDir = "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/resume-2026-10-14";
+var report = new {
+    scope = "Native TestJob SessionState metadata: результат exact fixture не принят",
+    sourceRequestUtc = "2026-10-14T16:30:17.005663Z",
+    sourceRequestUnixMs = 1791995417005L,
+    currentJobId = current,
+    rawSessionState = raw,
+    normalizerCompiled,
+    assembly = editorAssembly.Location,
+    project = UnityEngine.Application.dataPath
+};
+string reportPath = System.IO.Path.Combine(outDir, "native-test-session-635.json");
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+return new { report.scope, reportPath, hasState = !string.IsNullOrEmpty(raw), currentJobId = current, normalizerCompiled };

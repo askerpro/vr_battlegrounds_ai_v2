@@ -1,0 +1,44 @@
+// Read-only preflight: загруженные test types после завершённой компиляции. Никаких запуска/ремонта TestRunner.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Не worker: " + UnityEngine.Application.dataPath);
+if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
+    UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+    throw new System.InvalidOperationException("Import/compile/Play ещё не завершены.");
+var names = new[] {
+    "VrBattlegrounds.Tests.Prefabs.NetworkAssetIdOnDiskTests",
+    "VrBattlegrounds.Tests.Prefabs.UxrUniqueIdOnDiskTests",
+    "VrBattlegrounds.Tests.Prefabs.UxrUniqueIdStabilityTests",
+    "VrBattlegrounds.Tests.Prefabs.AvatarHandPoseChainTests",
+    "VrBattlegrounds.Tests.Prefabs.RegisteredAvatarBodyTests"
+};
+var rows = new System.Collections.Generic.List<object>();
+var failures = new System.Collections.Generic.List<string>();
+foreach (string name in names) {
+    System.Type type = null;
+    foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies()) {
+        type = assembly.GetType(name, false);
+        if (type != null) break;
+    }
+    if (type == null) { failures.Add("Тип не загружен: " + name); continue; }
+    var methods = new System.Collections.Generic.List<string>();
+    foreach (var method in type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static)) {
+        foreach (var attribute in method.GetCustomAttributes(false)) {
+            string attr = attribute.GetType().FullName;
+            if (attr == "NUnit.Framework.TestAttribute" || attr == "NUnit.Framework.TestCaseAttribute" || attr == "NUnit.Framework.TestCaseSourceAttribute") {
+                methods.Add(method.Name);
+                break;
+            }
+        }
+    }
+    if (methods.Count == 0) failures.Add("Нет test/test-case методов: " + name);
+    rows.Add(new { name, assembly = type.Assembly.Location, testMethods = methods });
+}
+return new {
+    passed = failures.Count == 0 && rows.Count == names.Length,
+    scope = "Runtime reflection discovery пяти NUnit fixture types; не результат тестов и не число параметризованных cases",
+    found = rows.Count, expected = names.Length, rows, failures,
+    compiling = UnityEditor.EditorApplication.isCompiling,
+    importing = UnityEditor.EditorApplication.isUpdating,
+    project = UnityEngine.Application.dataPath
+};

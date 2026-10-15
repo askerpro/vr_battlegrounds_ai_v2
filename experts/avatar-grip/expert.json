@@ -19,6 +19,8 @@
     "Assets/Editor/VR_Battlegrounds/Avatars/BlenderScripts/amputate_avatar_hands.py",
     "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/**",
     "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/**",
+    "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/**",
+    "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction.meta",
     "Assets/Editor/VR_Battlegrounds/Avatars/Workbench/AvatarRigPreparation.cs",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/UxrHandIntegration*.cs",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/UxrAvatar.HandState.cs",

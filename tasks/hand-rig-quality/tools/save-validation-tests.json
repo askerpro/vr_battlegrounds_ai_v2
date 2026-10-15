@@ -1,0 +1,12 @@
+{
+  "mode": "EditMode",
+  "test_names": [
+    "VrBattlegrounds.Tests.Prefabs.NetworkAssetIdOnDiskTests",
+    "VrBattlegrounds.Tests.Prefabs.UxrUniqueIdOnDiskTests",
+    "VrBattlegrounds.Tests.Prefabs.UxrUniqueIdStabilityTests",
+    "VrBattlegrounds.Tests.Prefabs.AvatarHandPoseChainTests",
+    "VrBattlegrounds.Tests.Prefabs.RegisteredAvatarBodyTests"
+  ],
+  "include_details": true,
+  "include_failed_tests": true
+}

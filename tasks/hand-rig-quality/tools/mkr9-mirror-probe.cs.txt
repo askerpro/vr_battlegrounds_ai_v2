@@ -1,0 +1,201 @@
+// Тело execute_code: только внутри своей RUNNING аренды, без сохранения prefab/asset.
+// A — текущий Body X; B — узкая гипотеза Body Z только для opposite-side MKR9.
+// Это числовая preview-проба. Контакт, реальный BakeMesh, Play/IK и шлем остаются pending.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Проба не в Unity worker: " + UnityEngine.Application.dataPath);
+if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
+    UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+    throw new System.InvalidOperationException("Нужен свободный Editor: compile/import/play=false.");
+if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+    throw new System.InvalidOperationException("Открыт чужой prefab stage; проба не запускалась.");
+
+const string scope = "preview/numeric; SDK runtime-descriptor vs editor bones; no contact acceptance";
+const string outBase = "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/mkr9-mirror-probe";
+string outDir = System.IO.Path.Combine(outBase, System.DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffffZ") + "-" + System.Guid.NewGuid().ToString("N"));
+var failures = new System.Collections.Generic.List<string>();
+var rows = new System.Collections.Generic.List<object>();
+var sources = new System.Collections.Generic.List<object>();
+var hashesBefore = new System.Collections.Generic.Dictionary<string, string>();
+var hashesAfter = new System.Collections.Generic.Dictionary<string, string>();
+string executionError = null;
+int affectedCount = 0, controlCount = 0;
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+string recordGuid = profile.ResolveRecordGuid();
+System.Func<string, string> sha256 = path => {
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(System.IO.File.ReadAllBytes(path))).Replace("-", "").ToLowerInvariant();
+};
+System.Action<string> watch = path => {
+    if (!System.IO.File.Exists(path)) throw new System.IO.FileNotFoundException("Нет файла для проверки неизменности", path);
+    if (!hashesBefore.ContainsKey(path)) hashesBefore[path] = sha256(path);
+    string meta = path + ".meta";
+    if (System.IO.File.Exists(meta) && !hashesBefore.ContainsKey(meta)) hashesBefore[meta] = sha256(meta);
+};
+System.Func<UnityEngine.Vector3, float[]> v3 = value => new[] { value.x, value.y, value.z };
+System.Func<UnityEngine.Quaternion, float[]> q4 = value => new[] { value.x, value.y, value.z, value.w };
+System.Func<float, bool> finite = value => !float.IsNaN(value) && !float.IsInfinity(value);
+System.Func<VrBattlegrounds.Editor.Avatars.GripLocalPose, bool> validAlign = align =>
+    finite(align.Position.x) && finite(align.Position.y) && finite(align.Position.z) &&
+    finite(align.Rotation.x) && finite(align.Rotation.y) && finite(align.Rotation.z) && finite(align.Rotation.w);
+
+try {
+    watch(profile.RigPrefabPath);
+    watch(profile.RecordAvatarPath);
+    watch(VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.Character);
+    // RequireReadable не пишет importer. Последующий constructor источника не должен запускать EnsureReadable import.
+    foreach (var recipe in new[] {
+        VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.MKR9,
+        VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.AK105 }) {
+        string packPath = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Prefabs/Weapons/" + recipe.PackPrefab + ".prefab";
+        var pack = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(packPath);
+        if (pack == null) throw new System.InvalidOperationException("Нет pack prefab: " + packPath);
+        VrBattlegrounds.Editor.Gameplay.KinemationWeapon.RequireReadable(pack, recipe.Attachments);
+        watch(packPath);
+        foreach (string modelPath in VrBattlegrounds.Editor.Gameplay.KinemationWeapon.ReadableSourcePaths(pack, recipe.Attachments)) watch(modelPath);
+        string clipPath = null, clipGuid = null;
+        foreach (string guid in UnityEditor.AssetDatabase.FindAssets("t:AnimationClip", new[] {
+            VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Animations/" + recipe.AnimFolder + "/Character" })) {
+            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            foreach (var obj in UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path)) {
+                if (obj is UnityEngine.AnimationClip && obj.name == recipe.PoseClip) { clipPath = path; clipGuid = guid; break; }
+            }
+            if (clipPath != null) break;
+        }
+        if (clipPath == null) throw new System.InvalidOperationException("Нет source clip " + recipe.PoseClip);
+        watch(clipPath);
+        sources.Add(new { weapon = recipe.Weapon.Name, packPath, packGuid = UnityEditor.AssetDatabase.AssetPathToGUID(packPath),
+            character = VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.Character,
+            characterGuid = UnityEditor.AssetDatabase.AssetPathToGUID(VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.Character),
+            clipPath, clipGuid, clipName = recipe.PoseClip, timeSeconds = 0f });
+    }
+    using (var source = new VrBattlegrounds.Editor.Avatars.PackClipGripSource())
+    using (var rig = new VrBattlegrounds.Editor.Avatars.GripTargetRig(profile.RigPrefabPath)) {
+        var points = source.Select(new[] { "MKR9", "AK105" });
+        if (points.Count != 4) throw new System.InvalidOperationException("Ожидались четыре source point MKR9/AK105.");
+        foreach (var point in points) {
+            bool isMkr9 = System.IO.Path.GetFileNameWithoutExtension(point.Weapon) == "MKR9";
+            watch(point.Weapon);
+            string posePath = profile.PosePathFor(point);
+            watch(posePath);
+            var existingPose = UnityEditor.AssetDatabase.LoadAssetAtPath<UltimateXR.Manipulation.HandPoses.UxrHandPoseAsset>(posePath);
+            if (existingPose == null) throw new System.InvalidOperationException("Нет baseline pose: " + posePath);
+            var sampleA = source.Sample(point);
+            var descriptors = new System.Collections.Generic.Dictionary<UltimateXR.Core.UxrHandSide, UltimateXR.Manipulation.HandPoses.UxrHandDescriptor>();
+            foreach (var side in VrBattlegrounds.Editor.Avatars.GripTargetRig.Sides) {
+                System.Collections.Generic.Dictionary<string, float> curl = null;
+                if (isMkr9 && point.GrabPoint == 0 && side == UltimateXR.Core.UxrHandSide.Right)
+                    curl = new System.Collections.Generic.Dictionary<string, float> { { "thumb", -35f }, { "little", -10.3f } };
+                descriptors[side] = VrBattlegrounds.Editor.Avatars.GripPoseEncoder.Encode(rig, side, sampleA.DescriptorFor(side), profile.Encoding, curl);
+            }
+            UltimateXR.Manipulation.HandPoses.UxrHandPoseAsset transient = null;
+            UnityEngine.GameObject root = null;
+            try {
+                transient = VrBattlegrounds.Editor.Avatars.GripPoseAssets.CreateTransient(point.Pose, descriptors[UltimateXR.Core.UxrHandSide.Left], descriptors[UltimateXR.Core.UxrHandSide.Right]);
+                root = UnityEditor.PrefabUtility.LoadPrefabContents(point.Weapon);
+                var body = root.transform.Find(point.BodyPath);
+                if (body == null) throw new System.InvalidOperationException("Нет Body: " + point.BodyPath);
+                var bodyLocalPosition = root.transform.InverseTransformPoint(body.position);
+                var bodyLocalRotation = UnityEngine.Quaternion.Inverse(root.transform.rotation) * body.rotation;
+                var bodyX = bodyLocalRotation * UnityEngine.Vector3.right;
+                var bodyY = bodyLocalRotation * UnityEngine.Vector3.up;
+                var bodyZ = bodyLocalRotation * UnityEngine.Vector3.forward;
+                // Гипотеза применима только к данной ориентации и нулевому переносу плоскости MKR9.
+                if (isMkr9 && (UnityEngine.Vector3.Angle(bodyX, UnityEngine.Vector3.up) > .1f ||
+                    UnityEngine.Vector3.Angle(bodyZ, UnityEngine.Vector3.right) > .1f || UnityEngine.Mathf.Abs(bodyLocalPosition.x) > .000001f))
+                    throw new System.InvalidOperationException("Оси/перенос MKR9 изменились: узкая гипотеза неприменима.");
+                var grabbable = root.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+                if (grabbable == null) throw new System.InvalidOperationException("Нет root grabbable: " + point.Weapon);
+                var grabPoint = grabbable.GetGrabPoint(point.GrabPoint);
+                var record = grabPoint == null ? null : grabPoint.GetGripPoseInfo(recordGuid);
+                if (record == null) throw new System.InvalidOperationException("Нет baseline record " + point.Pose + "/" + recordGuid);
+                foreach (var side in VrBattlegrounds.Editor.Avatars.GripTargetRig.Sides) {
+                    string key = point.HandKey(side);
+                    bool affected = isMkr9 && side != sampleA.Side;
+                    float offsetMm = isMkr9 && point.GrabPoint == 0 && side == UltimateXR.Core.UxrHandSide.Right ? -13.3f : 0f;
+                    sampleA.ForSide(side, out UnityEngine.Vector3 t, out UnityEngine.Quaternion r, out UnityEngine.Vector3 c);
+                    var sampleB = sampleA;
+                    if (affected) {
+                        // Side=side исключает второе отражение внутри GripPlacement.ForSide.
+                        sampleB = new VrBattlegrounds.Editor.Avatars.GripSample {
+                            SourceKind = sampleA.SourceKind, Side = side, Hand = sampleA.DescriptorFor(side),
+                            WristBodyPosition = t, WristBodyRotation = r * UnityEngine.Quaternion.Euler(0f, 180f, 0f),
+                            PalmCenter = c, BodyScale = sampleA.BodyScale
+                        };
+                        affectedCount++;
+                    } else controlCount++;
+                    rig.RestoreBind();
+                    rig.Apply(side, descriptors[side]);
+                    var placementA = new VrBattlegrounds.Editor.Avatars.GripPlacement(root.transform, body, sampleA, side, rig);
+                    var placementB = new VrBattlegrounds.Editor.Avatars.GripPlacement(root.transform, body, sampleB, side, rig);
+                    var alignA = placementA.Compute(profile.Anchor, offsetMm * .001f);
+                    var alignB = placementB.Compute(profile.Anchor, offsetMm * .001f);
+                    var palmA = placementA.Evaluate(alignA, offsetMm * .001f);
+                    var palmB = placementB.Evaluate(alignB, offsetMm * .001f);
+                    var delta = placementA.Delta(alignA, alignB, key);
+                    var baselineTransform = side == UltimateXR.Core.UxrHandSide.Left ? record.GripAlignTransformHandLeft : record.GripAlignTransformHandRight;
+                    if (baselineTransform == null) throw new System.InvalidOperationException("Нет baseline align " + key);
+                    var baseline = VrBattlegrounds.Editor.Avatars.GripLocalPose.Of(root.transform, baselineTransform);
+                    var baselineDeltaA = placementA.Delta(alignA, baseline, key);
+                    var baselineDeltaB = placementB.Delta(alignB, baseline, key);
+                    if (!validAlign(alignA) || !validAlign(alignB)) failures.Add(key + ": нечисловой align");
+                    if (palmA.ErrorMm > .5 || palmB.ErrorMm > .5 || palmA.AxesErrorDeg > .5 || palmB.AxesErrorDeg > .5)
+                        failures.Add(key + ": несогласованность прямой/обратной формулы (не проверка контакта)");
+                    if (!affected && (delta.Mm > .001 || delta.Deg > .001)) failures.Add(key + ": B изменил контроль");
+                    if (affected && UnityEngine.Mathf.Abs((float)delta.Deg - 180f) > .1f) failures.Add(key + ": B не дал ожидаемый разворот 180°");
+                    if (baselineDeltaA.Mm > .5 || baselineDeltaA.Deg > .5) failures.Add(key + ": A отличается от current baseline record");
+                    float poseVsBaselineDeg = VrBattlegrounds.Editor.Avatars.GripPoseEncoder.ShapeDeg(rig, side,
+                        VrBattlegrounds.Editor.Avatars.GripPoseEncoder.Descriptor(existingPose, side), descriptors[side]);
+                    float runtimeVsWorldDeg = VrBattlegrounds.Editor.Avatars.GripPoseEncoder.RuntimeVsWorldDeg(rig, side, transient);
+                    if (!finite(runtimeVsWorldDeg) || runtimeVsWorldDeg > .5f) failures.Add(key + ": SDK runtime-descriptor/world mismatch");
+                    if (!finite(poseVsBaselineDeg) || poseVsBaselineDeg > .5f) failures.Add(key + ": pose отличается от current baseline");
+                    sampleB.ForSide(side, out UnityEngine.Vector3 tB, out UnityEngine.Quaternion rB, out UnityEngine.Vector3 cB);
+                    rows.Add(new { key, weapon = point.Weapon, weaponGuid = UnityEditor.AssetDatabase.AssetPathToGUID(point.Weapon),
+                        posePath, poseGuid = UnityEditor.AssetDatabase.AssetPathToGUID(posePath), point.BodyPath, point.GrabPoint,
+                        sourceSide = sampleA.Side.ToString(), targetSide = side.ToString(), affected,
+                        body = new { rootPositionMeters = v3(bodyLocalPosition), rootRotationQuaternion = q4(bodyLocalRotation),
+                            xInRoot = v3(bodyX), yInRoot = v3(bodyY), zInRoot = v3(bodyZ), sampleA.BodyScale, placementA.K },
+                        normalOffsetMm = offsetMm,
+                        curlDeg = offsetMm != 0f ? new System.Collections.Generic.Dictionary<string, float> { { "thumb", -35f }, { "little", -10.3f } } : null,
+                        A = new { positionRootMeters = v3(alignA.Position), rotationRootQuaternion = q4(alignA.Rotation),
+                            samplePositionMeters = v3(t), sampleRotationQuaternion = q4(r), samplePalmMeters = v3(c), palm = palmA, baselineDelta = baselineDeltaA },
+                        B = new { positionRootMeters = v3(alignB.Position), rotationRootQuaternion = q4(alignB.Rotation),
+                            samplePositionMeters = v3(tB), sampleRotationQuaternion = q4(rB), samplePalmMeters = v3(cB), palm = palmB, baselineDelta = baselineDeltaB },
+                        delta, baseline = new { positionRootMeters = v3(baseline.Position), rotationRootQuaternion = q4(baseline.Rotation) },
+                        poseVsBaselineDeg, runtimeVsWorldDeg,
+                        fingerPoseABDeg = 0f, fingerPoseABReason = "A/B используют один encoded descriptor; меняется только rigid Body frame",
+                        contactStatus = "unknown", visualStatus = "pending", physicalStatus = "pending" });
+                }
+            } finally {
+                try { if (root != null) UnityEditor.PrefabUtility.UnloadPrefabContents(root); }
+                finally { try { if (transient != null) UnityEngine.Object.DestroyImmediate(transient); } finally { rig.RestoreBind(); } }
+            }
+        }
+    }
+    if (rows.Count != 8 || affectedCount != 2 || controlCount != 6) failures.Add("Ожидались 8 рук, 2 affected и 6 controls.");
+} catch (System.Exception exception) {
+    executionError = exception.ToString();
+    failures.Add("Исполнение пробы завершилось исключением: " + exception.Message);
+} finally {
+    foreach (var pair in hashesBefore) {
+        try {
+            hashesAfter[pair.Key] = sha256(pair.Key);
+            if (hashesAfter[pair.Key] != pair.Value) failures.Add("Изменились байты input asset/meta: " + pair.Key);
+        } catch (System.Exception exception) { failures.Add("Не удалось повторно прочитать input " + pair.Key + ": " + exception.Message); }
+    }
+}
+var report = new { schemaVersion = 1, createdUtc = System.DateTime.UtcNow.ToString("o"), scope,
+    numericChecksPassed = failures.Count == 0, contactAccepted = false, visualPending = true, physicalPending = true,
+    project = UnityEngine.Application.dataPath, target = profile.Name, profile.RigPrefabPath,
+    rigGuid = UnityEditor.AssetDatabase.AssetPathToGUID(profile.RigPrefabPath), profile.RecordAvatarPath, recordGuid,
+    hypothesis = "Только opposite-side MKR9: ForSide(t,r,c); Side=target; rotation=r*Ry(180); t,c,scale,descriptor неизменны",
+    limitations = new[] { "Нулевая palm error — самосогласованность sample/placement, не контакт с геометрией.",
+        "runtimeVsWorldDeg — вызов SDK descriptor на preview-риге; это не Play Mode и не удержание.",
+        "SDK preview snapshot использует preview mesh; actual BakeMesh/равные screenshots не сняты.",
+        "Root Body axes/нулевой X перенос проверены только для MKR9; гипотеза не является общей production схемой." },
+    sources, affectedCount, controlCount, rows, hashesBefore, hashesAfter, failures, executionError };
+System.IO.Directory.CreateDirectory(outDir);
+string reportPath = System.IO.Path.Combine(outDir, "mkr9-mirror-probe.json");
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+return new { report.numericChecksPassed, report.scope, report.contactAccepted, report.visualPending, report.physicalPending,
+    hands = rows.Count, affectedCount, controlCount, failures, reportPath };

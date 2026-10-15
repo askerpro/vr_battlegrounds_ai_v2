@@ -1425,3 +1425,129 @@ mef-grip-audit → **contact-metrics** (метрики контакта Hand Pos
 [История](changelog/2026-10-07-static-analyzer.md).
 Локальные доказательства: [сводка](reports/static-verification.json),
 [тесты](reports/unity-tests-summary.json), [контроли](reports/sensitivity-verification.json).
+
+## Возобновление Codex: сохранение Viper и MKR9 — 2026-10-14
+
+Девять этапов влиты; `grip-save-validation` running, широкий проход и следующие этапы planned.
+Ticket 635 завершён и получен: input `1e89792b`, result `c4f463d5`, изменённых/неожиданных путей нет.
+Unity Measure принятого Viper: 2 точки / 4 кисти, align/pose/runtime-world 0 мм/0°, три SHA256
+до/после совпадают, канонический `_assetId=1889608562`. Это не проверка пути Save.
+Отчёт: `reports/resume-2026-10-14/save-validation/save-validation.json`.
+
+Запрос пяти существующих EditMode fixtures потерял ответ при reload/disconnect до job_id.
+Результат UNKNOWN. Native guard затем подтвердил tests/compile/import/play=false и отсутствие
+`Assets/__UxrIdProbe`; повтор неизвестного job не выполнялся. Infra_issue 6809 направлен maintainer.
+Встроенная MCP-сессия terminated; локальный клиент вызывает тот же штатный worktree proxy,
+без изменения общей инфраструктуры. TestJob metadata хранится в native SessionState, полный
+результат после domain reload может отсутствовать. Следующий пакет читает metadata без GetJob/clear_stuck.
+
+Узкие ACK: avatar-ik 6727 (две Viper-позы), weapon-system 6843 (Viper prefab). При Apply требуется
+побайтовое совпадение принятого пилота; ACK не разрешают новый общий проход. Принятые параметры
+из r1-apply-03 сохранены в `tools/validate-grip-save.cs.txt`; Apply включается клиентом после свежего zone-check.
+
+MKR9: Body X направлена вверх оружия, Body Z — вправо; действующее противоположное отражение
+использует Body X. Проба `tools/mkr9-mirror-probe.cs.txt` проверяет узкую гипотезу Body Z
+на временных клонах: две affected кисти MKR9 и шесть controls, без записи assets.
+Статическая компиляция против worker ScriptAssemblies exit 0. Numeric/preview не доказывает контакт,
+BakeMesh, Play/IK и Quest. Сохранение нового MKR9-хвата пока не разрешено этим пакетом.
+
+После свежего fetch выполнен rebase на `97a320c88`, autostash применён, локальные правки сохранены.
+WIP normalizer теперь `2f01b0569` (ранее `4a11f5391`), HEAD `d26a4e16b`. Общая приёмка не заявлена.
+
+### Реальные результаты пакета 647
+
+Input `ac5adbe7`, base `97a320c88`; RUNNING в worker41776, затем DONE/received,
+result `aefb9fc6e34849f55e1efa12f133f172a6724010`, paths/unexpected=[].
+Compiled normalizer witness=true. Apply принятого Viper PASS: 2 точки/4 кисти,
+три исходных SHA256 совпали, assetId1889608562 канонический, warnings=[].
+Measure635 сохранён отдельно в `reports/resume-2026-10-14/measure-viper-635.json`.
+
+MKR9 A/B numeric PASS: 8 рук (2 affected,6 controls),34 input asset/meta hashes unchanged;
+main Left delta208,0405мм/180° (Y130,469→-77,272мм),support Right97,4297мм/180°,
+controls0мм/0°, SDK runtime/world и pose/current0°. Это preview-числа, не contact/Play/Quest.
+Отчёт `reports/mkr9-mirror-probe/20261014T1747580009493Z-4c001650d3fb4fcd9f6f103ed5dbc80b/mkr9-mirror-probe.json`.
+
+Свежий существующий EditMode request после Apply: UTC17:48:15.695957Z; plugin session
+770866ac-5bfb-4c0c-9efb-b7684ac9fb90 disconnected awaiting command_result,job_id отсутствует.
+Native SessionState до/после показывает current empty и пять чужих более старых jobs;
+подходящего по времени job нет. Полный exact-fixture результат UNKNOWN, чужие результаты не присвоены.
+Native cleanup PASS: testsRunning=false, временный prefab отсутствует, compile/import/play=false.
+Worker освобождён сразу после prepared package/result inspection; shared infra не менялась.
+Повторный infra_issue отправлен agent-coordination-protocol с raw requests/replies/native evidence.
+R3 prerequisite: сохранить обе independently authored стороны Cyborg, а не зеркалить одну;
+read-only source review сохранён в `reports/resume-2026-10-14/r3-source-prerequisites.md`.
+Infra_issue6972 опубликован; stop6974 после DONE/received вернул этап в planned и освободил admission.
+Отсутствие completed checks/приёмки не заменено состоянием verified/accepted/merged.
+
+### Readiness и штатный MCP чата — 2026-10-15
+
+События7202/7257 приняты: recovery664 завершён,667DONE, worker baselineB54673ba4 восстановлена.
+Инфраструктурный unity-mcp patch2 прошёл native prebuild24,9с и полный Result из двух
+инфраструктурных проверок (PASS+намеренный FAIL); это не наши игровые проверки.
+Штатный resources/list текущего Codex-чата в01:15МСК вновь ответил32600 Session terminated.
+RuntimeVERSIONeb4ab1d981654f3bcd64cd4eb546cbcc950370d6. Нового ticket/job/requestID нет,
+Unity-операция не отправлялась. Infra_issue7266 опубликован и доставлен native сопровождающему.
+Постоянный ремонт/обход infrastructure запрещён policy7257; временный task MCP-клиент не запускается.
+Источник отказа: `reports/native-mcp-session-2026-10-15.md`. Независимая read-only подготовка
+MKR9 actual BakeMesh/одинаковых A/B ракурсов продолжается; код и ассеты не меняются.
+Read-only маршрут подготовлен: `reports/mkr9-contact-package-2026-10-15.md`.
+Готовый HandMeshCapture использует BakeMesh(true), editor capture — SDK preview;
+для actual BakeMesh(false) нужна одноразовая сборка snapshot через публичные FromGeometry/RenderEditorView.
+Она ещё не написана/не исполнена, scale/mapping/self-roundtrip остаются acceptance prerequisite.
+
+### Прямое поручение пользователя: новая FIFO-попытка тестов 677 — 2026-10-15
+
+После fetch/rebase origin/dev8eb877915, HEAD1aea8180d, WIP writer1dca4d3f5;
+autostash применён, tracked/untracked правки сохранены. Input23557f15b9826aa5c67852529e215dad71c4ff4d.
+677 штатно QUEUED→LEASED→RUNNING, preflight native PASS в worker41776 (tests/compile/import/Play=false,
+ProbeAbsent=true). Выяснено, что resources/list32600 не означает отказ всех tools/call:
+read_console и execute_code работали. Временный клиент/helper не запускался и не изменялся.
+
+Штатный run_tests пяти существующих fixtures вернул job8c540cf8a16c4c4e8ded80aba0e707ac.
+Первый get_test_job — reconnect timeout120с/7попыток. Native guard затем responsive/ready=true,
+tests/compile/import/Play=false,heartbeat_age0,3с,delayCallstalled196,9с,noPreviewLeftovers.
+Повторный status-poll известного ID: terminal failed,completed0,totalnull,resultnull,
+ошибка Test job failed to initialize (tests did not start within timeout).
+StartedUnixMs1792018335520,FinishedUnixMs1792018645011. Нет зарегистрированного RunStarted/полного Result;
+этот outcome отличается от старых UNKNOWN635/647, которые не переобъявлялись.
+
+Native cleanup PASS: testsRunning=false, probeAbsent=true. Finish677 и receive успешны,
+result4f1df746c87bb7cc651c7c7959d5e6926ea5fe4e,paths/unexpected=[]. Admission остановлен после release.
+Infra_issue7387 и терминальное уточнение переданы canonical hub и native сопровождающему.
+Raw evidence: reports/native-tests-request-677.json,start-677.json,result-677-a.json,result-677-b.json,
+native-guard-after-tests-677.json,native-cleanup-677.json,broker-finish-677.json
+(имена start/result также имеют префикс native-tests-). Проверки gameplay не приняли/не вливали.
+
+### Ещё одна прямая пользовательская попытка 680 — 2026-10-15
+
+Fresh fetch/rebase origin/dev8eb877915, HEAD1aea8180d; местные изменения сохранены.
+Inputd62864c7f3f4d0d42fc5897a1a4c3bdaad1ab21b,680OFFERED→LEASED→RUNNING.
+Native guard/preflight PASS. Тот же набор пяти existing fixtures,штатный run_tests:
+successfalse,error Unity plugin sessionb83fb05d-aaa2-4f17-a125-e6da328f4278 disconnected while awaiting command_result,
+data=null,job_id отсутствует. OutcomeUNKNOWN, никакого повторного run/hintretry не отправлено.
+Native guard responsive/readytrue,tests/compile/import/Play=false; native cleanup PASS probeAbsent=true.
+Finish и receive успешны,resultb1d174681e9d2b828df8271e9f625f3c7f4b52bf,paths/unexpected=[].
+Admission освобождён после release. Infra_issue7446 передан в хаб и native сопровождающему;
+старые635/647UNKNOWN и известный initfailure677 сохранены. Альтернативных клиентов/ремонта нет.
+Evidence: reports/native-tests-request-680.json,native-tests-start-680.json,native-preflight-680.json,
+native-guard-after-tests-680.json,native-cleanup-680.json,broker-finish-680.json.
+
+### Полный результат после исправления маршрута тестов: 683 — 2026-10-15
+
+Readiness7457 обработан; runtime f6387f9dd19ff4547e7f98c53e6e4718d5735933.
+Fetch/rebase сохранил WIP; origin/dev bb28046079f0ad3251ab3bbc22988027bf00c107, HEAD9dcb90e24.
+Inputd8136cc36ece22ccb1b096411a1d45135dc4917b,683 штатно RUNNING.
+Первый refresh ответил Session terminated; native guard и runtime reflection показали idle и все пять fixture types.
+run_tests затем вернул refresh_required с явным «no test job was started».
+Явный refresh if_dirty/compile request успешен; guard и повторная discovery PASS.
+Один фактический run_tests с init_timeout120000 вернул job8a8b2efeb4ab456b95628b6b6235bf34.
+Полный terminal Result сохранён до cleanup/finish: 57 total,56 passed,1 failed,0 skipped;127,6486424с.
+NetworkAssetIdOnDisk1/1, UxrUniqueIdOnDisk1/1, UxrUniqueIdStability2/2, AvatarHandPoseChain13/13;
+RegisteredAvatarBody39/40. Единственный FAIL — Своя_голова_выключается для
+Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab: LocalDisabledGameObjects пуст,
+RegisteredAvatarBodyTests.cs:88. Это проверка авторинга; видимость в runtime/Quest не наблюдалась.
+Native cleanup PASS: probeAbsent,true; tests/compile/import/Play=false.
+DONE/received,resultccf4a1551827b6939511017d69c469c78f977011,paths/unexpected=[]; admission освобождён.
+Tests/code/assets не менялись, этап не принят/не влит; старые UNKNOWN не переобъявлены.
+Evidence: reports/native-tests-result-a-683.json (полный Result),native-tests-start-b-683.json,
+native-refresh-b-683.json,native-discovery-b-683.json,native-cleanup-683.json,broker-finish-683.json.

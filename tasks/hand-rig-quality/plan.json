@@ -1,7 +1,7 @@
 {
   "task_id": "hand-rig-quality",
   "owner": "avatar-grip",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai",
   "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
@@ -212,6 +212,28 @@
       "needs": []
     },
     {
+      "id": "grip-save-validation",
+      "writes": [
+        "Assets/__UxrIdProbe/**",
+        "Assets/__UxrIdProbe.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripRecordWriter.cs",
+        "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/tools/**",
+        "tasks/hand-rig-quality/changelog/**",
+        "experts/avatar-grip/AGENT.md",
+        "experts/avatar-grip/expert.json"
+      ],
+      "after": [
+        { "task": "hand-rig-quality", "stage": "grip-extraction", "state": "merged" }
+      ],
+      "needs": []
+    },
+    {
       "id": "grip-extraction-run",
       "writes": [
         "Assets/Prefabs/Weapons/**",
@@ -228,6 +250,11 @@
         {
           "task": "hand-rig-quality",
           "stage": "grip-extraction",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-save-validation",
           "state": "merged"
         }
       ],

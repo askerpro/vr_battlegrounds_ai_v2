@@ -1,0 +1,18 @@
+// После завершённого EditMode job, до finish. Только чтение состояния и временного пути теста.
+bool probeAbsent = !System.IO.Directory.Exists("Assets/__UxrIdProbe") && !System.IO.File.Exists("Assets/__UxrIdProbe.meta");
+bool compiling = UnityEditor.EditorApplication.isCompiling;
+bool importing = UnityEditor.EditorApplication.isUpdating;
+bool? testsRunning = null;
+foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies()) {
+    var type = assembly.GetType("UnityEditor.TestTools.TestRunner.Api.TestRunnerApi", false);
+    if (type == null) continue;
+    var method = type.GetMethod("IsRunActive", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+    if (method != null && method.ReturnType == typeof(bool)) testsRunning = (bool)method.Invoke(null, null);
+    break;
+}
+return new {
+    passed = probeAbsent && testsRunning == false && !compiling && !importing && !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode,
+    scope = "Cleanup UxrUniqueIdStabilityTests: временный prefab и native TestRunner activity",
+    probeAbsent, compiling, importing, testsRunning,
+    project = UnityEngine.Application.dataPath
+};

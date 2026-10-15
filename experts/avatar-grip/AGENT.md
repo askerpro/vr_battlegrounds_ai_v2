@@ -28,13 +28,26 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
   defects (Issue 26). A record on the hand base beats one per variant.
 - Native ≠ Sdk: no SDK remap on Native; `TryToMatchHand` does not fix weights/bindposes.
 - Re-rig, hand swap, MEF scale — only after a confirmed cause and a user decision.
+- Fit signed/rules metrics are approximate. Distance uses the whole item surface; winding-based sign has
+  limits on open/reversed meshes. `ok` means no gross deviation from an SDK band, never grip acceptance.
+- Edit preview applies numeric bend/offset only to a temporary static clone, remeasures and restores it.
+  Source hash/dirty checks do not prove runtime or Quest behavior.
 
 ### Architecture map (`AV` = `Assets/Editor/VR_Battlegrounds/Avatars`)
 - Grip data: GUID chain, default, align — `UXR/Manipulation/UxrGrabPointInfo.cs`
 - Hand bases Sdk/NonSdk, Rebase — `AV/AvatarHandBases.cs`
 - Integration Native/Sdk, TryToMatchHand — `AV/Workbench/AvatarRigPreparation.cs`, `AV/HandsIntegrationSetup.cs`, `UXR/Avatar/UxrHandIntegration.cs`
 - Pose authoring — `AV/HandPosesSetup.cs`, `AV/HandsPackGripAligner.cs`
-- Fit/Review (contact); HRQ 0.5 (rig) — `AV/HandPoseReview/`, `AV/HandRigQuality/`
+- Fit/Review schema 4, mesh-fit-0.6-grip-rules — `AV/HandPoseReview/`: signed per-finger/distal-pad metrics,
+  SDK bands, gross rules, hints, review sheets/edit preview; HRQ 0.5 (rig) — `AV/HandRigQuality/`.
+- Grip Extraction — `AV/GripExtraction/GripExtraction.cs` (`RunJson`): pack source → target profile/rig →
+  placement/encoder → pose assets/record writer. Reuses importer recipes, registry and align/cleanup helpers;
+  no second grip writer. Measure/Preview/Apply are distinct; avatar-record/manual adapters and auto-bend
+  are not implemented. Profiles separate rig prefab, record GUID and pose registry.
+- Save identity: GripRecordWriter adds synchronous NetworkAssetIdNormalizer + disk check after
+  SaveAsPrefabAsset, retaining identity guard. Worker647: compiled witness + Apply accepted Viper PASS,
+  all3 asset bytes unchanged/canonical id. Worker683: full EditMode57,56PASS1FAIL (older Cyborg own-head);
+  identifiers4/4 and hand-chain13/13 PASS. User accepted merge on 2026-10-15; publication tracked in task Readme.
 - MEF — `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`, `Tools/mef-avatar/README.md`
 - Coverage guard item × avatar — `Assets/Tests/EditMode/Prefabs/GrabPoseCoverageTests.cs`
 
@@ -45,6 +58,9 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - `Docs/hand-pose-fit-tool.md` — «Вход для агента», «Пределы версии»; `Docs/UltimateXR/known-issues.md` — Issue 26, 28; `Docs/avatar-editor-workbench.md` — «Кисти и подготовка».
 
 ### Zone rules
+- Partial source review 2026-10-14 at origin/dev d3c62ca5: old owns delta + Grip Extraction API/boundaries
+  reviewed; MKR9 mirror defect separately diagnosed. `reviewed_sha` stays unchanged: this is no full-zone,
+  runtime or watch-asset review. Evidence: tasks/hand-rig-quality/reports/resume-2026-10-14/mkr9-diagnosis.md.
 - Evidence levels differ, name yours: config ≠ deformed contact (Fit) ≠ rig (HRQ) ≠ static preview/capture ≠ runtime ≠ Quest.
 - Specs name avatar, item, hand, grip point, pose, Blend; reports add GUIDs.
 - HRQ writes only to `Docs/tasks/report/hand-rig-quality` (gitignored; enforced in `HandRigQualityAnalyzer.cs`).

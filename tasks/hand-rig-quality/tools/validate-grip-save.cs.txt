@@ -1,0 +1,77 @@
+// Тело execute_code. Только внутри RUNNING аренды hand-rig-quality.
+// Apply включается основной сессией после свежих zone-ack; иначе только Measure.
+const bool applyAcceptedPilot = false;
+var failures = new System.Collections.Generic.List<string>();
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Проверка не в Unity worker: " + UnityEngine.Application.dataPath);
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
+    UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят: проверка не запускалась.");
+if (System.IO.Directory.Exists("Assets/__UxrIdProbe") || System.IO.File.Exists("Assets/__UxrIdProbe.meta"))
+    throw new System.InvalidOperationException("Папка тестовой пробы уже существует; чужие данные не трогаем.");
+
+string outDir = "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/resume-2026-10-14/save-validation";
+string[] paths = {
+    "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+    "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset",
+    "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset"
+};
+System.Func<string, string> sha256 = path => {
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(System.IO.File.ReadAllBytes(path))).Replace("-", "").ToLowerInvariant();
+};
+var before = new System.Collections.Generic.Dictionary<string, string>();
+foreach (string path in paths) before[path] = sha256(path);
+
+// Принятые параметры последнего пилота r1-apply-03, только Viper.
+string requestJson = @"{""source"":""pack"",""recipes"":[""Viper""],""target"":""MEF_cyborg_hands"",""anchor"":""palm"",""encoding"":""rig"",""mode"":""measure"",""registerPoses"":false,""removeReplacedAligns"":true,""analyze"":false,""curlDegByHand"":{""Kinemation_Viper_Support/Left"":{""index"":14.2,""middle"":15.4,""ring"":27.6,""little"":25.6},""Kinemation_Viper_Support/Right"":{""index"":18.1,""middle"":16.0,""ring"":16.0,""little"":20.0}}}";
+var request = Newtonsoft.Json.JsonConvert.DeserializeObject<VrBattlegrounds.Editor.Avatars.GripExtractionRequest>(requestJson);
+request.Mode = applyAcceptedPilot ? "apply" : "measure";
+request.OutDir = outDir;
+var result = VrBattlegrounds.Editor.Avatars.GripExtraction.Run(request);
+if (result.Status != "ok") failures.Add("GripExtraction status: " + result.Status + "; " + result.Error);
+if (result.Points.Count != 2) failures.Add("Ожидались две точки Viper, получено " + result.Points.Count);
+var hands = new System.Collections.Generic.List<object>();
+int handCount = 0;
+foreach (var point in result.Points) {
+    if (!string.IsNullOrEmpty(point.Error)) failures.Add(point.Pose + ": " + point.Error);
+    foreach (var hand in point.Hands) {
+        handCount++;
+        var current = hand.ExistingRecord;
+        if (current == null || current.DeltaMm > 0.5 || current.DeltaDeg > 0.5)
+            failures.Add(point.Pose + "/" + hand.Side + ": align отличается от принятого пилота");
+        if (!hand.RuntimeVsWorldDeg.HasValue || hand.RuntimeVsWorldDeg.Value > 0.5)
+            failures.Add(point.Pose + "/" + hand.Side + ": runtime/world не подтверждён");
+        if (!hand.PoseVsExistingDeg.HasValue || hand.PoseVsExistingDeg.Value > 0.5)
+            failures.Add(point.Pose + "/" + hand.Side + ": поза отличается от принятого пилота");
+        hands.Add(new { point.Pose, hand.Side, existing = current, hand.RuntimeVsWorldDeg, hand.PoseVsExistingDeg });
+    }
+}
+if (handCount != 4) failures.Add("Ожидались четыре руки, получено " + handCount);
+string prefab = System.IO.File.ReadAllText(paths[0]);
+var match = System.Text.RegularExpressions.Regex.Match(prefab, @"^  _assetId: (\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+uint canonical = Mirror.NetworkIdentity.AssetGuidToUint(new System.Guid(UnityEditor.AssetDatabase.AssetPathToGUID(paths[0])));
+if (!match.Success || match.Groups[1].Value != canonical.ToString()) failures.Add("_assetId на диске неканонический");
+var after = new System.Collections.Generic.Dictionary<string, string>();
+foreach (string path in paths) {
+    after[path] = sha256(path);
+    if (before[path] != after[path]) failures.Add("Байты принятого пилота изменились: " + path);
+}
+var report = new {
+    passed = failures.Count == 0,
+    scope = applyAcceptedPilot ? "Unity Apply: принятый Viper + проверка сохранения, без gameplay/Quest" : "Unity Measure: сохранение ещё не проверено",
+    applyExecuted = applyAcceptedPilot,
+    project = UnityEngine.Application.dataPath,
+    mode = result.Mode,
+    result.Status,
+    result.ReportPath,
+    canonicalAssetId = canonical,
+    onDiskAssetId = match.Success ? match.Groups[1].Value : null,
+    before, after, hands, failures,
+    warnings = result.Warnings
+};
+System.IO.Directory.CreateDirectory(outDir);
+string reportPath = System.IO.Path.Combine(outDir, "save-validation.json");
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+return new { report.passed, report.scope, report.applyExecuted, points = result.Points.Count, handCount, failures, reportPath };

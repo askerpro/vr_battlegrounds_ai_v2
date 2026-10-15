@@ -92,7 +92,6 @@ namespace VrBattlegrounds.Editor.Avatars
             return written;
         }
 
-        /// <summary>Мировая поза align от корня — как HandsPackGripAligner.Place (SetPositionAndRotation).</summary>
         /// <summary>
         /// <c>SaveAsPrefabAsset</c> из изолированной сцены пишет <c>NetworkIdentity._assetId: 0</c>, а сторож по
         /// загруженному ассету этого не видит (Mirror в памяти восстанавливает канон). Возвращает канон на диск
@@ -136,6 +135,7 @@ namespace VrBattlegrounds.Editor.Avatars
             snap.SetEditorUniqueId(Guid.TryParse(stored, out Guid id) && id != Guid.Empty ? id : Guid.NewGuid(), true, prefabGuid);
         }
 
+        /// <summary>Мировая поза align от корня — как HandsPackGripAligner.Place (SetPositionAndRotation).</summary>
         private static void Place(Transform root, Transform align, GripHandResult hand)
         {
             if (hand == null)

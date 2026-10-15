@@ -67,8 +67,11 @@
 - Blaze: `Assets/ThirdParty/Blaze AI/Scripts/BlazeAI.cs`; контроллер `Assets/Resources/Bots/BotBlazeProxy.controller`.
 - Стенд: `Assets/Scripts/Debug/BotCombatStand/`; editor-инструменты: `Assets/Editor/VR_Battlegrounds/Bots/`.
 - Чужие фабрики: `Assets/Scripts/Managers/PlayersManager.cs`, `Assets/Scripts/Player/Avatars/`.
-- Контракты реализации: `Docs/tasks/T-48-bots-match.md`, `Docs/tasks/bots-blaze-integration.md`,
-  `Docs/tasks/bot-combat-stand.md`; проект перехода: `tasks/bots-fix/clip-cutover-plan.md`, `cc1-plan.md`, `player-flow-plan.md`.
+- Текущие документы реализации: `tasks/bots-fix/product-docs/T-48-bots-match.md`,
+  `tasks/bots-fix/product-docs/bots-blaze-integration.md`, `tasks/bots-fix/product-docs/bot-combat-stand.md`.
+  Одноимённые `Docs/tasks/` сохраняют accepted историю; проект перехода: `tasks/bots-fix/clip-cutover-plan.md`,
+  `cc1-plan.md`, `player-flow-plan.md`.
 - Актуальный статус и evidence — `tasks/bots-fix/Readme.md`. Реализация перехода ещё не принята в игре;
-  отказы эталона/proxy/fixture, матч, M8, сеть, поздний вход и Quest проверяются раздельно.
+  свежие результаты734/738 не переоценивают исторические FAIL/UNKNOWN. Матч, M8, сеть, поздний вход
+  и Quest проверяются раздельно; DirectorEquip — явный диагностический case, scripted stand сохраняет AutoEquip=false.
 - Симптом кнопок планшета: `Docs/troubleshooting.md`, раздел «После добавления бота кнопки планшета не нажимаются».

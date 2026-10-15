@@ -18,7 +18,7 @@
   без наблюдаемых дублей. Это sampled inventory, не полный spawn/despawn provenance.
   AB:1598 совместных кадров root/Feet/camera; движение тела подтверждено, proxy↔root <0,7мм.
   Bone feet/точная latency/визуальная приёмка открыты. [Итоги738](changelog/2026-10-15-round9.md).
-  Собственный HEAD=`450d1e41d`, rebased accepted6669; stash`63e8db0a4` и резервная ссылка сохранены.
+  Источник738 HEAD=`450d1e41d`, rebased accepted6669; stash`63e8db0a4` и резервная ссылка сохранены.
   Новые code changes существуют как непринятый рабочий diff и technical input, в origin/dev не опубликованы.
 - **734 DONE/receive**, A=`932d9cda5`, B=`47c010277`, epoch621, R=`42f37db64992b6dfb3b9a8733bf7c8ec3e80f916`:
   paths0/unexpected0. Аренда завершена. Без borrowed SDK81. Собственный HEAD=`3274e0b7b`, accepted base=`05506131`.

@@ -44,6 +44,10 @@ runtime errors=0, CameraFade=0. В обеих фазах `usePrecaching=false`, 
 Подробный разбор результатов ещё открыт. Эти результаты не принимают полный матч, M8, сеть,
 SDK или Quest. [Результаты и история](bot-combat-stand.md#наблюдения-и-дальнейшая-приёмка).
 
+Ticket738 добавил совместные post-UXR замеры: в 1598 кадрах AB корень/Feet согласованы,
+движение тела подтверждено, proxy↔root <0,7 мм с учётом округления proxy. Это не измерение костей стоп
+или точной latency. Все 5 cases остаются NeedsReview. [Результаты738](../changelog/2026-10-15-round9.md).
+
 Подробности перехода — [cc-1](../cc1-plan.md),
 [clip-cutover](../clip-cutover-plan.md),
 [player-flow](../player-flow-plan.md).

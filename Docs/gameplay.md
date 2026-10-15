@@ -864,7 +864,9 @@ Blaze работает в минимальном серверном прокси
 B0/B1 PASS, свежий discovery — 8 fixtures/49 Runnable, штатный T1 — 49/49 PASS с полным покрытием
 листовых тестов. В Console одна известная ошибка EditMode `UxrActor.Destroy`; чистая Console не доказана.
 Две фазы PlayLaunch ServerOnly дали 9 случаев `NeedsReview`, без InvalidFixture, runtime errors и CameraFade.
-Подробный разбор ещё открыт. Нужны полный матч, M8, сеть с наблюдателями, поздний вход и Quest-приёмка.
+В738 T1 повторно49/49, пять диагностических случаев NeedsReview: подтверждены правильные source/target G,
+один новый Mk14 в sampled DirectorEquip inventory и движение тела вместе с proxy. Старые UNKNOWN не закрыты.
+Нужны полный матч, M8, сеть с наблюдателями, поздний вход и Quest-приёмка.
 Подробности — [интеграция Blaze](../tasks/bots-fix/product-docs/bots-blaze-integration.md)
 и [текущий статус](../tasks/bots-fix/Readme.md).
 [BotCombatStand](../tasks/bots-fix/product-docs/bot-combat-stand.md) измеряет серверный тракт и фиксирует позы после SDK.

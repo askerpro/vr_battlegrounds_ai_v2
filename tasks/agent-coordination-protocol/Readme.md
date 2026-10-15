@@ -23,10 +23,38 @@ Checkout: F:/CodexWorktrees/agent-coordination-protocol/Vr_Battlegrounds_ai.
 
 ## Статус и проверки
 
-Точечное сопровождение реестра UI, событие 7695: опубликованный expert.json содержит
-пустой tasks, поэтому debug-menu-refactor не определяется как задача владельца UI.
-Этап ui-zone-task-registration добавляет только эту уже зарегистрированную задачу
-в tasks эксперта через отдельный выпуск. Зоны owns, ACK и игровые исходники не меняются.
+Реестр UI исправлен этапом ui-zone-task-registration: коммит d449f1983 опубликован
+в origin/dev, задача debug-menu-refactor определяется как задача владельца UI.
+Зоны owns, ACK и игровые исходники этим выпуском не менялись.
+
+Текущий этап mcp-execute-timeout-cli-pilot: пользователь согласовал адресный
+timeout_seconds 30–300 для execute_code/action=execute при прежнем default 30,
+свежую проверку RUNNING-аренды с запасом 60 секунд перед отправкой и отсутствие
+автоматического повтора при неизвестном исходе. Сборка ticket713 после ответа
+TimeoutError завершилась успешно за 87,61 секунды; повтор не выполняется.
+Побочный PC.asset из её R не принимается по заключению владельца performance7926.
+
+Для отдельной CLI-проверки создан checkout
+F:/CodexWorktrees/unity-cli-validation/Vr_Battlegrounds_ai на принятой базе
+04fc9de8875d390ab2fb1ddb4116536aa288a01d с полными LFS-ассетами. Ручной pilot716
+дал actual exit0 и полный XML16/16 PASS: семь UI и девять сетевых EditMode тестов.
+Холодная загрузка1717,79 секунды, затем около4 минут14 секунд до начала тестов;
+причина второго интервала не установлена. XML SHA256 начинается с `cddc5a29`,
+лог — с `1fc65673`; полные hashes и внешний R `22fb3c056fdd` закреплены в
+[итоге pilot](changelog/2026-10-15-mcp-timeout-cli-pilot.md).
+Производный package-lock diff сохранён и восстановлен, закрытый CLI checkout чистый.
+Ошибочный `/**` в output roots finish вызвал WinError123; штатный recover завершил716
+в DONE без broker result_sha, внешний R/ref и evidence сохранены. Это ещё не
+production CLI executor и не проверка PlayMode/build/Player E2E.
+
+MCP runtime6faf77 и pinned wheel выпущены собственной729: initialize/tools-list48,
+прямой ответ execute46.0118654s и полный run_tests/get_test_job16/16 PASS подтверждены.
+Для HTTP control-pong задан конечный timeout315 при сохранении JSON heartbeat,
+default30, lease guards и no-replay. Output/** живым CLI отклонён до enqueue.
+729 DONE, Rf161480da9a4,19 broker artifacts; blocked/recovery=false, FIFO перешла к730.
+Полный source suite на предыдущем f344798:1058 тестов, один skip, два baseline-дефекта
+(hook timing и короткая service lease). Последний delta:47/47 PASS, review45/45 PASS.
+Полный набор на окончательном source повторно не запускался и не объявляется GREEN.
 
 Текущее сопровождение: coordination mode off; очередь работает без плановой паузы.
 Проверенные исправления доставляются собственной заявкой сопровождающего в конец FIFO.

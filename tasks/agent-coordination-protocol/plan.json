@@ -433,6 +433,11 @@
           "task": "agent-coordination-protocol",
           "stage": "ui-zone-task-registration",
           "state": "merged"
+        },
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "mcp-execute-timeout-cli-pilot",
+          "state": "merged"
         }
       ],
       "needs": []
@@ -468,7 +473,11 @@
         "Assets/Editor/VR_Battlegrounds/AgentInfraTestJobLifecycleProbe/**"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "mcp-test-job-lifecycle", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "mcp-test-job-lifecycle",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -479,7 +488,25 @@
         "experts/ui/expert.json"
       ],
       "after": [
-        {"task": "agent-coordination-protocol", "stage": "maintenance-fifo-cli-guidance", "state": "merged"}
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "maintenance-fifo-cli-guidance",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "mcp-execute-timeout-cli-pilot",
+      "writes": [
+        "tasks/agent-coordination-protocol/**"
+      ],
+      "after": [
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "ui-zone-task-registration",
+          "state": "merged"
+        }
       ],
       "needs": []
     }

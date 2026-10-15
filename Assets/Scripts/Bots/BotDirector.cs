@@ -8,6 +8,7 @@ using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Network;
 using VrBattlegrounds.Player;
 using VrBattlegrounds.Player.Avatars;
 
@@ -50,10 +51,60 @@ namespace VrBattlegrounds.Bots
 
         private readonly List<PlayerSession> _bots = new List<PlayerSession>();
         private readonly Dictionary<PlayerSession, BotMind> _minds = new Dictionary<PlayerSession, BotMind>();
+        private readonly Dictionary<PlayerController, ShotWindow> _shotWindows = new Dictionary<PlayerController, ShotWindow>();
         private int _nextNumber = 1;
 
         /// <summary>Боты на сервере.</summary>
         public IReadOnlyList<PlayerSession> Bots => _bots;
+
+        /// <summary>
+        /// Ограниченное окно новых выстрелов собственного тела. Стенд сохраняет оружие и цель после deadline,
+        /// чтобы наблюдать хвост; директор остаётся единственным владельцем разрешения огня.
+        /// </summary>
+        public System.IDisposable OpenShotWindow(PlayerSession subject, float deadline)
+        {
+            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority || subject == null ||
+                !_minds.ContainsKey(subject) || subject.ActiveAvatar == null ||
+                float.IsNaN(deadline) || float.IsInfinity(deadline))
+                throw new System.InvalidOperationException("Окно огня требует собственного серверного тела и конечного deadline.");
+            PlayerController player = subject.ActiveAvatar;
+            if (_shotWindows.ContainsKey(player))
+                throw new System.InvalidOperationException("У тела уже есть окно огня; сначала освободите своё окно.");
+            var window = new ShotWindow(this, subject, player, deadline);
+            _shotWindows.Add(player, window);
+            return window;
+        }
+
+        /// <summary>Стрелок только читает намерение директора, в том числе непосредственно перед SDK attempt.</summary>
+        public bool IsShotAllowed(PlayerController player)
+        {
+            if (player == null) return false;
+            if (!_shotWindows.TryGetValue(player, out ShotWindow window)) return true;
+            return window.Subject != null && ReferenceEquals(window.Subject.ActiveAvatar, player) &&
+                player.gameObject.scene.handle == window.Scene && Time.time < window.Deadline;
+        }
+
+        private sealed class ShotWindow : System.IDisposable
+        {
+            private BotDirector _owner;
+            public readonly PlayerSession Subject;
+            public readonly PlayerController Player;
+            public readonly float Deadline;
+            public readonly int Scene;
+
+            public ShotWindow(BotDirector owner, PlayerSession subject, PlayerController player, float deadline)
+            {
+                _owner = owner; Subject = subject; Player = player; Deadline = deadline;
+                Scene = player.gameObject.scene.handle;
+            }
+
+            public void Dispose()
+            {
+                BotDirector owner = _owner; _owner = null;
+                if (owner != null && owner._shotWindows.TryGetValue(Player, out ShotWindow current) &&
+                    ReferenceEquals(current, this)) owner._shotWindows.Remove(Player);
+            }
+        }
 
         /// <summary>Префикс <c>DeviceToken</c> сессии бота. Токен реплицируется — по нему бота узнаёт и клиент.</summary>
         public const string TokenPrefix = "bot_";
@@ -90,6 +141,7 @@ namespace VrBattlegrounds.Bots
 
         private void OnDestroy()
         {
+            _shotWindows.Clear();
             if (Instance == this) Instance = null;
         }
 
@@ -114,7 +166,10 @@ namespace VrBattlegrounds.Bots
         /// бот-компонентов тело получает по <c>AvatarSpawned</c> (<see cref="BotKit"/>). null — сервер не готов
         /// (нет менеджеров).
         /// </summary>
-        public PlayerSession AddBot()
+        public PlayerSession AddBot() => AddBot(null);
+
+        /// <summary>Добавляет бота с настройками автоматического снаряжения; null — штатные настройки матча.</summary>
+        public PlayerSession AddBot(BotAddOptions options)
         {
             PlayersManager players = PlayersManager.Instance;
             if (!NetworkServer.active || players == null || AvatarManager.Instance == null)
@@ -128,7 +183,7 @@ namespace VrBattlegrounds.Bots
             if (session == null) return null;
 
             _bots.Add(session);
-            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1 };
+            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, AutoEquip = options?.AutoEquip ?? true };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
@@ -163,6 +218,7 @@ namespace VrBattlegrounds.Bots
             _minds.Remove(session);
 
             PlayerController avatar = session.ActiveAvatar;
+            if (avatar != null) _shotWindows.Remove(avatar);
             PlayersManager.Instance?.UnregisterBot(session);
 
             if (!NetworkServer.active) return;
@@ -282,16 +338,31 @@ namespace VrBattlegrounds.Bots
                     break;
             }
 
-            if (BotOrders.ShouldShop(order, alive, mind.ShoppedFor(token), free: Economy.MatchEconomy.Current == null))
+            if (mind.AutoEquip && BotOrders.ShouldShop(order, alive, mind.ShoppedFor(token), free: Economy.MatchEconomy.Current == null))
             {
                 mind.Purchase = BotShopper.Buy(bot);
                 mind.ShopToken = token;
             }
 
-            if (BotOrders.ShouldArm(stage, alive, mind.ShoppedFor(token)))
-                gunner.Arm(mind.ShoppedFor(token) ? mind.Purchase : null);
-            else if (stage == BotStage.NoMatch || stage == BotStage.BetweenRounds)
-                gunner.StandDown();
+            if (mind.AutoEquip)
+            {
+                if (BotOrders.ShouldArm(stage, alive, mind.ShoppedFor(token)))
+                {
+                    if (mind.ShoppedFor(token) && mind.Purchase != null &&
+                        (!ReferenceEquals(mind.PurchaseOfferedBody, avatar) || mind.PurchaseOfferedToken != token))
+                    {
+                        // Даже отказ стрелка завершает предложение: не повторяем его из каждого тика.
+                        mind.PurchaseOfferedBody = avatar;
+                        mind.PurchaseOfferedToken = token;
+                        gunner.OfferPurchase(mind.Purchase);
+                    }
+
+                    // Покупку принимает только OfferPurchase; без неё стрелок берёт штатный пистолет из кобуры.
+                    gunner.Arm(null);
+                }
+                else if (stage == BotStage.NoMatch || stage == BotStage.BetweenRounds)
+                    gunner.StandDown();
+            }
 
             if (BotOrders.ShouldDeclareReady(order, alive, bot.IsInSpawnZone, mind.ShoppedFor(token), bot.ReadyState))
                 bot.ServerSetReady(true, "бот закупился и стоит на базе");

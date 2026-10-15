@@ -29,6 +29,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         /// меняются. По умолчанию выключено.
         /// </summary>
         public bool NoRecoil;
+        /// <summary>Только диагностика T07: после активных 30 с наблюдать условное окно полёта по публичным descriptors.</summary>
+        public bool ObserveShotTail;
         /// <summary>
         /// Только стенд, мультипроцессный запуск (этап pf-network): сдвиг по X всей раскладки case — места бота и
         /// контрольной цели и её перемещений по сценарию, метры. Клиенты-игроки без команды режима (Respawn — выбор

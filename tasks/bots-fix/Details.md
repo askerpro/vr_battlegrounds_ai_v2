@@ -1,7 +1,9 @@
 # Боты: полный анализ и архитектурные решения
 
-Владелец: `bots-fix`, Codex. Worktree: `F:/CodexWorktrees/bots-fix/Vr_Battlegrounds_ai`.
-Анализ зафиксирован 2026-10-08. Текущий статус — [Readme.md](Readme.md), машинный план — [plan.json](plan.json).
+Владелец: `bots`, задача `bots-fix`, Codex. Текущий worktree: `F:/CodexWorktrees/bots/Vr_Battlegrounds_ai`.
+Исторический анализ зафиксирован 2026-10-08. Текущий статус — [Readme.md](Readme.md), машинный план — [plan.json](plan.json).
+Возобновление и свежие проверки 2026-10-14 — [changelog](changelog/2026-10-14-codex-resume.md);
+текущая архитектура — [player-flow-plan.md](player-flow-plan.md), реализация — [cc1-plan.md](cc1-plan.md).
 Координация актуализирована 2026-10-09: requests491/498/622 обработаны.
 Прогон303 после восстановления MCP: input8bee2f3645ae7bd31ef110ecddd1572b49cde17e,
 resultd2d905280ca8cca75be76d172cfe5602a4fd7696; finish/receive выполнены.

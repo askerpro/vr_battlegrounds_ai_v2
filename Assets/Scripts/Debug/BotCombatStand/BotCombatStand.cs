@@ -40,6 +40,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private BotStandCaseResult _activeCase;
         private BotStandPlayerFlowProbe _probe;
         private BotStandShotConditions _conditions;
+        private BotStandShotTailObservation _shotTail;
         /// <summary>Маркеры отправки NT тел без владельца (net-round1 attempt-6); создаются до спавна бота case.</summary>
         private BotStandNetSendMarkers _netMarkers;
         private readonly List<BotStandCaseResult> _results = new List<BotStandCaseResult>();
@@ -66,6 +67,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if ((Instance._output + Path.DirectorySeparatorChar).StartsWith(assets, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Отчёты стенда нельзя сохранять в Assets.");
             options = JsonConvert.DeserializeObject<BotStandRunOptions>(JsonConvert.SerializeObject(options));
+            if (options.ObserveShotTail && (ids.Any(id => id != BotStandScenarioId.T07) || options.CaseSeconds != 30f ||
+                options.KillAtSeconds >= 0f || options.RespawnAtSeconds >= 0f || !string.IsNullOrEmpty(options.PurchaseWeaponName)))
+                throw new ArgumentException("ObserveShotTail требует T07, активные 30 с и неизменные тело/оружие (без смерти, respawn и покупки).");
             Instance.ActiveOptions = options;
             Directory.CreateDirectory(Instance._output);
             Instance._status = new BotStandRunStatus { RunId = run, Total = ids.Length * options.Seeds.Length, ReportPath = Path.Combine(Instance._output, "summary.json") };
@@ -133,28 +137,77 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                         Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null && w.name == options.PurchaseWeaponName);
                     _netMarkers = new BotStandNetSendMarkers();
                     _session.Begin(id, weapon, options, purchase);
-                    BotStandMeasurements.ValidateFixture(id, _session);
+                    _session.HoldForReadiness(result);
                     _conditions = new BotStandShotConditions(_session, options);
-                    _probe = new BotStandPlayerFlowProbe(_session);
-                    CaseStarted?.Invoke(result, _session);
                 }
                 catch (NotSupportedException e) { result.Status = "Unsupported"; result.Error = e.Message; }
                 catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
+                if (result.Status != "InvalidFixture" && result.Status != "Unsupported")
+                {
+                    while (!_cancel && !_session.FixtureReady && !_session.ReadinessTimedOut) yield return null;
+                    _session.CompleteReadiness(result, _cancel);
+                }
                 float start = Time.time;
+                float duration = Mathf.Clamp(options.CaseSeconds, 1f, MaxCaseSeconds);
+                if (result.Status != "InvalidFixture" && result.Status != "Unsupported")
+                {
+                    try
+                    {
+                        BotStandMeasurements.ValidateFixture(id, _session);
+                        _probe = new BotStandPlayerFlowProbe(_session);
+                        // Передача единственного окна без yield: Director не допускает два окна одного тела.
+                        _session.ReleaseReadinessFire();
+                        if (options.ObserveShotTail) _shotTail = new BotStandShotTailObservation(_session, result, start, duration);
+                        CaseStarted?.Invoke(result, _session);
+                    }
+                    catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
+                }
+                float nextSample = start;
                 while (!_cancel && result.Status != "InvalidFixture" && result.Status != "Unsupported" && Time.time - start < Mathf.Clamp(options.CaseSeconds, 1f, MaxCaseSeconds))
                 {
-                    _session.Tick(Time.time - start, Mathf.Clamp(options.CaseSeconds, 1f, MaxCaseSeconds));
-                    Sample(result);
-                    try { CaseSampled?.Invoke(result, _session); }
-                    catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
-                    yield return new WaitForSeconds(0.1f);
+                    _shotTail?.Poll(_cancel, false);
+                    if (_shotTail != null && _shotTail.Finished)
+                    {
+                        result.Status = "InvalidFixture"; result.Error = "Активная фаза прервана; см. shotTail.endReason."; break;
+                    }
+                    if (!options.ObserveShotTail || Time.time >= nextSample)
+                    {
+                        _session.Tick(Time.time - start, duration);
+                        Sample(result);
+                        try { CaseSampled?.Invoke(result, _session); }
+                        catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
+                        nextSample = Time.time + .1f;
+                    }
+                    // В opt-in опыте cutoff проверяется каждый кадр; выборка и Tick сохраняют каденцию 0,1 с.
+                    if (options.ObserveShotTail) yield return null;
+                    else yield return new WaitForSeconds(0.1f);
                 }
-                result.Duration = Time.time - start;
+                result.Duration = options.ObserveShotTail ? Mathf.Min(duration, Time.time - start) : Time.time - start;
+                if (_shotTail != null)
+                {
+                    _shotTail.Poll(_cancel, result.Status == "InvalidFixture");
+                    while (!_shotTail.Finished)
+                    {
+                        yield return null;
+                        _shotTail.Poll(_cancel, result.Status == "InvalidFixture");
+                    }
+                    // Probe/actor/оружие и Director window сохраняются до финального snapshot.
+                }
                 if (_probe != null)
                 {
                     try { _probe.WriteMetrics(result); }
                     catch (Exception e) { result.Metrics["playerFlowError"] = e.Message; }
                     _probe.Dispose(); _probe = null;
+                }
+                if (_shotTail != null)
+                {
+                    _shotTail.Dispose();
+                    if (_shotTail.ObservationIncomplete)
+                    {
+                        result.Status = "InvalidFixture";
+                        result.Error = "Неполное наблюдение shot tail: " + _shotTail.EndReason;
+                    }
+                    _shotTail = null;
                 }
                 if (_netMarkers != null)
                 {
@@ -198,6 +251,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             {
                 if(_activeCase!=null)
                 {
+                    _shotTail?.Poll(true, true);
+                    _shotTail?.Dispose(); _shotTail = null;
                     var interrupted=_activeCase; _activeCase=null;
                     interrupted.Status="InvalidFixture"; interrupted.Error=_status?.Error ?? "Сценарий прерван до завершения.";
                     try { CaseFinished?.Invoke(interrupted); } catch(Exception e) { interrupted.Error += " Запись: " + e.Message; }
@@ -209,6 +264,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             finally
             {
                 _probe?.Dispose(); _probe=null;
+                _shotTail?.Dispose(); _shotTail=null;
                 _conditions?.Dispose(); _conditions=null;
                 _netMarkers?.Dispose(); _netMarkers=null;
                 var owned=_session; _session=null;

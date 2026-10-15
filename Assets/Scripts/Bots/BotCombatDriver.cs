@@ -42,6 +42,7 @@ namespace VrBattlegrounds.Bots
         private System.Func<Collider, bool> _ignoreOwnCollider;
         private GameObject _proxy;
         private BlazeAI _blaze;
+        private int _proxyGeneration;
         private float _nextAttempt;
         private bool _warned;
         private GameObject _targetSource;
@@ -149,7 +150,13 @@ namespace VrBattlegrounds.Bots
             _proxy.transform.SetPositionAndRotation(start, _body.BodyRotation);
             _proxy.transform.localScale = transform.lossyScale;
 
-            _blaze = _proxy.AddComponent<BlazeAI>();
+            if (BotBlazeDiagnostics.HasListeners)
+            {
+                var diagnostic = _proxy.AddComponent<BotBlazeDiagnosticBrain>();
+                diagnostic.Configure(_body.GetInstanceID(), ++_proxyGeneration);
+                _blaze = diagnostic;
+            }
+            else _blaze = _proxy.AddComponent<BlazeAI>();
             var animator = _proxy.GetComponent<Animator>();
             animator.runtimeAnimatorController = controller;
             animator.applyRootMotion = false;
@@ -292,6 +299,7 @@ namespace VrBattlegrounds.Bots
             if (_body != null) _body.SetCombatLegsSource(null);
             if (_proxy != null)
             {
+                if (_blaze is BotBlazeDiagnosticBrain diagnostic) diagnostic.Removing();
                 _proxy.SetActive(false); // Close освобождает занятость укрытия до Destroy.
                 Destroy(_proxy);
             }

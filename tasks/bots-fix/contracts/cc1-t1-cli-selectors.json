@@ -1,0 +1,61 @@
+{
+  "schema": "bots-cc1-t1-selectors-v1",
+  "status": "prepared-selectors-awaiting-broker-cli-release",
+  "owner": "bots",
+  "task": "bots-fix",
+  "stage": "clip-cutover",
+  "consumer_revision": 52,
+  "consumer_epoch": 3,
+  "reference_base_sha": "bb28046079f0ad3251ab3bbc22988027bf00c107",
+  "reference_input_sha": "40c4c0a2c5db9c3e1a62b4c527f724f63451c187",
+  "editor_version": "6000.4.1f1",
+  "test_framework_version": "1.6.0",
+  "platform": "EditMode",
+  "assemblies": [
+    "VrBattlegrounds.Tests.EditMode"
+  ],
+  "filters": [
+    "VrBattlegrounds.Tests.Bots.BotAuthorityTests",
+    "VrBattlegrounds.Tests.Bots.BotBuyPlanTests",
+    "VrBattlegrounds.Tests.Bots.BotMatchPlanTests",
+    "VrBattlegrounds.Tests.Bots.BotOrdersTests",
+    "VrBattlegrounds.Tests.Bots.BotRouteTests",
+    "VrBattlegrounds.Tests.DevTools.BotTeamChoiceTests",
+    "VrBattlegrounds.Tests.DevTools.BotSessionTests",
+    "VrBattlegrounds.Tests.DevTools.ServerAuthoredAvatarTests"
+  ],
+  "categories": [],
+  "expected_fixture_types": [
+    "VrBattlegrounds.Tests.Bots.BotAuthorityTests",
+    "VrBattlegrounds.Tests.Bots.BotBuyPlanTests",
+    "VrBattlegrounds.Tests.Bots.BotMatchPlanTests",
+    "VrBattlegrounds.Tests.Bots.BotOrdersTests",
+    "VrBattlegrounds.Tests.Bots.BotRouteTests",
+    "VrBattlegrounds.Tests.DevTools.BotTeamChoiceTests",
+    "VrBattlegrounds.Tests.DevTools.BotSessionTests",
+    "VrBattlegrounds.Tests.DevTools.ServerAuthoredAvatarTests"
+  ],
+  "evidence_rule": "До запуска фактическая discovery всех ожидаемых типов и ненулевого набора tests. После запуска полный terminal leaf result; ровно выбранные fixtures; число выполненных >0; failed=0, skipped=0 для PASS. Исторические49 tests не заменяют новую discovery.",
+  "output_root_template": "tasks/bots-fix/reports/unity-cli/<new-request-id>/",
+  "required_artifacts": [
+    "full NUnit3 XML",
+    "separate Editor.log",
+    "durable public receipt with request/ticket/epoch/B/A/versions/process creation time/exit/artifact SHA256"
+  ],
+  "completion_rule": "Артефакты сохраняются и для Failed. Exit0 без полного XML и ненулевого executed count не PASS. Partial XML только progress. Terminal процесс exited и writer closed до capture/finish/receive.",
+  "runtime_bindings_required_from_maintainer": [
+    "new CLI ticket/epoch/key/request_id",
+    "registered closed CLI project_root",
+    "exact unity_exe/version and backend fingerprint",
+    "fresh accepted B and task input A with valid immutable grants"
+  ],
+  "prohibitions": [
+    "не использовать GUI worker root для второго Editor",
+    "не превращать MCP ticket687 в CLI",
+    "не replay старых UNKNOWN",
+    "не force/resume/clear_stuck",
+    "не подставлять вымышленные ticket/root/exe",
+    "не запускать production CLI до штатного выпуска"
+  ],
+  "scope": "Подготовка селекторов/приёмки владельцем. Не готовый launch spec и не разрешение запуска. M8/latejoin/Quest/SDK/gameplay acceptance вне этого T1."
+}

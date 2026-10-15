@@ -1,9 +1,9 @@
 {
   "task_id": "bots-fix",
   "owner": "bots",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/bots/Vr_Battlegrounds_ai",
-  "base_sha": "3240427c9d6c48c30694da906381031303fccb2e",
+  "base_sha": "498f284fbd2ecfd4a4e6ab9681766174e5c4af48",
   "doc_path": "tasks/bots-fix/Readme.md",
   "title": "Боты: штатный поток игрока — аватар без владельца + адаптер намерений ИИ (Blaze)",
   "stages": [
@@ -178,6 +178,7 @@
       "writes": [
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotBlazeProxySetup.cs",
         "Assets/Editor/VR_Battlegrounds/Bots/BotCombatSetup.cs",
         "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
         "Assets/Editor/VR_Battlegrounds/Bots/BotStandHandMotionRecorder.cs",
@@ -187,7 +188,12 @@
         "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**",
         "Assets/Resources/Bots/**",
-        "Assets/Tests/EditMode/Bots/**"
+        "Assets/Tests/EditMode/Bots/**",
+        "Docs/tasks/T-48-bots-match.md",
+        "Docs/tasks/bots-blaze-integration.md",
+        "Docs/tasks/bot-combat-stand.md",
+        "Docs/gameplay.md",
+        "experts/bots/AGENT.md"
       ],
       "after": [
         {

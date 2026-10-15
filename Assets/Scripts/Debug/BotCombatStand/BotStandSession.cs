@@ -11,6 +11,9 @@ using VrBattlegrounds.Player;
 using VrBattlegrounds.Player.Avatars;
 using VrBattlegrounds.Core;
 using BlazeAISpace;
+using System.Collections.Generic;
+using UltimateXR.Avatar;
+using UltimateXR.Core;
 
 namespace VrBattlegrounds.DevTools.BotCombatStand
 {
@@ -29,6 +32,15 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private int _configuredRig;
         private bool _targetSeen;
         private Collider[] _hiddenTargetColliders;
+        private readonly List<IDisposable> _readinessHolds = new List<IDisposable>();
+        private readonly List<object> _readinessRows = new List<object>();
+        private readonly Dictionary<PlayerSession, PlayerController> _readinessBodies = new Dictionary<PlayerSession, PlayerController>();
+        private int _readyCycles;
+        private int _readinessStartFrame;
+        private float _readinessStartRealtime;
+        private string _readinessReason;
+        private bool _readinessSubscribed;
+        public bool FixtureReady => _readyCycles >= 3;
 
         public void Begin(BotStandScenarioId id, WeaponInfo weapon, BotStandRunOptions options, WeaponInfo purchase = null)
         {
@@ -39,7 +51,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if (BotDirector.Instance != null && BotDirector.Instance.Bots.Count != 0)
                 throw new InvalidOperationException("Есть чужие боты — стенд их не удаляет.");
             var director = BotDirector.EnsureInstance();
-            Subject = director.AddBot();
+            Subject = director.AddBot(new BotAddOptions { AutoEquip = false });
             if (Subject != null) _ownedBots.Add(Subject);
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
             if (options.AvatarIndex >= 0)
@@ -50,7 +62,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             if (id == BotStandScenarioId.T02)
             {
-                var other = director.AddBot();
+                var other = director.AddBot(new BotAddOptions { AutoEquip = false });
                 if(other!=null) _ownedBots.Add(other);
                 if(other?.ActiveAvatar==null) throw new InvalidOperationException("Нет второго бота.");
                 Place(other, Lane(new Vector3(0f, 0f, 5f)), 180f);
@@ -78,6 +90,95 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 _hiddenTargetColliders=_target.ActiveAvatar.GetComponentsInChildren<Collider>().Where(c=>c.enabled && c.gameObject.layer==LayerMask.NameToLayer("Player")).ToArray();
                 foreach(var collider in _hiddenTargetColliders) collider.enabled=false;
             }
+        }
+
+        /// <summary>До первого замера удерживает огонь у владельца намерений; позу пишет только штатный драйвер.</summary>
+        public void HoldForReadiness(BotStandCaseResult result)
+        {
+            _readinessStartFrame = Time.frameCount;
+            _readinessStartRealtime = Time.realtimeSinceStartup;
+            foreach (var bot in _ownedBots)
+            {
+                _readinessHolds.Add(BotDirector.Instance.OpenShotWindow(bot, Time.time));
+                _readinessBodies.Add(bot, bot.ActiveAvatar);
+            }
+            if (_target != null) _readinessBodies.Add(_target, _target.ActiveAvatar);
+            result.Metrics["fixtureReadiness"] = new Dictionary<string, object>
+            {
+                ["startedFrame"] = _readinessStartFrame, ["startedGameTime"] = Time.time,
+                ["startedRealtime"] = _readinessStartRealtime, ["observations"] = _readinessRows,
+                ["requiredConsecutiveCycles"] = 3, ["timeoutRealtimeSeconds"] = 15f,
+                ["scope"] = "precase; первая готовая поза и ещё два последующих полных цикла UXR"
+            };
+            UxrManager.AvatarsUpdated += ObserveReadiness;
+            _readinessSubscribed = true;
+            ObserveReadiness(); // Исходная, ещё не применённая поза сохраняется отдельно, цикл не засчитывается.
+        }
+
+        public bool ReadinessTimedOut => Time.realtimeSinceStartup - _readinessStartRealtime >= 15f;
+
+        private void ObserveReadiness()
+        {
+            if (FixtureReady) return;
+            bool ready = Time.frameCount > _readinessStartFrame;
+            _readinessReason = ready ? null : "Ожидание первого полностью последующего UXR цикла";
+            foreach (var pair in _readinessBodies)
+            {
+                PlayerController player = pair.Key != null ? pair.Key.ActiveAvatar : null;
+                BotBody body = player != null ? player.GetComponent<BotBody>() : null;
+                BotAvatarDriver driver = player != null ? player.GetComponent<BotAvatarDriver>() : null;
+                UxrAvatar avatar = player != null ? player.GetComponent<UxrAvatar>() : null;
+                Transform camera = avatar != null ? avatar.CameraTransform : null;
+                float height = camera != null && player != null ? camera.position.y - player.transform.position.y : float.NaN;
+                float expectedHeight = pair.Key != null && pair.Key.Calibration.HasEyeHeight ? pair.Key.Calibration.EyeHeight : BotPlayerFlowSettings.EyeHeight;
+                float rootError = player != null && body != null ? Vector3.Distance(player.transform.position, body.Feet) : float.NaN;
+                bool valid = player != null && player == pair.Value && player.gameObject.activeInHierarchy && player.IsAlive &&
+                    body != null && camera != null && camera.gameObject.activeInHierarchy && driver != null &&
+                    driver.AppliedFrame == Time.frameCount && rootError <= .001f && Mathf.Abs(height - expectedHeight) <= .001f;
+                bool stopped = !_ownedBots.Contains(pair.Key) || (BotDirector.Instance != null && !BotDirector.Instance.IsShotAllowed(player));
+                var gunner = player != null ? player.GetComponent<BotGunner>() : null;
+                int shotsBeforeActive = gunner != null ? gunner.ShotsFired : 0;
+                ready &= valid && stopped && shotsBeforeActive == 0;
+                if (!valid) _readinessReason = "Тело/драйвер/корень/высота камеры ещё не готовы";
+                if (!stopped) _readinessReason = "Director не подтвердил удержание огня";
+                if (shotsBeforeActive != 0) _readinessReason = "Есть выстрел до начала активной фазы";
+                _readinessRows.Add(new Dictionary<string, object>
+                {
+                    ["frame"] = Time.frameCount, ["gameTime"] = Time.time, ["realtime"] = Time.realtimeSinceStartup,
+                    ["session"] = pair.Key != null ? pair.Key.PlayerName : null, ["bodyId"] = player != null ? player.GetInstanceID() : 0,
+                    ["root"] = player != null ? new[] { player.transform.position.x, player.transform.position.y, player.transform.position.z } : null,
+                    ["feet"] = body != null ? new[] { body.Feet.x, body.Feet.y, body.Feet.z } : null,
+                    ["height"] = float.IsNaN(height) ? null : (object)height, ["expectedHeight"] = expectedHeight,
+                    ["rootErrorM"] = float.IsNaN(rootError) ? null : (object)rootError,
+                    ["driverAppliedFrame"] = driver != null ? driver.AppliedFrame : -1,
+                    ["ready"] = valid, ["fireHeld"] = stopped, ["shotsBeforeActive"] = shotsBeforeActive, ["reason"] = _readinessReason
+                });
+            }
+            _readyCycles = ready ? _readyCycles + 1 : 0;
+        }
+
+        public void CompleteReadiness(BotStandCaseResult result, bool cancelled)
+        {
+            if (_readinessSubscribed) UxrManager.AvatarsUpdated -= ObserveReadiness;
+            _readinessSubscribed = false;
+            var metrics = (Dictionary<string, object>)result.Metrics["fixtureReadiness"];
+            metrics["ready"] = FixtureReady;
+            metrics["completedFrame"] = Time.frameCount;
+            metrics["completedGameTime"] = Time.time;
+            metrics["completedRealtime"] = Time.realtimeSinceStartup;
+            metrics["consecutiveCycles"] = _readyCycles;
+            metrics["endReason"] = cancelled ? "cancelled" : FixtureReady ? "ready" : "timeout: " + _readinessReason;
+            if (!FixtureReady || cancelled)
+            {
+                result.Status = "InvalidFixture";
+                result.Error = cancelled ? "Прогон отменён до готовности fixture." : "Timeout готовности fixture: " + _readinessReason;
+            }
+        }
+
+        public void ReleaseReadinessFire()
+        {
+            foreach (var hold in _readinessHolds) hold.Dispose();
+            _readinessHolds.Clear();
         }
 
         /// <summary>
@@ -124,6 +225,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
         public void Dispose()
         {
+            if (_readinessSubscribed) UxrManager.AvatarsUpdated -= ObserveReadiness;
+            _readinessSubscribed = false;
+            ReleaseReadinessFire();
             if (!NetworkServer.active) { _ownedBots.Clear(); Subject=null; _target=null; return; }
             bool hadActors=_ownedBots.Count>0 || _target!=null;
             foreach (var bot in _ownedBots) if (bot != null) BotDirector.Instance?.RemoveBot(bot);

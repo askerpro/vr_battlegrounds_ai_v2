@@ -162,8 +162,12 @@ namespace VrBattlegrounds.Bots
         /// <summary>Blaze выбирает момент атаки; настоящий выстрел исполняет только автор оружия.</summary>
         public void RequestShot()
         {
-            if (NetworkServer.active && StateEventAuthority.IsWorldAuthority) _shotRequested = true;
+            if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority) return;
+            if (!DirectorAllowsShot()) { _shotRequested = false; return; }
+            _shotRequested = true;
         }
+
+        private bool DirectorAllowsShot() => BotDirector.Instance == null || BotDirector.Instance.IsShotAllowed(_player);
 
         /// <summary>Цель; null — нет.</summary>
         public PlayerController Target => _target;
@@ -474,6 +478,8 @@ namespace VrBattlegrounds.Bots
             _lastBlocker = null;
             if (!_shotRequested) return BotShotOutcome.None;
             _shotRequested = false;
+            // Deadline проверяется повторно: запрос до границы не разрешает поздний SDK attempt.
+            if (!DirectorAllowsShot()) return BotShotOutcome.None;
             if (!CanFightNow()) return BotShotOutcome.Blocked;
             Transform muzzle = Muzzle;
             if (muzzle == null) return BotShotOutcome.Blocked;

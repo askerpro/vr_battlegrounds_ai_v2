@@ -2,6 +2,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Maps;
+using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Bots
 {
@@ -13,6 +14,9 @@ namespace VrBattlegrounds.Bots
     {
         /// <summary>Место на базе — индекс в <see cref="BotHomeSlot"/>, раздаёт директор по порядку ботов.</summary>
         public int HomeSlot;
+
+        /// <summary>Директор управляет закупкой и вооружением; задаётся при добавлении бота.</summary>
+        public bool AutoEquip = true;
 
         /// <summary>
         /// Комплект бот-компонентов текущего тела (<see cref="BotKit"/>): один раз на тело, ссылки без поиска в тике.
@@ -46,6 +50,12 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Купленное в этой закупке; null — воюет стартовым пистолетом.</summary>
         public WeaponInfo Purchase;
+
+        /// <summary>Тело, которому директор уже предложил покупку (включая отказ стрелка).</summary>
+        public PlayerController PurchaseOfferedBody;
+
+        /// <summary>Закупка последнего предложения: одно предложение на пару (тело, закупка).</summary>
+        public int PurchaseOfferedToken = -1;
 
         /// <summary>Решение о покупке в закупке <paramref name="token"/> принято.</summary>
         public bool ShoppedFor(int token) => ShopToken == token;

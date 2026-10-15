@@ -37,6 +37,7 @@ var stateHashes = stateNames.Select(n => Animator.StringToHash(n)).ToArray();
 var moveStates = new[] { "Move", "Back", "Left", "Right" };
 Func<int, string> stateOf = hash => { for (int i = 0; i < stateHashes.Length; i++) if (stateHashes[i] == hash) return stateNames[i]; return "#" + hash; };
 Func<float, float> R3 = v => (float)Math.Round(v, 3);
+Func<Vector3, float[]> V3 = v => new[] { v.x, v.y, v.z };
 
 // ── Очередь ──
 var entries = new List<Dictionary<string, object>>();
@@ -68,7 +69,12 @@ var transitions = new List<Dictionary<string, object>>();
 var moves = new List<Dictionary<string, object>>();
 Dictionary<string, object> pending = null; Vector3 pendingPos = Vector3.zero; float pendingT = 0f; int pendingFrame = 0;
 var trace = new List<object>(); float traceUntil = -1f;
+var targetTrace = new List<object>();
 var sampleErrors = new List<string>();
+// Public virtual вызовы снимаются с создания proxy, включая readiness до CaseStarted.
+var blazeCalls = new List<VrBattlegrounds.Bots.BotBlazeDiagnosticEvent>();
+int blazeDropped = 0;
+IDisposable blazeSubscription = null;
 
 Func<VrBattlegrounds.Player.PlayerController, string, float, Dictionary<string, object>> describe = (p, role, at) => {
     var runtime = p.GetComponent<VrBattlegrounds.Bots.BotRuntimeController>();
@@ -103,7 +109,7 @@ Action resetCase = () => {
     brain = null; proxyEntry = null; lastAnim = null; lastHash = 0; lastNt = -1f; ntSame = 0; ntUp = 0; ntStuck = 0; sampleFrames = 0; proxyFrames = 0;
     animatorSeen = new Dictionary<string, int>(); proxies = new List<Dictionary<string, object>>();
     transitions = new List<Dictionary<string, object>>(); moves = new List<Dictionary<string, object>>(); pending = null;
-    trace = new List<object>(); traceUntil = -1f; sampleErrors = new List<string>();
+    trace = new List<object>(); targetTrace = new List<object>(); traceUntil = -1f; sampleErrors = new List<string>();
     cMissing = 0; cEmpty = 0; cErrors = 0; cExceptions = 0; cCameraFade = 0; cSamples = new List<string>();
 };
 
@@ -142,7 +148,23 @@ Action sample = () => {
             if (target != null && seenBodies.Add(target.GetInstanceID())) bodies.Add(describe(target, "target", t));
             lastTarget = target; targetAvatar = target != null ? target.GetComponent<UltimateXR.Avatar.UxrAvatar>() : null;
         }
-        // Цель: камера над корнем и дрейф корня.
+        // Сохраняем исходные samples, включая неготовую позу: агрегаты не скрывают начальный скачок.
+        var targetCamera = targetAvatar != null ? targetAvatar.CameraTransform : null;
+        var targetBody = target != null ? target.GetComponent<VrBattlegrounds.Bots.BotBody>() : null;
+        if (targetTrace.Count < 2048) targetTrace.Add(new {
+            t, time = Time.time, realtime = Time.realtimeSinceStartup, frame = Time.frameCount,
+            combo = caseCombo, scenario = caseScenario, stage = VrBattlegrounds.Bots.BotSenses.Stage().ToString(),
+            body = target != null ? (int?)target.GetInstanceID() : null,
+            root = target != null ? V3(target.transform.position) : null,
+            camera = targetCamera != null ? V3(targetCamera.position) : null,
+            feet = targetBody != null ? V3(targetBody.Feet) : null,
+            heightAboveRoot = target != null && targetCamera != null ? (float?)(targetCamera.position.y - target.transform.position.y) : null,
+            stepFromPreviousM = tSeen && target != null ? (float?)Vector3.Distance(target.transform.position, tPrev) : null,
+            referencesPresent = target != null && targetAvatar != null && targetCamera != null,
+            bodyActive = target != null && target.gameObject.activeInHierarchy,
+            cameraActive = targetCamera != null && targetCamera.gameObject.activeInHierarchy
+        });
+        // Цель: камера над корнем и дрейф корня. Критерии остаются по всем измеренным кадрам.
         if (target != null && targetAvatar != null && targetAvatar.CameraTransform != null) {
             Vector3 root = target.transform.position;
             float h = targetAvatar.CameraTransform.position.y - root.y;
@@ -191,8 +213,10 @@ Action sample = () => {
             if (animState != null && moveStates.Contains(animState)) {
                 closePending("superseded");
                 int ofProxy = moves.Count(m => object.Equals(m["proxy"], proxyEntry["bornFrame"]));
+                int moveOfProxy = moves.Count(m => object.Equals(m["proxy"], proxyEntry["bornFrame"]) && object.Equals(m["anim"], "Move"));
                 pending = new Dictionary<string, object> { { "t", R3(t) }, { "frame", Time.frameCount }, { "anim", animState }, { "from", lastAnim },
                     { "proxy", proxyEntry["bornFrame"] }, { "proxyAge", R3(Time.time - brainBorn) }, { "firstOfProxy", ofProxy == 0 },
+                    { "firstMoveOfProxy", animState == "Move" && moveOfProxy == 0 },
                     { "ntAtPlay", R3(nt) }, { "animatorStateAtPlay", animatorState }, { "blazeState", brain.state.ToString() } };
                 moves.Add(pending); pendingPos = pos; pendingT = Time.time; pendingFrame = Time.frameCount;
                 traceUntil = Mathf.Max(traceUntil, Time.time + 1.5f);
@@ -240,7 +264,8 @@ Action<VrBattlegrounds.DevTools.BotCombatStand.BotStandCaseResult> onFinished = 
             { "target", new Dictionary<string, object> { { "frames", tFrames },
                 { "cameraHeightAboveRoot", tFrames > 0 ? (object)new { min = R3(tHMin), max = R3(tHMax), mean = R3((float)(tHSum / tFrames)) } : null },
                 { "rootDriftFromFirstM", R3(tDrift) }, { "rootMaxStepM", R3(tStep) }, { "rootStepsOver1mm", tStepsOver1mm },
-                { "note", "Корень цели двигает только стенд (Place: T01/T05/T06/T08); в T07 ожидается 0." } } },
+                { "traceRows", targetTrace.Count }, { "traceTruncated", sampleFrames > targetTrace.Count },
+                { "note", "Place задаёт ноги BotBody; корень аватара записывает штатный драйвер. В T07 проверяется стабильность корня и высоты; readiness по ссылкам не означает калибровку." } } },
             { "proxy", new Dictionary<string, object> { { "proxies", proxies }, { "frames", proxyFrames }, { "moves", moves },
                 { "transitions", transitions.Take(200).ToList() }, { "transitionsTotal", transitions.Count },
                 { "normalizedTime", new { sameStateFrames = ntSame, increasingFrames = ntUp, stuckFrames = ntStuck } },
@@ -254,12 +279,21 @@ Action<VrBattlegrounds.DevTools.BotCombatStand.BotStandCaseResult> onFinished = 
         System.IO.Directory.CreateDirectory(folder);
         System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-trace.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
             columns = new[] { "t", "frame", "animState", "animatorState", "nt", "inTransition", "x", "z", "agentSpeed" }, rows = trace }));
+        System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-target-trace.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            limit = 2048, observedFrames = sampleFrames, truncated = sampleFrames > targetTrace.Count,
+            validityScope = "Только ссылки и activeInHierarchy; калибровка не утверждается. Начальные samples не исключены.",
+            rows = targetTrace }));
+        System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-blaze-calls.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            limit = 50000, dropped = blazeDropped, coverageComplete = blazeDropped == 0,
+            scope = "Public virtual callbacks, включая readiness. Приватный gate и фактический Agent.Move не измерены.",
+            events = blazeCalls }));
     } catch (Exception error) { if (notes.Count < 32) notes.Add("onFinished: " + error.Message); }
     finally { caseSession = null; }
 };
 
 EditorApplication.CallbackFunction tick = null;
 Action detach = () => {
+    if (blazeSubscription != null) { blazeSubscription.Dispose(); blazeSubscription = null; }
     VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseStarted -= onStarted;
     VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseFinished -= onFinished;
     UltimateXR.Core.UxrManager.AvatarsUpdated -= sample;
@@ -286,11 +320,13 @@ tick = () => {
         if (VrBattlegrounds.Bots.BotSenses.Stage() != VrBattlegrounds.Bots.BotStage.Combat) { queueState = "live-ended"; queueError = "Live завершён до " + combos[index + 1].id; write(); detach(); return; }
         index++;
         var combo = combos[index];
+        blazeCalls.Clear(); blazeDropped = 0;
         var ids = new[] { combo.scenario };
         var options = new VrBattlegrounds.DevTools.BotCombatStand.BotStandRunOptions {
             OutputDirectory = Root + "/" + combo.id, Profile = VrBattlegrounds.DevTools.BotCombatStand.BotStandProfile.Production,
             Seeds = new[] { 101 }, CaseSeconds = combo.seconds, Capture = false, Rifle = combo.rifle, HandFit = false,
             WeaponName = combo.weapon, AvatarIndex = -1, ZeroAiAimSpread = combo.zero, NoRecoil = combo.noRecoil,
+            ObserveShotTail = combo.zero && combo.noRecoil,
             HolsterStart = combo.holster, Unarmed = combo.unarmed, PurchaseWeaponName = combo.purchase, PurchaseAtSeconds = combo.purchaseAt,
             KillAtSeconds = combo.killAt, RespawnAtSeconds = combo.respawnAt, Cases = ids };
         var entry = new Dictionary<string, object> { { "combo", combo.id }, { "options", options }, { "requestedLocal", DateTime.Now.ToString("HH:mm:ss") } };
@@ -302,6 +338,10 @@ tick = () => {
     } catch (Exception error) { queueState = "failed"; queueError = error.ToString(); write(); detach(); }
 };
 AppDomain.CurrentDomain.SetData(Marker, DateTime.UtcNow.ToString("o"));
+blazeSubscription = VrBattlegrounds.Bots.BotBlazeDiagnostics.Subscribe(
+    VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.Instance, e => {
+        if (blazeCalls.Count < 50000) blazeCalls.Add(e); else blazeDropped++;
+    });
 VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseStarted += onStarted;
 VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseFinished += onFinished;
 UltimateXR.Core.UxrManager.AvatarsUpdated += sample;

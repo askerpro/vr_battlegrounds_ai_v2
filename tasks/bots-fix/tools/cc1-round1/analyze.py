@@ -7,6 +7,7 @@ Metrics["cc1"] — наблюдатель B4), <root>/runtime/<phase>/queue.json
 """
 import glob
 import json
+import math
 import os
 import sys
 
@@ -19,6 +20,86 @@ BASE_OF = {"E-ak105-ref": "E-ak105", "PE-ppk-ref": "PE-ppk", "H-ppk-holster": "H
 LIVE = ("botBody", "botNavigator", "botGunner", "botAvatarDriver", "botCombatDriver", "botHands", "botWeaponAim", "botRuntimeController")
 PASSIVE_ZERO = ("botCombatDriver", "botHands", "botWeaponAim")
 PASSIVE_ONE = ("botBody", "botNavigator", "botGunner", "botAvatarDriver", "botRuntimeController")
+AB = ("AB-T01-ak105", "AB-T06-ak105", "AB-T08-ak105")
+LOG_COUNTERS = ("missingAnim", "emptyAnim", "errors", "exceptions")
+
+
+def number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def zero_log(log, keys=LOG_COUNTERS):
+    return isinstance(log, dict) and all(number(log.get(k)) and log[k] == 0 for k in keys)
+
+
+def tail_complete(tail, pf):
+    """Opt-in замер требует полной условной границы, без утверждения projectile terminal."""
+    if not isinstance(tail, dict) or tail.get("observationIncomplete") is not False or \
+            tail.get("endReason") != "conditionalObservationBudgetCompleted" or tail.get("stopAcknowledged") is not True:
+        return False
+    final = tail.get("finalCounts") or {}
+    return all(number(final.get(key)) for key in ("fired", "sourceEmissions", "gunnerShotsFired", "hitsOnTarget")) and \
+        final["fired"] == final["sourceEmissions"] == final["gunnerShotsFired"] == pf.get("shots") and \
+        final["hitsOnTarget"] == pf.get("hitsOnTarget")
+
+
+def metric_coverage(name, case, pf, cc1):
+    """Отсутствующий замер не равен нулю: перечисляем обязательные данные отдельно от порогов."""
+    missing = []
+    for label, value in (("playerFlow", pf), ("cc1", cc1)):
+        if not isinstance(value, dict) or not value:
+            missing.append(label)
+    for key in ("shots", "hitsOnTarget", "hitRate", "foreignDamageEventsOnTarget", "consoleErrors"):
+        if not number(pf.get(key)):
+            missing.append("playerFlow." + key)
+    if not isinstance(pf.get("equipment"), dict) or not pf["equipment"]:
+        missing.append("playerFlow.equipment")
+    equipment = pf.get("equipment") or {}
+    hands = equipment.get("hands") or {}
+    if name in ("H-ppk-holster", "P-purchase-ak105", "G-ghost-respawn-ak105") and not equipment.get("timeline"):
+        missing.append("playerFlow.equipment.timeline")
+    if name == "U-unarmed":
+        unarmed = equipment.get("unarmed") or {}
+        for key in ("frames", "blazeActiveFrames", "shotRequestFrames", "restPoseFrames"):
+            if not number(unarmed.get(key)):
+                missing.append("playerFlow.equipment.unarmed." + key)
+        if not number(hands.get("primaryGrabs")):
+            missing.append("playerFlow.equipment.hands.primaryGrabs")
+    if name == "P-purchase-ak105":
+        for label, value in (("hands.stowsPlaced", hands.get("stowsPlaced")), ("stowDropped", equipment.get("stowDropped"))):
+            if not number(value):
+                missing.append("playerFlow.equipment." + label)
+    if not (case.get("Frames") or []):
+        missing.append("Frames")
+    if not number(cc1.get("sampleFrames")) or cc1["sampleFrames"] <= 0:
+        missing.append("cc1.sampleFrames")
+    if not isinstance(cc1.get("sampleErrors"), list):
+        missing.append("cc1.sampleErrors")
+    if not (cc1.get("kit") or []):
+        missing.append("cc1.kit")
+    target = cc1.get("target") or {}
+    if not number(target.get("frames")) or target["frames"] <= 0:
+        missing.append("cc1.target.frames")
+    height = target.get("cameraHeightAboveRoot") or {}
+    for key in ("min", "max", "mean"):
+        if not number(height.get(key)):
+            missing.append("cc1.target.cameraHeightAboveRoot." + key)
+    if not number(target.get("rootDriftFromFirstM")):
+        missing.append("cc1.target.rootDriftFromFirstM")
+    log = cc1.get("log") or {}
+    for key in LOG_COUNTERS:
+        if not number(log.get(key)):
+            missing.append("cc1.log." + key)
+    if name in AB:
+        proxy = cc1.get("proxy") or {}
+        if not number(proxy.get("frames")) or proxy["frames"] <= 0:
+            missing.append("cc1.proxy.frames")
+        if not (proxy.get("proxies") or []):
+            missing.append("cc1.proxy.proxies")
+        nt = proxy.get("normalizedTime") or {}
+        if not number(nt.get("sameStateFrames")) or nt["sameStateFrames"] <= 0 or not number(nt.get("increasingFrames")):
+            missing.append("cc1.proxy.normalizedTime")
+    return missing
 
 
 def load(path):
@@ -119,13 +200,18 @@ def proxy_row(cc1):
     proxy = (cc1 or {}).get("proxy") or {}
     moves = proxy.get("moves") or []
     move_only = [m for m in moves if m.get("anim") == "Move"]
-    first = [m for m in move_only if m.get("firstOfProxy")]
-    lat = [m.get("latency") for m in move_only if m.get("result") == "moved"]
+    first = [m for m in move_only if m.get("firstMoveOfProxy")]
+    lat = [m.get("latency") for m in move_only if m.get("result") == "moved" and number(m.get("latency"))]
+    proxy_ids = [p.get("bornFrame") for p in proxy.get("proxies") or []]
+    first_ids = [m.get("proxy") for m in first]
     nt = proxy.get("normalizedTime") or {}
     return {
         "proxies": [{k: p.get(k) for k in ("bornT", "removedT", "removedReason", "controller", "applyRootMotion", "cullingMode",
                                           "firstDisplacementAfterBirth")} for p in proxy.get("proxies") or []],
         "moves": len(moves), "moveAnimCount": len(move_only),
+        "allMovesOk": bool(move_only) and all(m.get("result") == "moved" and number(m.get("latency")) and 0 <= m["latency"] <= 0.2 for m in move_only),
+        "firstMoveCoverage": bool(proxy_ids) and None not in proxy_ids and len(set(proxy_ids)) == len(proxy_ids) and
+                             len(first_ids) == len(proxy_ids) and set(first_ids) == set(proxy_ids),
         "firstMove": [{k: m.get(k) for k in ("t", "from", "proxyAge", "result", "latency", "latencyFrames", "ntAtPlay",
                                               "animatorStateAtPlay", "animatorStateAtMove", "elapsed")} for m in first],
         "moveLatency": {"n": len(lat), "max": r(max(lat)) if lat else None, "median": r(sorted(lat)[len(lat) // 2]) if lat else None},
@@ -134,7 +220,8 @@ def proxy_row(cc1):
         "otherAnimLatency": {a: [m.get("latency") for m in moves if m.get("anim") == a and m.get("result") == "moved"][:10]
                              for a in ("Back", "Left", "Right")},
         "normalizedTime": nt,
-        "ntGrowthShare": r(nt.get("increasingFrames", 0) / nt["sameStateFrames"], 3) if nt.get("sameStateFrames") else None,
+        "ntGrowthShare": nt["increasingFrames"] / nt["sameStateFrames"] if number(nt.get("sameStateFrames")) and nt["sameStateFrames"] > 0 and
+                          number(nt.get("increasingFrames")) and 0 <= nt["increasingFrames"] <= nt["sameStateFrames"] else None,
         "animatorStatesSeen": proxy.get("animatorStatesSeen"), "transitionsTotal": proxy.get("transitionsTotal"),
     }
 
@@ -147,6 +234,8 @@ def combo_row(name):
     metrics = case.get("Metrics") or {}
     pf = metrics.get("playerFlow") or {}
     cc1 = metrics.get("cc1") or {}
+    tail_required = (summary.get("options") or {}).get("ObserveShotTail") is True
+    tail = metrics.get("shotTail")
     kit_ok, kit_rows = kit_check(cc1.get("kit"))
     target = cc1.get("target") or {}
     height = target.get("cameraHeightAboveRoot") or {}
@@ -154,6 +243,7 @@ def combo_row(name):
         "combo": name, "case": case.get("Id"), "status": case.get("Status"), "error": case.get("Error"),
         "duration": r(case.get("Duration")), "shots": pf.get("shots"), "hits": pf.get("hitsOnTarget"), "hitRate": r(pf.get("hitRate")),
         "foreignDamage": pf.get("foreignDamageEventsOnTarget"), "consoleErrorsProbe": pf.get("consoleErrors"),
+        "tailRequired": tail_required, "tailComplete": tail_complete(tail, pf) if tail_required else None,
         "probeCriteria": {k: v for k, v in (pf.get("criteria") or {}).items() if k != "note"},
         "equipment": eq_points(name, pf),
         "kitOk": kit_ok, "kit": kit_rows,
@@ -166,6 +256,7 @@ def combo_row(name):
                                                                              "metersPerPlantedSecond", "bodyTravelMeters")},
         "log": cc1.get("log"), "memory": cc1.get("memory"), "sampleErrors": cc1.get("sampleErrors"),
         "playerFlowError": metrics.get("playerFlowError"),
+        "missingMetrics": metric_coverage(name, case, pf, cc1),
     }
     base_name = BASE_OF.get(name)
     if base_name:
@@ -180,39 +271,63 @@ def combo_row(name):
     return row
 
 
-def checks(rows):
+def checks(rows, queues=None):
     by = {row["combo"]: row for row in rows}
     out = {}
     for ref in ("E-ak105-ref", "PE-ppk-ref"):
         row = by.get(ref) or {}
-        out[ref + ": hitRate=1"] = None if row.get("missing") else bool(row.get("shots")) and row.get("hitRate") == 1
+        out[ref + ": hitRate=1"] = None if row.get("missing") else bool(row.get("shots")) and row.get("hitRate") == 1 and \
+            (not row.get("tailRequired") or row.get("tailComplete") is True)
     for name in ("H-ppk-holster", "U-unarmed", "P-purchase-ak105", "G-ghost-respawn-ak105"):
         row = by.get(name) or {}
         out[name + ": pf-equipment"] = None if row.get("missing") else row["equipment"].get("pass")
     present = [row for row in rows if not row.get("missing")]
-    out["kit: 1 компонент на тело, у пассивных нет Hands/Aim/CombatDriver"] = all(row["kitOk"] for row in present) if present else None
+    covered = set(by) == set(COMBOS) and len(present) == len(COMBOS)
+    out["покрытие: все 9 обязательных combo"] = covered
+    out["метрики: обязательные данные и кадры присутствуют"] = covered and all(not row["missingMetrics"] for row in present)
+    out["наблюдатель: 0 ошибок sample/playerFlow"] = covered and all(row.get("sampleErrors") == [] and not row.get("playerFlowError") for row in present)
+    out["стенд: нет ошибок case/playerFlow"] = covered and all(not row.get("error") and row.get("status") in ("Passed", "NeedsReview") and
+                                                               row.get("consoleErrorsProbe") == 0 and row.get("foreignDamage") == 0 for row in present)
+    out["kit: 1 компонент на тело, у пассивных нет Hands/Aim/CombatDriver"] = covered and all(row["kitOk"] for row in present)
     ghost_rows = [k for row in present for k in row["kit"] if k["passive"] and k["role"].startswith("subject")]
     out["kit: призрак встречен и пассивен"] = bool(ghost_rows) if by.get("G-ghost-respawn-ak105") and not by["G-ghost-respawn-ak105"].get("missing") else None
-    static = [row for row in present if row.get("case") == "T07" and row["target"].get("frames")]
-    out["target: камера 1,65 ± 0,02 м (T07)"] = all(1.63 <= row["target"]["heightMin"] and row["target"]["heightMax"] <= 1.67 for row in static) if static else None
-    out["target: корень неподвижен (T07, дрейф < 1 мм)"] = all((row["target"]["rootDrift"] or 0) < 0.001 for row in static) if static else None
-    ab = [row for row in present if row["combo"].startswith("AB-")]
+    static = [row for row in present if row["combo"] not in AB and row.get("case") == "T07" and row["target"].get("frames")]
+    out["target: камера 1,65 ± 0,02 м (T07)"] = len(static) == 6 and all(number(row["target"]["heightMin"]) and number(row["target"]["heightMax"]) and
+                                                                                  1.63 <= row["target"]["heightMin"] <= row["target"]["heightMax"] <= 1.67 for row in static)
+    out["target: корень неподвижен (T07, дрейф < 1 мм)"] = len(static) == 6 and all(number(row["target"]["rootDrift"]) and 0 <= row["target"]["rootDrift"] < 0.001 for row in static)
+    ab = [row for row in present if row["combo"] in AB]
+    ab_covered = len(ab) == len(AB) and all(row.get("case") == row["combo"].split("-")[1] for row in ab)
     firsts = [m for row in ab for m in row["proxy"]["firstMove"]]
-    out["proxy A: первый Move ≤ 0,2 с (T01/T06/T08)"] = all(m.get("result") == "moved" and m.get("latency") is not None and m["latency"] <= 0.2
-                                                            for m in firsts) if firsts else None
-    out["proxy A: все Move ≤ 0,2 с"] = all((row["proxy"]["moveLatency"]["max"] or 0) <= 0.2 for row in ab) if ab else None
-    out["proxy A: normalizedTime растёт (>95% кадров того же состояния)"] = all((row["proxy"]["ntGrowthShare"] or 0) > 0.95 for row in ab) if ab else None
-    out["proxy: 0 «doesn't exist»/«Empty animation»"] = all(((row.get("log") or {}).get("missingAnim") or 0) == 0 and
-                                                           ((row.get("log") or {}).get("emptyAnim") or 0) == 0 for row in present) if present else None
-    out["console: 0 ошибок/исключений в case"] = all(((row.get("log") or {}).get("errors") or 0) == 0 and
-                                                     ((row.get("log") or {}).get("exceptions") or 0) == 0 for row in present) if present else None
-    out["стенд: нет InvalidFixture"] = all(row.get("status") != "InvalidFixture" for row in present) if present else None
+    first_covered = ab_covered and all(row["proxy"]["firstMoveCoverage"] for row in ab) and bool(firsts)
+    initial_source_known = first_covered and all(isinstance(m.get("from"), str) and bool(m["from"]) for m in firsts)
+    out["proxy A: исходное состояние первого Move измерено"] = initial_source_known
+    # Наблюдатель мог подключиться уже после Idle: отсутствие from — пробел измерения, а не доказанный неверный переход.
+    out["proxy A: первый Move ≤ 0,2 с (T01/T06/T08)"] = False if not first_covered else (
+        None if not initial_source_known else all(m.get("from") == "Idle" and m.get("result") == "moved" and
+            number(m.get("latency")) and 0 <= m["latency"] <= 0.2 for m in firsts))
+    out["proxy A: все Move ≤ 0,2 с"] = ab_covered and all(row["proxy"]["allMovesOk"] for row in ab)
+    out["proxy A: normalizedTime растёт (>95% кадров того же состояния)"] = ab_covered and all(number(row["proxy"]["ntGrowthShare"]) and row["proxy"]["ntGrowthShare"] > 0.95 for row in ab)
+    out["proxy: 0 «doesn't exist»/«Empty animation»"] = covered and all(zero_log(row.get("log"), ("missingAnim", "emptyAnim")) for row in present)
+    out["console: 0 ошибок/исключений в case"] = covered and all(zero_log(row.get("log"), ("errors", "exceptions")) for row in present)
+    out["стенд: нет InvalidFixture"] = covered and all(row.get("status") in ("Passed", "NeedsReview") for row in present)
+    for phase, names in (("p1", COMBOS[:5]), ("p2", COMBOS[5:])):
+        queue = (queues or {}).get(phase) or {}
+        entries = queue.get("combos") or []
+        out[phase + ": очередь завершена без ошибок, все case получены"] = queue.get("state") == "completed" and "error" in queue and not queue["error"] and \
+            len(entries) == len(names) and {e.get("combo") for e in entries} == set(names) and all(
+                (e.get("status") or {}).get("Total") == 1 and (e.get("status") or {}).get("Completed") == 1 and
+                (e.get("status") or {}).get("Failed") == 0 and (e.get("status") or {}).get("InvalidFixture") == 0 and
+                "Error" in (e.get("status") or {}) and not e["status"]["Error"] for e in entries)
+        out[phase + ": журнал фазы без ошибок/исключений/предупреждений анимации"] = zero_log(queue.get("log"))
+        out[phase + ": наблюдатель onFinished без ошибок"] = isinstance(queue.get("notes"), list) and not any(
+            "onFinished:" in str(note) for note in queue["notes"])
     return out
 
 
 def table(rows, verdict):
     lines = ["# cc1-round1 — сводка стенда", "", "DEVELOPMENT-замер (стенд, сервер без клиентов, Editor worker); не приёмка.", "",
-             "| combo | case | статус | выстр. | попад. | доля | pf-equipment | комплект | камера цели, м | дрейф корня, м | первый Move, с | Move max, с | nt растёт | warn anim | ошибки |",
+             "Move max — только успешные перемещения. Отменённые запросы остаются FAIL в all Move; детали — proxy.movesNotMoved в verdict.json.", "",
+             "| combo | case | статус | выстр. | попад. | доля | pf-equipment | комплект | камера цели, м | дрейф корня, м | первый Move, с | Move max (усп.), с | nt растёт | warn anim | ошибки |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for row in rows:
         if row.get("missing"):
@@ -251,7 +366,7 @@ def main():
     for phase in ("p1", "p2"):
         path = os.path.join(ROOT, "runtime", phase, "queue.json")
         queues[phase] = load(path) if os.path.exists(path) else None
-    verdict = {"root": ROOT, "controller": load(controller[-1]) if controller else None, "checks": checks(rows),
+    verdict = {"root": ROOT, "controller": load(controller[-1]) if controller else None, "checks": checks(rows, queues),
                "queues": {k: (None if v is None else {"state": v.get("state"), "error": v.get("error"), "log": v.get("log"),
                                                        "memory": v.get("memory"), "notes": v.get("notes")}) for k, v in queues.items()},
                "combos": rows,

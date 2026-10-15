@@ -1,0 +1,100 @@
+{
+  "format": "gameplay-owner-test-spec@1",
+  "prepared_on": "2026-10-15",
+  "owner": "gameplay",
+  "stage": "accepted-tests",
+  "status": "Подготовленная декларация владельца; не исполняемая схема production executor",
+  "authority_event": 7375,
+  "executor_binding": {
+    "owner": "agent-coordination-protocol",
+    "status": "Ожидается опубликованный production контракт и подтверждённая готовность маршрута",
+    "direct_unity_cli": false,
+    "alternate_client": false
+  },
+  "request_policy": {
+    "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
+    "baseline": "Перед будущей заявкой fetch/rebase принятого origin/dev с сохранением локальных правок; immutable input обязан содержать актуальную базу брокера.",
+    "lease": "Только штатный broker FIFO request/claim/begin/guard; владение и права сохраняются.",
+    "create_request_now": false,
+    "replay_unknown": false
+  },
+  "tests": {
+    "mode": "EditMode",
+    "assembly": "VrBattlegrounds.Tests.EditMode",
+    "fixture": "VrBattlegrounds.Tests.Arsenal.ArsenalCompositionTeardownTests",
+    "expected_total": 8,
+    "expected_passed": 8
+  },
+  "result_policy": {
+    "require_terminal_result": true,
+    "require_full_nunit_xml": true,
+    "require_editor_log": true,
+    "exit_code_alone_is_verdict": false,
+    "failed": 0,
+    "skipped": 0,
+    "ignored": 0,
+    "allow_unexpected_tests": false,
+    "suppressions": [],
+    "capture_before_finish": true,
+    "timeout_or_receipt_loss": "UNKNOWN; без retry/replay/clear_stuck/recover. Немедленная эскалация infra_issue + подтверждённый Codex канал. Не прерывать активную операцию через finish."
+  },
+  "cleanup": {
+    "capture_before_and_after": [
+      "scene setup, active handle/path, sceneCount, loaded/dirty/rootCount",
+      "не внутренние preview scenes",
+      "UxrGrabManager без создания singleton",
+      "ArsenalStationComposer.Live без обращения к Instance"
+    ],
+    "touch_only_fixture_objects": true,
+    "save_user_scenes": false,
+    "save_source_assets": false,
+    "regenerate_meta_guid": false,
+    "discard_foreign_state": false,
+    "expected_git_asset_delta": [],
+    "finish": "После terminal Result и собственной очистки немедленный finish; анализ/правки/приёмка после освобождения аренды. Для UNKNOWN сначала подтвердить отсутствие активной операции.",
+    "receive": "Только ожидаемые собственные outputs; исходные GUID сохранять."
+  },
+  "prohibitions": [
+    "Самостоятельный ремонт/обход agent-infra, broker/proxy, hooks, MCP, worker или клиента.",
+    "Прямой запуск альтернативного тестового клиента или Unity CLI вне штатного опубликованного исполнителя.",
+    "Повтор старых UNKNOWN по тому же payload, подмена отсутствующего XML зелёным exit code, force-add reports."
+  ],
+  "task_id": "arsenal-unload-teardown",
+  "source_snapshot_sha": "bf104fcb45e3152be18f6d5a883000bc6823f0c8",
+  "source": [
+    {
+      "path": "Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs",
+      "sha256": "08a46006a5b136cc5ace422033d338f8aacf718d0bd0b112fdb64b4fcea1ccee"
+    },
+    {
+      "path": "Assets/Tests/EditMode/Arsenal/ArsenalCompositionTeardownTests.cs.meta",
+      "sha256": "e4973b1eef6dcd4de6de53336c797f6423c2a75263d515b091567b4d128695da",
+      "guid": "ca7b39726bc307049a5bb7c37cf7d2f5"
+    }
+  ],
+  "outputs": {
+    "directory_template": "tasks/arsenal-unload-teardown/reports/cli/{request_id}",
+    "files": [
+      "TestResults.xml",
+      "Editor.log",
+      "executor-receipt.json",
+      "cleanup.json"
+    ],
+    "overwrite_previous_runs": false,
+    "git_tracked": false
+  },
+  "evidence_status": {
+    "mechanic_accepted_sha": "ec0887cf51",
+    "unity_run": {
+      "ticket": 668,
+      "job_id": "c47d9b1953e24feaafbb0eaea853438e",
+      "passed": 8,
+      "total": 8,
+      "failed": 0,
+      "skipped": 0,
+      "report": "tasks/arsenal-unload-teardown/reports/attempt-668.json"
+    },
+    "test_code_acceptance": "Ожидается ответ на уже заданный вопрос; повторный прогон ради нового формата не требуется для текущего доказательства.",
+    "scope_limit": "EditMode разборка синтетических предметов; не runtime сеть и не Quest."
+  }
+}

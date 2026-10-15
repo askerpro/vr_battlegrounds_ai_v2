@@ -146,12 +146,12 @@ function Get-LfsPointerFiles([string] $WorktreePath) {
 
 function Read-UxrIdHash([string] $ProfileBuildDir) {
     $uxrFile = Join-Path $ProfileBuildDir 'uxr-ids.txt'
-    if (-not (Test-Path -LiteralPath $uxrFile)) { return $null }
-    foreach ($line in (Get-Content -LiteralPath $uxrFile -Encoding UTF8)) {
-        if ($line.StartsWith('# sha256: ')) {
-            return $line.Substring('# sha256: '.Length).Trim()
-        }
-    }
+    if (-not (Test-Path -LiteralPath $uxrFile -PathType Leaf)) { return $null }
+    # UxrIdFingerprint.WriteTo записывает hash первой строкой без заголовка.
+    $line = Get-Content -LiteralPath $uxrFile -Encoding UTF8 -TotalCount 1
+    if ($null -eq $line) { return $null }
+    $hash = $line.Trim()
+    if ($hash -match '^[0-9a-fA-F]{16}$') { return $hash }
     return $null
 }
 

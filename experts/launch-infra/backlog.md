@@ -1,3 +1,19 @@
+## Текущий итог — 2026-10-15
+
+quest-perf-pipeline: матрица4checkout завершена,8/8builderPASS,3последнихpipelineexit0;
+исходный Testcoldexit1 сохранён как дефект старогоreader. Testrepeat14мин11с,
+Prodrepeat17мин45с. Все4root clean/free/no-lock, Library/Build сохранены; Testcache hashes
+и creationtimes до/послеProd совпали. Fullresults и694проверенных архивных файлов в taskreports.
+Heartbeat checkout штатно остановлен после матрицы. Readerfix18/18/reviewclean принят15.10,
+пользователь поручил штатное FF-вливание; публикация выполняется.
+DevTools129/129 принят и FF влит6669db54f, публикация737DONE; hub lifecycle merged,
+plan30: DevTools merged → build-checkouts verified0bef1d608, приёмка reader получена.
+Рецепты самостоятельных Test и Windows-rendered E2E
+переданы scene-detail8313/8325; новых GPUзапусков/профилей нет. Общий AGENTScandidate8039
+и оценка build-брокера у сопровождающего; нового build-механизма нет.
+
+Ниже — историческая передача, её старые running/RED/route значения не являются текущим статусом.
+
 ## Обещания другим агентам (передача Codex 2026-10-14)
 
 Возобновление 2026-10-14: хаб подтверждает `vr-test-stand` rev36 (всё merged),
@@ -38,9 +54,11 @@ AndroidCompileGate PASS, Windows build PASS; selftest 19/19 GREEN, map-startup 1
   инструкции всех агентов. Свежий audit4/4 clean,8828LFS,missing0/pointer0; три документированные
   dry-run Test/Prod/QuestE2E exit0. Общая инструкция и допуск общей пары — maintainer7288;
   собственные Docs/release/AGENT обновляются. До назначения пары только dry-run безRef/Unity.
-  Ответ7514: dedicated batch без FIFO/lease интерактивного worker подтверждён, но owner-bound
-  pair reservation отсутствует; сопровождающий принял отдельный инфраструктурный хвост.
-  Worker readiness7457/7492 этот блокер не снимает. Реальные сборки пока не запускались.
+  Решение пользователя15.10 заменило ожидание pair reservation7514: dedicated batch без
+  брокера/очереди, fresh process/log/lock preflight; при занятости повтор по таймеру20–30мин.
+  Сопровождающий8007+Codex получил запрос общего AGENTS и оценки дешёвого build-брокера;
+  новый механизм сейчас не внедряем. Первая Test реально запущена на accepted74bd42f57,
+  сначала Android затемWin64; результат ещё не получен. DevTools-правки явно согласованы.
 - performance: перенести тесты `Release/Tests/**` в `Assets/Tests/EditMode` при удобном случае (5496).
 - agent-infra: обращение 6653 — прежний Claude route другой задачи и view-only owner inbox;
   встроенная MCP-сессия Codex завершена, отдельный штатный proxy-клиент работоспособен.

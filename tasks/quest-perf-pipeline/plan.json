@@ -267,6 +267,30 @@
           "task": "quest-perf-pipeline",
           "stage": "e2e-smoke-kit",
           "state": "merged"
+        },
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "devtools-contract-tests",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "devtools-contract-tests",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs",
+        "Assets/Tests/EditMode/DevTools/DebugBootstrapEditorOnlyTests.cs",
+        "Assets/Tests/EditMode/DevTools/BuildSceneResolverTests.cs",
+        "Assets/Tests/EditMode/DevTools/BuildSceneResolverTests.cs.meta",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        {
+          "task": "quest-perf-pipeline",
+          "stage": "e2e-smoke-kit",
+          "state": "merged"
         }
       ],
       "needs": []

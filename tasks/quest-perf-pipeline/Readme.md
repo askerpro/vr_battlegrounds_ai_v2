@@ -1,99 +1,122 @@
 # Автоматический прогон Quest и каркас E2E
 
-Обновлено: 2026-10-15. Владелец: launch-infra; worktree `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`,
-ветка `codex/vr-test-stand`. Пользователь принял проверенный объём 2026-10-14;
-fast-forward влит в `origin/dev`: `be120d280522321f166484f29d3b3fc81a00e4a5`.
-Проверенная сборка: input `87643327108f`, база `d3c62ca5e`; локальные правки сохранены.
+Обновлено: 2026-10-15. Владелец: launch-infra; worktree
+`F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`.
+План хаба rev30. Режим coordination off; интерактивный Unity требует своей RUNNING lease.
 
 ## Цель и границы
 
-Одна команда: сборка → установка APK → запуск клиента Quest и выделенного ПК-сервера → закрытие →
-логи/артефакты → вердикт. Launch-infra владеет дирижёрами, сборками и каркасом E2E.
-Содержание сценариев — эксперты-потребители; метрики — performance, сценарий серии — gameplay.
-Контракт `quest-device-run` r5; регистрация сценария в E2ERunner проходит ревью launch-infra.
+Одна команда: сборка → APK → Quest-клиент и выделенный ПК-сервер → логи/артефакты → вердикт.
+Launch-infra владеет сборщиками, запуском и каркасом E2E. Содержание сценариев — их эксперты,
+метрики и GPU-инструменты — performance, анализ сцены — её автор. Контракт quest-device-run r5.
 
 ## Статус
 
 | Этап | Состояние |
 |---|---|
-| design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged; e2e-log-verdict принят 2026-10-13 |
-| e2e-smoke-kit | принят пользователем и влит 2026-10-14, be120d280; worker **637 DONE**, input 87643327108f |
-| build-checkouts | развёртывание выполнено93d7dfbc3; инструкция опубликована8eb877915; реальные проверки блокирует missing pair reservation, подтверждение7514 |
+| design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged |
+| e2e-smoke-kit | принят14.10 и влит be120d280; Windows selftest19/19, map-startup14/14 GREEN |
+| build-checkouts | пользователь принял15.10 reader fix,9новых проверок и отчётность; подготовка штатного FF-вливания, матрица8/8builder PASS |
+| devtools-contract-tests | merged6669db54f, принят15.10,129/129PASS; публикация737DONE; lifecycle закрыт штатно |
 
-Принятые исправления: lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
-поля путей PairStatus. Эти исправления приняты вместе с каркасом по fixture 9/9. Сборочные worktree чистые, полностью LFS,
-на 93d7dfbc3; Library/Build отсутствуют — кеши не прогреты. Свежий audit 2026-10-15:
-4/4 clean,8828/8828 LFS present,missing0/pointer0. Antigravity не требуется повторно создавать checkout.
-Пользователь подтвердил следующий объём: реальные сборки и инструменты на этих checkout,
-инструкции всех агентов с готовыми командами. Own Docs/release.md и пакет launch-infra опубликованы
-8eb877915; три точные команды dry-run Test/Prod/QuestE2E прошли. База673 DONE подтверждена.
-Ответ сопровождающего7514: dedicated batch без FIFO/lease интерактивного worker предусмотрен
-решением пользователя14.10, но owner-bound назначения/резервирования общих пар пока нет.
-Это missing capability инфраструктуры, а не отказ нашего builder. Сопровождающий принял
-адресный хвост: назначение Test/Prod пар и batch admission/reservation, затем общий AGENTS candidate.
-До выпуска этого маршрута только dry-run без -Ref/Unity; worker readiness7457/7492 не выдаёт batch-допуск.
-Матрица и критерии результата — [build-checkouts-validation.md](contracts/build-checkouts-validation.md).
-Хаб rev27: client справочно обновлён на Codex, свой native route опубликован epoch6;
-owner/worktree/стадии сохранены. Ожидание ответа включено штатным wait-inbox.
+## Четыре checkout и фактическая матрица
 
-## Свежие проверки
+Развёртывание93d7dfbc3 уже было выполнено; повторно checkout не создавались. Начальный аудит:
+4/4clean,8828LFS present,missing0/pointer0. Выделены постоянные пары
+`F:/CodexWorktrees/build-{test,prod}-{win64,android}/Vr_Battlegrounds_ai`.
+Library создавались первым проходом и сохранялись между проходами.
 
-- ProtocolHarness: **67 passed / 0 failed**; EditorBinding: **0 ошибок / 0 предупреждений**.
-- Launcher fixture: до правок 3/9, после **9/9**, повтор principal 9/9. Независимое ревью без блокирующих замечаний.
-- Сухая маршрутизация Test, Prod и Quest E2E — exit 0; Unity/adb не запускались.
-- AndroidCompileGate в Unity worker: **PASS, errors=[]**. Windows E2E-плеер собран за 71,773 с.
-- `e2e-kit-selftest`: **19/19, enforce GREEN**, сервер + два клиента; один hello на соединение,
-  ready повторно отправлен после reload, Unknown message id = 0, потерь/дублей журнала нет.
-- `map-run-startup-route`: **14/14, enforce GREEN** на базе с исправлением `ec0887cf5`.
-- `dedicated-server-arsenal`: **24/24 функционально**, но **enforce RED, exit 1**:
-  четыре серверные ошибки `teleport-state-unknown-target`. Передано network: 6850.
-- Добавлен счётчик `logVerdict.defects` в summary; исправленный `anchored-ignore-collision-prefab`
-  снят из списка по чистому прогону карты. Неисправленный teleport остаётся дефектом.
-- Проверки log-verdict: **15/15**; повторная обработка полных результатов текущим JSON —
-  GREEN / GREEN / RED (4 дефекта). Summary на реальном RED показывает defects=4.
-- После чистого rebase на 39afa05bd собственные source blobs не изменились: новый SHA
-  be120d280 повторно проверен ProtocolHarness 67/67, EditorBinding 0/0, launcher 9/9 и log-verdict 15/15.
+Все8build на одном runtime SHA `74bd42f5760b5e3f04d2e886a5685a2f52ff3d1d`.
 
-Unity-компиляция и Windows runtime подтверждены; физический Quest и четыре выделенные сборки
-не проверены. Полные логи и результаты — `reports/2026-10-14-status/` вне Git.
+| Проход | Android / Win64 builder | Pipeline exit | Время пары |
+|---|---|---|---|
+| Test cold | PASS / PASS | 1 — исходный дефект UXR reader | 90мин22с |
+| Test repeat | PASS / PASS | 0 | 14мин11с |
+| Prod cold | PASS / PASS | 0 | 85мин28с |
+| Prod repeat | PASS / PASS | 0 | 17мин45с |
 
-## Следующий шаг
+Последний terminal16:33:33MSK. UXR во всех8build одинаковый: `748f8ac1c2e18298`,
+9681id/359files. Время — wall-clock сборок, не Quest FPS или performance gate.
 
-Дождаться исправления network и повторить `dedicated-server-arsenal` на принятой ревизии.
-Ответ 6866: фикс пока только в candidate `01e8b7748d`, их worker 643 ждёт проверки;
-принятого SHA нет, старый прогон не является проверкой этого исправления.
-Каркас и правки дирижёров влиты; gameplay пришлёт id задачи серии,
-после чего снять старый series-smoke-e2e из map-runtime-bootstrap. Отдельно проверить настоящие
-Test/Prod × Windows/Android сборки и сохранение кешей; физический Quest — когда шлем свободен.
+Первый дирижёр ожидал заголовок `# sha256:`, producer пишет raw16hex первой строкой.
+Минимально исправлен только Read-UxrIdHash; writer/manifest не менялись. Регрессии:
+RED15/18 → GREEN18/18, principal18/18; независимое review clean, realmanifest9/9 cases.
+Три последующих реальных pipeline exit0 используют caller SHA256
+`AB74B435E3AA879AC447AA76CCD8EE34FE740FC164EDFD9A95B60378BA49C1BD`.
+Reader принят пользователем15.10 отдельным пакетом; в DevTools commit он не входил.
 
-637 завершена штатно сразу после сборки; плеер сохранён в `Build/e2e-worker-637/`.
-Все процессы трёх прогонов остановлены. Единственный побочный `PC.asset` в результате брокера
-не принят (`accepted=false`), receive не выполнялся; это не отменяет PASS сборки.
+Полный итог: [matrix-result.json](reports/build-checkouts-validation/matrix-result.json),
+[final-checkout-state.json](reports/build-checkouts-validation/final-checkout-state.json).
+Полные8native logs, commands/exit, fingerprints, artifact hashes и generated diff сохранены.
+Архивы Prod cold230files, Test repeat234files, Prod repeat230files проверены source/copy SHA256:
+[artifacts](reports/build-checkouts-validation/artifacts/). Test cold binaries отдельно до repeat
+не копировались; для них сохранены полные логи/manifest/metadata hashes.
 
-## Ждёт пользователя
+После terminal и fresh no-process/no-lock восстановлены только собственные заархивированные
+catalog/UPM-lock/Win64URP generated diff; чужие изменения не затронуты. Все4checkout clean
+на74bd, Library/Build сохранены. Test Library creation times и platform-state SHA256 совпали
+до и после обоих Prod проходов; кеши Test не пересоздавались и платформа не менялась.
+Все четыре повторных native log содержат положительные Local cache hits, включая compiled0variants:
+[cache-reuse-evidence.json](reports/build-checkouts-validation/cache-reuse-evidence.json).
+Heartbeat checkout штатно остановлен (PAUSED) после сохранения результатов.
+Gameplay8213 подтвердил границы cleanup; source callback/catalog — их отдельный кандидат
+catalog-build-derived-state, ручной правки YAML нет.
 
-Проверенный Windows-каркас и инфраструктурные правки приняты ответом
-«Принять проверенный объём (рекомендуется)». Полный арсенальный сценарий остаётся RED
-до исправления network; физический Quest-прогон ещё не выполнен, четыре сборочных кеша не проверены.
+## Принятый DevTools
 
-## Решения пользователя
+Commit `6669db54ff2629c716c2678f67f2c23841c60c93` FF опубликован в origin/dev по прямому
+решению пользователя15.10. Remote SHA проверен, localdev mirror обновлён без переключения
+пользовательской scene-detail. Commit содержит4source/meta и2taskdocs.
 
-- 2026-10-11: автоматический конвейер; Quest — клиент выделенного ПК-сервера.
-- 2026-10-13: ошибки исправлять, не фильтровать; сценарий серии пишет gameplay; e2e-log-verdict принят.
-- 2026-10-14: четыре сборочных worktree Test/Prod × Windows/Android для сохранения кешей;
-  TargetQuest3 пока не включать.
+Проверены JSON roundtrip в изолированном профиле, реальный release resolver input и отказ
+явно запрошенной automation-сцене с компонентом из Editor-only assembly. BotCombatStand остаётся
+Editor/MPPM, его scene/asmdef не менялись. Точный RED727:5/4PASS/1FAIL; затем guard.
+GREEN731/input16e8089:129/129PASS,0fail/skip, job18b567b0dff84e33b368a83985eec52a.
+Cleanup/finish успешны, R945281d39131b6e6455d2c2b5c11a4a19dc40944; full terminal в
+[reports/2026-10-15-devtools-approved](reports/2026-10-15-devtools-approved/).
+Ignored reports в R не captured. После rebase полные Assets/Packages/ProjectSettings trees
+равны проверенному input; EOL issues0. Публикация базы737DONE/published6669db54f по8336.
+Новый namespace129 не объявляется эквивалентом исторических141/139/2.
 
-## Риски
+Историческая721 завершена сопровождающим после compile refusal; её не повторять. Подробности
+в [devtools-validation.md](contracts/devtools-validation.md). Пока build-stage был running,
+DevTools begin не допускался. План30 задаёт фактический порядок публикации: DevTools merged,
+затем build-checkouts. Штатные verify/accept/record-merged DevTools выполнены без обходных флагов;
+build-checkouts verified0bef1d608; пользовательская приёмка получена15.10, SHA публикации оформляется. Receipts:
+[lifecycle-reconcile](reports/lifecycle-reconcile/13-final-own-status.json).
 
-Встроенная MCP-сессия Codex завершена; отдельный штатный клиент работоспособен. Сопровождающий
-исследует EDITOR_DELAYCALL_STALLED. Owner inbox частично view-only из-за старого route другой задачи;
-infra_issue 6653. При отсутствии выделенного пути возможен fallback в текущий checkout; сейчас не сработал.
-629 отменена до claim; 632 CANCELLED после истечения OFFERED, claim отказал, Unity-действий не было.
-637 завершена с диагностическими hello send/receive; результат network передан в событии 6829.
-Хвосты PlayLaunch/-e2eArg/позднего клиента — бэклог 0h.
+## Инструкции и межзадачные ответы
 
-Подробности: [Details.md](Details.md), [план](plan.json),
-[changelog](changelog/2026-10-14-resume-and-launcher-preflight.md). В scope e2e-smoke-kit добавлен
-known-noise.json для согласованного снятия исправленного дефекта. Из-за общих GameBuilder/Docs
-build-checkouts упорядочен после e2e-smoke-kit; в scope каркаса внесены принятые исправления
-двух дирижёров. Чужие этапы/области не изменены.
+Решение пользователя15.10: ordinary dedicated builds без брокера/резервирования. Перед Ref/Unity
+fresh process/log/UnityLockfile preflight обоих root; busy/unknown → native timer20–30мин,
+без второго процесса, изменения SHA или удаления locks. Library сохраняются. Интерактивные
+worker/MCP leases остаются обязательными. Новый механизм сборочного брокера не внедрялся.
+
+Own Docs/release и launch-infra instructions опубликованы8eb877915/934605e1f; dryrun3/3.
+Сопровождающему переданы8007/8039: общий AGENTS candidate и оценка дешёвого build-брокера;
+подтверждения общего выпуска/нового решения пользователя пока нет.
+
+Scene-detail получил8313/8325: существующий E2E Windows rendered-client route, команды
+E2EPlayerBuilder.RunBatch → Run-E2E и пределы PC/Quest; полный static recipe в
+[scene-author-recipe.md](reports/build-checkouts-validation/scene-author-recipe.md).
+Новых профилей/запусков GPU не было. По ответу8394 performance уже опубликовал view-tour
+3b0f41b62: его combined741 AndroidCompileGate PASS,146/146PASS, включая17view-tour.
+Старый static recipe описывает прежний input; launcher Map/views options и загрузка context.Map
+остаются отдельными стыками. Headless GameBuilder.Server не подменяет rendered PC-клиент.
+Performance получил DevTools результаты8230 и принятое вливание8309.
+Завершение матрицы и освобождение checkout переданы performance8453, scene-detail8455,
+сопровождающему8457; оценка build-брокера и общий AGENTS candidate остаются у сопровождающего.
+
+## Осталось
+
+Опубликовать принятый минимальный reader fix с9новыми fixture cases и отчётностью матрицы.
+Далее отдельный собственный dedicated-server-arsenal на принятом network1e945a996:
+исторический наш24/24functional/enforceRED4teleport не заменяет новый прогон, чужой713GREEN24/24
+не является нашим подтверждением. Frozen74bd старше network-исправления.
+Gameplay должен прислать id новой series-smoke задачи; старую map-runtime-bootstrap здесь не менять.
+Физический Quest, GPU/FPS и ввод контроллеров этой batch-матрицей не проверялись.
+TargetQuest3 по решению14.10 остаётся false.
+
+Подробности: [Details.md](Details.md), [plan.json](plan.json),
+[build validation](contracts/build-checkouts-validation.md),
+[DevTools accepted](changelog/2026-10-15-devtools-accepted.md).

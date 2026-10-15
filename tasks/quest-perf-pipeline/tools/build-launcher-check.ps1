@@ -106,6 +106,35 @@ foreach ($case in $cases) {
     $results.Add([pscustomobject]@{ name = $case.name; passed = $passed; serverOutput = $pair.serverOutput; questOutput = $pair.questOutput; pairJson = $pairPath })
 }
 
+# Читаем только реальную функцию из AST: верхний уровень launcher не запускается.
+$tokens = $null; $parseErrors = $null
+$ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $repo 'Tools\release\Build-Game.ps1'), [ref]$tokens, [ref]$parseErrors)
+if ($parseErrors.Count) { throw 'Build-Game parser error' }
+$readers = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Read-UxrIdHash' }, $true))
+if ($readers.Count -ne 1) { throw 'Read-UxrIdHash function not found or ambiguous' }
+. ([scriptblock]::Create($readers[0].Extent.Text))
+$manifestCases = @(
+    # Формат настоящего UxrIdFingerprint.WriteTo, Quest Test от 2026-10-15.
+    @{ name = 'uxr-producer-manifest'; content = "748f8ac1c2e18298`nprofile: Quest`nids: 9681`nfiles: 359`nbuilt: 2026-10-15 13:34:10`n"; want = '748f8ac1c2e18298' },
+    @{ name = 'uxr-trimmed-first-line'; content = "  748F8AC1C2E18298  `nprofile: Quest`n"; want = '748F8AC1C2E18298' },
+    @{ name = 'uxr-missing'; content = $null; want = $null },
+    @{ name = 'uxr-empty'; content = ''; want = $null },
+    @{ name = 'uxr-nonhex'; content = "748f8ac1c2e1829z`n"; want = $null },
+    @{ name = 'uxr-wrong-length'; content = "748f8ac1c2e1829`n"; want = $null },
+    @{ name = 'uxr-legacy-header'; content = "# sha256: 748f8ac1c2e18298`n"; want = $null },
+    @{ name = 'uxr-metadata-first'; content = "profile: Quest`n748f8ac1c2e18298`n"; want = $null },
+    @{ name = 'uxr-blank-first-line'; content = "`n748f8ac1c2e18298`n"; want = $null }
+)
+foreach ($case in $manifestCases) {
+    $buildDir = Join-Path $fixture $case.name
+    $null = New-Item -ItemType Directory -Path $buildDir -Force
+    $manifest = Join-Path $buildDir 'uxr-ids.txt'
+    if ($null -ne $case.content) { [IO.File]::WriteAllText($manifest, $case.content, $utf8) }
+    elseif (Test-Path -LiteralPath $manifest) { Remove-Item -LiteralPath $manifest }
+    $actual = Read-UxrIdHash $buildDir
+    $results.Add([pscustomobject]@{ name = $case.name; passed = ($actual -ceq $case.want); actual = $actual; expected = $case.want; manifest = $manifest })
+}
+
 $summary = [pscustomobject]@{ label = $Label; passed = @($results | Where-Object passed).Count; failed = @($results | Where-Object { -not $_.passed }).Count; results = $results.ToArray() }
 [IO.File]::WriteAllText((Join-Path $ReportDir ($Label + '-summary.json')), ($summary | ConvertTo-Json -Depth 8), $utf8)
 $results | ForEach-Object { Write-Host ('{0}: {1}' -f $_.name, $(if ($_.passed) { 'PASS' } else { 'FAIL' })) }

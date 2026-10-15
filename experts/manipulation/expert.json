@@ -2,9 +2,9 @@
   "schema_version": 2,
   "id": "manipulation",
   "owner": "manipulation",
-  "tasks": ["haptics-system", "grab-authority"],
-  "reviewed_sha": "feae75b5626d51e967882ca3a7df35ef71d6c7a7",
-  "reviewed_at": "2026-10-14",
+  "tasks": ["haptics-system"],
+  "reviewed_sha": "29c96608027e74cb3b922fcaf32bdfd43895df30",
+  "reviewed_at": "2026-10-15",
   "owns": [
     "Assets/Scripts/Haptics/**",
     "Assets/Scripts/Interaction/**",

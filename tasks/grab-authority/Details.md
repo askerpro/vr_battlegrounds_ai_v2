@@ -63,6 +63,12 @@ Git blob исходника4572b77c1fb5db3d114a2219508a514cccd778d6 совпад
 meta2d69d170b981458a8a000a7a540e006fe317ef9b совпадает с R711.
 Android PASS0 и79/79 относятся к worker711 на его снимке; новых измерений после rebase нет.
 
+Принятый commit29c96608027e74cb3b922fcaf32bdfd43895df30 содержит8 собственных файлов.
+Физические/staged LF8/8, issues=[], staged diff-check PASS; исходник/meta сверены с711.
+Verify/accept точного SHA и merge-request c0a1b70856b3433085fb514fe0c5a0f7 epoch3 завершены.
+Merge-execute: merged, push_in_progress=false, remote_head29c966080; независимые ls-remote/fetch совпали.
+Документационное завершение не меняет Assets/Packages/ProjectSettings/Tools принятого коммита.
+
 ## Сверка источников
 
 - Своё рабочее место — linked worktree `F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`, ветка `haptics`.

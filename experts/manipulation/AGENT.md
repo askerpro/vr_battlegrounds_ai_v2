@@ -38,6 +38,7 @@ release, grab networking by network's rules, loose items) plus interaction effec
 - Admission — `Assets/Scripts/Player/PlayerGrabManager.cs`, `GrabRules.cs`.
 - Two hands — `Assets/Scripts/Player/TwoHandGrabPolicy.cs`, `ManipulationConstraints.cs`.
 - Pocket, anchors — `Assets/Scripts/Interaction/UxrMagazinePocket.cs`, `AnchorRole.cs`, `AnchorPlacementReadiness.cs`.
+- Holster calibration scale — `Assets/Scripts/Interaction/HolsterCalibrationScale.cs`; local per-avatar subscriber to `AvatarCalibrationApplier` scale events, no grab-state/network writer.
 - Release, world — `Assets/Scripts/Interaction/OutOfWorldGuard.cs`, `LooseItems.cs`.
 - Vibration — `Assets/Scripts/Haptics/HapticService.cs`, `HapticMixer.cs`, `UnityXRHapticDevice.cs`.
 - Feedback — `Assets/Scripts/Haptics/InteractionFeedback.cs`, `Assets/Prefabs/Feedback/`.

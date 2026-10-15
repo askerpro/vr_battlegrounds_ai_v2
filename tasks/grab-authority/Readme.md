@@ -12,7 +12,7 @@
 | `late-join-anchors` — SDK75 | влит `8306c6a86`, принят по стенду |
 | `death-release-authority` | снят: реализован gameplay `death-body-defer` |
 | `pocket-active-hide` | **влит `feae75b56`** fast-forward в origin/dev; принят пользователем, GREEN 470/470 |
-| `holster-calibration-scale` | принят пользователем2026-10-15 «сразу вливай как есть»; подготовка штатного вливания |
+| `holster-calibration-scale` | **влит `29c966080`** fast-forward в origin/dev; принят пользователем2026-10-15 «сразу вливай как есть» |
 
 ## Принятая архитектура
 
@@ -63,6 +63,8 @@ Worker711 DONE/received, R `ecdc65f8c6`: получен только Unity-gener
 CANCELLED из QUEUED, epoch0, аренды/Play не было; watcher завершён.
 Ветка обновлена до origin/dev74bd42f57. Исходник и meta побайтово совпадают с worker711;
 новый Unity-прогон после обновления базы не заявляется. Ручная проверка Unity/Quest не подтверждена.
+Merge-request `c0a1b70856b3433085fb514fe0c5a0f7`, epoch3: merged, push_in_progress=false,
+remote_head29c966080; свежий fetch/ls-remote подтвердил принятый SHA. Все этапы задачи влиты/сняты.
 
 ## Ограничения и процесс
 

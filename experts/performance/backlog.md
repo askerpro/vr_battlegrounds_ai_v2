@@ -51,6 +51,10 @@
 - weapon-system 6903: будущие точные GPU-фазы `shot-cost: bot` / `shot-cost: away`; producer
   ShotCostScenario ждёт BotShotCostDriver. Runtime-маркеров ещё нет, Editor synthetic probe не заменяет
   Quest-замер. Уточнение внесено в gpu-tool-phases-notes; источник старого T23/T24 для этого не используется.
+- weapon-system8113: SDK80 принят в1e945a996; current after-profile не блокируется before-запросом8101.
+  Historical dd11ca2e→4130bf96 — cache+player log clamp, не reflection-only (Editor no-op);
+  configured/effective logs/DebugMode/verbose и общий overlay обязательны. API scenario/driver отсутствуют,
+  runtime/Quest cost не измерены; существующий метод6203 сохранён в gpu-tool-phases-notes.
 - weapon-system6984: synthetic Editor recorder probe648 PASS по отчёту владельца (345 кадров, 41 emission,
   mismatches0; analyzer warm3/steady38/errors0/warnings11, comparison_complete=false). GC baseline включает
   фон Editor; GC=0, стоимость оружия/сети и Quest не подтверждены. Реальный bot observer ждёт driver/clip-cutover.

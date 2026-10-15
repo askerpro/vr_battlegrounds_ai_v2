@@ -39,6 +39,8 @@
    в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
    README рядом. Нужен weapon-system для замера стоимости выстрела (метод 6156).
+   Уточнение8113: основной after-profile SDK80 не ждёт before8101; пакет cache+player log clamp
+   не reflection-only. Метод6203/log conditions и исходные SHA внесены в contracts/gpu-tool-phases-notes.md.
 3. `docs`: порядок правки `Docs/perf-stress-test.md` согласовать с avatar-ik (legs-ik/`quest-perf` пишет тот же файл).
 
 ## Ждёт пользователя

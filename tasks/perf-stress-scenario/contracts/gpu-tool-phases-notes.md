@@ -27,6 +27,15 @@
 
 ## Рекомендуемый срез реализации после допуска этапа
 
+- Weapon-system8113 / accepted SDK80 в1e945a996: основной текущий shot-cost after-profile не ждёт
+  дополнительной before-базы8101. Historical pair dd11ca2eadbfdd13256f95178f39755595627bdc →
+  4130bf96af4d7c4388348432e677fad849da5cb0 изолирует пакет reflection cache + player log clamp,
+  не reflection-only; Editor policy no-op. Фиксировать configured/effective log levels, DebugMode,
+  verbose flags и одинаковый measurement overlay. Причинный A/B на полном актуальном stack требует
+  отдельного network-owned before delta/grant; самостоятельно Core SDK не откатывать.
+  Метод6203: по два90-shot прогона на view/variant, warm3/steady87, cooling2–3мин;
+  третий повтор при расхождении p50>10%. Scenario/driver/API ещё нет, новых runtime/Quest cost цифр нет.
+  Source spec: F:/CodexWorktrees/weapon-system/Vr_Battlegrounds_ai/tasks/weapon-system/contracts/shot-cost-sdk80-inputs.md.
 - Один или несколько точных имён через `--phases` (отдельные quoted аргументы), явная опция заменяет default.
   Без CSV, regex, нечёткого совпадения и подмены регистра/пробелов. Пример:
   `--phases 'база' 'куклы: по карте' --settle 2 --seconds 10`.

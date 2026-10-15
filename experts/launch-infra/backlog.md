@@ -38,6 +38,9 @@ AndroidCompileGate PASS, Windows build PASS; selftest 19/19 GREEN, map-startup 1
   инструкции всех агентов. Свежий audit4/4 clean,8828LFS,missing0/pointer0; три документированные
   dry-run Test/Prod/QuestE2E exit0. Общая инструкция и допуск общей пары — maintainer7288;
   собственные Docs/release/AGENT обновляются. До назначения пары только dry-run безRef/Unity.
+  Ответ7514: dedicated batch без FIFO/lease интерактивного worker подтверждён, но owner-bound
+  pair reservation отсутствует; сопровождающий принял отдельный инфраструктурный хвост.
+  Worker readiness7457/7492 этот блокер не снимает. Реальные сборки пока не запускались.
 - performance: перенести тесты `Release/Tests/**` в `Assets/Tests/EditMode` при удобном случае (5496).
 - agent-infra: обращение 6653 — прежний Claude route другой задачи и view-only owner inbox;
   встроенная MCP-сессия Codex завершена, отдельный штатный proxy-клиент работоспособен.

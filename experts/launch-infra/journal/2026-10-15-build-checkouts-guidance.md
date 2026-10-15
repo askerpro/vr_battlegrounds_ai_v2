@@ -10,3 +10,11 @@ Own Docs/release.md и AGENT.md дополнены точными команда
 Требуется согласовать RUNNING workerlease из общих правил с dedicatedbatch из Docs;
 до этого только dry-run безRef/Unity. Candidate tasks/quest-perf-pipeline/contracts/build-checkouts-agent-guidance.md.
 Свою инфраструктуру для обхода не создаём. Первые/повторные сборки и Quest ещё открыты.
+
+Сопровождающий7514 подтвердил: исходный dedicated batch не требует аренды интерактивного
+worker, но назначения/owner-bound резервирования пар сейчас нет. Это отдельный адресный
+infra-хвост сопровождающего; восстановление GUI worker7457/7492 не выдаёт batch-capability.
+Собственные матрица/критерии подготовлены в contracts/build-checkouts-validation.md;
+до выпуска batch admission/reservation сохранён запрет Ref/Unity. База инструкций673 DONE.
+У своей задачи штатно обновлён справочный client=codex (rev27), native route epoch6;
+owner/worktree/стадии сохранены. Чужие маршруты и ACK не менялись.

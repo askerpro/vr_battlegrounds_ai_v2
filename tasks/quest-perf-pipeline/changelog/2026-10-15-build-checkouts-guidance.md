@@ -29,3 +29,12 @@ Reviewable candidate общих инструкций — contracts/build-checkou
 Ревью исправило неверное утверждение первоначального draft: Ref+DryRun не переключает checkout
 и не гидратирует LFS; preview использует текущий HEAD. Docs и пример теперь отражают это,
 реальная команда закомментирована до явного batch-допуска и назначения пары по7288.
+
+Ответ владельца7514: dedicated batch без FIFO/lease интерактивного worker — решение пользователя,
+подтверждённое maintainer-handoff.md:79. Отсутствует owner-bound назначение/резервирование пар;
+Build-Game не вызывает broker admission, lockfile — только preflight; worker guard принимает
+только editor_root. Сопровождающий принял отдельный адресный хвост admission/reservation и общего
+AGENTS candidate. Не создаём свой lease/mutex; до выпуска маршрута Ref/Unity не запускаются.
+Это missing capability, не отказ собственных сборочных инструментов. Готовая матрица сохранена
+в contracts/build-checkouts-validation.md, база инструкций673 DONE. Новый native route собственной
+задачи опубликован epoch6 после справочного client=codex (rev27), owner/worktree/стадии сохранены.

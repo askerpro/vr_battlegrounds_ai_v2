@@ -1,7 +1,7 @@
 {
   "task_id": "quest-perf-pipeline",
   "owner": "launch-infra",
-  "client": "claude",
+  "client": "codex",
   "worktree": "F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai",
   "base_sha": "7c42ac5db934ae8ad6f3defb2b6ca1dc2f6367cb",
   "doc_path": "tasks/quest-perf-pipeline/Readme.md",

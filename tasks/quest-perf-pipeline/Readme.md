@@ -18,15 +18,23 @@ fast-forward влит в `origin/dev`: `be120d280522321f166484f29d3b3fc81a00e4a5
 |---|---|
 | design, device-runner, quest-build, e2e-views, e2e-log-verdict, quest-vr-manifest, e2e-head-pose | merged; e2e-log-verdict принят 2026-10-13 |
 | e2e-smoke-kit | принят пользователем и влит 2026-10-14, be120d280; worker **637 DONE**, input 87643327108f |
-| build-checkouts | развёртывание выполнено93d7dfbc3; этап проверки running, новые инструкции готовятся; первые/повторные сборки не проверены |
+| build-checkouts | развёртывание выполнено93d7dfbc3; инструкция опубликована8eb877915; реальные проверки блокирует missing pair reservation, подтверждение7514 |
 
-В текущем diff исправлены lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
+Принятые исправления: lock перед любым `-Ref` checkout/hydrate, отказ при ошибке Git LFS и
 поля путей PairStatus. Эти исправления приняты вместе с каркасом по fixture 9/9. Сборочные worktree чистые, полностью LFS,
 на 93d7dfbc3; Library/Build отсутствуют — кеши не прогреты. Свежий audit 2026-10-15:
 4/4 clean,8828/8828 LFS present,missing0/pointer0. Antigravity не требуется повторно создавать checkout.
 Пользователь подтвердил следующий объём: реальные сборки и инструменты на этих checkout,
-инструкции всех агентов с готовыми командами. Общая инструкция направляется сопровождающему;
-до назначения общей пары разрешён dry-run без -Ref, batch не запускается.
+инструкции всех агентов с готовыми командами. Own Docs/release.md и пакет launch-infra опубликованы
+8eb877915; три точные команды dry-run Test/Prod/QuestE2E прошли. База673 DONE подтверждена.
+Ответ сопровождающего7514: dedicated batch без FIFO/lease интерактивного worker предусмотрен
+решением пользователя14.10, но owner-bound назначения/резервирования общих пар пока нет.
+Это missing capability инфраструктуры, а не отказ нашего builder. Сопровождающий принял
+адресный хвост: назначение Test/Prod пар и batch admission/reservation, затем общий AGENTS candidate.
+До выпуска этого маршрута только dry-run без -Ref/Unity; worker readiness7457/7492 не выдаёт batch-допуск.
+Матрица и критерии результата — [build-checkouts-validation.md](contracts/build-checkouts-validation.md).
+Хаб rev27: client справочно обновлён на Codex, свой native route опубликован epoch6;
+owner/worktree/стадии сохранены. Ожидание ответа включено штатным wait-inbox.
 
 ## Свежие проверки
 

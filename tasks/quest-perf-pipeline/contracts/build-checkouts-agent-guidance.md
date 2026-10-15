@@ -24,3 +24,11 @@ worker lease для Unity-мутаций linked worktree, а Docs/release.md о�
 Проверка развёртывания: четыре clean worktree на93d7dfbc3, role=build,8828 LFS present,
 missing0/pointer0. Library/Build отсутствуют; первые/повторные сборки ещё не доказаны.
 Отчёт: reports/2026-10-15-build-checkouts-antigravity/audit.md.
+
+Ответ владельца7514 (2026-10-15): исходное решение пользователя о dedicated batch без FIFO/lease
+интерактивного worker подтверждено по agent-infra/docs/maintainer-handoff.md:79. Проблема конкретна:
+Build-Game не делает pair reservation до Ref; UnityLockfile — только моментальный preflight.
+Worker lease guard ограничен config.editor_root и не выдаёт capability четырём build roots.
+Root принял отдельный адресный хвост: явное назначение пар + batch admission/reservation,
+затем общий пункт AGENTS отдельным candidate. До этого существующее ограничение noRef/noUnity
+сохраняется. 7457/7492 относятся к GUI worker/MCP, не к этому назначению.

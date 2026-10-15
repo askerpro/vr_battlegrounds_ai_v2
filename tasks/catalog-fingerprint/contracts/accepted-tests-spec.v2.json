@@ -1,0 +1,144 @@
+{
+  "format": "gameplay-owner-test-spec@1",
+  "prepared_on": "2026-10-15",
+  "owner": "gameplay",
+  "stage": "accepted-tests",
+  "status": "Подготовленная декларация владельца; не исполняемая схема production executor",
+  "authority_event": 7375,
+  "executor_binding": {
+    "owner": "agent-coordination-protocol",
+    "status": "Ожидается опубликованный production контракт и подтверждённая готовность маршрута",
+    "direct_unity_cli": false,
+    "alternate_client": false
+  },
+  "request_policy": {
+    "worktree": "F:/CodexWorktrees/gameplay/Vr_Battlegrounds_ai",
+    "baseline": "Перед будущей заявкой fetch/rebase принятого origin/dev с сохранением локальных правок; immutable input обязан содержать актуальную базу брокера.",
+    "lease": "Только штатный broker FIFO request/claim/begin/guard; владение и права сохраняются.",
+    "create_request_now": false,
+    "replay_unknown": false
+  },
+  "tests": {
+    "mode": "EditMode",
+    "assembly": "VrBattlegrounds.Tests.EditMode",
+    "fixture": "VrBattlegrounds.Tests.Maps.MapRunPreflightTests",
+    "expected_total": 7,
+    "expected_passed": 7,
+    "required_cases": [
+      "YAML/meta LF–CRLF (2)",
+      "бинарные байты (1)",
+      "одиночный CR (2)",
+      "загруженная clean Lobby (1)",
+      "загруженная dirty Lobby (1)"
+    ]
+  },
+  "result_policy": {
+    "require_terminal_result": true,
+    "require_full_nunit_xml": true,
+    "require_editor_log": true,
+    "exit_code_alone_is_verdict": false,
+    "failed": 0,
+    "skipped": 0,
+    "ignored": 0,
+    "allow_unexpected_tests": false,
+    "suppressions": [],
+    "capture_before_finish": true,
+    "timeout_or_receipt_loss": "UNKNOWN; без retry/replay/clear_stuck/recover. Немедленная эскалация infra_issue + подтверждённый Codex канал. Не прерывать активную операцию через finish."
+  },
+  "cleanup": {
+    "capture_before_and_after": [
+      "scene setup, active handle/path, sceneCount, loaded/dirty/rootCount",
+      "не внутренние preview scenes",
+      "UxrGrabManager без создания singleton",
+      "ArsenalStationComposer.Live без обращения к Instance"
+    ],
+    "touch_only_fixture_objects": true,
+    "save_user_scenes": false,
+    "save_source_assets": false,
+    "regenerate_meta_guid": false,
+    "discard_foreign_state": false,
+    "expected_git_asset_delta": [],
+    "finish": "После terminal Result и собственной очистки немедленный finish; анализ/правки/приёмка после освобождения аренды. Для UNKNOWN сначала подтвердить отсутствие активной операции.",
+    "receive": "Только ожидаемые собственные outputs; исходные GUID сохранять."
+  },
+  "prohibitions": [
+    "Самостоятельный ремонт/обход agent-infra, broker/proxy, hooks, MCP, worker или клиента.",
+    "Прямой запуск альтернативного тестового клиента или Unity CLI вне штатного опубликованного исполнителя.",
+    "Повтор старых UNKNOWN по тому же payload, подмена отсутствующего XML зелёным exit code, force-add reports."
+  ],
+  "task_id": "catalog-fingerprint",
+  "source": [
+    {
+      "path": "Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs",
+      "sha256": "9ec0d4a6853f2d34b4696a8c5665a6dd9b02c47b11f5948e013257c08f41211e"
+    },
+    {
+      "path": "Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs.meta",
+      "sha256": "e87b58b6a0b962b0ea39dbb1fb2f5d3bb99a5da49064d670127cb8f267f67d2c",
+      "guid": "33a70f46be69a0e4d8d9441943cd0502"
+    }
+  ],
+  "preconditions": [
+    "Idle Editor без Play, компиляции и prefab stage.",
+    "Никаких исходных dirty сцен; при безымянной исходной сцене допускается только одна loaded сцена. Её корни сохраняются без изменений в Additive-пути.",
+    "При parked worker проверять фактическую active scene: source setup[] сам по себе не означает отсутствие пустой сцены."
+  ],
+  "outputs": {
+    "directory_template": "tasks/catalog-fingerprint/reports/cli/{request_id}",
+    "files": [
+      "TestResults.xml",
+      "Editor.log",
+      "executor-receipt.json",
+      "cleanup.json"
+    ],
+    "overwrite_previous_runs": false,
+    "git_tracked": false
+  },
+  "fixture_policy": {
+    "catalog": "Копия только в памяти, создана после открытия Lobby и удерживается HideAndDontSave до DestroyImmediate.",
+    "lobby": "Исходную безымянную сцену с любыми корнями сохранять, Lobby открывать Additive. Закрывать только свою Lobby; восстановить active, проверить идентификаторы исходных корней и setup.",
+    "report": "Предыдущий preflight.json восстановить в finally.",
+    "source_bytes": "Сравнивать scene/MapData/registry/preset/catalog и meta без записи исходных ассетов.",
+    "skipped_is_pass": false
+  },
+  "evidence_status": {
+    "mechanics_accepted_sha": [
+      "e330b6162a",
+      "97a320c88469cb2a74d89adb0a6b6edd23536753"
+    ],
+    "compile_only_passed": true,
+    "latest_unity_run": {
+      "ticket": 684,
+      "job_id": "2b53a24011f7431e8a09505fe0181c01",
+      "summary": {
+        "passed": 5,
+        "total": 7,
+        "failed": 0,
+        "skipped": 2
+      },
+      "report": "tasks/catalog-fingerprint/reports/terminal-result-684.json",
+      "finish": "DONE",
+      "reason": "Оба scene case пропущены старым rootCount==0 guard до Lobby/preflight; guard уточнён с дополнительными preservation assertions."
+    },
+    "previous_red": [
+      {
+        "ticket": 671,
+        "passed": 5,
+        "failed": 2,
+        "skipped": 0
+      },
+      {
+        "ticket": 675,
+        "passed": 5,
+        "failed": 1,
+        "skipped": 1
+      }
+    ],
+    "nunit_current_source_confirmed": false,
+    "test_code_acceptance": "После новой проверки7/7 без пропусков; прежниеUNKNOWN не replay.",
+    "scope_limit": "EditMode preflight/хеши; не две реальные сборки из разных checkout и не Quest."
+  },
+  "revision": 2,
+  "supersedes_spec_sha256": "e9e740c19f84824833f6308ba079b5b9d9cf86af45cf12b3ad4b0c445dfb130d",
+  "source_binding": "Точные SHA256 source/meta ниже; полный Git input SHA публикуется вместе со штатной заявкой."
+}

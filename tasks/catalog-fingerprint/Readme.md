@@ -1,6 +1,6 @@
 # catalog-fingerprint — отпечатки каталога карт и preflight
 
-Владелец — эксперт `gameplay`. Обновлено 2026-10-14 (Codex возобновил работу). Машинный план — [plan.json](plan.json),
+Владелец — эксперт `gameplay`. Обновлено 2026-10-15. Машинный план — [plan.json](plan.json),
 подробности и условия проверки — [Details.md](Details.md).
 
 ## Статус
@@ -9,7 +9,7 @@
 |---|---|---|
 | `env-independent` | влит, принят пользователем 2026-10-12 | origin/dev e330b6162 |
 | `preview-loaded-scene` | принят и влит 2026-10-14; Unity 3/3 preflight PASS, Windows E2E build PASS | origin/dev 97a320c88; stage_merged 6800; база опубликована 639 DONE / 6808 |
-| `accepted-tests` | выполняется в хабе; 7 случаев, compile-only PASS, статическое ревью без блокеров; NUnit ещё не запускался | заявка 650 QUEUED, вход 21cfe21d1d5d |
+| `accepted-tests` | принят пользователем 2026-10-15; Unity694:7/7 PASS, failed/skipped0; подготовка FF-вливания | Input c7ee905d0580; source9ec0d4a6; finish694 DONE |
 
 ## Что сделано
 
@@ -28,15 +28,23 @@
 
 ## Следующий шаг
 
-1. `accepted-tests`: scoped Unity-прогон `Assets/Tests/EditMode/Maps/MapRunPreflightTests.cs`, получение Unity-generated
-   .meta, фактические результаты и отдельная приёмка. 7 случаев: YAML/meta LF–CRLF, бинарные байты, одиночный CR,
-   загруженная чистая / dirty сцена. Каталог клонируется в памяти; setup и отчёт восстанавливаются.
+1. `accepted-tests`: приёмка получена 2026-10-15 («да - вливаем, считай принял»); выполнить принятый коммит
+   и FF-вливание семи тестов, Unity-generated meta и документации этапа. Арсенал уже влит09d514cc2.
+   Unity694 после явных import/readiness/discovery7: 7/7 PASS,39.266314s; полный terminal Result сохранён
+   доcleanup/finish. Finish DONE d76df7621be92d6bf95a1e05c609cdac154376e4, paths[]/unexpected[].
+   Fixture сохраняет исходную безымянную сцену и root IDs, Lobby открывает Additive; assertions прошли.
+   Managers/live/previews0 и setup[] до/после; изменения clean unnamed scene оболочкой NUnit раскрыты в Details.
+   Старый676 остаётся UNKNOWN, не повторялся. Compile-only284refs PASS, ревью текущего source без блокеров.
 2. Результат аренды 84bc9c0de949 содержит только побочный `PC.asset`; `receive` не выполнялся.
 3. Вливание выполнено fast-forward; launch-infra и level-design уведомлены через hub.
+4. По infra_status7375 подготовлена [спецификация владельца v2](contracts/accepted-tests-spec.v2.json):
+   текущие source/meta SHA256,7/7 без пропусков, XML/log outputs и cleanup; immutable checkpoint
+   c7ee905d058091a02360c42f7092073d189b340f. Production CLI executor ещё не опубликован; обычный MCP runner
+   восстановлен сопровождающим (7457). UNKNOWN676 не повторяется.
 
 ## Ждёт пользователя
 
-- Ничего для `preview-loaded-scene`: принят пользователем. `accepted-tests` — отдельная следующая приёмка.
+- Ничего: `accepted-tests` принят, выполняется разрешённая публикация.
 
 ## Решения пользователя
 
@@ -44,6 +52,7 @@
   (одна строка отпечатка лобби вручную, 4912). «принимаю» — `env-independent`.
 - 2026-10-13: «идем по твоим рекомендациям — arsenal пока откладываем» — `preview-loaded-scene` взят в работу.
 - 2026-10-14: «Принимаю, влить (рекомендуется)» в диалоге приёмки текущего прогона — `preview-loaded-scene`.
+- 2026-10-15: «да - вливаем, считай принял» — `accepted-tests`,7тестов, meta и документация этапа.
 
 ## Риски и ловушки
 

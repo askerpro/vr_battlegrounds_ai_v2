@@ -1,0 +1,388 @@
+// Одноразовая authoring-диагностика; выполнять только в собственной RUNNING-аренде.
+// Канонические импортированные fixtures намеренно создаются вне Assets/Prefabs.
+const string runLabel = "asset-id-authoring";
+const string expectedSourceLfSha256 = "";
+const string expectedRoot = "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai";
+var token = System.Guid.NewGuid().ToString("N");
+var failures = new System.Collections.Generic.List<string>();
+var rows = new System.Collections.Generic.List<object>();
+var loadedContents = new System.Collections.Generic.List<UnityEngine.GameObject>();
+var transientObjects = new System.Collections.Generic.List<UnityEngine.GameObject>();
+var registeredAssets = new System.Collections.Generic.Dictionary<string, string>();
+var ownScene = default(UnityEngine.SceneManagement.Scene);
+var originalActive = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+var originalSelection = UnityEditor.Selection.objects;
+int originalPreviewCount = UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount;
+string folder = "Assets/__NetworkAssetIdAuthoringProbe_" + token;
+bool folderCreated = false;
+bool cleanupPassed = false;
+bool bodyCompleted = false;
+bool rootPassed = false;
+string sourceSha256 = null;
+string sourceLfSha256 = null;
+string reportPath = null;
+string cleanupError = null;
+var originalStage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+var validate = typeof(Mirror.NetworkIdentity).GetMethod("OnValidate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+// Broker park может оставить единственную чистую пустую Untitled-сцену.
+bool replaceEmptyServiceScene = originalActive.IsValid() && originalActive.isLoaded
+    && UnityEngine.SceneManagement.SceneManager.sceneCount == 1
+    && UnityEngine.SceneManagement.SceneManager.GetSceneAt(0).handle == originalActive.handle
+    && string.IsNullOrEmpty(originalActive.path) && !originalActive.isDirty
+    && originalActive.rootCount == 0 && originalSelection.Length == 0;
+bool serviceSceneReplaced = false;
+bool serviceSceneRestored = false;
+
+System.Func<string, string> Normalize = (string path) => { return System.IO.Path.GetFullPath(path).Replace('\\', '/').TrimEnd('/'); };
+System.Func<byte[], string> Hash = (byte[] bytes) =>
+{
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+};
+System.Action<bool, string> Check = (bool passed, string name) =>
+{
+    if (!passed) failures.Add(name);
+};
+System.Action<string, System.Action> Attempt = (string name, System.Action action) =>
+{
+    try { action(); }
+    catch (System.Exception exception)
+    {
+        failures.Add(name + ": " + exception.GetBaseException().Message);
+        rows.Add(new { phase = name, exception = exception.ToString(), passed = false });
+    }
+};
+System.Func<string> SceneFingerprint = () =>
+{
+    var scenes = new System.Collections.Generic.List<object>();
+    for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; ++i)
+    {
+        var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+        // Для согласованной замены служебной сцены сравниваем семантику без handle.
+        // В обычном additive-режиме сохраняется и handle исходных сцен.
+        if (replaceEmptyServiceScene)
+            scenes.Add(new { scene.path, scene.name, scene.isLoaded, scene.isDirty, scene.rootCount, scene.buildIndex, scene.isSubScene });
+        else
+            scenes.Add(new { scene.handle, scene.path, scene.name, scene.isLoaded, scene.isDirty, scene.rootCount, scene.buildIndex, scene.isSubScene });
+    }
+    return Newtonsoft.Json.JsonConvert.SerializeObject(scenes);
+};
+System.Func<string, uint> Canonical = (string path) =>
+{
+    return Mirror.NetworkIdentity.AssetGuidToUint(new System.Guid(UnityEditor.AssetDatabase.AssetPathToGUID(path)));
+};
+System.Func<Mirror.NetworkIdentity, uint> RawAssetId = (Mirror.NetworkIdentity identity) =>
+{
+    var serialized = new UnityEditor.SerializedObject(identity);
+    serialized.Update();
+    var property = serialized.FindProperty("_assetId");
+    if (property == null) throw new System.InvalidOperationException("Нет сериализованного _assetId");
+    return unchecked((uint)property.longValue);
+};
+System.Action<string, string, Mirror.NetworkIdentity, uint, bool> Snapshot = (string phase, string path, Mirror.NetworkIdentity identity, uint expected, bool expectScene) =>
+{
+    uint actual = RawAssetId(identity);
+    ulong sceneId = identity.sceneId;
+    bool passed = actual == expected && (expectScene ? sceneId != 0 : sceneId == 0);
+    rows.Add(new { phase, path, passed, assetId = actual, expectedAssetId = expected, sceneId,
+        expectedSceneId = expectScene ? "nonzero" : "zero", instance = identity.GetInstanceID(),
+        persistent = UnityEditor.EditorUtility.IsPersistent(identity), scenePath = identity.gameObject.scene.path,
+        previewScene = UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(identity.gameObject.scene) });
+    Check(passed, phase + ": " + path);
+};
+System.Action<Mirror.NetworkIdentity> InvokeValidate = (Mirror.NetworkIdentity identity) =>
+{
+    if (validate == null) throw new System.MissingMethodException("NetworkIdentity.OnValidate");
+    validate.Invoke(identity, null);
+};
+System.Func<string, string, uint, bool, string> CaptureDisk = (string phase, string path, uint expected, bool variant) =>
+{
+    byte[] bytes = System.IO.File.ReadAllBytes(path);
+    string text = System.Text.Encoding.UTF8.GetString(bytes);
+    var own = System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^  _assetId: (\d+)\s*$");
+    var overrides = System.Text.RegularExpressions.Regex.Matches(text, @"propertyPath: _assetId\r?\n\s+value: (\d+)");
+    var sceneFields = System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^  sceneId: (\d+)\s*$");
+    var sceneOverrides = System.Text.RegularExpressions.Regex.Matches(text, @"propertyPath: sceneId\r?\n\s+value: (\d+)");
+    var ids = new System.Collections.Generic.List<uint>();
+    var ownIds = new System.Collections.Generic.List<uint>();
+    var overrideIds = new System.Collections.Generic.List<uint>();
+    foreach (System.Text.RegularExpressions.Match match in own) { uint value = uint.Parse(match.Groups[1].Value); ownIds.Add(value); ids.Add(value); }
+    foreach (System.Text.RegularExpressions.Match match in overrides) { uint value = uint.Parse(match.Groups[1].Value); overrideIds.Add(value); ids.Add(value); }
+    var sceneIds = new System.Collections.Generic.List<ulong>();
+    foreach (System.Text.RegularExpressions.Match match in sceneFields) sceneIds.Add(ulong.Parse(match.Groups[1].Value));
+    foreach (System.Text.RegularExpressions.Match match in sceneOverrides) sceneIds.Add(ulong.Parse(match.Groups[1].Value));
+    bool passed = expected != 0 && (variant ? overrideIds.Count == 1 : ownIds.Count == 1);
+    foreach (uint id in ids) passed &= id == expected;
+    foreach (ulong id in sceneIds) passed &= id == 0;
+    if (!variant) passed &= sceneFields.Count == 1;
+    string sha256 = Hash(bytes);
+    rows.Add(new { phase, path, passed, expectedAssetId = expected, ownIds, overrideIds, sceneIds, sha256, byteCount = bytes.Length });
+    Check(passed, phase + ": " + path);
+    return sha256;
+};
+System.Action<string> Register = (string path) =>
+{
+    string guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+    if (string.IsNullOrEmpty(guid)) throw new System.InvalidOperationException("Нет GUID: " + path);
+    registeredAssets.Add(path, guid);
+};
+System.Action<string, bool> SeedCanonical = (string path, bool variant) =>
+{
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var identity = root.GetComponent<Mirror.NetworkIdentity>();
+    uint expected = Canonical(path);
+    if (expected == 0) throw new System.InvalidOperationException("Нулевой канон: " + path);
+    // Это явная подготовка исходно корректного импортированного префаба, не исправление результата проверки.
+    var serialized = new UnityEditor.SerializedObject(identity);
+    serialized.Update();
+    serialized.FindProperty("_assetId").longValue = expected;
+    serialized.FindProperty("sceneId").longValue = 0;
+    serialized.ApplyModifiedPropertiesWithoutUndo();
+    UnityEditor.EditorUtility.SetDirty(identity);
+    bool saved;
+    UnityEditor.PrefabUtility.SavePrefabAsset(root, out saved);
+    if (!saved) throw new System.InvalidOperationException("Не сохранён seed: " + path);
+    rows.Add(new { phase = "canonical-seed-explicit", path, assetId = expected, sceneId = 0, purpose = "initially-correct-imported-prefab" });
+    UnityEditor.AssetDatabase.ImportAsset(path, UnityEditor.ImportAssetOptions.ForceUpdate);
+    Snapshot("seed-import-raw", path, UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path).GetComponent<Mirror.NetworkIdentity>(), expected, false);
+    CaptureDisk("seed-import-disk", path, expected, variant);
+};
+System.Action<string, bool> ContentsCycles = (string path, bool variant) =>
+{
+    uint expected = Canonical(path);
+    string firstSave = null;
+    string firstImport = null;
+    for (int cycle = 1; cycle <= 2; ++cycle)
+    {
+        string phase = (variant ? "variant" : "regular") + "-cycle" + cycle;
+        UnityEngine.GameObject contents = null;
+        try
+        {
+            contents = UnityEditor.PrefabUtility.LoadPrefabContents(path);
+            loadedContents.Add(contents);
+            var identity = contents.GetComponent<Mirror.NetworkIdentity>();
+            // Обязательно до reflection/любого потенциально ленивого getter.
+            Snapshot(phase + "-load-immediate", path, identity, expected, false);
+            InvokeValidate(identity);
+            Snapshot(phase + "-explicit-validate", path, identity, expected, false);
+            bool saved;
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(contents, path, out saved);
+            Check(saved, phase + "-save-return");
+            Snapshot(phase + "-after-save-contents", path, identity, expected, false);
+            string savedHash = CaptureDisk(phase + "-save-disk", path, expected, variant);
+            if (cycle == 1) firstSave = savedHash;
+            else
+            {
+                bool stable = savedHash == firstSave;
+                rows.Add(new { phase = phase + "-no-edit-save-byte-stability", path, passed = stable, firstSave, secondSave = savedHash });
+                Check(stable, phase + "-no-edit-save-byte-stability");
+            }
+        }
+        catch (System.Exception exception)
+        {
+            failures.Add(phase + ": " + exception.GetBaseException().Message);
+            rows.Add(new { phase, path, exception = exception.ToString(), passed = false });
+        }
+        finally
+        {
+            if (contents != null)
+            {
+                UnityEditor.PrefabUtility.UnloadPrefabContents(contents);
+                loadedContents.Remove(contents);
+            }
+        }
+        Attempt(phase + "-force-import", () =>
+        {
+            UnityEditor.AssetDatabase.ImportAsset(path, UnityEditor.ImportAssetOptions.ForceUpdate);
+            string importedHash = CaptureDisk(phase + "-import-disk", path, expected, variant);
+            Snapshot(phase + "-import-asset-raw", path, UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path).GetComponent<Mirror.NetworkIdentity>(), expected, false);
+            if (cycle == 1) firstImport = importedHash;
+            else
+            {
+                bool stable = importedHash == firstImport;
+                rows.Add(new { phase = phase + "-import-byte-stability", path, passed = stable, firstImport, secondImport = importedHash });
+                Check(stable, phase + "-import-byte-stability");
+            }
+        });
+    }
+};
+string originalScenes = SceneFingerprint();
+string actualDataPath = Normalize(UnityEngine.Application.dataPath);
+string actualCwd = Normalize(System.Environment.CurrentDirectory);
+try
+{
+    rootPassed = string.Equals(actualDataPath, expectedRoot + "/Assets", System.StringComparison.OrdinalIgnoreCase)
+        && string.Equals(actualCwd, expectedRoot, System.StringComparison.OrdinalIgnoreCase);
+    if (!rootPassed) throw new System.InvalidOperationException("Root guard: " + actualDataPath + " ; " + actualCwd);
+    reportPath = expectedRoot + "/Temp/NetworkAssetIdAuthoringProbe/" + runLabel + "-" + token + ".json";
+    sourceSha256 = Hash(System.IO.File.ReadAllBytes("Assets/ThirdParty/Mirror/Core/NetworkIdentity.cs"));
+    sourceLfSha256 = Hash(System.Text.Encoding.UTF8.GetBytes(System.IO.File.ReadAllText("Assets/ThirdParty/Mirror/Core/NetworkIdentity.cs").Replace("\r\n", "\n")));
+    if (!string.IsNullOrEmpty(expectedSourceLfSha256) && !string.Equals(sourceLfSha256, expectedSourceLfSha256, System.StringComparison.OrdinalIgnoreCase))
+        throw new System.InvalidOperationException("NetworkIdentity source не соответствует immutable input");
+    if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating || originalStage != null)
+        throw new System.InvalidOperationException("Нужен idle edit mode без PrefabStage/compilation/import");
+    if (validate == null) throw new System.MissingMethodException("NetworkIdentity.OnValidate");
+    if (System.IO.Directory.Exists(folder) || System.IO.File.Exists(folder + ".meta") || UnityEditor.AssetDatabase.IsValidFolder(folder))
+        throw new System.InvalidOperationException("Fixture folder уже существует");
+    string folderGuid = UnityEditor.AssetDatabase.CreateFolder("Assets", System.IO.Path.GetFileName(folder));
+    if (string.IsNullOrEmpty(folderGuid)) throw new System.InvalidOperationException("CreateFolder не создал fixture");
+    folderCreated = true;
+    registeredAssets.Add(folder, folderGuid);
+    if (replaceEmptyServiceScene)
+    {
+        var current = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (!current.IsValid() || !current.isLoaded || current.handle != originalActive.handle
+            || UnityEngine.SceneManagement.SceneManager.sceneCount != 1
+            || !string.IsNullOrEmpty(current.path) || current.isDirty || current.rootCount != 0
+            || UnityEditor.Selection.objects.Length != 0 || UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+            throw new System.InvalidOperationException("Служебная пустая сцена изменилась; Single запрещён");
+        ownScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+        serviceSceneReplaced = true;
+        rows.Add(new { phase = "service-scene-replacement", passed = true, originalHandle = originalActive.handle, ownHandle = ownScene.handle,
+            reason = "single clean loaded untitled scene, zero roots and empty selection", comparison = "semantic snapshot without handle" });
+    }
+    else
+        ownScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+    UnityEngine.SceneManagement.SceneManager.SetActiveScene(ownScene);
+    string regularPath = folder + "/Regular.prefab";
+    string variantPath = folder + "/Variant.prefab";
+    var regular = new UnityEngine.GameObject("NetworkAssetIdAuthoringRegular");
+    transientObjects.Add(regular);
+    regular.AddComponent<Mirror.NetworkIdentity>();
+    bool created;
+    UnityEditor.PrefabUtility.SaveAsPrefabAsset(regular, regularPath, out created);
+    if (!created) throw new System.InvalidOperationException("Не создан regular prefab");
+    Register(regularPath);
+    UnityEngine.Object.DestroyImmediate(regular);
+    SeedCanonical(regularPath, false);
+    var variant = (UnityEngine.GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(regularPath), ownScene);
+    transientObjects.Add(variant);
+    variant.name = "NetworkAssetIdAuthoringVariant";
+    UnityEditor.PrefabUtility.SaveAsPrefabAsset(variant, variantPath, out created);
+    if (!created) throw new System.InvalidOperationException("Не создан variant prefab");
+    Register(variantPath);
+    UnityEngine.Object.DestroyImmediate(variant);
+    var variantAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(variantPath);
+    bool actualVariant = UnityEditor.PrefabUtility.GetPrefabAssetType(variantAsset) == UnityEditor.PrefabAssetType.Variant;
+    rows.Add(new { phase = "variant-type", passed = actualVariant, actualType = UnityEditor.PrefabUtility.GetPrefabAssetType(variantAsset).ToString() });
+    if (!actualVariant) throw new System.InvalidOperationException("Fixture не является variant");
+    SeedCanonical(variantPath, true);
+    Check(Canonical(regularPath) != Canonical(variantPath), "variant-canonical-differs-from-base");
+    ContentsCycles(regularPath, false);
+    ContentsCycles(variantPath, true);
+    Attempt("loose-scene-object", () =>
+    {
+        var loose = new UnityEngine.GameObject("NetworkAssetIdAuthoringLoose");
+        transientObjects.Add(loose);
+        var identity = loose.AddComponent<Mirror.NetworkIdentity>();
+        InvokeValidate(identity);
+        Snapshot("loose-scene-object", "own-diagnostic-scene", identity, 0, true);
+    });
+    foreach (string path in new[] { regularPath, variantPath })
+    {
+        Attempt("scene-instance:" + path, () =>
+        {
+            var instance = (UnityEngine.GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path), ownScene);
+            transientObjects.Add(instance);
+            var identity = instance.GetComponent<Mirror.NetworkIdentity>();
+            InvokeValidate(identity);
+            Snapshot("scene-instance", path, identity, Canonical(path), true);
+        });
+    }
+    bodyCompleted = true;
+}
+catch (System.Exception exception)
+{
+    failures.Add("probe: " + exception.GetBaseException().Message);
+    rows.Add(new { phase = "probe", passed = false, exception = exception.ToString() });
+}
+finally
+{
+    // Только зарегистрированные собственные объекты/пути. Чужие стадии/сцены/статики не трогаем.
+    foreach (var contents in loadedContents.ToArray()) Attempt("cleanup-unload", () =>
+    {
+        if (contents != null) UnityEditor.PrefabUtility.UnloadPrefabContents(contents);
+        loadedContents.Remove(contents);
+    });
+    foreach (var instance in transientObjects) Attempt("cleanup-destroy", () =>
+    {
+        if (instance != null && !UnityEditor.EditorUtility.IsPersistent(instance) && ownScene.IsValid() && instance.scene == ownScene)
+            UnityEngine.Object.DestroyImmediate(instance);
+    });
+    Attempt("cleanup-scene", () =>
+    {
+        if (serviceSceneReplaced)
+        {
+            // После удаления только tracked objects никакие чужие roots/сцены/стадии не закрываем.
+            var current = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!ownScene.IsValid() || !ownScene.isLoaded || current.handle != ownScene.handle
+                || UnityEngine.SceneManagement.SceneManager.sceneCount != 1
+                || !string.IsNullOrEmpty(ownScene.path) || ownScene.rootCount != 0
+                || UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+                throw new System.InvalidOperationException("Собственная Single-сцена содержит чужие roots/сцены/stage или сменила путь; восстановление запрещено");
+            var restored = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+            serviceSceneRestored = restored.IsValid() && restored.isLoaded && string.IsNullOrEmpty(restored.path)
+                && !restored.isDirty && restored.rootCount == 0;
+            rows.Add(new { phase = "service-scene-restoration", passed = serviceSceneRestored, originalHandle = originalActive.handle,
+                replacedHandle = ownScene.handle, restoredHandle = restored.handle, comparison = "semantic snapshot without handle" });
+            if (!serviceSceneRestored) throw new System.InvalidOperationException("Не восстановлена чистая пустая служебная сцена");
+            return;
+        }
+        if (originalActive.IsValid() && originalActive.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(originalActive);
+        if (ownScene.IsValid() && ownScene.isLoaded)
+        {
+            if (!string.IsNullOrEmpty(ownScene.path) || ownScene.rootCount != 0)
+                throw new System.InvalidOperationException("Собственная additive-сцена содержит чужие roots или сменила путь; закрытие запрещено");
+            if (!UnityEditor.SceneManagement.EditorSceneManager.CloseScene(ownScene, true))
+                throw new System.InvalidOperationException("Не закрыта собственная additive scene");
+        }
+    });
+    Attempt("cleanup-fixture-folder", () =>
+    {
+        if (!folderCreated) return;
+        foreach (var entry in registeredAssets)
+            if (UnityEditor.AssetDatabase.AssetPathToGUID(entry.Key) != entry.Value)
+                throw new System.InvalidOperationException("GUID ownership mismatch: " + entry.Key);
+        var allowed = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in registeredAssets)
+            if (entry.Key != folder) { allowed.Add(Normalize(entry.Key)); allowed.Add(Normalize(entry.Key + ".meta")); }
+        foreach (string file in System.IO.Directory.GetFiles(folder, "*", System.IO.SearchOption.AllDirectories))
+            if (!allowed.Contains(Normalize(file))) throw new System.InvalidOperationException("Неизвестный файл, папка сохранена: " + file);
+        if (!UnityEditor.AssetDatabase.DeleteAsset(folder)) throw new System.InvalidOperationException("DeleteAsset вернул false");
+    });
+    UnityEditor.Selection.objects = originalSelection;
+    bool scenesRestored = SceneFingerprint() == originalScenes;
+    bool activeRestored = serviceSceneReplaced ? serviceSceneRestored && scenesRestored
+        : UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle == originalActive.handle;
+    bool previewRestored = UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount == originalPreviewCount;
+    bool stageRestored = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() == originalStage;
+    bool selectionRestored = UnityEditor.Selection.objects.Length == originalSelection.Length;
+    var restoredSelection = UnityEditor.Selection.objects;
+    if (selectionRestored)
+        for (int i = 0; i < restoredSelection.Length; ++i) selectionRestored &= restoredSelection[i] == originalSelection[i];
+    bool folderAbsent = !folderCreated || (!System.IO.Directory.Exists(folder) && !System.IO.File.Exists(folder + ".meta") && !UnityEditor.AssetDatabase.IsValidFolder(folder));
+    cleanupPassed = scenesRestored && activeRestored && previewRestored && stageRestored && selectionRestored && folderAbsent && loadedContents.Count == 0;
+    rows.Add(new { phase = "cleanup", passed = cleanupPassed, scenesRestored, activeRestored, previewRestored, stageRestored, selectionRestored, folderAbsent,
+        replaceEmptyServiceScene, serviceSceneReplaced, serviceSceneRestored, sceneComparison = replaceEmptyServiceScene ? "semantic-without-handle" : "exact-handles-and-semantics",
+        previewBefore = originalPreviewCount, previewAfter = UnityEditor.SceneManagement.EditorSceneManager.previewSceneCount,
+        scenesBefore = originalScenes, scenesAfter = SceneFingerprint() });
+    Check(cleanupPassed, "cleanup-state-restoration");
+    cleanupError = cleanupPassed ? null : "Проверьте cleanup rows; сохранённые неизвестные fixtures не удалялись";
+}
+bool overallPassed = bodyCompleted && cleanupPassed && failures.Count == 0;
+var stageInfo = new { attempted = false, reason = "Optional PrefabStage coverage omitted; probe never opens a stage", originalStageOpen = originalStage != null };
+var report = new { passed = overallPassed, executionCompleted = true, bodyCompleted, failureCount = failures.Count, failures, rows, cleanupPassed, cleanupError,
+    sourceSha256, sourceLfSha256, rootPassed, actualDataPath, actualCwd, expectedRoot, stageInfo, replaceEmptyServiceScene, serviceSceneReplaced, serviceSceneRestored,
+    folder, registeredAssets, runLabel, reportPath,
+    unityVersion = UnityEngine.Application.unityVersion, utc = System.DateTime.UtcNow.ToString("O"),
+    scope = "Authoring API probe only; no Play/network/Quest acceptance; raw serialized reads, explicit canonical seeding, no YAML writes" };
+if (rootPassed && reportPath != null)
+{
+    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+    System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+}
+var examples = new System.Collections.Generic.List<string>();
+for (int i = 0; i < failures.Count && i < 10; ++i) examples.Add(failures[i]);
+return new { passed = overallPassed, executionCompleted = true, bodyCompleted, failureCount = failures.Count, examples, rowCount = rows.Count,
+    cleanupPassed, cleanupError, sourceSha256, sourceLfSha256, rootPassed, actualDataPath, actualCwd, stageInfo,
+    replaceEmptyServiceScene, serviceSceneReplaced, serviceSceneRestored, reportPath };

@@ -3,7 +3,7 @@
   "owner": "network",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
-  "base_sha": "04fc9de8875d390ab2fb1ddb4116536aa288a01d",
+  "base_sha": "98eed6c1cc5503fb77ff0d042ede1a10469c54f9",
   "doc_path": "tasks/mirror-preview-scene-objects/Readme.md",
   "title": "Прекратить перезапись _assetId при редакторном сохранении prefab/variant",
   "stages": [
@@ -12,6 +12,7 @@
       "writes": [
         "Assets/ThirdParty/Mirror/Core/NetworkIdentity.cs",
         "Assets/Editor/VR_Battlegrounds/VersionControl/NetworkAssetIdNormalizer.cs",
+        "Assets/Tests/EditMode/Prefabs/NetworkAssetIdOnDiskTests.cs",
         "tasks/mirror-preview-scene-objects/**",
         "experts/network/**"
       ],

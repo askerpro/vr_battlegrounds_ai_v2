@@ -1,11 +1,13 @@
 Обновлено 2026-10-15. Кандидаты вне хаба; порядок — приоритет.
 
-## Следующая задача по прямому выбору пользователя
+## Задача по прямому выбору пользователя
 
 2026-10-15: «после текущей запланируй исправление перезаписи _assetId».
-После исправления текущей AvatarRoot гонки — [mirror-preview-scene-objects](../../tasks/mirror-preview-scene-objects/Readme.md):
-прекратить повторную перезапись _assetId в OnValidate/SetupIDs при LoadPrefabContents/сохранении prefab/variant.
-Сейчас только очередь/план, SDK-патч не начат и номер не зарезервирован; прежний нормализатор не считается root fix.
+AvatarRoot-пакет уже в origin/dev1e945a996. В [mirror-preview-scene-objects](../../tasks/mirror-preview-scene-objects/Readme.md)
+реализован Mirror patch5: preview contents сохраняют собственный _assetId и sceneId0. Unity746 RED20 →748 GREEN0,
+Android0, disk test1/1; пользователь принял результаты2026-10-15. Регрессии Unity750 —3/3 PASS;
+SDK-код, тесты и task docs входят в один принятый пакет для origin/dev.
+Отдельные backlog-части про общий helper, Utils/NetworkScenePostProcess и Play/spawn этой правкой не закрыты.
 
 ## Обещания и ожидания (2026-10-14, передача Claude → Codex)
 

@@ -1,7 +1,21 @@
 # Пакет текущей проверки сетевых исправлений
 
 2026-10-15, network / Codex. Совместная проверка `network-sync-hardening` и `precache-server-guard`.
-Код не принят; этот документ готовит действия и освобождение аренды, но не выдаёт допуск.
+2026-10-15 пользователь прямо разрешил коммит и вливание текущего пакета. Исторические непринятые
+проверки ниже сохраняются с исходной областью доказательств; физическая Quest-приёмка не заявляется.
+
+Подготовка публикации: fetch подтвердил прежнюю базу04fc9de8875d390ab2fb1ddb4116536aa288a01d.
+Технический input0b06728381da4280d074f6c1165cf3158443f242 отличается от проверенного beb0 только
+Assets/Tests/EditMode/Network/RemoteCallHashTests.cs: актуальная сигнатура Cmd(byte[],uint,Guid,sender),
+FNV16 hash43519. Историческая коллизия со старой сигнатурой остаётся без изменений.
+Офлайн read-only проверка фактического player DLL F81261409D250AA67E48EB4D6215D72F3F563069D54E28F29501866FAE252622:
+woven literal новой полной сигнатуры найден в UTF-16 metadata по offset1473162, штатный FNV16 даёт43519.
+Отчёт reports/avatar-root-merge/compiled-command-signature.json; это не новый NUnit-прогон.
+Дополнительный повтор Network/Weapons717 отменён в QUEUED: перед ним длительный первый импорт CLI-пилота716.
+Claim/begin/аренды717 и нового Unity/NUnit-прогона не было. Публикуется по прямому разрешению пользователя,
+данному после отчёта428/429 и Windows24/24; игровой Assets-код совпадает с713, единственная разница —
+ожидание существующего теста, отдельно подтверждённое по production woven DLL. Это не полный GREEN429/429.
+Локальные отчёты в reports/avatar-root-merge/, побочных assets не принимать.
 
 ## Входное состояние и доказательства
 
@@ -170,22 +184,84 @@ MCP/Unity; исправленная версия helper в live Unity после
 
 ## Проект исправления поздних событий аватара
 
+### Выполнение плана: 2026-10-15
+
+Plan: tasks/network-sync-hardening/avatar-root-implementation-plan.md. Spec: contracts/avatar-root-event-admission-v1.md.
+BASE реализации: c7747c753051b141cfe062e73e8f8ffa93664c3e, после rebase на d449f19832b1c2b0f6bb9c9ada3b9db4a4a2b299.
+Пользователь отменил трактовку «вливаем прежний пакет» и прямо поручил сначала исправить гонку, docs отдельно не вливать.
+Push не выполнялся; собственная QUEUED заявка 706 отменена до claim, Unity-операций и lease не было.
+
+Ruling: выполнять inline основным агентом — прямое «исправляй гонку» продолжает одобренный spec/план без нового диалога.
+Ruling: ledger хранится здесь — task material по AGENTS.md находится в tasks/<id>, не в отдельном .superpowers workspace.
+Ruling: новый A/B perf baseline не задерживает первую реализацию — пользователь явно попросил код; старые 651/658
+остаются историей, performance PASS не заявляется, измерения стоимости остаются частью проверки до принятия.
+Ruling: новые/переписанные игровые тесты остаются после пользовательской проверки — явное правило пользователя выше TDD-рецепта.
+Интерфейсы scope/capture/helper из задачи 1 совпадают с входами relay. Helper не владеет spawned/registry;
+counter structs принадлежат двум полям relay, сборки/SDK serializer/engine execution API не меняются.
+
+Задача 0: rebase и сохранение untracked tools выполнены; checkpoint 8c233e89 старого пакета не является кодом гонки.
+Задача 1: добавлены helper + .meta, outgoing capture/revalidate и входные guards Cmd/Rpc; проверки ещё не запускались.
+Задача 2: source review и пакет713 выполнены; Unity/Android PASS,428/429 (один старый Cmd-membership), Windows24/24 GREEN.
+Задача 3: новые детерминированные регрессии и обновление старого hash-membership теста — после приёмки gameplay.
+После checkpoint a551ef40 для review выполнен ещё один штатный rebase на origin/dev04fc9de8 с сохранением WIP
+в stash84c389c4 (резерв оставлен). Новый HEADd92968b1. Принятые Network/MirrorCore/SDKStateSync файлы не менялись;
+helper и relay после восстановления совпали с reviewed input по SHA256. Это не результат Unity-компиляции.
+Source-review новой реализации: reports/avatar-root-implementation-review.md, immutable a551ef40 против c7747c75.
+Critical/Important production defects не найдено. Important: расчёт wire20 неверен — Weaver выбирает WriteVarUInt,
+поэтому 17–21 Б аргументов и отдельно prefix deltas. Ruling: исправить spec/план, штатный codec не менять.
+Minor deferred: CaptureOutgoing на отказе оставляет default scope, поэтому source-log может показывать netId0
+вместо известного реального. На отказ/отправку это не влияет; сохраняем reviewed production bytes до проверки.
+Declined to judge: Unity/Weaver/Quest/perf требуют фактических проверок; child/item/reuse и malicious-server вне v1;
+AOI/barrier восстановление и custom deserializer side effects остаются прежними механизмами, новых нарушений не выявлено;
+task-local mcp_call.py вне нового review и в принятый код не включается. Ни один из этих пределов не объявлен PASS.
+
+### Фактические проверки реализации: 713 и Windows E2E
+
+Input beb0b9ae722c6f74d81b623cd9f71a92b03085bd,713/epoch605. Source SHA256 helper/relay совпали с native readback;
+helper загружен, обе новые сигнатуры имеют4параметра, Editor compilation failed=false; Android Passed=true/Errors0.
+Первый run_tests явно ответил refresh_required/no job started; выполнен штатный refresh_unity до idle,
+затем job0041db6e186a4c4097bc4228a93ec97a вернул полный terminal Result429details:428PASS/1FAIL/0SKIP.
+Fail — только RemoteCallHashTests.Расчёт_хэша_совпадает_с_регистрацией_Mirror: ожидает прежний fullname
+Cmd(byte[],sender). Dynamic collision и исторический collision fixture PASS. Тесты не переписаны, весь suite не GREEN.
+
+E2EPlayerBuilder.Run запущен один раз: native tool reply TimeoutError, но durable windows-build-beb0.json
+Passed=true/87,61с/revisionbeb0b9ae722c. Независимый native BuildReport: Succeeded/0errors/104warnings,
+GUID62c78db2a0c643fa934844bd517d28a6, building/compile/update=false, target19 как до сборки.
+BuildSummary timestamps Kind=Unspecified сохранены без неверной ToUniversalTime freshness-интерпретации.
+Полный экспорт386файлов/2517904655байт; VrBattlegrounds.dll SHA256F81261409D250AA67E48EB4D6215D72F3F563069D54E28F29501866FAE252622.
+До finish сохранены все429details и build/Android proof. Finish713 DONE, R3f37b42c/ref result-713-9d2b50aae3ca4c6e910d136e28d1225d,
+accepted=false, paths/unexpected только Assets/URPDefaultResources/PC.asset; чужой побочный файл не receive/ack/import.
+Runtime1432984, infra_issue7911 + native notification сопровождающему, самостоятельного ремонта нет.
+Окончательное owner-review performance7926, передано сопровождающим7928: три поля PC.asset — generated
+URP-prefilter metadata, exact I/R blobs совпадают с651. Побочку не принимать в source, canonical PC.asset
+сохранить; отдельный candidate не нужен. R713/ref и отчёты сохранены, receive/ACK/import713 не выполнять.
+Сборку не повторять; фактический Succeeded/экспорт/E2E остаются доказательствами в указанной области.
+
+После освобождения: Tools/e2e/results/20261015-104950-dedicated-server-arsenal GREEN/enforce24/24,
+server10+clients7+7, все completed/passed, версия0.1.0+beb0b9ae722c и GUID одинаковы у трёх ролей,
+unexpected/known defects/native/dropped0, logIssuesDropped/stepsDropped0. Свои PID213040/209716/204148 и
+UDP63722/63723 освобождены. Это PC-runtime; отсутствуют physical Quest/perf/host-client proof.
+Счётчики admission в существующий E2E Result не включены, AvatarRoot trace не записана: отрицательная
+Unavailable-ветка не доказана этим GREEN, не называть её runtime PASS. Новые детерминированные проверки после приёмки.
+Raw reports: reports/avatar-root-current/, summary.json; accepted commit/FF push ещё не выполнялись.
+
 После выбора пользователя подготовлен [контракт v1](contracts/avatar-root-event-admission-v1.md).
 Предлагается только scope source UxrAvatar с UxrMirrorAvatar: добавить к relay-пакету Mirror netId и уже
 существующий SDK UniqueId корня. Mirror.spawned остаётся единственным владельцем доступности тела;
 нового флага retirement у gameplay, tombstones и SDK-патча нет. Sender capture/revalidate после gate;
 server проверяет actual-target binding перед Execute/forward, client проверяет пару ID до обычного SDK-вызова.
-Цена фиксированного формата — +20 байт каждому событию, в том числе unscoped; число decode не увеличивается.
+Цена штатных аргументов — +17–21 байт, unscoped17; внешние length prefix и transport отдельно. Число decode прежнее.
 
 Живой root с удалённой ссылкой в аргументах и дочерние target-компоненты вне этого scope сохраняют прежнюю
 строгую обработку. Отсутствие netId называется Unavailable, не доказанным retirement. Проект содержит границы
 доверия серверу, map/reconnect/AOI/final-release и наблюдаемую приёмку. Пользователь 2026-10-15 одобрил проект
-для подготовки [плана реализации](avatar-root-implementation-plan.md). Product/test изменений, реализации,
-SDK reserve или новой Unity-заявки нет. Этап avatar-event-design — только task docs.
+для подготовки [плана реализации](avatar-root-implementation-plan.md). На том шаге product/test изменений,
+SDK reserve и Unity-заявки не было. Позднее пользователь поручил реализацию; её текущее состояние выше.
 
 Отзывы: gameplay7180 — bounded no objections по release/body-swap/map/disconnect; avatar-ik7223 — без
 блокеров при точной проверке CombineIdSource текущего netId (учтено в 7bc8846ba). Performance7191 уточнил
-fanout и модель logical delta: 20*(Ncmd+sum actual RPC recipients)/T, SDK lookup не гарантированно O(1)/zeroalloc.
+fanout; первоначальная формула20 исправлена поздним source-review на сумму16+VarUIntSize(netId) с фактическим
+fanout и prefix deltas. SDK lookup не гарантированно O(1)/zeroalloc.
 SDK GetGuid использует SHA-256 и временные массивы; план сохраняет expected Guid только на синхронный send,
 без постоянного кеша жизни. Это source-review, не runtime/Quest/performance PASS и не formal contract-ack.
 Fetch origin/dev 2026-10-15: 8eb87791541fda68f67bcf99d35bdffb08879d9e; в рассмотренной области относительно

@@ -94,8 +94,9 @@
 - Source-review показал, что для найденных четырёх root events достаточно существующего Mirror.spawned;
   новый gameplay retirement writer не нужен. General NetworkTarget и SDK resolver оставлены отдельными вариантами.
 - Проект v1: netId + существующий IUxrUniqueId.UniqueId корня рядом с прежним SDK byte[]; server actual binding
-  перед forward, client preflight pair check при доверии проверившему payload серверу. Фиксированная цена +20 Б
-  каждому событию сохраняет прежнее число decode и SDK execution context. Реализация ждёт ревью проекта.
+  перед forward, client preflight pair check при доверии проверившему payload серверу. Первоначальная оценка20 Б
+  исправлена review2026-10-15: штатный Weaver uint varint + Guid дают17–21 Б аргументов, prefix/transport отдельно.
+  Прежнее число decode и SDK execution context сохраняются. Пользователь поручил реализацию; код готовится к проверке.
 - Fetch origin/dev `39afa05bd`: scoped accepted diff Network/PlayerAvatars/MirrorCore/UXRStateSync пуст,
   checkout не rebased; прежние runtime результаты остаются привязаны к прежним inputs. Отчёт feasibility в reports/.
 - Свежий Codex listing подтвердил собственный thread UUID; routes двух незавершённых задач опубликованы как

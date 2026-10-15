@@ -1,0 +1,50 @@
+// Пакет readback + существующий Android gate. Запускать только в своей RUNNING аренде.
+string expectedRoot = "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai";
+string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, "..")).Replace('\\', '/');
+if (!string.Equals(root, expectedRoot, System.StringComparison.OrdinalIgnoreCase) ||
+    !string.Equals(System.IO.Path.GetFullPath(System.IO.Directory.GetCurrentDirectory()).Replace('\\', '/'), root,
+        System.StringComparison.OrdinalIgnoreCase))
+    return new { passed = false, wrongRoot = root, error = "Worker root/cwd mismatch; no gate or report write" };
+var asm = typeof(VrBattlegrounds.Network.NetworkStateRelay).Assembly;
+var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+var cmd = typeof(VrBattlegrounds.Network.NetworkStateRelay).GetMethod("CmdComponentStateChanged", flags);
+var rpc = typeof(VrBattlegrounds.Network.NetworkStateRelay).GetMethod("RpcComponentStateChanged", flags);
+var helper = asm.GetType("VrBattlegrounds.Network.AvatarRootEventAdmission");
+System.Func<string, string> hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(path))).Replace("-", "");
+};
+string relayHash = hash(System.IO.Path.Combine(root, "Assets/Scripts/Network/NetworkStateRelay.cs"));
+string helperHash = hash(System.IO.Path.Combine(root, "Assets/Scripts/Network/AvatarRootEventAdmission.cs"));
+bool passed = string.Equals(root, expectedRoot, System.StringComparison.OrdinalIgnoreCase)
+    && !UnityEditor.EditorApplication.isCompiling && !UnityEditor.EditorApplication.isUpdating
+    && !UnityEditor.EditorUtility.scriptCompilationFailed && !UnityEngine.Application.isPlaying
+    && helper != null && cmd != null && cmd.GetParameters().Length == 4
+    && rpc != null && rpc.GetParameters().Length == 4
+    && relayHash == "B9F4C419F7DEAB6EAA8606B66391C9582C2EDA752850C5EDC80C5B98A359D1C4"
+    && helperHash == "B044C0CF1965553B9AC3458D9860EE7C2653D1774C4E9B3C1F8929A8BC69753D";
+var report = new Newtonsoft.Json.Linq.JObject {
+    ["input"] = "beb0b9ae722c6f74d81b623cd9f71a92b03085bd",
+    ["root"] = root,
+    ["preflightPassed"] = passed,
+    ["relaySha256"] = relayHash,
+    ["helperSha256"] = helperHash,
+    ["compiledHelper"] = helper != null,
+    ["assemblyMvid"] = asm.ManifestModule.ModuleVersionId.ToString(),
+    ["activeBuildTarget"] = (int)UnityEditor.EditorUserBuildSettings.activeBuildTarget,
+    ["isCompiling"] = UnityEditor.EditorApplication.isCompiling,
+    ["isUpdating"] = UnityEditor.EditorApplication.isUpdating,
+    ["compilationFailed"] = UnityEditor.EditorUtility.scriptCompilationFailed
+};
+if (passed) {
+    var gate = VrBattlegrounds.EditorTools.AndroidCompileGate.Run();
+    report["android"] = Newtonsoft.Json.Linq.JObject.FromObject(gate);
+    report["passed"] = gate.Passed && gate.Errors.Count == 0;
+} else {
+    report["passed"] = false;
+}
+string directory = System.IO.Path.Combine(root, "tasks/network-sync-hardening/reports/avatar-root-current");
+System.IO.Directory.CreateDirectory(directory);
+string reportPath = System.IO.Path.Combine(directory, "preflight-android-beb0.json");
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { passed = (bool)report["passed"], preflightPassed = passed, android = report["android"], reportPath };

@@ -56,10 +56,10 @@ namespace VrBattlegrounds.Tests.Network
         [Test]
         public void Расчёт_хэша_совпадает_с_регистрацией_Mirror()
         {
-            // 14651 — ключ, под которым Mirror зарегистрировал команду в живой игре (RemoteProcedureCalls, 2026-10-06).
+            // Аргументы допуска корня аватара входят в полное имя, которое регистрирует Weaver.
             string relay = FullName(typeof(NetworkStateRelay), "CmdComponentStateChanged",
-                new[] { typeof(byte[]), typeof(NetworkConnectionToClient) });
-            Assert.AreEqual(14651, Hash(relay));
+                new[] { typeof(byte[]), typeof(uint), typeof(Guid), typeof(NetworkConnectionToClient) });
+            Assert.AreEqual(43519, Hash(relay));
             Assert.That(RemoteCalls().Select(call => call.FullName), Has.Member(relay),
                 "Тест не нашёл известную команду — поменялся формат Weaver.");
         }

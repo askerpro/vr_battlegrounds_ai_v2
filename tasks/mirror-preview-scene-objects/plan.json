@@ -1,0 +1,22 @@
+{
+  "task_id": "mirror-preview-scene-objects",
+  "owner": "network",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/network/Vr_Battlegrounds_ai",
+  "base_sha": "04fc9de8875d390ab2fb1ddb4116536aa288a01d",
+  "doc_path": "tasks/mirror-preview-scene-objects/Readme.md",
+  "title": "Прекратить перезапись _assetId при редакторном сохранении prefab/variant",
+  "stages": [
+    {
+      "id": "asset-id-authoring",
+      "writes": [
+        "Assets/ThirdParty/Mirror/Core/NetworkIdentity.cs",
+        "Assets/Editor/VR_Battlegrounds/VersionControl/NetworkAssetIdNormalizer.cs",
+        "tasks/mirror-preview-scene-objects/**",
+        "experts/network/**"
+      ],
+      "after": [{"task": "network-sync-hardening", "stage": "avatar-root-admission", "state": "merged"}],
+      "needs": []
+    }
+  ]
+}

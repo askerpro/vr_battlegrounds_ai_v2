@@ -1,3 +1,4 @@
+using System;
 using Mirror;
 using UltimateXR.Core;
 using UltimateXR.Core.Settings;
@@ -82,6 +83,12 @@ namespace VrBattlegrounds.Network
         ///     См. <see cref="AvatarStateEventGate" />.
         /// </summary>
         private AvatarStateEventGate _gate;
+
+        private AvatarRootAdmissionCounters _serverAvatarRootCounters;
+        private AvatarRootAdmissionCounters _clientAvatarRootCounters;
+
+        internal AvatarRootAdmissionCounters ServerAvatarRootCounters => _serverAvatarRootCounters;
+        internal AvatarRootAdmissionCounters ClientAvatarRootCounters => _clientAvatarRootCounters;
 
 
         // ── Жизненный цикл ────────────────────────────────────────────────
@@ -179,6 +186,8 @@ namespace VrBattlegrounds.Network
             UxrManager.ComponentStateChanged -= HandleComponentStateChanged;
             _subscribed = false;
             _gate?.Clear();
+            _serverAvatarRootCounters = default;
+            _clientAvatarRootCounters = default;
         }
 
         /// <summary>
@@ -229,8 +238,15 @@ namespace VrBattlegrounds.Network
             if (component?.Component is UxrLocomotion && !StateEventAuthority.ShouldSend(component, eventArgs))
                 return;
 
+            var spawned = isServer ? NetworkServer.spawned : NetworkClient.spawned;
+            AvatarRootAdmissionResult captureResult = AvatarRootEventAdmission.CaptureOutgoing(component, spawned, out var capture);
+            if (!AcceptOutgoingAvatarRoot(captureResult, capture.Scope)) return;
+
             byte[] serializedEvent = eventArgs.SerializeEventBinary(component);
             if (serializedEvent == null)
+                return;
+
+            if (!AcceptOutgoingAvatarRoot(AvatarRootEventAdmission.RevalidateOutgoing(in capture, spawned), capture.Scope))
                 return;
 
             // Событие на каждый хват/отпускание/выстрел: строку не собираем, если Verbose
@@ -244,12 +260,12 @@ namespace VrBattlegrounds.Network
 
             if (isServer)
             {
-                RpcComponentStateChanged(serializedEvent, 0u);
+                RpcComponentStateChanged(serializedEvent, 0u, capture.Scope.NetId, capture.Scope.UniqueId);
                 StateEventAuthority.MarkAmmoAdmissionPublished(component, eventArgs);
             }
             else if (NetworkClient.active && NetworkClient.ready)
             {
-                CmdComponentStateChanged(serializedEvent);
+                CmdComponentStateChanged(serializedEvent, capture.Scope.NetId, capture.Scope.UniqueId);
             }
             else
             {
@@ -270,7 +286,8 @@ namespace VrBattlegrounds.Network
         ///     событие всё равно сервер.
         /// </summary>
         [Command(requiresAuthority = false)]
-        private void CmdComponentStateChanged(byte[] serializedEvent, NetworkConnectionToClient sender = null)
+        private void CmdComponentStateChanged(byte[] serializedEvent, uint avatarRootNetId, Guid avatarRootUniqueId,
+                                             NetworkConnectionToClient sender = null)
         {
             // Disconnect снимает соединение немедленно, но его уже разобранный
             // batch может ещё содержать команды. Они не принадлежат живому отправителю.
@@ -282,20 +299,30 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            // Новый admission разрешён только server queue; client-only payload не исполняется и не отражается observers.
+            var scope = new AvatarRootEventScope(avatarRootNetId, avatarRootUniqueId);
+            if (scope.NetId != 0 && scope.UniqueId != Guid.Empty) _serverAvatarRootCounters.ScopedReceived++;
+            AvatarRootAdmissionResult admission = AvatarRootEventAdmission.CheckIncoming(in scope, NetworkServer.spawned, out var root);
+            if (!AcceptIncomingAvatarRoot(admission, in scope, ref _serverAvatarRootCounters, "server")) return;
+
+            // Снятый Mirror root не входит в SDK. Живой root сохраняет прежний строгий decoder и ammo policy.
+            if (scope.NetId != 0) _serverAvatarRootCounters.ScopedDecoderEntered++;
+            // Новый ammo admission разрешён только server queue; client-only payload не исполняется и не отражается observers.
             // Невалидный пакет уже диагностирован декодером: не разбираем его снова
             // и не распространяем ошибку на observers.
             if (!UxrSyncEventArgs.DeserializeEventBinary(serializedEvent, out var target, out var args, out _)) return;
+            admission = AvatarRootEventAdmission.CheckDecodedTarget(in scope, root, target);
+            if (!AcceptIncomingAvatarRoot(admission, in scope, ref _serverAvatarRootCounters, "server")) return;
             if (IsClientAmmoAdmissionPayload(target, args)) return;
             var execution = UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
             if (execution.IsError) return;
+            if (scope.NetId != 0) _serverAvatarRootCounters.ScopedApplied++;
 
             // netId объекта игрока отправителя — метка «кто это породил».
             // Автору событие обратно не применяем: у него оно уже произошло,
             // а повторное исполнение метода (захват, выстрел) сработало бы дважды.
             uint originNetId = sender != null && sender.identity != null ? sender.identity.netId : 0u;
 
-            RpcComponentStateChanged(serializedEvent, originNetId);
+            RpcComponentStateChanged(serializedEvent, originNetId, scope.NetId, scope.UniqueId);
         }
 
         /// <summary>
@@ -306,8 +333,11 @@ namespace VrBattlegrounds.Network
         ///     netId объекта игрока, породившего событие, или 0, если событие
         ///     породил сам сервер. Клиент с этим netId событие пропускает.
         /// </param>
+        /// <param name="avatarRootNetId">Mirror id concrete UxrAvatar root, либо 0 для остальных целей.</param>
+        /// <param name="avatarRootUniqueId">SDK UniqueId того же root; вместе с 0 допустим только Guid.Empty.</param>
         [ClientRpc]
-        private void RpcComponentStateChanged(byte[] serializedEvent, uint originNetId)
+        private void RpcComponentStateChanged(byte[] serializedEvent, uint originNetId,
+                                             uint avatarRootNetId, Guid avatarRootUniqueId)
         {
             // Хост: сервер уже применил событие у себя — либо породил сам,
             // либо применил в Cmd.
@@ -325,7 +355,54 @@ namespace VrBattlegrounds.Network
                 return;
             }
 
-            UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
+            var scope = new AvatarRootEventScope(avatarRootNetId, avatarRootUniqueId);
+            if (scope.NetId != 0 && scope.UniqueId != Guid.Empty) _clientAvatarRootCounters.ScopedReceived++;
+            AvatarRootAdmissionResult admission = AvatarRootEventAdmission.CheckIncoming(in scope, NetworkClient.spawned, out _);
+            if (!AcceptIncomingAvatarRoot(admission, in scope, ref _clientAvatarRootCounters, "client")) return;
+
+            // Сервер уже связал metadata с actual decoded target и переслал те же bytes. На клиенте остаётся
+            // единственный прежний SDK decode/Execute с IsInsideStateSync; direct SyncState недопустим.
+            if (scope.NetId != 0) _clientAvatarRootCounters.ScopedDecoderEntered++;
+            var execution = UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
+            if (!execution.IsError && scope.NetId != 0) _clientAvatarRootCounters.ScopedApplied++;
+        }
+
+        private static bool AcceptOutgoingAvatarRoot(AvatarRootAdmissionResult result, AvatarRootEventScope scope)
+        {
+            if (result == AvatarRootAdmissionResult.Allowed || result == AvatarRootAdmissionResult.Unscoped) return true;
+            if (result == AvatarRootAdmissionResult.Unavailable)
+            {
+                if (GameLog.Network.IsEnabled(LogLevel.Verbose))
+                    GameLog.Network.Verbose($"[NetworkStateRelay] Source AvatarRoot недоступен; отправка отменена (netId={scope.NetId}).");
+            }
+            else
+            {
+                GameLog.Network.Error($"[NetworkStateRelay] Source AvatarRoot: {result}; отправка отменена (netId={scope.NetId}).");
+            }
+            return false;
+        }
+
+        private static bool AcceptIncomingAvatarRoot(AvatarRootAdmissionResult result, in AvatarRootEventScope scope,
+            ref AvatarRootAdmissionCounters counters, string side)
+        {
+            switch (result)
+            {
+                case AvatarRootAdmissionResult.Unscoped:
+                case AvatarRootAdmissionResult.Allowed:
+                    return true;
+                case AvatarRootAdmissionResult.Unavailable:
+                    counters.Unavailable++;
+                    if (GameLog.Network.IsEnabled(LogLevel.Verbose))
+                        GameLog.Network.Verbose($"[NetworkStateRelay] {side}: AvatarRoot недоступен (netId={scope.NetId}); SDK/forward пропущены.");
+                    return false;
+                case AvatarRootAdmissionResult.InvalidEnvelope: counters.InvalidEnvelope++; break;
+                case AvatarRootAdmissionResult.InvalidBinding: counters.InvalidBinding++; break;
+                case AvatarRootAdmissionResult.InvalidAlignment: counters.InvalidAlignment++; break;
+                case AvatarRootAdmissionResult.InvalidRegistry: counters.InvalidRegistry++; break;
+            }
+
+            GameLog.Network.Error($"[NetworkStateRelay] {side}: AvatarRoot {result} (netId={scope.NetId}, UniqueId={scope.UniqueId}); событие отклонено.");
+            return false;
         }
 
         // ── Начальный снимок состояния сцены ──────────────────────────────

@@ -2,9 +2,9 @@
   "schema_version": 2,
   "id": "network",
   "owner": "network",
-  "tasks": ["network-state-review", "precache-server-guard", "network-sync-hardening"],
-  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
-  "reviewed_at": "2026-10-11",
+  "tasks": ["network-state-review", "precache-server-guard", "network-sync-hardening", "mirror-preview-scene-objects"],
+  "reviewed_sha": "0b06728381da4280d074f6c1165cf3158443f242",
+  "reviewed_at": "2026-10-15",
   "owns": [
     "Assets/Scripts/Network/**",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Networking/**",

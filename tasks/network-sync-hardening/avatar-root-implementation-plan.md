@@ -17,7 +17,7 @@ Stateless helper проверяет текущее Mirror.spawned и binding; Mi
 ## Global Constraints
 
 - Scope: concrete `sourceComponent is UxrAvatar`, UxrMirrorAvatar и NetworkIdentity на том же GameObject.
-- Wire: uint avatarRootNetId + Guid avatarRootUniqueId, **20 байт каждому событию**, включая unscoped.
+- Wire: штатные uint avatarRootNetId + Guid avatarRootUniqueId, **17–21 байт аргументов**, unscoped=17; length prefix отдельно.
 - Только `(0, Guid.Empty)` означает unscoped; частичная пара запрещена до ветвления по нулю.
 - Точный CombineIdSource: `netId.ToString().GetGuid()`. Непустого значения недостаточно.
 - SDK byte[] неизменен; прежний ExecuteStateSyncEvent и IsInsideStateSync обязательны; server decode=2, client=1.
@@ -195,13 +195,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/e2e/Run-E2E.ps1 -Scena
   различается только admission и его метаданные. У каждого варианта свои точные SHA/buildGuid, одинаковые внутри ролей.
   NetworkDiagnostics.OutMessageEvent отбирать по CommandMessage/RpcMessage.functionHash именно relay;
   суммировать count и bytes*count. Сохранить Ncmd, фактических RPC recipients, payload-size distribution,
-  scoped/unscoped mix, T; логический прирост `20*(Ncmd + sum actual RPC recipients)/T` Б/с.
+  scoped/unscoped mix, T; логический прирост — сумма `d_i=16+VarUIntSize(rootNetId_i)` по Cmd и фактическим RPC
+  recipients, делённая на T. Для длины прежних аргументов L_i учитывать также
+  `VarUIntSize(L_i+d_i+1)-VarUIntSize(L_i+1)` внешнего payload prefix; Batcher/transport отдельно.
   На B mix брать из wire metadata при обычном Mirror чтении параметров; на A без metadata не разбирать SDK
   payload ради классификации: сопоставлять заданные действия, а точный scoped/unscoped mix A отметить неизвестным.
   Origin handler-skip не убирает wire; transport headers/batching/retransmit/fragmentation/host loopback отдельно.
 - [ ] Снять PerfFrameRecorder CPU/GC/memory и транспортные counters на normal/drop/error/warmup и gate burst
   раздельно. SDK GetGuid использует SHA-256 и временные массивы; untyped registry lookup O(K implementer types)
-  и может чистить dead-owner. Нулевые GC/CPU-издержки не заявлять. Сравнить maximum payload+20 с реальным
+  и может чистить dead-owner. Нулевые GC/CPU-издержки не заявлять. Сравнить полный максимум payload/metadata/prefix с реальным
   лимитом согласованного канала; без усечения. Нового бюджета или числового performance PASS этот план не вводит.
   Если измеренная цена неприемлема, согласовать изменение проекта, не вводить кеш жизни/другой codec скрыто.
 - [ ] Передать пользователю build/SHA, таблицу actual checks и оставшиеся пробелы; дать шаги на физическом Quest:
@@ -227,7 +229,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/e2e/Run-E2E.ps1 -Scena
   Для финального release прежнего spawned root допустимы при уже новом ActiveAvatar; AOI absence только unavailable.
   Использовать существующий MirrorTestHarness и наблюдаемые SDK события/результаты, не добавлять runtime delegates
   в production ради подставного decoder. Если настоящий вызов нельзя наблюдать, тест не объявлять доказанным.
-- [ ] Там же закрепить wire/gate границы: Mirror uint+Guid roundtrip добавляет ровно 20 байт для scoped и unscoped,
+- [ ] Там же закрепить wire/gate границы: штатный woven uint+Guid roundtrip добавляет 16+VarUIntSize(netId) байт,
+  для netId 0/240/241/2287/2288/67823/67824/16777215/16777216/uint.MaxValue проверить размеры 17/17/18/18/19/19/20/20/21/21;
   SDK byte[] побайтно сохранён; payload у фактического лимита канала не усечён, превышение не отправлено частично.
   Burst от AvatarStateEventGate создаёт header в Send после выравнивания каждого root, без повторной отправки;
   partial pair с netId=0 проверяется на клиенте до unscoped Execute. Это тесты Review Focus 1/5, а не новые codec/API.
@@ -246,5 +249,7 @@ payload limit, fanout, CPU/GC/gate burst — 2; пять Review Focus — 2/3. �
 Source-review владельцев: gameplay7180, avatar-ik7223, performance7191; это статический обзор, не ACK приёмки.
 API-аудит: локальный `reports/avatar-root-plan-api-audit.md`; GetGuid/explicit IUxrUniqueId/lookup и stale
 hash-membership проверены по исходникам. Unity/benchmark в ходе подготовки плана не запускались.
+Поправка implementation-review: прежняя константа20 ошибочно предполагала WriteUInt; Weaver выбирает
+WriteVarUInt. Production codec сохраняется, критерии приёмки исправлены на 17–21 Б и отдельные prefix deltas.
 Рекомендуемое исполнение — основным агентом в этой сессии с независимым итоговым review: изменения helper и relay
 тесно связаны, а code scope мал. Пользователь сначала оценивает этот план и выбирает способ исполнения.

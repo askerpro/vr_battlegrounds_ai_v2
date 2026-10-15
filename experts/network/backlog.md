@@ -1,4 +1,11 @@
-Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-15. Кандидаты вне хаба; порядок — приоритет.
+
+## Следующая задача по прямому выбору пользователя
+
+2026-10-15: «после текущей запланируй исправление перезаписи _assetId».
+После исправления текущей AvatarRoot гонки — [mirror-preview-scene-objects](../../tasks/mirror-preview-scene-objects/Readme.md):
+прекратить повторную перезапись _assetId в OnValidate/SetupIDs при LoadPrefabContents/сохранении prefab/variant.
+Сейчас только очередь/план, SDK-патч не начат и номер не зарезервирован; прежний нормализатор не считается root fix.
 
 ## Обещания и ожидания (2026-10-14, передача Claude → Codex)
 
@@ -11,8 +18,9 @@
 Ready, precache=false, childCount/liveCopies=0 в трёх снимках за 92,36 с. Физическая Quest-приёмка pending.
 Поздние ghost events — подтверждённое окно без server-side retirement admission; gameplay 7027 подтвердил
 отсутствие общего retirement-сигнала. Пользователь выбрал проект исправления в этой задаче:
-`contracts/avatar-root-event-admission-v1.md` — AvatarRoot netId+UniqueId, один owner Mirror, +20 Б/event,
-без нового decode/SDK patch. Проект на ревью; реализация не начата.
+`contracts/avatar-root-event-admission-v1.md` — AvatarRoot netId+UniqueId, один owner Mirror, штатные17–21 Б аргументов,
+без нового decode/SDK patch. Код написан, source review без production blockers;713 DONE/Android PASS,
+EditMode428/429 (один старый Cmd-membership), Windows E2E24/24 GREEN. User/Quest и отрицательная ветка pending; вливания нет.
 
 Обещано другим (кому — что — событие):
 - bots (`bots-fix`) и performance (`perf-stress-scenario`): сообщить о вливании `precache-server-guard` — они делают

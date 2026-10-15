@@ -1,0 +1,15 @@
+// Сборка запускается ровно один раз; при потере ответа сначала читать durable result/history, не replay.
+string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, "..")).Replace('\\', '/');
+if (!string.Equals(root, "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai", System.StringComparison.OrdinalIgnoreCase) ||
+    !string.Equals(System.IO.Path.GetFullPath(System.IO.Directory.GetCurrentDirectory()).Replace('\\', '/'), root,
+        System.StringComparison.OrdinalIgnoreCase))
+    return new { passed = false, wrongRoot = root, error = "Worker root/cwd mismatch; no build or report write" };
+var result = VrBattlegrounds.EditorTools.E2EPlayerBuilder.Run();
+var report = Newtonsoft.Json.Linq.JObject.FromObject(result);
+report["input"] = "beb0b9ae722c6f74d81b623cd9f71a92b03085bd";
+report["activeBuildTargetAfter"] = (int)UnityEditor.EditorUserBuildSettings.activeBuildTarget;
+string directory = System.IO.Path.Combine(root, "tasks/network-sync-hardening/reports/avatar-root-current");
+System.IO.Directory.CreateDirectory(directory);
+string reportPath = System.IO.Path.Combine(directory, "windows-build-beb0.json");
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { passed = result.Passed, result.Message, result.Path, result.Seconds, reportPath };

@@ -7,6 +7,15 @@
 
 ## Статус
 
+- 2026-10-15: разрешённая B4-правка применена: Vector3 → массивы координат, потеря listener/coverage
+  делает trace incomplete. После rebase на принятую `47c010277` офлайн: 7 сборок и 9 C#6 payload errors0;
+  analyzer: полная synthetic fixture PASS, 24 ошибочные отвергнуты. Это не Unity/runtime PASS.
+  Round7 `A=aec747179` без borrowed SDK: **732 DONE/receive**, `R=932d9cda5`, только два ожидаемых `.meta`.
+  B0 оборвался `Session terminated`; исходная ошибка сохранена. Сопровождающий8239 независимо доказал
+  **NOT_DELIVERED** по HTTP404 до Unity dispatch. B0/T1/Play не пройдены. Свежий idle guard → renew
+  только для capture/restore → штатный finish/receive; своей аренды больше нет.
+  Следующий вход сохраняет полученные GUID; новая проверка — в конец FIFO и с read-only MCP probe.
+  Детали: changelog/2026-10-15-round7.md; evidence reports/cc1-round7-input/infra732.json.
 - 2026-10-15, canonical8064: `precache-server-guard` принят и влит в `origin/dev`
   `1e945a99673b9726773242f690fcea2032cae2c6`; удалённый SHA проверен через `ls-remote`.
   Зависимость от отсутствующего accepted guard снята. До собственного Unity-запуска нужны
@@ -26,10 +35,10 @@
   Подготовка раннего вливания остановлена; candidate a2576cab не опубликован, активной Unity-аренды нет.
   Выполняются readiness/shot-tail/public Blaze trace и cc-2 закупки, затем новые проверки/матч/демо.
   Точные scope/решения: changelog/2026-10-15-cutover-completion.md. Старые FAIL сохраняются.
-- Хаб revision52: `clip-cutover` RUNNING epoch3 (свежий permit; ACK weapon-use-context r2);
+- Хаб revision52: `clip-cutover` RUNNING epoch3 (ACK weapon-use-context r2; admission не заменяет Unity lease);
   `binding-foundation`, `pf-prototype`, `pf-equipment`, `pf-network` MERGED.
   `armed-development` ACCEPTED; `pilot-split`, `script-brain`, `pf-quest` PLANNED.
-- HEAD `e812a2dfa` содержит принятую B `bb2804607`; при последнем fetch/rebase — 0 позади / 13 впереди.
+- Исторический HEAD `e812a2dfa` содержал принятую B `bb2804607`; тогда — 0 позади / 13 впереди.
   Свои правки восстановлены из сохранённого stash `a7921d04c`, rebase без конфликтов.
   По7614 общий worker позднее перешёл на B `5435b3488`; собственный687 проверял exact Bbb, это разные снимки.
   Registration base_sha остаётся498f284fb; worker669 использовал exactB546/grant4.

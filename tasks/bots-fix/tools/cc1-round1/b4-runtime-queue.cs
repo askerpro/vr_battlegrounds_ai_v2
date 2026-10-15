@@ -284,9 +284,26 @@ Action<VrBattlegrounds.DevTools.BotCombatStand.BotStandCaseResult> onFinished = 
             validityScope = "Только ссылки и activeInHierarchy; калибровка не утверждается. Начальные samples не исключены.",
             rows = targetTrace }));
         System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-blaze-calls.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
-            limit = 50000, dropped = blazeDropped, coverageComplete = blazeDropped == 0,
+            limit = 50000, dropped = blazeDropped,
+            coverageComplete = blazeDropped == 0 && VrBattlegrounds.Bots.BotBlazeDiagnostics.IsSubscribed(blazeSubscription) &&
+                blazeCalls.Any(e => e.Kind == VrBattlegrounds.Bots.BotBlazeDiagnosticKind.ProxyStarted) &&
+                !blazeCalls.Any(e => e.Kind == VrBattlegrounds.Bots.BotBlazeDiagnosticKind.CoverageLost),
             scope = "Public virtual callbacks, включая readiness. Приватный gate и фактический Agent.Move не измерены.",
-            events = blazeCalls }));
+            events = blazeCalls.Select(e => new {
+                kind = e.Kind.ToString(), e.OwnerBodyId, e.ProxyId, e.ProxyGeneration, e.Sequence, e.CallId, e.Result, e.Caller,
+                sample = new { e.Sample.Frame, e.Sample.Time, e.Sample.Realtime, e.Sample.DeltaTime,
+                    position = V3(e.Sample.Position), e.Sample.CurrentHash, e.Sample.CurrentNt, e.Sample.NextHash, e.Sample.NextNt,
+                    e.Sample.TransitionHash, e.Sample.TransitionNt, e.Sample.InTransition, e.Sample.AnimatorValid,
+                    e.Sample.AnimatorEnabled, e.Sample.PreviousRequestedAnimation, state = e.Sample.State.ToString(),
+                    e.Sample.PathReachable, pathCorner = V3(e.Sample.PathCorner), e.Sample.AgentEnabled, e.Sample.OnNavMesh,
+                    e.Sample.IsStopped, e.Sample.PathPending, e.Sample.HasPath, e.Sample.OffMeshLink,
+                    agentPathStatus = e.Sample.AgentPathStatus.ToString(), destination = V3(e.Sample.AgentDestination),
+                    nextPosition = V3(e.Sample.NextPosition), velocity = V3(e.Sample.Velocity),
+                    desiredVelocity = V3(e.Sample.DesiredVelocity), e.Sample.IsAttacking },
+                call = new { destination = V3(e.Call.Destination), e.Call.Animation, e.Call.Direction,
+                    e.Call.TransitionSeconds, e.Call.MoveSpeed, e.Call.TurnSpeed, e.Call.ClosestPointDistance,
+                    e.Call.Overplay, e.Call.AddAsLastPath, e.Call.ForceState, requestedState = e.Call.RequestedState.ToString() }
+            }).ToArray() }));
     } catch (Exception error) { if (notes.Count < 32) notes.Add("onFinished: " + error.Message); }
     finally { caseSession = null; }
 };

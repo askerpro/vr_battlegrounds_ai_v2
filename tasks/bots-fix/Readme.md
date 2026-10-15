@@ -7,6 +7,21 @@
 
 ## Статус
 
+- 2026-10-15, canonical8064: `precache-server-guard` принят и влит в `origin/dev`
+  `1e945a99673b9726773242f690fcea2032cae2c6`; удалённый SHA проверен через `ls-remote`.
+  Зависимость от отсутствующего accepted guard снята. До собственного Unity-запуска нужны
+  fetch/rebase и подтверждённый DONE/base заявки723. Чужие Android713 PASS и Windows713 E2E24/24
+  не заменяют наши M8/M10/S8, perf и Quest. SDK81 остаётся отдельной непринятой зависимостью.
+  Canonical8081 уточняет ServerOnly: фактическая роль `NetworkServer.active && !NetworkClient.active`,
+  scene-load guard до спавна и `UsePrecaching=false`; клиентские realLocal/warmup/abort/latejoin
+  проверяются отдельно. Новый grant SDK81 не выдан, свежие exact B/A и own proofs обязательны.
+  Canonical8089: perf-методика7933 и свежая hybrid baseline обязательны; сетевой overhead
+  `16 + VarUIntSize(netId)` = 17–21 байт (unscoped17) плюс prefix/fanout/transport.
+  Canonical8100: worker716 восстановлен DONE, FIFO продолжилась; production CLI ещё не выпущен,
+  MCP timeout fix f344798 не deployed, delayCall остаётся отдельным открытым симптомом.
+  Текущий локальный HEAD `cb3c61ecc` — технический checkpoint; свежего round7 input и аренды нет.
+  Canonical7961 подтвердил внешний blocker auto-review7947: прежние разрешения человека действуют,
+  повторы отклонённых правок и обход другим инструментом/исполнителем остановлены.
 - 2026-10-15 пользователь поручил полностью завершить clip-cutover (cc-1…cc-5).
   Подготовка раннего вливания остановлена; candidate a2576cab не опубликован, активной Unity-аренды нет.
   Выполняются readiness/shot-tail/public Blaze trace и cc-2 закупки, затем новые проверки/матч/демо.
@@ -145,7 +160,9 @@ E: попадания10/22, PE25/28; target root однажды сместилс
 ## Дальше
 
 1. Диагностика полученных E/PE отчётов; рост CameraFade передан владельцу uxr-precache-once.
-   Продолжение p1/p2 — после accepted guard либо exact immutable grant с проверенными own proofs.
+   Accepted guard опубликован (canonical8064, `origin/dev` `1e945a996`); для продолжения p1/p2
+   нужны собственный fetch/rebase, подтверждение worker DONE/base723 и точный новый input.
+   Borrowed SDK81 требует отдельного exact immutable grant с проверенными own proofs.
    Новые runtime-попытки используют отдельный output root; intent/phase маркеры656 не удалять.
    Grant3 наr52/epoch3/B39af подтверждён7125/7126. Exact audit:55 mutation paths,33 исключения,
    5 recorded own proofs проверены, own_verified entries0. Technical checkpoint — отдельный index,
@@ -166,7 +183,8 @@ E: попадания10/22, PE25/28; target root однажды сместилс
    Weapon-system7282 выбрал partial observer attempt → commit/emission → returned outcome вявной синхронной scope.
    Actual projectile/firstcollision UNAVAILABLE publicAPI; SDKpatch не разрешён, implementation пока не выполнялась.
 2. Зональное ревью и демо пользователю. Затем покупки cc-2, документация cc-4, принятые тесты cc-5.
-3. Матч M8/S8 и late-client замеры — после защиты precache; независимый patch81 пока не принят.
+3. Матч M8/M10/S8 и late-client замеры — после получения worker с принятой защитой precache,
+   выполнения условий SDK-владельца и согласованной perf-методики7933; patch81 пока не принят.
    Обещания другим владельцам и события — [backlog](../../experts/bots/backlog.md).
 
 ## Ждёт пользователя и риски

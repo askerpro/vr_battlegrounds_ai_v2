@@ -40,7 +40,11 @@
   до job_id/итога; DONE/received, paths0, admission освобождён. Infra_issue7008.
   После worker_ready7257/SDKunity-mcp2 пакет670: свежая AndroidCompileGate PASS0, снова plugin disconnect
   до job_id/result; UNKNOWN. DONE/received R a66b06b000ed, paths0; infra_issue7318 отправлен hub+Codex.
-  Runtime VERSION eb4ab1d981654f3bcd64cd4eb546cbcc950370d6; новых заявок до диагноза сопровождающего нет.
+  После7457/7502 пакет688: полныйDevToolsResult141=139PASS/2FAIL/0skip, все17новыхview-tourPASS;
+  discovery141=terminal141. AndroidCompileGate PASS0; DONE/received R30814e4c3966 paths0/unexpected0.
+  ДваFAIL DebugBootstrapEditorOnlyTests (BotCombatStand editor-only в build-сценах, BotCount7→0)
+  направлены launch-infra7591 и bots7592; причина/baseline не установлены, merge ждёт решения владельцев.
+  Runtimef6387f9/server10.2.0+vr2012.de5035a57e7f; новых заявок нет, старыеUNKNOWN не переоценены.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны
   подтверждёнными на Quest. Сбой MCP нашего пакета отправлен сопровождающему (6768).

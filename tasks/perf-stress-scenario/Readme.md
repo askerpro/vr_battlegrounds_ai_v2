@@ -19,27 +19,22 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, блокер EditMode MCP**: runtime принят пользователем; свежий AndroidCompileGate PASS0 (670); новый запуск670 после SDKunity-mcp2 потерял соединение до `job_id`/итога (7318); worker освобождён |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, два отказа DevTools у launch-infra**: runtime принят; AndroidCompileGate PASS0; полный Result688 — 139/141 PASS, все 17 новых PASS; 2 FAIL переданы 7591/7592; worker освобождён |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: worker_ready7457 подтверждает исправленный маршрут run_tests/Result через reload
-   по live proof сопровождающего. Но текущие native resources/templates/list и resources/list
-   отказали до новой заявки: Session terminated (infra_issue7469). Дождаться восстановления
-   штатного MCP-доступа своей сессии, затем подготовить новый ограниченный пакет.
-   Явно завершить import/compile/discovery ДО run_tests; полный terminal Result сохранить
-   ДО finish/reload, итоговые counts брать из Result.summary, не из progress.completed.
-   По infra_status7375 подготовлена `contracts/view-tour-test-spec-v1.json`: неизменяемая
-   спецификация фильтров/17 новых случаев, XML/log/receipt/correlation и cleanup. Это подготовка,
-   не запуск и не утверждение совместимости с пока не выпущенной схемой CLI executor.
-   После worker_ready7257/SDKunity-mcp2 проведён новый независимый пакет670: свежая
-   AndroidCompileGate PASS0; run_tests EditMode/DevTools потерял plugin session до job_id.
-   Исходы634/654/670 UNKNOWN; инфраструктурные smoke-проверки не заменяют результаты DevTools.
-   Никаких retry/replay/clear_stuck/Refresh/саморемонта. Отчёты670 сохранены в ignored reports/;
-   finish без --artifact завершён, R a66b06b000ed, paths0/unexpected0, worker освобождён.
-   Ожидаемое подтверждение: весь DevTools зелёный, включая 17 новых случаев (8 Plan +9 Args).
+1. `view-tour`: дождаться диагноза владельцев по 7591/7592: два отказа
+   `DebugBootstrapEditorOnlyTests` (editor-only BotCombatStand в build-сценах и BotCount expected7/actual0).
+   Их причина/baseline пока не установлены; собственный diff этих тестов/сцены пуст.
+   Чужие тесты/ассеты не менять, ожидания ради GREEN не ослаблять.
+   Пакет688 получил полный Result139PASS/2FAIL/0skip; все17новыхPASS, discovery141=terminal141.
+   Worker DONE/received, R30814e4c39669a9c83310bf5e3377b8f54d54a41 paths0/unexpected0.
+   После исправления/согласованного решения повторить ограниченную проверку новым пакетом.
+   Текущий DevTools RED; прежние634/654/670 остаются UNKNOWN, не повторяются автоматически.
+   Подготовленный CLI-spec — `contracts/view-tour-test-spec-v1.json`; опубликованного CLI executor ещё нет.
+   Ожидаемое подтверждение перед merge: весь DevTools зелёный, включая17новых случаев.
    Затем зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
    в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
@@ -52,6 +47,19 @@
 
 ## Возобновление 2026-10-14
 
+- 2026-10-15 пакет688/input11d9d62cc/basebb28046079/epoch583: явный refresh/compile завершён,
+  AndroidCompileGate PASS0. Полный native discovery141DevTools/3237EditMode, все17новых.
+  run_tests вернул job4d0be5f6a53a47e4965acbbb6c30b96a; terminal Failed(Child), total141,
+  passed139/failed2/skipped0, детали всех141 сохранены до cleanup/finish. Множество terminal leaves
+  точно равно discovery; все17новыхPASS. Cleanup только своего discovery key; finish/receive DONE,
+  R30814e4c3966 paths0/unexpected0. Отказы DebugBootstrapEditorOnlyTests направлены launch-infra7591
+  и bots7592. Полные отчёты — reports/validation-20261015-688/; новых Unity-заявок нет, merge не выполнен.
+- 2026-10-15 диагностика7492→7502: один штатный debug_request_context PASS,
+  затем resources/templates/list PASS6. Фактически server10.2.0+vr2012.de5035a57e7f;
+  ordinary automaticreconnect восстановил доступ, без изменения proxy/config/worker.
+  Полные ответы — reports/preflight-20261015-7469/diagnostic-7492.json.
+  Новый пакет готовится на текущей базе, без повторения старыхUNKNOWN. Отчёты MCP сохраняются
+  в ignored reports напрямую; полного native XML этот MCP API не обещает, CLI-spec остаётся подготовкой.
 - 2026-10-15 после7457: свой route epoch11; fetch/rebase на origin/dev bb28046079 без конфликтов.
   Новая заявка не подавалась: MCP resource preflight вернул Session terminated.
   Infra_issue7469 и PUBLICATION_BUSY автоматической публикации переданы сопровождающему

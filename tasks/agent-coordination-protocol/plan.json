@@ -428,6 +428,11 @@
           "task": "agent-coordination-protocol",
           "stage": "maintenance-fifo-cli-guidance",
           "state": "merged"
+        },
+        {
+          "task": "agent-coordination-protocol",
+          "stage": "ui-zone-task-registration",
+          "state": "merged"
         }
       ],
       "needs": []
@@ -464,6 +469,17 @@
       ],
       "after": [
         {"task": "agent-coordination-protocol", "stage": "mcp-test-job-lifecycle", "state": "merged"}
+      ],
+      "needs": []
+    },
+    {
+      "id": "ui-zone-task-registration",
+      "writes": [
+        "tasks/agent-coordination-protocol/**",
+        "experts/ui/expert.json"
+      ],
+      "after": [
+        {"task": "agent-coordination-protocol", "stage": "maintenance-fifo-cli-guidance", "state": "merged"}
       ],
       "needs": []
     }

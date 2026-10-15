@@ -2,7 +2,9 @@
   "schema_version": 2,
   "id": "ui",
   "owner": "ui",
-  "tasks": [],
+  "tasks": [
+    "debug-menu-refactor"
+  ],
   "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
   "reviewed_at": "2026-10-11",
   "owns": [

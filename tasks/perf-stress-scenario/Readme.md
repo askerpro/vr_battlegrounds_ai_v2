@@ -2,7 +2,7 @@
 
 Обновлено: 2026-10-15 (продолжение в Codex). Владелец: эксперт `performance`. Worktree:
 `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`, ветка `claude/performance` (HEAD — последний коммит ветки;
-работа этапа `view-tour` — 832d7f50f после rebase на origin/dev 54673ba496). Начата по решению пользователя («начинай свою часть»).
+работа этапа `view-tour` — 8cde6946a после rebase на origin/dev bb28046079). Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
 
@@ -25,8 +25,12 @@
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: дождаться диагноза сопровождающего по infra_issue7318 (продолжение7008),
-   затем готовить следующий ограниченный пакет только по подтверждённому маршруту.
+1. `view-tour`: worker_ready7457 подтверждает исправленный маршрут run_tests/Result через reload
+   по live proof сопровождающего. Но текущие native resources/templates/list и resources/list
+   отказали до новой заявки: Session terminated (infra_issue7469). Дождаться восстановления
+   штатного MCP-доступа своей сессии, затем подготовить новый ограниченный пакет.
+   Явно завершить import/compile/discovery ДО run_tests; полный terminal Result сохранить
+   ДО finish/reload, итоговые counts брать из Result.summary, не из progress.completed.
    По infra_status7375 подготовлена `contracts/view-tour-test-spec-v1.json`: неизменяемая
    спецификация фильтров/17 новых случаев, XML/log/receipt/correlation и cleanup. Это подготовка,
    не запуск и не утверждение совместимости с пока не выпущенной схемой CLI executor.
@@ -48,6 +52,11 @@
 
 ## Возобновление 2026-10-14
 
+- 2026-10-15 после7457: свой route epoch11; fetch/rebase на origin/dev bb28046079 без конфликтов.
+  Новая заявка не подавалась: MCP resource preflight вернул Session terminated.
+  Infra_issue7469 и PUBLICATION_BUSY автоматической публикации переданы сопровождающему
+  через canonical inbox+Codex; recovery/reconnect/ремонт не делали. Readonly runtime VERSION
+  f6387f9dd19ff4547e7f98c53e6e4718d5735933. Полный scope — reports/preflight-20261015-7469/.
 - 2026-10-15 после worker_ready7257: свой route epoch9; fetch/rebase origin/dev54673ba496
   без конфликтов, runtime/test diff bd7dd0127→832d7f50f пуст, карта owns/watch без новых изменений.
   Пакет670/input28afff074/epoch566: AndroidCompileGate PASS0, run_tests один раз вернул

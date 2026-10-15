@@ -10,7 +10,7 @@
 8. `default-pipeline` — `ProjectSettings/GraphicsSettings.asset` ссылается на сэмпловый URP-Balanced из ThirdParty; нужен ли свой default — journal 2026-09-28 quest-graphics-baseline.
 9. `ffr-intermediate-texture` — у `Default_Forward_Renderer` Intermediate Texture = Always; не теряет ли FFR основные проходы — `Docs/perf-stress-test.md` «Дальше».
 10. `hand-tracking-permission-name` — Horizon OS: `com.oculus.permission.HAND_TRACKING` устарело, советует `horizonos.permission.HAND_TRACKING` (logcat прогона 2026-10-13); добавить новое имя в `QuestControllerFreeManifest` (Test) и проверку валидатора, проверить запуск без контроллеров на шлеме — зона сборки launch-infra.
-11. `precache-guard-regression` — после вливания network precache-server-guard (f645d72f9): perf-stress с сервером с графикой (редактор/оконный сервер) — mem_mb сервера по фазам ровный, без ступеньки на спавне кукол; в логе «[HeadlessPrecacheGuard] сервер без своего игрока» — network 6326, дефект bots 6233.
+11. `precache-guard-regression` — guard/SDK80/Mirror4/AvatarRoot пакет принят в origin/dev1e945a996 (8066, ls-remote подтверждён). Публикация723 покаQUEUED: перед собственным Unity проверить DONE/актуальнуюB/guard. Будущий perf-stress с сервером с графикой: mem_mb сервера по фазам без ступеньки на спавне кукол; в логе «[HeadlessPrecacheGuard] сервер без своего игрока» — network6326/6332, дефектbots6233. Это доступность source, не новый runtime/perf/Quest PASS.
 
 ## Обещания другим агентам и ожидания (на 2026-10-14, передача Codex)
 
@@ -71,7 +71,7 @@
 - Уточнениеnetwork7023 проверено: history18:04:16Z внутри651 +386files/4hashes +6roleidentity поддерживают
   свежийbuild; прежнийtimestamp mismatch не доказывает stalebuild. Первый functional24/24 RED/unexpected4,
   второй24/24 GREEN/logs0; launchpath неattest, Quest/perfнепроверены. URPdisposition7025 неизменен.
-- network7148 → design review7191: root-event envelope+20B/fanout, lookupO(K), existingdecode2/1 и
+- network7148 → design review7191: draft оценивал root-event envelope+20B; выпущенный1e945a996 использует 16+VarUIntSize(netId)=17–21B аргументов (unscoped17), плюс length-prefix/fanout/transport. LookupO(K), existingdecode2/1 и
   allocation scope сверены. Метод existing A/B согласован с уточнениями, eventrates отсутствуют;
   нет нового гейта/бюджета/perf PASS/разрешения реализации. Humanwrittenreview уnetwork/user.
 - Policy7160 учтена: infra issue hub+проверенный nativeCodex без вопросов;7008 дополнительно уведомлён.

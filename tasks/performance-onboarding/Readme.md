@@ -63,11 +63,17 @@ canonical asset сохранить; отдельный product candidate не н
 network gameplay/build/runtime не принимались. Отчёт: reports/network-7919/urp-prefilter-review.md.
 
 `network-sync-hardening`, проект avatar-root-event-admission-v1: запрос7148 → ответ7191.
-CPU/traffic-модель и существующий метод A/B согласованы с уточнениями: +20B каждому событию,
+CPU/traffic-модель и существующий метод A/B согласованы с уточнениями (draft тогда оценивал +20B),
 фактический RPC fanout; прежние server2/client1 decode; untyped SDK lookup O(K) и allocation scope
 для normal/dead-owner/writer-growth/diagnostics разделены. Observed event rates в draft отсутствуют,
 численных новых бюджетов, perf PASS и разрешения реализации нет. Human written review остаётся у owner/user.
 Отчёт: reports/network-7148/design-perf-review.md (draft8709a407…, source snapshotfb8d736c…, drift0).
+
+Уточнение8066: пакет guard/SDK80/Mirror4/AvatarRoot в origin/dev1e945a996, ls-remote проверен.
+Выпущенный контракт использует 16+VarUIntSize(netId)=17–21B аргументов, unscoped17B,
+плюс возможный рост length prefix, fanout и transport. Прежние20B не текущая wire-оценка.
+Публикация723 на момент проверки QUEUED; CPU/GC/traffic/Quest не измерены. Это source availability,
+не ACK незавершённого служебного receipt8058 и не закрытие независимой SDK-dependency7857/avatar-ik.
 
 `scene-detail`, evidence7186 → подтверждение7220: 252 unique GUID/path =112 protected +140 changed,
 intersection[], duplicates0; все112 meta byte-identical HEADcc485d9bd, все140 меняют только group name.

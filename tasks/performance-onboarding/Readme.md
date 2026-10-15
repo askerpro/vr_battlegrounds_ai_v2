@@ -52,6 +52,12 @@ launch executable path в role JSON не аттестован. Отчёт: repor
 
 ## Ревью 2026-10-15
 
+`agent-coordination-protocol`, asset side effect7919: R713 PC.asset содержит те же input/result
+blobs и три derived prefilter поля, что651. Свежие worker URP17.4.0 hashes совпали;
+UpdateShaderKeywordPrefiltering/SaveAssetIfDirty подтверждены. Решение: побочку не принимать,
+canonical asset сохранить; отдельный product candidate не нужен. Файл/receive/ACK не менялись,
+network gameplay/build/runtime не принимались. Отчёт: reports/network-7919/urp-prefilter-review.md.
+
 `network-sync-hardening`, проект avatar-root-event-admission-v1: запрос7148 → ответ7191.
 CPU/traffic-модель и существующий метод A/B согласованы с уточнениями: +20B каждому событию,
 фактический RPC fanout; прежние server2/client1 decode; untyped SDK lookup O(K) и allocation scope

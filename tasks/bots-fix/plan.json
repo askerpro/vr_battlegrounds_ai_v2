@@ -188,12 +188,7 @@
         "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs",
         "tasks/bots-fix/**",
         "Assets/Resources/Bots/**",
-        "Assets/Tests/EditMode/Bots/**",
-        "Docs/tasks/T-48-bots-match.md",
-        "Docs/tasks/bots-blaze-integration.md",
-        "Docs/tasks/bot-combat-stand.md",
-        "Docs/gameplay.md",
-        "experts/bots/AGENT.md"
+        "Assets/Tests/EditMode/Bots/**"
       ],
       "after": [
         {
@@ -218,6 +213,36 @@
           "readiness": "active"
         }
       ]
+    },
+    {
+      "id": "product-docs",
+      "writes": [
+        "Docs/gameplay.md",
+        "experts/bots/AGENT.md",
+        "tasks/bots-fix/product-docs/**"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-network",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "binding-player-flow-contract",
+      "writes": [
+        "tasks/bots-fix/contracts/weapon-equipment-binding-r3.json"
+      ],
+      "after": [
+        {
+          "task": "bots-fix",
+          "stage": "pf-network",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     },
     {
       "id": "pilot-split",

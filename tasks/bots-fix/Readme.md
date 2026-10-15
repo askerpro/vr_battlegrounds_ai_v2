@@ -7,6 +7,26 @@
 
 ## Статус
 
+- **734 DONE/receive**, A=`932d9cda5`, B=`47c010277`, epoch621, R=`42f37db64992b6dfb3b9a8733bf7c8ec3e80f916`:
+  paths0/unexpected0. Аренда завершена. Без borrowed SDK81. Собственный HEAD=`3274e0b7b`, accepted base=`05506131`.
+  B0/B1 PASS; discovery 8 fixtures/49 Runnable; штатный T1 **49/49 PASS**, missing0/extra0.
+  Console содержит одну известную EditMode ошибку `UxrActor.Destroy`; runtime errors0.
+  PlayLaunch p1/p2: 9 завершённых cases **NeedsReview**, InvalidFixture0; ServerOnly подтверждён,
+  UsePrecaching=false, container count0, роста CameraFade нет.
+  Raw reports: `reports/received734/cc1-round8/`; 100 файлов/53 538 204 байта скопированы после finish,
+  SHA256 mismatch0 (`reports/received734/copy-sha256.json`). Broker artifacts[]; это собственная копия, не broker archive.
+- Свежие эталоны: AK105 shots/hits49/49, PPK73/73; источник emission/Gunner согласован,
+  readiness3 валидных UXR-цикла и условный shot-tail завершены. Начальные невалидные строки сохранены.
+  Полная идентичность/завершение каждого projectile не доказаны. Исторический679 PPK67/68 остаётся FAIL.
+  G death/respawn: foreignDamage1 без event/source journal; причина UNKNOWN, отказ сохранён.
+  Blaze trace показывает реальные шаги proxy у ряда прежних «отменённых» Move; запасной клип не обоснован.
+  Контролируемый explicit Idle→Move и совпадение proxy/body/feet ещё требуют отдельной проверки.
+- Hub **r53**, clip-cutover RUNNING epoch3. TASK_LAYOUT8260 снят по8265: неизменный RUNNING scope,
+  отдельные planned `product-docs` и `binding-player-flow-contract`; legacy Docs/tasks восстановлены к accepted05506131,
+  актуальные документы перенесены в [product-docs](product-docs/T-48-bots-match.md).
+  Binding r3 **PROPOSED** (publication32508b3d), замечания weapon-system8267 учтены; свой ACK записан
+  (publicationd19800ec) после штатного решения lock8288/8294. ACK weapon-system ожидается; active r2 до workflow.
+  [Разбор734](changelog/2026-10-15-round8.md). Ни gameplay, ни cc-1…cc-5 ещё не приняты.
 - 2026-10-15: разрешённая B4-правка применена: Vector3 → массивы координат, потеря listener/coverage
   делает trace incomplete. После rebase на принятую `47c010277` офлайн: 7 сборок и 9 C#6 payload errors0;
   analyzer: полная synthetic fixture PASS, 24 ошибочные отвергнуты. Это не Unity/runtime PASS.
@@ -35,7 +55,7 @@
   Подготовка раннего вливания остановлена; candidate a2576cab не опубликован, активной Unity-аренды нет.
   Выполняются readiness/shot-tail/public Blaze trace и cc-2 закупки, затем новые проверки/матч/демо.
   Точные scope/решения: changelog/2026-10-15-cutover-completion.md. Старые FAIL сохраняются.
-- Хаб revision52: `clip-cutover` RUNNING epoch3 (ACK weapon-use-context r2; admission не заменяет Unity lease);
+- Хаб revision53: `clip-cutover` RUNNING epoch3 (ACK weapon-use-context r2; admission не заменяет Unity lease);
   `binding-foundation`, `pf-prototype`, `pf-equipment`, `pf-network` MERGED.
   `armed-development` ACCEPTED; `pilot-split`, `script-brain`, `pf-quest` PLANNED.
 - Исторический HEAD `e812a2dfa` содержал принятую B `bb2804607`; тогда — 0 позади / 13 впереди.
@@ -167,6 +187,18 @@ E: попадания10/22, PE25/28; target root однажды сместилс
 - Боты входят в minPlayersToStart; матч минимум с двумя командами. Следующие замеры — 8 и 10 ботов.
 
 ## Дальше
+
+Текущий порядок после734:
+
+1. Пассивный bounded журнал DamageReceived/истории тел для G, без изменения прежних hit/foreign counters.
+2. DirectorEquip: отдельный наблюдаемый сценарий штатного Director с AutoEquip=true; доказать один OfferPurchase
+   на body/token, отказ без повторов, сброс round/map/match и второй матч с тем же Mind. Scripted P этого не доказывает.
+3. Новый точный input и FIFO-пакет для оставшихся runtime вопросов; полный матч, M8/M10/S8 и поздний вход
+   по согласованной perf-методике7933 со свежей hybrid baseline. SDK81/shot observer требуют отдельных актуальных grants.
+4. Зональное ревью и демонстрация пользователю. После Unity/headset-приёмки — актуализация тестов cc-5,
+   финальный scoped candidate, проверка и fast-forward публикация origin/dev. До этого не вливать.
+
+Предыдущая последовательность и обращения ниже — исторический журнал до734; текущий порядок указан выше.
 
 1. Диагностика полученных E/PE отчётов; рост CameraFade передан владельцу uxr-precache-once.
    Accepted guard опубликован (canonical8064, `origin/dev` `1e945a996`); для продолжения p1/p2

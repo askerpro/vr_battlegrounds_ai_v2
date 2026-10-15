@@ -1,0 +1,21 @@
+{
+  "summary": "Player-flow ботов использует штатные SDK-кисти; WeaponEquipmentBinding остаётся совместимым legacy foundation без нового production claim.",
+  "motivation": "Убрать прежнее требование clip-only equipment для production ботов: единственный путь тела и снаряжения — BotKit, BotHands, штатные хват, карманы и WeaponUseContext.",
+  "transition_cost": "BotBody больше не реализует IWeaponEquipmentSocketOwner, BotGunner не вызывает TryAttach. Публичный binding API и существующие SDK/Mirror gates не удаляются. Удаление legacy fixture/authoring допускается только отдельным cc-5 после пользовательской проверки и аудита потребителей.",
+  "aspects": ["api", "ownership", "sdk-grab-exclusion", "snapshot", "attachment"],
+  "compatibility": "additive",
+  "providing_stage": "binding-player-flow-contract",
+  "structural": false,
+  "api": {
+    "namespace": "VrBattlegrounds.Weapons",
+    "type": "WeaponEquipmentBinding",
+    "read": ["bool IsActive", "UxrAvatar Owner", "bool OwnerAlive", "int Epoch"],
+    "authority": "Существующий binding snapshot изменяет только server/world author; клиент/observer проецирует и не снимает claim из-за неразрешённого owner. Автор при !OwnerAlive выполняет штатный TryDrop; существующий teardown сохраняется.",
+    "legacy_admission": "Binding сохраняет проверки current alive canonical body, IWeaponEquipmentSocketOwner, map admission и SDK-grab/anchor конфликта. Resolver отклоняет одновременный active binding и SDK-hand. Полное low-level SDK-grab admission не объявляется реализованным: в текущем snapshot подтверждена IsGrabAvailable property, но consumer/IUxrGrabAvailability не найден; mutual exclusion остаётся обязательством отдельного исходного этапа r2.",
+    "production_bot": "BotKit Live/Passive собирается один раз на тело. BotHands управляет штатным SDK-хватом; BotAvatarDriver остаётся единственным писателем позы. WeaponEquipmentBinding не является вторым писателем root/кисти и не активируется директором либо стрелком.",
+    "firing": "Production путь бота: авторизованный BotGunner RequestShot/ExecuteRequestedShot → штатная ветка SDK. При UsesReadinessLedger используется публичный RequestAutomationPreparation; LegacyAmmo сохраняет отдельный штатный SDK-ready путь. WeaponUseContext/readiness и механика принадлежат weapon-system; конфликт владения не допускает выстрел. Существующий legacy binding resolver не ослабляется."
+  },
+  "purchases": "Director — единственный владелец фаз закупки и OfferPurchase/Arm. Стенд создаёт ботов с AutoEquip=false и владеет своим scripted equipment lifecycle.",
+  "revision_note": "r3 уточняет production consumer после согласованного удаления гибрида. API foundation6849ba0e6 и SDK mutual exclusion остаются; не является разрешением удалить binding/prefab components, gates либо менять чужие weapon/SDK исходники.",
+  "evidence": "Статический поиск Assets/Scripts/Bots не находит WeaponEquipmentBinding/IWeaponEquipmentSocketOwner/BotEquipmentLifecycle; офлайн 7 сборок errors0. Unity734 без SDK81: B0/B1 PASS, T1 49/49 с полным coverage; Console1 известный EditMode UxrActor.Destroy error. Девять runtime cases NeedsReview, G имеет foreignDamage1; полный gameplay, low-level grab admission и пользовательская приёмка не закрыты. Review weapon-system8267 применён к тексту; formal ACK этой ревизии ещё требуется."
+}

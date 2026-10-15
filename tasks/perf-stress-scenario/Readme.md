@@ -2,7 +2,7 @@
 
 Обновлено: 2026-10-15 (продолжение в Codex). Владелец: эксперт `performance`. Worktree:
 `F:/CodexWorktrees/performance/Vr_Battlegrounds_ai`, ветка `claude/performance` (HEAD — последний коммит ветки;
-работа этапа `view-tour` — 8cde6946a после rebase на origin/dev bb28046079). Начата по решению пользователя («начинай свою часть»).
+работа этапа `view-tour` — 715398718 после rebase на принятую origin/dev 6669db54f). Начата по решению пользователя («начинай свою часть»).
 
 ## Цель и границы
 
@@ -19,23 +19,32 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **planned, два отказа DevTools у launch-infra**: runtime принят; AndroidCompileGate PASS0; полный Result688 — 139/141 PASS, все 17 новых PASS; 2 FAIL переданы 7591/7592; worker освобождён |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **GREEN, готов к ранее разрешённому вливанию**: свежий741 — 146/146 PASS/0skip, все17новых PASS; AndroidCompileGate PASS0; exact discovery/terminal; DONE/received, paths0 |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: дождаться диагноза владельцев по 7591/7592: два отказа
-   `DebugBootstrapEditorOnlyTests` (editor-only BotCombatStand в build-сценах и BotCount expected7/actual0).
-   Их причина/baseline пока не установлены; собственный diff этих тестов/сцены пуст.
-   Чужие тесты/ассеты не менять, ожидания ради GREEN не ослаблять.
+1. `view-tour`: зафиксировать GREEN741 и выполнить ранее разрешённое fast-forward в origin/dev.
+   Два прежних отказа7591/7592 были устаревшими контрактами: raw EditorBuildSettings вместо
+   release resolver и legacy EditorPrefs вместо JSON-профиля. Launch-infra исправил проверки
+   и добавил generic guard несовместимой automation-сцены; полный731 — 129/129 PASS, обе проверки PASS.
+   Terminal job18b567b0dff84e33b368a83985eec52a проверен самостоятельно; SHA256B6D51C609DF1C61E09D8D78839234564A799656F685613329949F2B6640D2047.
+   Assets/Packages/ProjectSettings принятого6669db54f побайтно совпадают с tested input16e8089f.
+   Remote SHA сверён; worker publication737 DONE. Собственная ветка rebase выполнена без конфликтов.
    Пакет688 получил полный Result139PASS/2FAIL/0skip; все17новыхPASS, discovery141=terminal141.
    Worker DONE/received, R30814e4c39669a9c83310bf5e3377b8f54d54a41 paths0/unexpected0.
-   После исправления/согласованного решения повторить ограниченную проверку новым пакетом.
-   Текущий DevTools RED; прежние634/654/670 остаются UNKNOWN, не повторяются автоматически.
+   Свежий741: input3123095cb8509ccd8aec2433da79abdea0be917d, base6669db54f, epoch627.
+   Refresh/import/compile завершены, AndroidCompileGate PASS0. Native discovery146DevTools/3266EditMode.
+   Один run_tests → job4a044454400f4880b84cf0f47f2ff6ec, полный terminal146/146PASS/0skip,
+   41.1793408с. Exact discovery/terminal, дубликатов0; все17обязательных новых случаев PASS.
+   Полный Result сохранён до cleanup; удалён только собственный SessionState key.
+   Finish/receive DONE, R6055b30933d6cc35dd051e688f6ae2fc3a816ea5, paths/unexpected/artifacts[].
+   Evidence и независимый static review — reports/validation-20261015-741/. Новых аренды/операции нет.
+   Прежние634/654/670 остаются UNKNOWN, не повторяются автоматически.
    Подготовленный CLI-spec — `contracts/view-tour-test-spec-v1.json`; опубликованного CLI executor ещё нет.
-   Ожидаемое подтверждение перед merge: весь DevTools зелёный, включая17новых случаев.
-   Затем зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
+   Требование общего DevTools GREEN выполнено. Прежняя приёмка пользователя14.10 сохраняется.
+   Зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
    в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
    README рядом. Нужен weapon-system для замера стоимости выстрела (метод 6156).

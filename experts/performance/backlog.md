@@ -43,8 +43,14 @@
   После7457/7502 пакет688: полныйDevToolsResult141=139PASS/2FAIL/0skip, все17новыхview-tourPASS;
   discovery141=terminal141. AndroidCompileGate PASS0; DONE/received R30814e4c3966 paths0/unexpected0.
   ДваFAIL DebugBootstrapEditorOnlyTests (BotCombatStand editor-only в build-сценах, BotCount7→0)
-  направлены launch-infra7591 и bots7592; причина/baseline не установлены, merge ждёт решения владельцев.
-  Runtimef6387f9/server10.2.0+vr2012.de5035a57e7f; новых заявок нет, старыеUNKNOWN не переоценены.
+  направлены launch-infra7591 и bots7592; владельцы подтвердили устаревшие контракты тестов.
+  Исправление6669db54f принято/в origin/dev, полный731 — 129/129PASS, обе прежние проверки PASS;
+  полный terminal проверен, product trees равны tested input16e8089f; worker publication737 DONE.
+  Ветка performance перенесена на6669db54f; свежий741/input3123095c/base6669db54:
+  AndroidCompileGate PASS0, discovery146DevTools=terminal146/146PASS/0skip, все17новыхPASS.
+  Job4a044454400f4880b84cf0f47f2ff6ec, полный Result сохранён до cleanup/finish.
+  DONE/received R6055b30933d6 paths/unexpected/artifacts[]; worker освобождён, прежнее разрешение на вливание сохраняется.
+  Отчёты reports/validation-20261015-741/. СтарыеUNKNOWN не переоценены; нового Quest/GPU PASS нет.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны
   подтверждёнными на Quest. Сбой MCP нашего пакета отправлен сопровождающему (6768).

@@ -4,11 +4,10 @@
   "owner": "gameplay",
   "tasks": [
     "arsenal-generator",
-    "catalog-fingerprint",
-    "arsenal-unload-teardown"
+    "catalog-fingerprint"
   ],
-  "reviewed_sha": "97a320c88469cb2a74d89adb0a6b6edd23536753",
-  "reviewed_at": "2026-10-14",
+  "reviewed_sha": "09d514cc2e8f868b01fc8f78055ba48f06054155",
+  "reviewed_at": "2026-10-15",
   "owns": [
     "Docs/game-manager.md",
     "Docs/Arsenal/**",

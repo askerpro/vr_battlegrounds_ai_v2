@@ -184,3 +184,9 @@ Begin accepted-tests записал epoch3, но вернул publication PUBLIC
 неизменный SHA256 теста08a46006… и отсутствие изменений Arsenal/MapRunAuthority/UltimateXR между
 проверенной базой54673ba4 и свежим origin/dev. Нового runtime доказательства не заявляется.
 Подготовленная owner-spec.v1 — исторический immutable пакет данных7375, не production executor schema.
+
+Принятый коммит09d514cc2e8f868b01fc8f78055ba48f06054155 опубликован fast-forward
+5435b3488→09d514cc2; git ls-remote подтвердил точный origin/dev. В коммите только тест.cs/.meta,
+Readme/Details и owner-spec документация; task-local helpers и каталог исключены. Все5 физических файлов
+и raw index blobs совпали побайтно и имеют LF, range-check issues0. Hub verified→accepted→merged,
+stage_merged7553, dependency gaps/content drift отсутствуют. Непринятый тест каталога остаётся отдельной работой.

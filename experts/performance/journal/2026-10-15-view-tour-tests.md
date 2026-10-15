@@ -1,4 +1,4 @@
-# View-tour: свежий полный DevTools146/146 PASS, включая17новых
+# View-tour влит: полный DevTools146/146 PASS, включая17новых
 
 После принятого исправления launch-infra6669db54ff2629c716c2678f67f2c23841c60c93
 собственная ветка перенесена без конфликтов. Worker-base737 DONE подтверждён.
@@ -13,7 +13,9 @@ refresh/import/compile завершены, AndroidCompileGate PASS0; discovery32
 Cleanup только своего SessionState key; finish/receive DONE,
 R6055b30933d6cc35dd051e688f6ae2fc3a816ea5, paths/unexpected/artifacts[].
 Доказательства: tasks/perf-stress-scenario/reports/validation-20261015-741/ (вне Git).
-Приёмка пользователя14.10 «Принять и влить» сохраняется; теперь общий gate GREEN.
+Приёмка пользователя14.10 «Принять и влить» сохранена; общий gate GREEN.
+Fast-forward в origin/dev3b0f41b62229511122692813c786e0b9a2564c64 выполнен,
+удалённый SHA независимо подтверждён через ls-remote; main/чужие checkout не изменялись.
 Область результата — текущий DevTools EditMode и Android compilation; нового Quest/GPU PASS нет.
 
 ## Исторический пакет688 до исправления чужих тестов

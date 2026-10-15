@@ -19,13 +19,14 @@
 | `scenario` | сценарий `perf-stress` без рук, обе роли, `-e2eArg`, артефакты | merged `fa83395aa` |
 | `controller-free-launch` | Test-APK стартует без пробуждения контроллеров (руки в манифесте, Test only) | merged `3cabcc1ab` |
 | `arena-layout` | куклы по полу арены, корни не следуют за игроком; `Tools/Perf/quest_gpu_breakdown.py` | merged `2a5ed8f07` |
-| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **GREEN, готов к ранее разрешённому вливанию**: свежий741 — 146/146 PASS/0skip, все17новых PASS; AndroidCompileGate PASS0; exact discovery/terminal; DONE/received, paths0 |
+| `view-tour` | обход точек обзора `views=<файл>`, метрики по точкам | **merged `3b0f41b62`**, remote SHA подтверждён: свежий741 — 146/146 PASS/0skip, все17новых PASS; AndroidCompileGate PASS0; exact discovery/terminal; DONE/received, paths0 |
 | `gpu-tool-phases` | `quest_gpu_breakdown.py --phases <имена>` — профайлер в произвольных фазах (обещано weapon-system) | planned |
 | `docs` | раздел в `Docs/perf-stress-test.md` (обход, арена, без рук, бюджет сцен); файл точек → `Tools/Perf/views/Lobby.json` | planned |
 
 ## Следующий шаг (конкретно)
 
-1. `view-tour`: зафиксировать GREEN741 и выполнить ранее разрешённое fast-forward в origin/dev.
+1. `view-tour` закрыт: GREEN741 и ранее разрешённое fast-forward в origin/dev выполнены,
+   SHA3b0f41b62229511122692813c786e0b9a2564c64 подтверждён через ls-remote.
    Два прежних отказа7591/7592 были устаревшими контрактами: raw EditorBuildSettings вместо
    release resolver и legacy EditorPrefs вместо JSON-профиля. Launch-infra исправил проверки
    и добавил generic guard несовместимой automation-сцены; полный731 — 129/129 PASS, обе проверки PASS.
@@ -43,9 +44,8 @@
    Evidence и независимый static review — reports/validation-20261015-741/. Новых аренды/операции нет.
    Прежние634/654/670 остаются UNKNOWN, не повторяются автоматически.
    Подготовленный CLI-spec — `contracts/view-tour-test-spec-v1.json`; опубликованного CLI executor ещё нет.
-   Требование общего DevTools GREEN выполнено. Прежняя приёмка пользователя14.10 сохраняется.
-   Зафиксировать проверку и прежнюю приёмку → штатное fast-forward в origin/dev;
-   в mode off — legacy pipeline, в enforced — verify/accept/merge-request/merge-execute.
+   Требование общего DevTools GREEN выполнено. Прежняя приёмка пользователя14.10 сохранена;
+   собственные verify/accept и публикация точного SHA завершены без force-push.
 2. `gpu-tool-phases`: `--phases` в `Tools/Perf/quest_gpu_breakdown.py` (сейчас слушает только «база»/«куклы…»);
    README рядом. Нужен weapon-system для замера стоимости выстрела (метод 6156).
    Уточнение8113: основной after-profile SDK80 не ждёт before8101; пакет cache+player log clamp

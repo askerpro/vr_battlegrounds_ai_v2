@@ -49,7 +49,8 @@
   Ветка performance перенесена на6669db54f; свежий741/input3123095c/base6669db54:
   AndroidCompileGate PASS0, discovery146DevTools=terminal146/146PASS/0skip, все17новыхPASS.
   Job4a044454400f4880b84cf0f47f2ff6ec, полный Result сохранён до cleanup/finish.
-  DONE/received R6055b30933d6 paths/unexpected/artifacts[]; worker освобождён, прежнее разрешение на вливание сохраняется.
+  DONE/received R6055b30933d6 paths/unexpected/artifacts[]; worker освобождён.
+  View-tour принят и FF влит3b0f41b62229511122692813c786e0b9a2564c64; remote SHA подтверждён.
   Отчёты reports/validation-20261015-741/. СтарыеUNKNOWN не переоценены; нового Quest/GPU PASS нет.
 - weapon-system 6747: 30 SDK/WS/bots-маркеров и native buffer capture пока uncommitted, только offline-результаты.
   Ревью точного кандидата — после bots driver/runtime probe; отсутствие Reset в Update и overhead не признаны

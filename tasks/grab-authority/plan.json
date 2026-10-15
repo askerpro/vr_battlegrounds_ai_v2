@@ -67,8 +67,8 @@
     {
       "id": "holster-calibration-scale",
       "writes": [
-        "Assets/Scripts/Interaction/**",
-        "Assets/Tests/EditMode/Interaction/**",
+        "Assets/Scripts/Interaction/HolsterCalibrationScale.cs",
+        "Assets/Scripts/Interaction/HolsterCalibrationScale.cs.meta",
         "Docs/manipulation/**",
         "experts/manipulation/**",
         "tasks/grab-authority/**"

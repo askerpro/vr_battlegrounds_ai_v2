@@ -1,8 +1,8 @@
 # grab-authority — авторство хвата, поздний вход, карман и кобуры
 
-Обновлено 2026-10-14. Владелец `manipulation`, Codex; worktree
+Обновлено 2026-10-15. Владелец `manipulation`, Codex; worktree
 `F:/CodexWorktrees/manipulation/Vr_Battlegrounds_ai`, ветка `haptics`.
-План [plan.json](plan.json), зарегистрированная редакция13; доказательства [Details.md](Details.md).
+План [plan.json](plan.json); доказательства [Details.md](Details.md).
 
 ## Статус
 
@@ -12,7 +12,7 @@
 | `late-join-anchors` — SDK75 | влит `8306c6a86`, принят по стенду |
 | `death-release-authority` | снят: реализован gameplay `death-body-defer` |
 | `pocket-active-hide` | **влит `feae75b56`** fast-forward в origin/dev; принят пользователем, GREEN 470/470 |
-| `holster-calibration-scale` | planned; после merged `scale-events` и `pocket-active-hide` |
+| `holster-calibration-scale` | принят пользователем2026-10-15 «сразу вливай как есть»; подготовка штатного вливания |
 
 ## Принятая архитектура
 
@@ -46,9 +46,23 @@ Verify/accept/merge-execute завершены; remote dev и merged в хабе
 Игровые файлы коммита полностью совпадают с GREEN.
 Документы другой своей задачи haptics остаются локально и не входят в этот этап.
 
-Кобуры: контракт `calibration-scale-events` r1 agreed, события ещё не merged.
+Кобуры: контракт `calibration-scale-events` r1 active; события влиты `b729e7c66`, inbox7714/7716.
 На каждой машине локально сохранить мировой масштаб по `ScaleChanging`, восстановить через
 `localScale` по `ScaleChanged`, без снятия с якоря и синхронизации UXR.
+Один `HolsterCalibrationScale` устанавливается на аватар по `UxrAvatar.GlobalEnabled`, включая headless.
+Снимок только Primary/Secondary кобур под Dummy Forward: предмет, якорь, родитель и localScale.
+Равномерная смена масштаба скелета компенсируется отношением oldScale/newScale.
+Восстановление допускается только для того же предмета в том же якоре и под тем же родителем.
+Пользователь2026-10-15: «отмени очередь и сразу вливай как есть, считай принял работу».
+Принят текущий вариант; новые тесты кобур по поручению влить как есть в этот выпуск не добавлялись.
+Worker711 DONE/received, R `ecdc65f8c6`: получен только Unity-generated `.meta`, unexpected=[].
+Полный terminal Result (79/79, все79 details) сохранён до finish:
+`reports/holster-20261015/test-result-full.json`. Тестов именно нового поведения кобур пока нет.
+
+Пакет720 для ручной проверки отменён по последующему прямому поручению пользователя:
+CANCELLED из QUEUED, epoch0, аренды/Play не было; watcher завершён.
+Ветка обновлена до origin/dev74bd42f57. Исходник и meta побайтово совпадают с worker711;
+новый Unity-прогон после обновления базы не заявляется. Ручная проверка Unity/Quest не подтверждена.
 
 ## Ограничения и процесс
 

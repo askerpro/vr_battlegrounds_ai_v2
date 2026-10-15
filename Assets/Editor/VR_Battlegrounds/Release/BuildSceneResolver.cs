@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Compilation;
 using VrBattlegrounds.Maps.Runtime;
 
 namespace VrBattlegrounds.EditorTools
@@ -20,6 +21,25 @@ namespace VrBattlegrounds.EditorTools
             foreach (string scene in required)
                 if (!debug.Contains(scene) || !enabled.Any(p => Path.GetFileNameWithoutExtension(p) == scene))
                     throw new InvalidOperationException("AutomationSceneMissing:" + scene);
+            if (automation && required.Count > 0)
+            {
+                var player = new HashSet<string>(CompilationPipeline.GetAssemblies(AssembliesType.PlayerWithoutTestAssemblies)
+                    .Select(assembly => assembly.name), StringComparer.Ordinal);
+                var editor = new HashSet<string>(CompilationPipeline.GetAssemblies(AssembliesType.Editor)
+                    .Select(assembly => assembly.name), StringComparer.Ordinal);
+                foreach (string path in enabled.Where(p => required.Contains(Path.GetFileNameWithoutExtension(p))))
+                foreach (string dependency in AssetDatabase.GetDependencies(path, true))
+                {
+                    if (!dependency.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) continue;
+                    // Editor-only метаданные ассетов допустимы; проверяем именно компоненты сцен и префабов.
+                    Type type = AssetDatabase.LoadAssetAtPath<MonoScript>(dependency)?.GetClass();
+                    if (type == null || !typeof(UnityEngine.MonoBehaviour).IsAssignableFrom(type)) continue;
+                    string assembly = type.Assembly.GetName().Name;
+                    if (editor.Contains(assembly) && !player.Contains(assembly))
+                        throw new InvalidOperationException("AutomationScenePlayerAssemblyMissing:" +
+                            Path.GetFileNameWithoutExtension(path) + ":" + assembly + ":" + dependency);
+                }
+            }
             return enabled.Where(path => !debug.Contains(Path.GetFileNameWithoutExtension(path)) ||
                 (automation && required.Contains(Path.GetFileNameWithoutExtension(path))))
                 .Where(path => !AssetDatabase.GetDependencies(path, true).Contains("Assets/Scripts/Core/StandaloneSceneMarker.cs"))

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -35,9 +37,11 @@ namespace VrBattlegrounds.Tests.DevTools
                 CompilationPipeline.GetAssemblies(AssembliesType.Editor).Select(a => a.name));
 
             var problems = new List<string>();
-            foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes.Where(s => s.enabled))
+            string[] scenes = ReleaseScenes();
+            Assert.IsNotEmpty(scenes, "Resolver релизной сборки не вернул ни одной сцены.");
+            foreach (string scene in scenes)
             {
-                foreach (string dependency in AssetDatabase.GetDependencies(scene.path, true))
+                foreach (string dependency in AssetDatabase.GetDependencies(scene, true))
                 {
                     if (!dependency.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) continue;
 
@@ -48,7 +52,7 @@ namespace VrBattlegrounds.Tests.DevTools
 
                     string assembly = type.Assembly.GetName().Name;
                     if (project.Contains(assembly) && !player.Contains(assembly))
-                        problems.Add($"{scene.path}: {type.Name} из сборки '{assembly}' (только редактор)");
+                        problems.Add($"{scene}: {type.Name} из сборки '{assembly}' (только редактор)");
                 }
             }
 
@@ -58,23 +62,68 @@ namespace VrBattlegrounds.Tests.DevTools
         [Test]
         public void Настройки_хранятся_вне_ассетов_и_возвращаются()
         {
-            int savedBots = DebugBootstrapSettings.BotCount;
-            string savedMap = DebugBootstrapSettings.AutoLoadMapScene;
+            if (PlayLaunchSettings.RequestActive || PlayLaunchSettings.HasLaunchConfiguration)
+                Assert.Ignore("Проверка профиля требует отсутствия активного launch request; его владелец и snapshot не изменяются.");
+
+            const string environmentKey = "VRBG_LAUNCH_CONFIG";
+            string savedPath = Environment.GetEnvironmentVariable(environmentKey);
+            string mapKey = DebugBootstrapSettings.KeyPrefix + nameof(DebugBootstrapSettings.AutoLoadMapScene);
+            string missingMap = Guid.NewGuid().ToString("N");
+            string savedMap = SessionState.GetString(mapKey, missingMap);
+            string directory = Path.Combine(Path.GetTempPath(), "VRBG-DebugBootstrapTests-" + Guid.NewGuid().ToString("N"));
+            string profilePath = Path.Combine(directory, "play-launch.json");
             try
             {
+                var store = ProfileStore(profilePath);
+                store.Save(new PlayLaunchConfiguration { BotCount = 1, SceneSource = "active", ScenePath = "" });
+                Environment.SetEnvironmentVariable(environmentKey, profilePath);
+                Assert.AreEqual(profilePath, PlayLaunchSettings.ProfilePath, "Тест должен использовать только собственный JSON.");
+
                 DebugBootstrapSettings.BotCount = 7;
                 DebugBootstrapSettings.AutoLoadMapScene = "TestMap2";
 
-                Assert.AreEqual(7, EditorPrefs.GetInt(DebugBootstrapSettings.KeyPrefix + "BotCount", -1));
-                Assert.AreEqual("TestMap2", SessionState.GetString(DebugBootstrapSettings.KeyPrefix + "AutoLoadMapScene", ""),
+                // Независимый store проверяет запись на диск, минуя кэш PlayLaunchSettings.
+                PlayLaunchConfiguration persisted = ProfileStore(profilePath).Read();
+                Assert.AreEqual(7, persisted.BotCount, "BotCount должен сохраниться в checkout-профиле JSON.");
+                Assert.AreEqual("active", persisted.SceneSource);
+                Assert.IsEmpty(persisted.ScenePath, "Сессионная карта не должна попадать в постоянный профиль.");
+                Assert.AreEqual(7, DebugBootstrapSettings.BotCount);
+                Assert.AreEqual("TestMap2", DebugBootstrapSettings.AutoLoadMapScene);
+                Assert.AreEqual("TestMap2", SessionState.GetString(mapKey, ""),
                     "Карта автозапуска — только на текущую сессию редактора.");
                 Assert.IsEmpty(AssetDatabase.FindAssets("t:ScriptableObject DebugBootstrapConfig"),
                     "Ассета с отладочными настройками быть не должно.");
             }
             finally
             {
-                DebugBootstrapSettings.BotCount = savedBots;
-                DebugBootstrapSettings.AutoLoadMapScene = savedMap;
+                Environment.SetEnvironmentVariable(environmentKey, savedPath);
+                if (savedMap == missingMap) SessionState.EraseString(mapKey);
+                else SessionState.SetString(mapKey, savedMap);
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            }
+        }
+
+        private static PlayLaunchProfileStore ProfileStore(string path)
+        {
+            return new PlayLaunchProfileStore(PlayLaunchSettings.CheckoutRoot, PlayLaunchSettings.Decode,
+                config => UnityEngine.JsonUtility.ToJson(config, true), () => PlayLaunchSettings.RequestActive, path);
+        }
+
+        private static string[] ReleaseScenes()
+        {
+            // Тестовая asmdef не может ссылаться на predefined Assembly-CSharp-Editor.
+            Type resolver = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType("VrBattlegrounds.EditorTools.BuildSceneResolver"))
+                .FirstOrDefault(type => type != null);
+            Assert.IsNotNull(resolver, "Editor assembly с BuildSceneResolver не загружена.");
+            MethodInfo resolve = resolver.GetMethod("Resolve", BindingFlags.Public | BindingFlags.Static,
+                null, new[] { typeof(bool), typeof(IEnumerable<string>) }, null);
+            Assert.IsNotNull(resolve, "Не найден штатный BuildSceneResolver.Resolve.");
+            try { return (string[])resolve.Invoke(null, new object[] { false, null }); }
+            catch (TargetInvocationException exception)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception.InnerException ?? exception).Throw();
+                throw;
             }
         }
 

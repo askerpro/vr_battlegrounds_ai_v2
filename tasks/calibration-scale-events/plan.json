@@ -3,7 +3,7 @@
   "owner": "avatar-ik",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/avatar-ik/Vr_Battlegrounds_ai",
-  "base_sha": "d3c62ca5e12d9beeceb57954c8ad751e9690d60d",
+  "base_sha": "1812dc5bf22860e8302e858b1637e92b1df636e9",
   "doc_path": "tasks/calibration-scale-events/Readme.md",
   "title": "События смены масштаба калибровки",
   "stages": [
@@ -12,6 +12,8 @@
       "writes": [
         "Assets/Scripts/PhysicalSpaceUtils/AvatarCalibrationApplier.cs",
         "Assets/Tests/EditMode/Calibration/CalibrationScaleEventsTests.cs",
+        "Assets/Tests/EditMode/Calibration/CalibrationScaleEventsTests.cs.meta",
+        "Assets/Tests/EditMode/Calibration.meta",
         "tasks/calibration-scale-events/**"
       ],
       "after": [],

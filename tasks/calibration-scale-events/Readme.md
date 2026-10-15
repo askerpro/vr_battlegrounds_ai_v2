@@ -1,64 +1,41 @@
 # События смены масштаба калибровки
 
-## Цель и мотивация
+## Статус — 2026-10-15
 
-Калибровка роста масштабирует `Dummy Forward` аватара (`AvatarCalibrationApplier`). Предметы в якорях на скелете —
-оружие в кобурах на Pelvis/Spine — масштабируются вместе с телом и остаются искажёнными (weapon-system 5827).
-manipulation (задача `grab-authority`) на время смены масштаба сохраняет мировой масштаб предметов в кобурах —
-локально на каждой машине. Для этого нужны события вокруг смены масштаба (запрос 5936).
+Пользователь принял изменение: «считай, что я принял — вливай». Повторное подтверждение не требуется.
+Ветка `avatar-ik/calibration-scale-events` на принятой базе `1812dc5bf22860e8302e858b1637e92b1df636e9`.
+Код и новые тесты проверены в worker696; следующий шаг — verify/accept и штатный merge через брокер.
+Отдельного отчёта о физической проверке в шлеме нет; прямое принятие пользователя не называется Quest-доказательством.
 
-## Статус
+## Результат
 
-Обновлено 2026-10-14, продолжение Codex. Владелец — эксперт `avatar-ik`. Ветка `avatar-ik/calibration-scale-events`
-перебазирована на origin/dev `d3c62ca5e`, срез кода `f4ac8c20f`; конфликтов нет, исходник applier не изменился.
-Непринятый патч прогрева сохранён отдельно, stash `7c77e9f76c296936b274588472281993e5e6c44c`;
-после проверки калибровки основная сессия вернёт ветку прогрева. Контракт
-`calibration-scale-events` r1 — agreed (ACK manipulation 6036). Исторический verified относился к
-SHA `8ec241cd9` (worker590: компиляция 0 ошибок, тесты калибровки 26/26). Исторический worker611 отменён до запуска.
-Свежая проверка: checkpoint `31edcc4de594d8b19a588d67fe23b29fb7d4ba9b`, worker638 DONE;
-Unity-компиляция точного исходника/наличие событий в загруженной сборке — PASS, AndroidCompileGate — PASS,
-существующие тесты — **26/26, failed=0, skipped=0**. Finish: paths=[], unexpected=[].
-Отчёт `reports/worker-638/summary.json` и полные ответы MCP внутри задачи, вне Git.
-План revision3; свежий **verified** в хабе относится к checkpoint `31edcc4de` (epoch5),
-перепроверка заменяет историческую. Пользовательская приёмка остаётся впереди.
-Свежая офлайн-компиляция UltimateXR555/VrBattlegrounds459 исходников — exit0, errors0;
-логи `reports/resume-compile/out/` внутри задачи, вне Git. Актуальное рабочее место эксперта —
-на ветке `avatar-ik/uxr-precache-once`.
+`AvatarCalibrationApplier` остаётся единственным писателем масштаба и производных полей тела.
+Экземплярные `ScaleChanging / ScaleChanged` синхронно окружают запись масштаба Dummy Forward и полей BodyIK,
+при фактическом изменении больше1e-4, на каждой машине. Исключение подписчика логируется и не прерывает Apply.
+Контракт `calibration-scale-events` r1 agreed; потребитель — manipulation / `grab-authority`.
 
-## Сделано
+После пользовательской приёмки добавлены9 тестов: порядок/состояние callbacks у своего и чужого аватара,
+идемпотентность и пол, epsilon, сброс, фактический старый масштаб, исключения подписчиков и отсутствие тела.
 
-- `Assets/Scripts/PhysicalSpaceUtils/AvatarCalibrationApplier.cs`: `event Action<AvatarCalibrationApplier,float,float>
-  ScaleChanging / ScaleChanged` — синхронно в `Apply`, до записи масштаба и после (масштаб + поля BodyIK), только при
-  реальной смене (> `ScaleChangeEpsilon` 1e-4), на каждой машине; вызов изнутри синхронизации UXR — `GameLog.Error`;
-  упавший обработчик логируется и не прерывает калибровку.
-- Спецификация — [contracts/calibration-scale-events.spec.json](contracts/calibration-scale-events.spec.json);
-  офлайн-проверка — [tools/compile-check.ps1](tools/compile-check.ps1); отчёт worker 590 — `reports/worker-590/`
-  (локально, вне Git).
+## Проверка
 
-## Следующий шаг
+Worker696/epoch591, Unity6000.4.1f1, вход `9898b546c4c031e7cd22ebb352523a1bf4b3c8b9`:
+- импорт нового MonoScript с корректным32hex GUID — PASS;
+- точные source/test hashes и оба загруженных типа — PASS; ошибок Console0;
+- TestRunner discovery —4 класса/35 Runnable, включая9 новых;
+- AndroidCompileGate — PASS, ошибок0;
+- EditMode job `882e2dac869f4b1ca2f7f71ec988f5e2` —35/35 PASS, failed0/skipped0, все35 details сохранены;
+- finish/receive: `576f0c633ed706a8faf774181d46d812956069d5`, paths=[], unexpected=[].
 
-1. Перепроверка на принятой базе и свежий verify выполнены (worker638, checkpoint31edcc4de).
-2. Приёмка пользователем в шлеме (ниже) → тесты событий в `Assets/Tests/EditMode/Calibration/` (новый файл в
-   `Network/` попал бы в зону network) → `accept` → merge-request → merge-execute.
-3. После вливания — сообщить manipulation (`grab-authority`): события в origin/dev.
+Полные отчёты — `reports/worker-696/`, вне Git. Это scoped EditMode/compile evidence, не весь проект и не Quest.
+Предыдущие678/685/691 не подтверждали новые тесты. Ошибка собственного нового .cs.meta (GUID33hex)
+исправлена на32hex; успешный импорт и выполнение9 новых случаев подтверждены696.
 
-## Ждёт пользователя
+## Дальше
 
-- Проверка в шлеме: в лобби откалибровать рост — рост и масштаб применяются как раньше, в логе нет ошибок
-  `AvatarCalibrationApplier`. Без подписчиков поведение не меняется.
+Verify/accept точного итогового SHA → merge-request/merge-execute → проверка origin/dev → публикация базы.
+После вливания уведомить manipulation. Непринятый WIP прогрева сохранён отдельно; его live provider
+Readme/plan остаются доступными и не входят в commit калибровки.
 
-## Решения пользователя
-
-- 2026-10-13: «делай до pose set в отдельной ветке от origin/main» — origin/main в репозитории только initial commit
-  2026-03-01, ветка сделана от origin/dev (основная линия, origin/HEAD).
-- 2026-10-14 (AskUserQuestion): приёмка — «Проверю в шлеме»; вливание — «Через брокер».
-
-## Риски и ловушки
-
-- Прямой `git push` в origin/dev блокировал классификатор Claude; маршрут — брокер. Запрет6535 снят6695;
-  публикация базы — только после принятого вливания по штатному маршруту.
-- `watch-ticket` при timeout отдаёт exit 0 и ok:false — смотреть JSON; оффер живёт 60 с.
-- Inbox: `inbox --owner avatar-ik --unread --as "<адрес сессии>"`, ожидание — `wait-inbox` фоновой командой;
-  вопросы пользователю — штатным инструментом, новых вопросов по уже записанной приёмке нет.
-
-Машинный план — [plan.json](plan.json).
+Подробности — [Details.md](Details.md), машинный план — [plan.json](plan.json),
+контракт — [contracts/calibration-scale-events.spec.json](contracts/calibration-scale-events.spec.json).

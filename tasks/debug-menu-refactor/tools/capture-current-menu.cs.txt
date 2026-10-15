@@ -1,0 +1,180 @@
+// Одноразовая съёмка текущего меню, не игровой тест и не приёмка UI.
+// Только EditMode и RUNNING аренда с неизменяемым входом. До отправки заменить __TICKET__ номером заявки.
+// Используются штатные BuildPreview и только callbacks внутренних вкладок Debug.
+// Права, SceneDetail.Current, конфигурация прогона и серверные действия не изменяются.
+string ticket = "__TICKET__";
+if (string.IsNullOrEmpty(ticket) || ticket == "__" + "TICKET__") throw new System.InvalidOperationException("Не подставлен номер заявки.");
+foreach (char c in ticket)
+    if (c < '0' || c > '9') throw new System.InvalidOperationException("Номер заявки должен состоять из цифр.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling)
+    throw new System.InvalidOperationException("Съёмка разрешена только вне Play и компиляции.");
+if (UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+    throw new System.InvalidOperationException("Перед съёмкой нужно завершить работу в Prefab Stage.");
+for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+    if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)
+        throw new System.InvalidOperationException("Съёмка не выполняется при несохранённой открытой сцене.");
+
+string projectRoot = System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath);
+string folder = System.IO.Path.Combine(projectRoot, "tasks/debug-menu-refactor/reports/" + ticket + "/snapshots");
+System.IO.Directory.CreateDirectory(folder);
+var images = new System.Collections.Generic.List<object>();
+var notes = new System.Collections.Generic.List<string>();
+string error = null;
+bool captureCompleted = false;
+bool detailAvailable = false;
+var previousTexture = UnityEngine.RenderTexture.active;
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+UnityEngine.RenderTexture texture = null;
+UnityEngine.Camera camera = null;
+try
+{
+    const int width = 1600;
+    const int height = 1000;
+    texture = new UnityEngine.RenderTexture(width, height, 24);
+    var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/UI/Menu/Tablet/Tablet.prefab");
+    if (prefab == null) throw new System.InvalidOperationException("Не найден Tablet.prefab.");
+    var tablet = (UnityEngine.GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, scene);
+    tablet.SetActive(true);
+    var view = tablet.GetComponent<VrBattlegrounds.UI.Menu.MenuView>();
+    var debug = tablet.GetComponentInChildren<VrBattlegrounds.UI.Menu.MenuDebug>(true);
+    var perf = tablet.GetComponentInChildren<VrBattlegrounds.UI.Menu.MenuPerfTests>(true);
+    var admin = tablet.GetComponentInChildren<VrBattlegrounds.UI.Menu.MenuMatchManager>(true);
+    var players = tablet.GetComponentInChildren<VrBattlegrounds.UI.Menu.MenuPlayersTeams>(true);
+    if (view == null || view.Frame == null || debug == null || perf == null || admin == null || players == null)
+        throw new System.InvalidOperationException("В планшете отсутствует необходимый экран или каркас.");
+    var canvas = (UnityEngine.RectTransform)view.MenuRoot.transform;
+    var cameraObject = new UnityEngine.GameObject("CurrentMenuCaptureCamera");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(cameraObject, scene);
+    cameraObject.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+    camera = cameraObject.AddComponent<UnityEngine.Camera>();
+    camera.scene = scene;
+    camera.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+    camera.backgroundColor = new UnityEngine.Color(0.35f, 0.4f, 0.45f);
+    camera.fieldOfView = 36f;
+    camera.aspect = (float)width / height;
+    camera.nearClipPlane = 0.01f;
+    camera.targetTexture = texture;
+
+    System.Action layout = () =>
+    {
+        for (int pass = 0; pass < 3; pass++)
+        {
+            UnityEngine.Canvas.ForceUpdateCanvases();
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(canvas);
+        }
+    };
+    System.Action fitCamera = () =>
+    {
+        var corners = new UnityEngine.Vector3[4];
+        canvas.GetWorldCorners(corners);
+        float worldWidth = UnityEngine.Vector3.Distance(corners[0], corners[3]);
+        float worldHeight = UnityEngine.Vector3.Distance(corners[0], corners[1]);
+        float tangent = UnityEngine.Mathf.Tan(camera.fieldOfView * UnityEngine.Mathf.Deg2Rad * 0.5f);
+        float distance = UnityEngine.Mathf.Max(worldHeight / (2f * tangent), worldWidth / (2f * tangent * camera.aspect)) * 1.05f;
+        var centre = (corners[0] + corners[2]) * 0.5f;
+        camera.transform.position = centre - canvas.forward * distance;
+        camera.transform.rotation = UnityEngine.Quaternion.LookRotation(canvas.forward, canvas.up);
+        camera.farClipPlane = UnityEngine.Mathf.Max(100f, distance + 10f);
+    };
+    System.Action<VrBattlegrounds.UI.Menu.MenuScreen, string, bool> capture = (screen, stem, allPages) =>
+    {
+        layout();
+        fitCamera();
+        view.Frame.ScrollToTop();
+        var scroll = view.Frame.Body;
+        float viewportHeight = view.Frame.Viewport.rect.height;
+        float contentHeight = scroll.content.rect.height;
+        if (viewportHeight <= 1f || contentHeight <= 0f)
+            throw new System.InvalidOperationException("После раскладки область съёмки имеет нулевую высоту: " + stem);
+        float overflow = UnityEngine.Mathf.Max(0f, contentHeight - viewportHeight);
+        int pageCount = allPages && overflow > 1f
+            ? UnityEngine.Mathf.CeilToInt(overflow / UnityEngine.Mathf.Max(1f, viewportHeight * 0.8f)) + 1 : 1;
+        var texts = new System.Collections.Generic.List<string>();
+        foreach (var label in screen.GetComponentsInChildren<TMPro.TMP_Text>(false)) texts.Add(label.text);
+        for (int page = 0; page < pageCount; page++)
+        {
+            float position = pageCount > 1 ? 1f - (float)page / (pageCount - 1) : 1f;
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = position;
+            UnityEngine.Canvas.ForceUpdateCanvases();
+            string suffix = page == 0 ? "top" : page == pageCount - 1 ? "bottom" : "middle";
+            string path = System.IO.Path.Combine(folder, stem + "-" + (page + 1).ToString("00") + "-" + suffix + ".png");
+            camera.Render();
+            UnityEngine.RenderTexture.active = texture;
+            var image = new UnityEngine.Texture2D(width, height, UnityEngine.TextureFormat.RGB24, false);
+            try
+            {
+                image.ReadPixels(new UnityEngine.Rect(0, 0, width, height), 0, 0);
+                image.Apply();
+                System.IO.File.WriteAllBytes(path, UnityEngine.ImageConversion.EncodeToPNG(image));
+            }
+            finally
+            {
+                UnityEngine.RenderTexture.active = previousTexture;
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+            images.Add(new { path, screen = screen.ScreenType.ToString(), page = page + 1, pageCount,
+                verticalNormalizedPosition = position, viewportHeight, contentHeight, texts });
+        }
+    };
+
+    VrBattlegrounds.EditorTools.UI.MenuPreview.Show(view, debug);
+    detailAvailable = !string.IsNullOrEmpty(VrBattlegrounds.Maps.Detail.SceneDetailDebugSection.Snapshot());
+    if (!detailAvailable) notes.Add("Детализация сцены отсутствует: штатный provider недоступен в текущем EditMode (Development + Current). Подмена Current не выполнялась.");
+    string[] categoryLabels = { "Оверлеи", "Касание", "Телепорт", "Перф-анализ" };
+    string[] categoryFiles = { "01-debug-overlays", "02-debug-touch", "03-debug-teleport", "04-debug-performance" };
+    for (int i = 0; i < categoryLabels.Length; i++)
+    {
+        var strip = debug.Content.Find("TabStrip");
+        if (strip == null) throw new System.InvalidOperationException("В текущем Debug не найден TabStrip.");
+        VrBattlegrounds.UI.Menu.Kit.KitButton selected = null;
+        foreach (var button in strip.GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>())
+            if (button.Text == categoryLabels[i]) { selected = button; break; }
+        if (selected == null) throw new System.InvalidOperationException("Не найдена вкладка: " + categoryLabels[i]);
+        // Только локальная категория: кнопки прогона, профиля и игровых действий не вызываются.
+        selected.onClick.Invoke();
+        capture(debug, categoryFiles[i], true);
+    }
+
+    // Превью конфигурации текущего preset: Open/Старт/Стоп и переключатели не вызываются.
+    VrBattlegrounds.EditorTools.UI.MenuPreview.Show(view, perf);
+    view.Frame.RefreshTabs(true, true, VrBattlegrounds.UI.Menu.MenuScreenType.Debug);
+    view.Frame.SetBack(false, null);
+    capture(perf, "05-perf-tests-current-preset", true);
+
+    // Штатные образцовые данные BuildPreview; права и сетевые команды не меняются.
+    VrBattlegrounds.EditorTools.UI.MenuPreview.Show(view, admin);
+    capture(admin, "06-admin", false);
+    VrBattlegrounds.EditorTools.UI.MenuPreview.Show(view, players);
+    view.Frame.RefreshTabs(true, true, VrBattlegrounds.UI.Menu.MenuScreenType.MatchManager);
+    view.Frame.SetBack(false, null);
+    capture(players, "07-admin-players-teams-bots", false);
+    captureCompleted = true;
+}
+catch (System.Exception exception)
+{
+    error = exception.GetType().Name + ": " + exception.Message;
+}
+finally
+{
+    try
+    {
+        if (camera != null)
+        {
+            camera.targetTexture = null;
+            UnityEngine.Object.DestroyImmediate(camera.gameObject);
+        }
+        UnityEngine.RenderTexture.active = previousTexture;
+        if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
+    }
+    finally
+    {
+        UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+    }
+}
+var report = new { captureCompleted, error, ticket, capturedAtUtc = System.DateTime.UtcNow.ToString("o"),
+    snapshotCount = images.Count, images, detailAvailable, notes,
+    scope = "Снимки текущего исходного меню в Unity EditMode: штатные preview-данные, четыре вкладки Debug, конфигурация перф-тестов и Admin → Игроки и команды. Это не PASS, runtime-проверка и не приёмка в шлеме.",
+    reportPath = System.IO.Path.Combine(folder, "capture-report.json") };
+System.IO.File.WriteAllText(report.reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented));
+return new { report.captureCompleted, report.error, report.snapshotCount, report.detailAvailable, report.reportPath, folder };

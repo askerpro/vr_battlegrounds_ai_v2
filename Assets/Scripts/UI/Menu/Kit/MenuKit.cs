@@ -82,6 +82,30 @@ namespace VrBattlegrounds.UI.Menu.Kit
             return (RectTransform)go.transform;
         }
 
+        /// <summary>
+        /// Вкладки одинаковой ширины в строке высоты темы. Выбор задаётся при построении;
+        /// его дальнейшим изменением управляет экран, включая повторный клик выбранной вкладки.
+        /// </summary>
+        public static RectTransform TabStrip(Transform parent, IList<string> labels, int selectedIndex,
+                                             UnityAction<int> onSelected)
+        {
+            RectTransform row = Row(parent);
+            row.name = "TabStrip";
+            for (int i = 0; i < labels.Count; i++)
+            {
+                int index = i;
+                KitButton tab = Button(row, labels[i], () => onSelected?.Invoke(index));
+                tab.Selected = i == selectedIndex;
+
+                // Setup уже вызвал FitWidth; вкладки делят строку поровну независимо от подписи.
+                var element = tab.GetComponent<LayoutElement>();
+                element.minWidth = 0f;
+                element.preferredWidth = 0f;
+                element.flexibleWidth = 1f;
+            }
+            return row;
+        }
+
         /// <summary>Сетка плиток: <paramref name="columns"/> колонок во всю ширину, высота ячейки = ширина × <paramref name="aspect"/>.</summary>
         public static RectTransform Grid(Transform parent, int columns, float aspect)
         {

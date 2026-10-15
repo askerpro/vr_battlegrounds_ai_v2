@@ -41,6 +41,13 @@ namespace VrBattlegrounds.UI.Menu
         private string _lastSnapshot = "";
         private TMP_Text _panel;
 
+        /// <summary>Открыть настройку выбранного перф-прогона без запуска и без изменения активного теста.</summary>
+        public static void Open(PerfRunMode mode)
+        {
+            if (!StressTestClientSession.IsRunning) _mode = mode;
+            Push(MenuScreenType.PerfTests);
+        }
+
         public static string ModeName(PerfRunMode mode)
         {
             switch (mode)

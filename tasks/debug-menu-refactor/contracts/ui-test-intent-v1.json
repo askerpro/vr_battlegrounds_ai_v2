@@ -1,0 +1,89 @@
+{
+  "schema": "debug-menu-refactor-ui-test-intent@1",
+  "status": "draft_not_executable",
+  "description": "Закреплённый caller intent. Это не опубликованная схема broker CLI и не разрешение запускать альтернативный клиент.",
+  "task_id": "debug-menu-refactor",
+  "owner": "ui",
+  "registered_revision": 6,
+  "worktree": "F:/CodexWorktrees/ui/Vr_Battlegrounds_ai",
+  "input_sha": "c3fbe124559b26192b3681bf6cbe6978928bea9b",
+  "base_sha": "54673ba496688efbb5c0dd1aaba6287cbe8feb4a",
+  "requires_fresh_binding_before_submission": true,
+  "execution_route": "published_broker_executor_only",
+  "mode": "EditMode",
+  "assembly": {
+    "name": "VrBattlegrounds.Tests.EditMode",
+    "path": "Assets/Tests/EditMode/VrBattlegrounds.Tests.EditMode.asmdef",
+    "blob": "b4a4c64bbabd3eafe673256fbbd1df3b9221b81c"
+  },
+  "production_sources": [
+    {
+      "path": "Assets/Scripts/UI/Menu/MenuDebug.cs",
+      "blob": "d8e1fa11bc71c42aa7ff326f7f620326dedee545"
+    },
+    {
+      "path": "Assets/Scripts/UI/Menu/Kit/MenuKit.cs",
+      "blob": "3b7a5dfd415d214606e8e8b0830bd1fb3c57d9fb"
+    }
+  ],
+  "fixtures": [
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.MenuDesignRulesTests",
+      "path": "Assets/Tests/EditMode/UI/MenuDesignRulesTests.cs",
+      "blob": "7699e7b26b92e71c2befad227f31d30a60c53cab"
+    },
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.MenuKitLogicTests",
+      "path": "Assets/Tests/EditMode/UI/MenuKitLogicTests.cs",
+      "blob": "272fbd27800f7e8739f2bcb3a4b2177ef5ca314f"
+    },
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.MenuWiringTests",
+      "path": "Assets/Tests/EditMode/UI/MenuWiringTests.cs",
+      "blob": "a8f4b4c5d1b52b1eb89ad9c6aa9ada424eb1702d"
+    },
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.MenuTabsTests",
+      "path": "Assets/Tests/EditMode/UI/MenuTabsTests.cs",
+      "blob": "fdc49054ce9f2e6df0e2dbb39c73555f56ea312a"
+    },
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.MenuPermissionsTests",
+      "path": "Assets/Tests/EditMode/UI/MenuPermissionsTests.cs",
+      "blob": "e61c11ea71245e88ece13fbc6c6087dc40ceda0a"
+    },
+    {
+      "full_name": "VrBattlegrounds.Tests.UI.UiFontCoverageTests",
+      "path": "Assets/Tests/EditMode/UI/UiFontCoverageTests.cs",
+      "blob": "e39456c647aa2de5a46d027cd5973426ebf359fc"
+    }
+  ],
+  "artifacts": {
+    "relative_root_template": "tasks/debug-menu-refactor/reports/unity-cli-ui-<ticket-id>",
+    "required_files": ["results.xml", "editor.log", "receipt.json"],
+    "generated_reports_in_git": false,
+    "reuse_or_overwrite_foreign_outputs": false
+  },
+  "result_contract": {
+    "all_six_fixtures_must_be_discovered": true,
+    "zero_tests_is_success": false,
+    "xml_must_be_complete_and_match_receipt": true,
+    "exit_code_alone_is_success": false,
+    "required_evidence": ["input_sha", "spec_sha256", "ticket_id", "process_id", "runtime_version", "exit_code", "total", "passed", "failed", "skipped"],
+    "save_full_result_before_finish": true,
+    "scope": "Регрессия шести существующих EditMode UI classes. Не приёмка новых runtime-переходов, касания или Quest."
+  },
+  "cleanup_contract": [
+    "Процессы и восстановление Editor/базы контролирует только опубликованный broker executor.",
+    "Не завершать чужой Unity или процессы без подтверждённого ownership/receipt.",
+    "Сохранить XML, полный log и receipt, проверить отсутствие активной своей операции.",
+    "Немедленно finish после завершения пакета и cleanup, до анализа или ожидания человека.",
+    "Отказ, отсутствующий XML или неизвестный исход сразу эскалировать в hub infra_issue и подтверждённый Codex канал.",
+    "Не replay UNKNOWN, не clear_stuck, не переключать клиент и не чинить инфраструктуру самостоятельно."
+  ],
+  "pending": [
+    "Точная опубликованная схема CLI-spec и runtime VERSION production executor.",
+    "Свежие B/input, task revision/epoch и допустимые output roots перед подачей новой заявки.",
+    "Границы таймаута и прекращения job устанавливает опубликованный executor; ручных kill/recovery команд здесь нет."
+  ]
+}

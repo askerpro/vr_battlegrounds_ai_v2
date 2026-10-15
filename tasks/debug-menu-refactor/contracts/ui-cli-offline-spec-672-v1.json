@@ -1,0 +1,24 @@
+{
+  "ticket": 672,
+  "epoch": 568,
+  "owner": "ui",
+  "task": "debug-menu-refactor",
+  "request_key": "debug-menu-refactor-fresh-sdk2-ui-20261015-1",
+  "base_sha": "54673ba496688efbb5c0dd1aaba6287cbe8feb4a",
+  "input_sha": "c3fbe124559b26192b3681bf6cbe6978928bea9b",
+  "project_root": "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai",
+  "unity_exe": "C:/Program Files/Unity/Hub/Editor/6000.4.1f1/Editor/Unity.exe",
+  "editor_version": "6000.4.1f1",
+  "test_framework_version": "1.6.0",
+  "platform": "EditMode",
+  "filters": [
+    "VrBattlegrounds.Tests.UI.MenuDesignRulesTests",
+    "VrBattlegrounds.Tests.UI.MenuKitLogicTests",
+    "VrBattlegrounds.Tests.UI.MenuWiringTests",
+    "VrBattlegrounds.Tests.UI.MenuTabsTests",
+    "VrBattlegrounds.Tests.UI.MenuPermissionsTests",
+    "VrBattlegrounds.Tests.UI.UiFontCoverageTests"
+  ],
+  "categories": [],
+  "assemblies": ["VrBattlegrounds.Tests.EditMode"]
+}

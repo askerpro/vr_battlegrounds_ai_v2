@@ -1,0 +1,77 @@
+// Только discovery после завершённого import/compile в собственной RUNNING аренде.
+// __TICKET__ заменяется номером этой аренды; тесты не запускаются.
+string projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, ".."));
+string directory = System.IO.Path.Combine(projectRoot, "tasks/debug-menu-refactor/reports/unity-ticket-__TICKET__");
+System.IO.Directory.CreateDirectory(directory);
+string path = System.IO.Path.Combine(directory, "ui-discovery.json");
+long started = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+string[] fixtures = {
+    "VrBattlegrounds.Tests.UI.MenuDesignRulesTests",
+    "VrBattlegrounds.Tests.UI.MenuKitLogicTests",
+    "VrBattlegrounds.Tests.UI.MenuWiringTests",
+    "VrBattlegrounds.Tests.UI.MenuTabsTests",
+    "VrBattlegrounds.Tests.UI.MenuPermissionsTests",
+    "VrBattlegrounds.Tests.UI.UiFontCoverageTests"
+};
+System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(
+    new { status = "pending", startedUnixMs = started, fixtures }, Newtonsoft.Json.Formatting.Indented));
+var api = UnityEngine.ScriptableObject.CreateInstance<UnityEditor.TestTools.TestRunner.Api.TestRunnerApi>();
+api.RetrieveTestList(UnityEditor.TestTools.TestRunner.Api.TestMode.EditMode, testRoot =>
+{
+    try
+    {
+        var nodes = new System.Collections.Generic.List<UnityEditor.TestTools.TestRunner.Api.ITestAdaptor>();
+        var pending = new System.Collections.Generic.Stack<UnityEditor.TestTools.TestRunner.Api.ITestAdaptor>();
+        if (testRoot != null) pending.Push(testRoot);
+        while (pending.Count > 0)
+        {
+            var node = pending.Pop();
+            nodes.Add(node);
+            if (node.Children != null)
+                foreach (var child in node.Children) pending.Push(child);
+        }
+        var rows = new System.Collections.Generic.List<object>();
+        bool passed = true;
+        foreach (string fixture in fixtures)
+        {
+            int exactNodes = 0;
+            var cases = new System.Collections.Generic.List<object>();
+            var loaded = new System.Collections.Generic.List<string>();
+            bool notRunnable = false;
+            foreach (var node in nodes)
+            {
+                if (node.IsSuite && node.FullName == fixture) exactNodes++;
+                if (!node.IsSuite && node.FullName.StartsWith(fixture + ".", System.StringComparison.Ordinal))
+                {
+                    string runState = node.RunState.ToString();
+                    if (runState == "NotRunnable") notRunnable = true;
+                    cases.Add(new { fullName = node.FullName, runState });
+                }
+            }
+            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                if (assembly.GetType(fixture, false) != null) loaded.Add(assembly.GetName().Name);
+            bool fixturePassed = exactNodes == 1 && cases.Count > 0 && !notRunnable && loaded.Contains("VrBattlegrounds.Tests.EditMode");
+            passed &= fixturePassed;
+            rows.Add(new { fixture, exactNodes, cases, loadedAssemblies = loaded, notRunnable, fixturePassed });
+        }
+        System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            status = "completed", passed, startedUnixMs = started,
+            finishedUnixMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            processId = System.Diagnostics.Process.GetCurrentProcess().Id,
+            projectRoot, fixtures = rows,
+            scope = "Discovery шести существующих EditMode fixtures, не выполнение tests и не игровая приёмка"
+        }, Newtonsoft.Json.Formatting.Indented));
+    }
+    catch (System.Exception error)
+    {
+        System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(new {
+            status = "failed", startedUnixMs = started, error = error.ToString()
+        }, Newtonsoft.Json.Formatting.Indented));
+    }
+    finally
+    {
+        UnityEngine.Object.DestroyImmediate(api);
+    }
+});
+UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
+return new { status = "discovery_requested", path, startedUnixMs = started };

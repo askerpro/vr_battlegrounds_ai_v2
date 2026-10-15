@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using Mirror;
 using TMPro;
 using UnityEngine;
+using VrBattlegrounds.Bots;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.DevTools.StressTest;
 using VrBattlegrounds.GameModes;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.Player;
@@ -15,7 +17,8 @@ namespace VrBattlegrounds.UI.Menu
     /// выдача команды каждому (этап Б). Кнопки команд — команды активного режима сцены; главное
     /// действие — «Распределить автоматически» (разовый автобаланс игроков без команды режима).
     /// Здесь же админ задаёт названия команд на серию и ники игрокам — полем ввода (на планшете —
-    /// системная клавиатура); сервер чистит ввод (<c>AdminNaming</c>).
+    /// системная клавиатура); сервер чистит ввод (<c>AdminNaming</c>). Управление ботами отправляет
+    /// запросы через <see cref="BotNetwork"/>; права и разрешение отладки проверяет сервер.
     ///
     /// <para>
     /// Экран только отправляет запросы (<c>PlayerSession.CmdAdminAssignTeam</c>,
@@ -64,7 +67,7 @@ namespace VrBattlegrounds.UI.Menu
             string[] names = { "Асланбек", "Марат", "Игрок_07", "ОченьДлинныйНикИгрока", "Залим", "Рустам", "Тимур", "Кантемир", "Ислам", "Азамат", "Бетал", "Хасан" };
             for (int i = 0; i < names.Length; i++)
                 players.Add(new PlayerRow { NetId = (uint)(i + 1), Name = names[i], TeamIndex = teams.Length > 0 ? (i % 3 == 2 ? 0 : teams[i % teams.Length].teamIndex) : 0 });
-            Render(true, teams, players);
+            Render(true, teams, players, 0);
         }
 
         private void Rebuild()
@@ -75,16 +78,17 @@ namespace VrBattlegrounds.UI.Menu
             bool admin = MenuPermissions.ShowAdminUi();
             TeamData[] teams = AssignableTeams();
             List<PlayerRow> players = CollectPlayers();
+            int botCount = admin ? BotNetwork.CountVisibleBots() : 0;
 
-            string snapshot = admin + "|" + string.Join(",", System.Array.ConvertAll(teams, t => t.teamIndex + ":" + t.Name));
+            string snapshot = admin + "|bots:" + botCount + "|" + string.Join(",", System.Array.ConvertAll(teams, t => t.teamIndex + ":" + t.Name));
             foreach (PlayerRow p in players) snapshot += "|" + p.NetId + ":" + p.Name + ":" + p.TeamIndex;
             if (snapshot == _lastSnapshot) return;
             _lastSnapshot = snapshot;
 
-            Render(admin, teams, players);
+            Render(admin, teams, players, botCount);
         }
 
-        private void Render(bool admin, TeamData[] teams, List<PlayerRow> players)
+        private void Render(bool admin, TeamData[] teams, List<PlayerRow> players, int botCount)
         {
             MenuKit.Clear(Content);
             MenuKit.Title(Content, "Игроки и команды");
@@ -97,6 +101,12 @@ namespace VrBattlegrounds.UI.Menu
                 MenuKit.EmptyState(Content, "Экран администратора: выдавать команды может только админ.");
                 return;
             }
+
+            // ── Боты ─────────────────────────────────────────────────────────
+            MenuKit.Section(Content, $"Боты ({botCount})");
+            RectTransform bots = MenuKit.Row(Content);
+            MenuKit.Button(bots, "Добавить бота", () => RequestBots(add: true));
+            MenuKit.Button(bots, "Убрать всех", () => RequestBots(add: false), MenuButtonRole.Danger);
 
             if (teams.Length == 0)
                 MenuKit.EmptyState(Content, "Режим сцены не запущен — выдавать нечего.");
@@ -150,6 +160,12 @@ namespace VrBattlegrounds.UI.Menu
             }
             result.Sort((a, b) => a.NetId.CompareTo(b.NetId));
             return result;
+        }
+
+        private static void RequestBots(bool add)
+        {
+            if (!BotNetwork.Request(add, out string reason))
+                PerfOverlay.Show("Боты: " + reason, 4f);
         }
 
         private void OnAssignPressed(uint targetNetId, int teamIndex)

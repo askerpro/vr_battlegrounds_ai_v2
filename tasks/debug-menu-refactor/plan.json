@@ -1,0 +1,135 @@
+{
+  "task_id": "debug-menu-refactor",
+  "owner": "ui",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/ui/Vr_Battlegrounds_ai",
+  "base_sha": "1e945a99673b9726773242f690fcea2032cae2c6",
+  "doc_path": "tasks/debug-menu-refactor/Readme.md",
+  "title": "Рефактор экрана «Отладка»: вкладки по категориям",
+  "progress": {
+    "updated": "2026-10-15",
+    "design": "completed",
+    "implementation": "verified_Unity725_existing50_AndroidCompileGate_and_capture7",
+    "user_acceptance": "user_authorized_ui_merge_after_inline_frame_2026_10_15",
+    "authorization": "Продолжение задачи; 2026-10-15 пользователь объединил перф/детализацию/время кадра, потребовал секции GPU и CPU, управление ботами перенёс в Админ → Игроки и команды; дублирующий Админ в Отладке удалён.",
+    "checks": "Unity725/inputeb6ff835(parent1e945a996): explicit refresh/compile/reload; AndroidCompileGate durablePassedtrue/Errors[] (lostMCPresponse, no replay); discovery6/50Runnable; job71b17c0092d64d8ea2cb8a2facc3b9d7 succeeded50PASS/0failed/0skipped/50details saved beforefinish. Capture7PNG, newPerf reviewed, other6 identical714. Cleanup idle/leftover0; finish/receiveR1213056bcbafe8d855529bf132d9832559320a7b paths0/unexpected0. Scope EditMode+Androidcompile, not Quest/livecommands.",
+    "hub_revision": 17,
+    "merge_authorization": "После7PNG714 пользователь поручил постоянно показывать время кадра на планшете и вливать UI. Inline label читает DebugPerfReadout.Format и обновляется на месте. Это не приёмка foreignSceneDetail/assets и не доказательство физической Quest-проверки",
+    "tests_policy": "Новые tests не записаны: auto-review отклонил scopeрасширение до headset validation. Продолжение существующими UI checks/compile/preview; test gaps записываются без изменения tests",
+    "hub_stage_update": "Implementation epoch3: actual Unity725 verification recorded; source-reviewP0-P2none. UI merge explicitly authorized by user after inline-frame request. Headset/gameplay acceptance remains separate, no new tests written.",
+    "scene_detail": "Accepted core74bd42f57 опубликован7993 и доставлен в worker719DONE/8109. API3blobs неизменны; GPU Build/Snapshot и inlineFormat готовы. Grants не используются.",
+    "screenshots": "Unity7147PNG просмотрены, paths/unexpected/immutable_changed=[], cleanup idle/leftover0, receivedR3c4ea2f50b6a3034f4e3bd468de873be0ab48a4f. Доinline; нужен новый снимок. SceneDetail controls не подменяются при отсутствии Current в EditMode.",
+    "worker_ready": "Основной test-results repair подтверждён7457; publication682 DONE Bbb2804607. Локальное resource discovery resources19/templates6 успешно, canonical7520. 686 CANCELLED offer_expired7547, Unity не начиналась, аренды нет. Новый input нужен для изменённого по указаниям пользователя UI. Историческая672: native callbacks послеreload коррелированы7430, XML/counts/coverage не восстановлены;642/657 UNKNOWN не replay",
+    "new_verification": "697 DONE/RECEIVED: inputf90de663e5ce689895694e845021941bb7e0f80f/B1812dc5bf/epoch592, delta9own/foreign0,50PASS и50details. Result91d2a6c8147e85d0cb7843daa0f4f5289d1da5d2; reports/unity-ticket-697. 686 CANCELLED offer_expired, old UNKNOWN не replay; runtime1432984 по7614, route epoch12",
+    "test_intent": {
+      "path": "contracts/ui-test-intent-v1.json",
+      "sha256": "e683d8fcea259cf32b739051ad3690a491e3700f930a30d7affc6d1553ce8869",
+      "status": "draft_not_executable",
+      "schema_request_event": 7386,
+      "production_executor": "not_released",
+      "offline_spec_path": "contracts/ui-cli-offline-spec-672-v1.json",
+      "offline_spec_sha256": "554a63666da629b2a8a819ce8f32bbdea0be6f11efc4e7457ec47d113d65b004",
+      "offline_plan_schema": 1,
+      "production_ready": false,
+      "native_result_report_event": 7404,
+      "native_result_proof": "7430 redacted log/manifest collected, hashes match; correlation only, ticket XML not recovered, fixture coverage/counts unknown",
+      "native_correlation_report": "reports/ui672-native-correlation/ui672-evidence.json"
+    },
+    "release_sequence": "Verified UI725 → user-authorized FF own4UI+taskmaterial → request-base FIFO → actualDONE/baseline verification. Exact accepted SHA/publication receipt in ignored reports/release-publication.json.",
+    "infrastructure_wait": "UI725 completed/released/received. Android MCP reply disconnected, actualPASS resolved by unique durable file+idle native guard; notified8142/8144, no replay/recovery/repair. Previous716/721 recovery handled by maintainer. OwnUIleaseNONE.",
+    "unity_final": {
+      "ticket": 725,
+      "input": "eb6ff835b350ff49707c80dc1c5ca1438cda0fc5",
+      "accepted_parent": "1e945a99673b9726773242f690fcea2032cae2c6",
+      "phase": "DONE_RECEIVED",
+      "lease": false,
+      "android_passed": true,
+      "tests": {
+        "job": "71b17c0092d64d8ea2cb8a2facc3b9d7",
+        "passed": 50,
+        "failed": 0,
+        "skipped": 0,
+        "details": 50
+      },
+      "snapshots": 7,
+      "result": "1213056bcbafe8d855529bf132d9832559320a7b",
+      "scope": "EditMode/Androidcompile only"
+    },
+    "release_receipt": "reports/release-publication.json"
+  },
+  "stages": [
+    {
+      "id": "design",
+      "writes": [
+        "tasks/debug-menu-refactor/Readme.md",
+        "tasks/debug-menu-refactor/Details.md",
+        "tasks/debug-menu-refactor/plan.json",
+        "tasks/debug-menu-refactor/contracts/**",
+        "tasks/debug-menu-refactor/changelog/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "implementation",
+      "writes": [
+        "Assets/Scripts/UI/Menu/MenuDebug.cs",
+        "Assets/Scripts/UI/Menu/Kit/MenuKit.cs",
+        "Assets/Scripts/UI/Menu/MenuPlayersTeams.cs",
+        "Assets/Scripts/UI/Menu/MenuPerfTests.cs",
+        "tasks/debug-menu-refactor/Readme.md",
+        "tasks/debug-menu-refactor/Details.md",
+        "tasks/debug-menu-refactor/plan.json",
+        "tasks/debug-menu-refactor/contracts/**",
+        "tasks/debug-menu-refactor/tools/**",
+        "tasks/debug-menu-refactor/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "debug-menu-refactor",
+          "stage": "design",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "user-acceptance",
+      "writes": [
+        "tasks/debug-menu-refactor/Readme.md",
+        "tasks/debug-menu-refactor/Details.md",
+        "tasks/debug-menu-refactor/plan.json",
+        "tasks/debug-menu-refactor/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "debug-menu-refactor",
+          "stage": "implementation",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "accepted-tests-and-release",
+      "writes": [
+        "Assets/Tests/EditMode/UI/**",
+        "Docs/ui-design-system.md",
+        "Docs/ui-menu-architecture.md",
+        ".claude/skills/add-menu-screen/SKILL.md",
+        "tasks/debug-menu-refactor/Readme.md",
+        "tasks/debug-menu-refactor/Details.md",
+        "tasks/debug-menu-refactor/plan.json",
+        "tasks/debug-menu-refactor/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "debug-menu-refactor",
+          "stage": "user-acceptance",
+          "state": "accepted"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

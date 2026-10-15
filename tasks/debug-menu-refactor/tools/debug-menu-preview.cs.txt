@@ -1,0 +1,140 @@
+// Диагностический пакет execute_code, не новый тест игры.
+// Выполнять только в RUNNING аренде на зафиксированном входном SHA.
+// Reflection вызывает построение с образцовыми входами, не меняет права/Current/состояние игры.
+var failures = new System.Collections.Generic.List<string>();
+var rows = new System.Collections.Generic.List<object>();
+string folder = System.IO.Path.GetFullPath("tasks/debug-menu-refactor/reports/unity-tabs");
+System.IO.Directory.CreateDirectory(folder);
+var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+var texture = new UnityEngine.RenderTexture(1600, 1000, 24);
+var previousTexture = UnityEngine.RenderTexture.active;
+try
+{
+    var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/UI/Menu/Tablet/Tablet.prefab");
+    var tablet = (UnityEngine.GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, scene);
+    tablet.SetActive(true);
+    var view = tablet.GetComponent<VrBattlegrounds.UI.Menu.MenuView>();
+    var screen = tablet.GetComponentInChildren<VrBattlegrounds.UI.Menu.MenuDebug>(true);
+    VrBattlegrounds.EditorTools.UI.MenuPreview.Show(view, screen);
+    var canvas = (UnityEngine.RectTransform)view.MenuRoot.transform;
+    var camGo = new UnityEngine.GameObject("DebugMenuSnapshotCamera");
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(camGo, scene);
+    var camera = camGo.AddComponent<UnityEngine.Camera>();
+    camera.scene = scene;
+    camera.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+    camera.backgroundColor = UnityEngine.Color.gray;
+    camera.fieldOfView = 36f;
+    camera.nearClipPlane = 0.01f;
+    camera.transform.position = canvas.position - canvas.forward * 1.05f;
+    camera.transform.rotation = UnityEngine.Quaternion.LookRotation(canvas.forward, canvas.up);
+    camera.targetTexture = texture;
+
+    // Инактивный образец: OnEnable/Apply не вызываются, QualitySettings и Current не меняются.
+    var tunerGo = new UnityEngine.GameObject("PreviewTunerInput");
+    tunerGo.SetActive(false);
+    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(tunerGo, scene);
+    var tuner = tunerGo.AddComponent<VrBattlegrounds.DevTools.LobbyDetailTuner>();
+    var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+    var category = typeof(VrBattlegrounds.UI.Menu.MenuDebug).GetField("_category", flags);
+    var rebuild = typeof(VrBattlegrounds.UI.Menu.MenuDebug).GetMethod("Rebuild", flags);
+    string[] categories = { "Overlays", "Touch", "Teleport", "Bots", "Scene", "Admin" };
+    string[] targets = { "База A", "База B", "Арсенал A", "Арсенал B", "Центр", "Крыша", "Подвал" };
+    for (int index = 0; index < categories.Length; index++)
+    {
+        string name = categories[index];
+        category.SetValue(screen, System.Enum.Parse(category.FieldType, name));
+        rebuild.Invoke(screen, new object[] { true, targets, targets, tuner });
+        ((TMPro.TMP_Text)typeof(VrBattlegrounds.UI.Menu.MenuDebug).GetField("_status", flags).GetValue(screen)).text =
+            "Сеть: хост · права админа: да · стресс-тест: не идёт · ботов: 0";
+        for (int pass = 0; pass < 3; pass++)
+        {
+            UnityEngine.Canvas.ForceUpdateCanvases();
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(canvas);
+        }
+        view.Frame.ScrollToTop();
+        var strip = (UnityEngine.RectTransform)screen.Content.Find("TabStrip");
+        var tabs = strip.GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+        if (tabs.Length != 6) failures.Add(name + ": expected six tabs");
+        int selected = 0;
+        float firstWidth = ((UnityEngine.RectTransform)tabs[0].transform).rect.width;
+        foreach (var tab in tabs)
+        {
+            if (tab.Selected) selected++;
+            var rect = (UnityEngine.RectTransform)tab.transform;
+            if (System.Math.Abs(rect.rect.width - firstWidth) > 0.1f) failures.Add(name + ": unequal width " + tab.Text);
+            var corners = new UnityEngine.Vector3[4];
+            rect.GetWorldCorners(corners);
+            foreach (var corner in corners)
+            {
+                var local = strip.InverseTransformPoint(corner);
+                if (local.x < strip.rect.xMin - 0.1f || local.x > strip.rect.xMax + 0.1f)
+                    failures.Add(name + ": tab outside strip " + tab.Text);
+            }
+            if (tab.Label.isTextTruncated) failures.Add(name + ": tab text truncated " + tab.Text);
+        }
+        if (selected != 1 || !tabs[index].Selected) failures.Add(name + ": wrong selection");
+        foreach (var button in screen.GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>())
+            if (button.Text == "Выключить режим отладки") failures.Add(name + ": exit button still present");
+        camera.Render();
+        UnityEngine.RenderTexture.active = texture;
+        var image = new UnityEngine.Texture2D(1600, 1000, UnityEngine.TextureFormat.RGB24, false);
+        try
+        {
+            image.ReadPixels(new UnityEngine.Rect(0, 0, 1600, 1000), 0, 0);
+            image.Apply();
+            System.IO.File.WriteAllBytes(System.IO.Path.Combine(folder, name + ".png"), image.EncodeToPNG());
+        }
+        finally { UnityEngine.Object.DestroyImmediate(image); }
+        rows.Add(new { category = name, tabs = tabs.Length, width = firstWidth, selected });
+    }
+
+    // Проверка фабричной видимости без изменения глобального владельца прав.
+    category.SetValue(screen, System.Enum.Parse(category.FieldType, "Overlays"));
+    rebuild.Invoke(screen, new object[] { false, targets, targets, null });
+    var publicTabs = screen.Content.Find("TabStrip").GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+    if (publicTabs.Length != 3) failures.Add("non-admin: expected three tabs without scene");
+    foreach (var tab in publicTabs)
+        if (tab.Text == "Боты" || tab.Text == "Админ" || tab.Text == "Сцена") failures.Add("non-admin: hidden tab present");
+
+    // Настоящие callbacks превью: переключение и повторный клик без пересборки.
+    screen.BuildPreview();
+    var previewTabs = screen.Content.Find("TabStrip").GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+    var previewLabels = new System.Collections.Generic.List<string>();
+    foreach (var tab in previewTabs) previewLabels.Add(tab.Text);
+    foreach (string label in previewLabels)
+    {
+        if (label == "Сцена") continue;
+        var currentTabs = screen.Content.Find("TabStrip").GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+        foreach (var tab in currentTabs)
+        {
+            if (tab.Text != label) continue;
+            tab.onClick.Invoke();
+            break;
+        }
+        var afterTabs = screen.Content.Find("TabStrip").GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+        foreach (var tab in afterTabs)
+        {
+            if (tab.Text != label) continue;
+            if (!tab.Selected) failures.Add("callback: selection not updated " + label);
+            int id = tab.GetInstanceID();
+            tab.onClick.Invoke();
+            var same = screen.Content.Find("TabStrip").GetComponentsInChildren<VrBattlegrounds.UI.Menu.Kit.KitButton>();
+            bool found = false;
+            foreach (var candidate in same) if (candidate.GetInstanceID() == id) found = true;
+            if (!found) failures.Add("callback: repeated click rebuilt " + label);
+            break;
+        }
+    }
+    camera.targetTexture = null;
+}
+finally
+{
+    UnityEngine.RenderTexture.active = previousTexture;
+    UnityEngine.Object.DestroyImmediate(texture);
+    UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+}
+var report = new { passed = failures.Count == 0, failureCount = failures.Count, failures, rows,
+    scope = "Unity EditMode preview; шестая категория построена с образцовым tuner, игровые права и Current не изменялись",
+    reportPath = System.IO.Path.Combine(folder, "report.json") };
+System.IO.File.WriteAllText(report.reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented));
+return new { report.passed, report.failureCount, snapshots = rows.Count, report.reportPath, failures };

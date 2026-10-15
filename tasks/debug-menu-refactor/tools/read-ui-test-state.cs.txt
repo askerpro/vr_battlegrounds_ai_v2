@@ -1,0 +1,26 @@
+// Читать persisted metadata только в своей короткой RUNNING аренде. Не запускает/не завершает tests.
+string raw = UnityEditor.SessionState.GetString("MCPForUnity.TestJobsV1", "");
+string current = UnityEditor.SessionState.GetString("MCPForUnity.CurrentTestJobIdV1", "");
+var state = string.IsNullOrEmpty(raw) ? new Newtonsoft.Json.Linq.JObject() : Newtonsoft.Json.Linq.JObject.Parse(raw);
+var jobs = state["jobs"] as Newtonsoft.Json.Linq.JArray ?? new Newtonsoft.Json.Linq.JArray();
+var matching = new System.Collections.Generic.List<Newtonsoft.Json.Linq.JToken>();
+var summary = new System.Collections.Generic.List<object>();
+long target = new System.DateTimeOffset(2026, 10, 14, 17, 18, 49, System.TimeSpan.Zero).ToUnixTimeMilliseconds();
+foreach (var job in jobs)
+{
+    long start = job["started_unix_ms"] == null ? 0 : job["started_unix_ms"].ToObject<long>();
+    if (start >= target - 10000 && start <= target + 15000) matching.Add(job.DeepClone());
+    summary.Add(new { id = (string)job["job_id"], status = (string)job["status"], started = start,
+        finished = (string)job["finished_unix_ms"], total = (string)job["total_tests"],
+        completed = (string)job["completed_tests"], error = (string)job["error"] });
+}
+string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, ".."));
+string path = System.IO.Path.Combine(root, "tasks/debug-menu-refactor/reports/ui-test-state.json");
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+var report = new { readAtUtc = System.DateTime.UtcNow.ToString("o"), root,
+    processId = System.Diagnostics.Process.GetCurrentProcess().Id, current, storedJobs = jobs.Count,
+    targetCallUtc = "2026-10-14T17:18:49Z", matching, summary, rawJobsState = raw,
+    isCompiling = UnityEditor.EditorApplication.isCompiling, isPlaying = UnityEditor.EditorApplication.isPlaying,
+    scope = "Чтение SessionState, не результат тестов и не новый запуск", reportPath = path };
+System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented));
+return new { report.root, report.processId, report.current, report.storedJobs, matchedJobs = matching.Count, summary, report.reportPath };

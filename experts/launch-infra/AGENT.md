@@ -49,10 +49,14 @@ debug mode, E2E framework, test XR input, builds.
 
 ## Agent builds
 - Run `Tools/release/Build-Game.ps1` or `Tools/e2e/Run-QuestE2E.ps1` from your own task worktree,
-  targeting the assigned dedicated build pair. Use explicit Win64/Android paths and an immutable SHA.
-- Get explicit batch admission (pending infra_issue7288) AND assignment of the shared pair
-  from the maintainer before `-Ref` or Unity batch. A closed Editor
-  is not an exclusive reservation. Read-only dry-run without `-Ref` is allowed before assignment.
+  targeting the dedicated build pair. Use explicit Win64/Android paths and an immutable SHA.
+- User decision 2026-10-15: dedicated builds run without broker, queue or pair reservation.
+  Immediately before `-Ref` and Unity, check both roots for an active builder/Unity process,
+  progressing build logs and UnityLockfile. If busy or uncertain, wait 20–30 minutes using
+  a native timer and repeat the full preflight; do not interrupt another build or delete locks.
+  This is an instruction-level flow, not atomic reservation. A cheap build broker may be
+  considered after the maintainer's estimate and a subsequent decision. Interactive worker
+  and MCP leases remain mandatory for their own operations.
 - Do not build ordinary players in the human Editor, unity-editor-worker or lightweight agent checkout;
   do not use fallback flags as a workaround. Exact commands and output paths: `Docs/release.md`,
   section «Агенту: сборка в выделенном checkout».

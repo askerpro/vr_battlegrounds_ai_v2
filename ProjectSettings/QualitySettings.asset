@@ -170,15 +170,15 @@ QualitySettings:
     excludedTargetPlatforms:
     - Standalone
   m_TextureMipmapLimitGroupNames:
-  - LobbyBand0
-  - LobbyBand1
-  - LobbyBand2
-  - LobbyBand3
-  - LobbyBand4
-  - LobbyBand5
-  - LobbyBand6
-  - LobbyBand7
-  - LobbyBand8
+  - DetailBand0
+  - DetailBand1
+  - DetailBand2
+  - DetailBand3
+  - DetailBand4
+  - DetailBand5
+  - DetailBand6
+  - DetailBand7
+  - DetailBand8
   m_PerPlatformDefaultQuality:
     Android: 1
     Nintendo Switch 2: 0

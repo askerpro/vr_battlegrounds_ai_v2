@@ -223,3 +223,11 @@ Owner-spec v2 сохранена как историческая деклара�
 будущего CLI исполнителя описывают момент подготовки. XML/log требования относятся к будущему CLI
 контракту; реальный результат694 получен и сохранён через обычный MCP. Текущий статус находится здесь
 и в Readme, исходная frozen spec не переписана задним числом.
+
+Коммит7fbacc8259e8bb5ebe45968cdd2676fbd54ca691 опубликован обычным fast-forward
+d449f1983→7fbacc825; git ls-remote подтвердил точный удалённый SHA. Только пять файлов: тест, meta,
+Readme, Details и frozen owner-spec v2. Физические файлы и blob коммита побайтно совпали, CR отсутствуют;
+LF range check без issues. Сводка привязки694 к принятому коммиту —
+[accepted-code-verification.json](reports/accepted-code-verification.json). Другие локальные материалы сохранены
+и в принятый коммит не включены. Все этапы catalog-fingerprint завершены.
+Хаб: stage_merged7825/audit7826, epoch7, content_drift[]/dependency_gaps[].

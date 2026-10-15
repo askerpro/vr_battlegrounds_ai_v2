@@ -3,10 +3,9 @@
   "id": "gameplay",
   "owner": "gameplay",
   "tasks": [
-    "arsenal-generator",
-    "catalog-fingerprint"
+    "arsenal-generator"
   ],
-  "reviewed_sha": "09d514cc2e8f868b01fc8f78055ba48f06054155",
+  "reviewed_sha": "7fbacc8259e8bb5ebe45968cdd2676fbd54ca691",
   "reviewed_at": "2026-10-15",
   "owns": [
     "Docs/game-manager.md",

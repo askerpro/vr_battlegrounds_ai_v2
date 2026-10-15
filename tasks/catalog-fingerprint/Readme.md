@@ -9,7 +9,7 @@
 |---|---|---|
 | `env-independent` | влит, принят пользователем 2026-10-12 | origin/dev e330b6162 |
 | `preview-loaded-scene` | принят и влит 2026-10-14; Unity 3/3 preflight PASS, Windows E2E build PASS | origin/dev 97a320c88; stage_merged 6800; база опубликована 639 DONE / 6808 |
-| `accepted-tests` | принят пользователем 2026-10-15; Unity694:7/7 PASS, failed/skipped0; подготовка FF-вливания | Input c7ee905d0580; source9ec0d4a6; finish694 DONE |
+| `accepted-tests` | принят и FF-влит 2026-10-15; Unity694:7/7 PASS, failed/skipped0 | origin/dev 7fbacc825; stage_merged7825; finish694 DONE |
 
 ## Что сделано
 
@@ -26,10 +26,10 @@
   Сырой составной отчёт `passed=false` сравнивал ещё transient InstanceID, изменившийся при сборке;
   это не критерий preflight. Исходный отчёт сохранён; подробная расшифровка — Details.md.
 
-## Следующий шаг
+## Завершение
 
-1. `accepted-tests`: приёмка получена 2026-10-15 («да - вливаем, считай принял»); выполнить принятый коммит
-   и FF-вливание семи тестов, Unity-generated meta и документации этапа. Арсенал уже влит09d514cc2.
+1. `accepted-tests`: приёмка получена 2026-10-15 («да - вливаем, считай принял»); коммит семи тестов,
+   Unity-generated meta и документации этапа7fbacc825 FF-влит, удалённый SHA подтверждён ls-remote.
    Unity694 после явных import/readiness/discovery7: 7/7 PASS,39.266314s; полный terminal Result сохранён
    доcleanup/finish. Finish DONE d76df7621be92d6bf95a1e05c609cdac154376e4, paths[]/unexpected[].
    Fixture сохраняет исходную безымянную сцену и root IDs, Lobby открывает Additive; assertions прошли.
@@ -44,7 +44,7 @@
 
 ## Ждёт пользователя
 
-- Ничего: `accepted-tests` принят, выполняется разрешённая публикация.
+- Ничего: все этапы приняты и влиты. Задача закрыта; межкопийная server/client проверка остаётся вне её scope.
 
 ## Решения пользователя
 

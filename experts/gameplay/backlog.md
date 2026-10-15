@@ -1,4 +1,4 @@
-Обновлено 2026-10-14 (Codex возобновил работу, inbox разобран). Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
+Обновлено 2026-10-15 (Codex, inbox разобран). Кандидаты вне хаба; порядок — приоритет. MRB = `tasks/map-runtime-bootstrap/`.
 Решение пользователя 2026-10-13: сначала то, что мешает игровой логике и чего ждут другие; `arsenal-generator`
 (декор, этапы planning…decorations) отложен.
 
@@ -6,11 +6,15 @@
 
 1. `catalog-fingerprint/preview-loaded-scene` — принят и FF-влит origin/dev97a320c88, база опубликована639 DONE;
    Unity 3/3 preflight PASS, Windows E2E build PASS. Побочный PC.asset не принят; зависимые владельцы уведомлены.
-2. `arsenal-unload-teardown/accepted-tests` — 8 случаев подготовлены, compile-only PASS; run_tests640 оборвал MCP
-   без job_id, NUnit не подтверждён. Получен только Unity-generated .meta, восстановление durable TestJob исхода.
-   Повторный пакет653 с сохранённым GUID в очереди; `catalog-fingerprint/accepted-tests` —7 случаев,
-   compile-only PASS, пакет650 в очереди. Оба этапа RUNNING в хабе.
-3. `series-smoke` — когда launch-infra вольёт `e2e-smoke-kit` (кандидат п.1 ниже).
+2. `arsenal-unload-teardown/accepted-tests` — принят пользователем и FF-влит origin/dev09d514cc2; stage_merged7553.
+   Unity668:8/8 PASS, cleanup без новых managers/live/previews. Документальное закрытие1812dc5bf;
+   публикация базы693 DONE. Прежние640/653 остаются без NUnit verdict.
+   `catalog-fingerprint/accepted-tests` —684:5PASS/0FAIL/2SKIP, terminal Result сохранён до finish; DONE.
+   Ограничение roots0 заменено проверкой сохранности исходных root IDs, compile-only284refs PASS.
+   Новый source9ec0d4a6/inputc7ee905d0580: Unity6947/7PASS, failed/skipped0; finish DONE с пустым diff.
+   Каталог принят пользователем и FF-влит origin/dev7fbacc825; все этапы закрыты. Старый676 остаётся UNKNOWN.
+3. `series-smoke` — launch-infra7139 сообщил о влитом `e2e-smoke-kit` be120d2805; каркас готов по сообщению
+   владельца. Кандидат п.1 ниже; отдельная задача ещё не заведена. Worker восстановлен сопровождающим (7257).
 
 ## Обещания другим агентам (кому — что — событие)
 

@@ -1,0 +1,27 @@
+{
+  "task": "hand-rig-quality",
+  "stage": "grip-contact-authoring",
+  "owner": "avatar-grip",
+  "nonce": "point-band-20261015-r1",
+  "status": "completed-incomplete-points",
+  "ticket": 749,
+  "inputSha": "9ccf8af1c2bf82f458f65ff2f87eca689d99b607",
+  "resultSha": "79ce8464d5c3b35cbc574479289e1716f6622fa1",
+  "received": true,
+  "result": "Правая14/15, зеркало11/15; smoke8checks/6failures. Existing HandMeshCaptureTests3/3PASS. Cleanup выполнен, worker освобождён. Качество хвата не принято.",
+  "next": "Диагностика геометрии и зеркала; затем визуальное ревью точек и IK до/после. Не писать новые тесты до пользовательской проверки. Pistol support отложена.",
+  "scope": "Автовыбор fixed phalanx points, зеркальная кисть, native BakeMesh измерение±2мм и окно. Без Apply игровых assets.",
+  "compiler": "auto",
+  "executeTimeoutSeconds": 300,
+  "reportRoot": "tasks/hand-rig-quality/reports/phalanx-contact-unity/point-band-20261015-r1",
+  "actions": [
+    "Begin и fresh guard: свой worker/input, compile/import/Play/tests idle; lease≥360s",
+    "run-phalanx-contact-smoke.cs.txt один раз; 2reference hands, source selection, inferred mirror, JSON/PNG, stable-key measurements Viper/Uzi обе стороны, IK fullset binding, source hashes",
+    "После native завершения отдельный close-phalanx-contact-preview.cs.txt: закрыть только своё uniquely titled окно; еслиtimeout/disconnect сначала durable result, replay нет",
+    "Explicit refresh_unity, fresh guard, existing HandMeshCaptureTests3cases; дождаться окончания",
+    "Native cleanup, немедленный finish с точными native файлами; receive; анализ и правки только после освобождения"
+  ],
+  "expectedAssetChanges": "Только Unity-generated .meta новых ContactPoints directory/scripts",
+  "releaseConditions": "Пакет и cleanup завершены, нет активной операции, своего окна и preview leftovers. Не держать worker для анализа/человеческого ожидания.",
+  "acceptancePending": ["Визуальная проверка выбранных полигонов и зеркальной кисти", "Нативный IK solve с новым критерием", "Игровая/Quest проверка хвата", "Accepted commit/merge"]
+}

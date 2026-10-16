@@ -43,7 +43,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         HandPoseFitSnapshot() {}
         /// <summary>Математические fixtures без preview-сцены и SDK. Заполняет только геометрию.</summary>
         public static HandPoseFitSnapshot FromGeometry() => new HandPoseFitSnapshot();
-        /// <summary>Чтение текущей формы кисти через SDK preview core с размещением на выбранном GrabPoint.</summary>
+        /// <summary>Фактическая кожа текущей рабочей позы SDK с виртуальным размещением на выбранном GrabPoint.</summary>
         public HandPoseFitSnapshot(UxrAvatar avatar,UxrHandPoseAsset pose,float blend,GameObject root,HandPoseFitRequest r,HandPoseFitReport report,HandPoseFitSnapshot objectCache=null,HandPoseFitReport objectMetadata=null)
         {
             try {
@@ -68,55 +68,26 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 report.PoseType=pose.PoseType.ToString();report.AppliedBlend=blend;report.RuntimePoseName=null;
                 report.AvatarGuidChain=avatar.GetPrefabGuidChain().ToArray();report.ObjectScale=root.transform.lossyScale.x;report.ObjectScaleAxes=root.transform.lossyScale;
                 report.GrabbablePath=HumanPath(grabbable.transform,root.transform);report.AlignToControllerEnabled=point.AlignToController;report.ControllerAlignmentApplied=false;
-                var hand=avatar.GetHand(r.Side);var zones=new Dictionary<Transform,string>();var segments=new Dictionary<Transform,string>();
-                var fingerAxes=avatar.AvatarRigInfo.GetArmInfo(r.Side).FingerUniversalLocalAxes;
-                if(hand.Wrist) WristPosition=sourceToSnap.MultiplyPoint3x4(hand.Wrist.position);
-                void Finger(UxrAvatarFinger f,string name) {
-                    if(f.Distal) FingerFrames.Add(FitFingerFrame.FromBone(name,f.Distal,fingerAxes,sourceToSnap));
-                    AddChain(f,name,fingerAxes,sourceToSnap);
-                    var nodes=new[]{f.Metacarpal,f.Proximal,f.Intermediate,f.Distal};var labels=new[]{"metacarpal","proximal","intermediate","distal"};
-                    for(int i=0;i<nodes.Length;i++) if(nodes[i]) {
-                        foreach(var child in nodes[i].GetComponentsInChildren<Transform>(true)){zones[child]=name;segments[child]=name+"/"+labels[i];}
-                        report.Joints.Add(new FitJointReport{Zone=name,Segment=labels[i],Path=HumanPath(nodes[i],avatar.transform),PositionMeters=sourceToSnap.MultiplyPoint3x4(nodes[i].position),LocalRotation=nodes[i].localRotation});
-                    }
-                }
-                Finger(hand.Thumb,"thumb");Finger(hand.Index,"index");Finger(hand.Middle,"middle");Finger(hand.Ring,"ring");Finger(hand.Little,"little");
-                // Текущие bone rotations читаются в transient Fixed descriptor: AutoSave SDK может быть выключен.
+                // Descriptor нужен для provenance несохранённой рабочей позы, но не для повторного
+                // применения: BakeMesh читает уже синхронизированные SDK кости и все skin weights.
                 var visiblePose=ScriptableObject.CreateInstance<UxrHandPoseAsset>();visiblePose.hideFlags=HideFlags.HideAndDontSave;
-                UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh preview=null;
                 try {
                     visiblePose.PoseType=UxrHandPoseType.Fixed;visiblePose.HandDescriptorLeft=r.Side==UxrHandSide.Left?new UxrHandDescriptor(avatar,r.Side):new UxrHandDescriptor();visiblePose.HandDescriptorRight=r.Side==UxrHandSide.Right?new UxrHandDescriptor(avatar,r.Side):new UxrHandDescriptor();
                     report.EditorAppliedPoseStateJson=EditorJsonUtility.ToJson(visiblePose,false);
-                    preview=UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh.BuildForAvatar(avatar,visiblePose,r.Side);
-                    if(preview==null || !preview.IsValid) throw new ArgumentException("SDK не смог построить preview кисти.");
-                    var mesh=preview.UnityMesh;var vertices=mesh.vertices;var weights=mesh.boneWeights;var bones=skin.bones;
-                    var axes=avatar.AvatarRigInfo.GetArmInfo(r.Side);var matrix=_worldToFrame*snap;var path=HumanPath(skin.transform,avatar.transform);
-                    for(int sub=0;sub<mesh.subMeshCount;sub++) {
-                        var ix=mesh.GetTriangles(sub);
-                        for(int i=0;i<ix.Length;i+=3) {
-                            int a=ix[i],b=ix[i+1],c=ix[i+2];var votes=new Dictionary<int,float>();
-                            foreach(int index in new[]{a,b,c}) {
-                                var w=weights[index];int[] ids={w.boneIndex0,w.boneIndex1,w.boneIndex2,w.boneIndex3};float[] values={w.weight0,w.weight1,w.weight2,w.weight3};
-                                for(int k=0;k<4;k++)if(values[k]>0 && ids[k]>=0 && ids[k]<bones.Length)votes[ids[k]]=(votes.TryGetValue(ids[k],out float old)?old:0)+values[k];
-                            }
-                            int dominant=votes.OrderByDescending(v=>v.Value).Select(v=>v.Key).DefaultIfEmpty(-1).First();if(dominant<0) continue;
-                            var bone=bones[dominant];string zone=zones.TryGetValue(bone,out string z)?z:"palm_wrist";
-                            var t=new FitTriangle(matrix.MultiplyPoint3x4(vertices[a]),matrix.MultiplyPoint3x4(vertices[b]),matrix.MultiplyPoint3x4(vertices[c]),zone){Source=path,SourceTriangle=i/3,SourceSubMesh=sub,FingerSegment=segments.TryGetValue(bone,out string segment)?segment:"palm_wrist"};
-                            if(t.Area<1e-12f)continue;Hand.Add(t);
-                            var up=zone=="palm_wrist"?axes.HandUniversalLocalAxes.LocalUp:axes.FingerUniversalLocalAxes.LocalUp;
-                            var normal=sourceToSnap.MultiplyVector(bone.TransformDirection(up)).normalized*r.PalmNormalSign;
-                            if(!r.PalmarOnly || Vector3.Dot(t.Normal,normal)>=r.PalmarMinDot)ContactHand.Add(t);
-                        }
-                    }
-                    report.Surfaces.Add(new FitSurfaceReport{Path=path,Kind="hand",Triangles=Hand.Count,Topology=new FitTopology{Reason="evaluated_on_analysis"}});
-                } finally {if(preview?.UnityMesh)Object.DestroyImmediate(preview.UnityMesh);Object.DestroyImmediate(visiblePose);}
+                } finally {Object.DestroyImmediate(visiblePose);}
+                var objectFrame=_worldToFrame;
+                try {
+                    // Меняется только матрица захвата. Живые Transform/позы не перемещаются.
+                    _worldToFrame=sourceToSnap;
+                    CaptureHand(avatar,grabber,r,report);
+                } finally {_worldToFrame=objectFrame;}
                 if(objectCache!=null && objectMetadata!=null) {
                     ObjectSurface.AddRange(objectCache.ObjectSurface);ContactObject.AddRange(objectCache.ContactObject);
                     report.Surfaces.AddRange(objectMetadata.Surfaces.Where(s=>s.Kind=="object"));
                 } else CaptureObject(root,r,report,false);
                 CaptureVolume(r,report);EnsureGeometry();
                 report.Limitations.Add("SDK grip preview: текущая форма кисти размещена на выбранном snap transform. Runtime IK/контроллер и фактическое удержание не проверены.");
-                report.Limitations.Add("Источник кисти — единственный SDK HandRenderer. Вторая кисть не размещалась; основной хват и поддержка анализируются отдельными точками.");
+                report.Limitations.Add("Источник кисти — HandMeshCapture/BakeMesh с исходными source/submesh/triangle и всеми весами LOD0. Вторая кисть не размещалась; поддержка пистолета отложена.");
                 report.Limitations.Add("Зоны по весам костей и ладонная маска требуют визуальной проверки.");
             } catch {Dispose();throw;}
         }
@@ -313,14 +284,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     report.Joints.Add(new FitJointReport {Zone=name,Segment=labels[i],Path=HumanPath(nodes[i],avatar.transform),PositionMeters=_worldToFrame.MultiplyPoint3x4(nodes[i].position),LocalRotation=nodes[i].localRotation});}
             }
             Finger(hand.Thumb,"thumb");Finger(hand.Index,"index");Finger(hand.Middle,"middle");Finger(hand.Ring,"ring");Finger(hand.Little,"little");
-            var main=grabber.HandRenderer as SkinnedMeshRenderer;
-            // Только LOD0 тела: в Play Mode LODGroup не выключает Renderer нижних уровней, поэтому их
-            // нужно исключить явно, иначе снимок смешивает Body_LOD0/1/2 (как в статике после Clone).
-            var lowerLods=LowerLodRenderers(avatar.gameObject);
-            foreach(var skin in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
-                if((_runtime||skin!=main) && (!skin.enabled || !skin.gameObject.activeInHierarchy)) continue;
-                if(lowerLods.Contains(skin)) continue;
-                Mesh source=skin.sharedMesh;if(!source || !skin.bones.Any(allowed.Contains)) continue;
+            foreach(var skin in SelectHandRenderers(avatar,grabber,r.Side,_runtime)) {
                 {
                     var sample=HandMeshCapture.Capture(skin,_worldToFrame,avatar.transform,false);
                     Vector3[] v=sample.Vertices;var bones=sample.Bones;
@@ -348,6 +312,20 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
             report.Limitations.Add("Зоны по весам костей, ладонная маска по нормалям — требуют визуальной проверки для нового рига/перчатки; palm_wrist включает границу запястья.");
+        }
+
+        /// <summary>Одинаковая выборка LOD0 для захвата и ключа frozen session; камеру и suppression не учитывает.</summary>
+        internal static SkinnedMeshRenderer[] SelectHandRenderers(UxrAvatar avatar,UxrGrabber grabber,UxrHandSide side,bool runtime=false)
+        {
+            var allowed=new HashSet<Transform>(avatar.GetHand(side).Transforms);
+            foreach(var bone in avatar.GetHand(side).Transforms)
+                foreach(var child in bone.GetComponentsInChildren<Transform>(true)) allowed.Add(child);
+            var main=grabber.HandRenderer as SkinnedMeshRenderer;
+            var lower=LowerLodRenderers(avatar.gameObject);
+            return avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(skin=>
+                skin.sharedMesh && !lower.Contains(skin) &&
+                ((!runtime && skin==main) || (skin.enabled && skin.gameObject.activeInHierarchy)) &&
+                skin.bones.Any(allowed.Contains)).ToArray();
         }
 
         void AddChain(UxrAvatarFinger f,string name,UltimateXR.Core.Math.UxrUniversalLocalAxes axes,Matrix4x4 toFrame)

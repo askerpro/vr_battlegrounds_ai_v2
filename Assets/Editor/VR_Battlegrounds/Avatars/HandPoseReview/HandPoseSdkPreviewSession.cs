@@ -59,7 +59,12 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 if(includeHand) {
                 Id(avatar);Id(pose);writer.Write(blend);
                 var grabber=avatar.GetComponentsInChildren<UxrGrabber>(true).FirstOrDefault(g=>g.Side==request.Side);
-                Id(grabber);if(grabber){Matrix(grabber.transform.localToWorldMatrix);Skin(grabber.HandRenderer as SkinnedMeshRenderer);}
+                Id(grabber);if(grabber){
+                    Matrix(grabber.transform.localToWorldMatrix);
+                    var skins=HandPoseFitSnapshot.SelectHandRenderers(avatar,grabber,request.Side);
+                    writer.Write(skins.Length);
+                    foreach(var skin in skins)Skin(skin);
+                }
                 var transform=HandPoseFitSnapshot.ResolveIndexPath(root.transform,request.GrabbableIndexPath);
                 var grabbable=transform.GetComponent<UxrGrabbableObject>();Id(grabbable);
                 if(grabbable && request.GrabPoint>=0 && request.GrabPoint<grabbable.GrabPointCount) {

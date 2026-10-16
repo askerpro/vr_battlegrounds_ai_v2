@@ -1,0 +1,37 @@
+{
+  "task": "hand-rig-quality",
+  "stage": "grip-contact-authoring",
+  "owner": "avatar-grip",
+  "nextAttemptNonce": null,
+  "lastAttemptNonce": "contact-authoring-source-mask-20261015-r2",
+  "lastAttemptTicket": 740,
+  "status": "completed_with_failures",
+  "completedSmokeMustNotReplay": true,
+  "lastOutcome": "740 DONE/received,3completed cases/7failure entries; Uzi source и Viper2masks passed, Viper source nonuniform String и Uzi target degenerate surface остаются.2PNG сохранены,198.585052native seconds, cleanup passed, paths/unexpected пусты.",
+  "executeCompiler": "auto",
+  "executeTimeoutSeconds": 300,
+  "humanReapprovalRequired": false,
+  "humanReapproval": "2026-10-15: пользователь явно разрешил новый прогон contact-authoring-reapproval-20261015-r1 через ответ Разрешить новый прогон (рекомендуется). Разрешены временные preview-копии, без Apply и сохранения игровых поз/префабов.",
+  "continuation": "735 DONE/received: source завершился с двумя известными ошибками; IK12/12 и existing3/3 PASS. Новый nonce для исправленного source/mask. Это продолжение исправления известного failure после закрытой операции, без replay неизвестного исхода. IK не повторяется.",
+  "scope": "Только editor import/compile, API smoke и синтетические targets. Качество хвата и production acceptance не проверяются.",
+  "actions": [
+    "Штатный begin/guard; проверить root, native compile/import/Play/tests и новые загруженные типы",
+    "run-contact-authoring-smoke.cs.txt: Viper/Uzi source capture, обе стороны target, draft mask API/PNG/JSON, hash guard",
+    "Native cleanup guard: вне Play/tests/import, без новых dirty scenes/assets/prefab stage/оставленных preview roots",
+    "Немедленно finish/receive, включая завершённые неудачные проверки; диагноз и правки после освобождения worker"
+  ],
+  "outputRootsAreLiteral": true,
+  "reportRoot": "tasks/hand-rig-quality/reports/contact-authoring-unity-pilot",
+  "expectedAttemptDirectories": [
+    "tasks/hand-rig-quality/reports/contact-authoring-unity-pilot/source-mask-contact-authoring-source-mask-20261015-r2"
+  ],
+  "expectedAssetChanges": "Только автоматически созданные Unity .meta новых editor scripts/directories",
+  "releaseConditions": "Подготовленные операции завершены, временные клоны уничтожены и нет активной операции. Не держать worker ради анализа, правок или человеческой проверки.",
+  "acceptancePending": [
+    "Анатомическое ревью реальных contact masks",
+    "Соответствие source pad patches и target patches; source frame сам по себе не валидирует контакт",
+    "Полная collision/sign проверка реальной сборки оружия",
+    "Парное сравнение хороших/плохих хватов с одинаковыми камерами и embedded before/after",
+    "Пользовательская проверка в игре/шлеме"
+  ]
+}

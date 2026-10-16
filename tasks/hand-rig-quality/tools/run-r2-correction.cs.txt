@@ -1,0 +1,480 @@
+// R2: один согласованный correction Apply+Analyze от source pack после Apply 704. Только своя RUNNING аренда.
+// Точные 14 рук / 24 curl закреплены SHA reviewed fragment; это total, а не дельта итерации.
+// Baseline — firstApply.after; исходные Measure/Apply/review сохраняются неизменными.
+// Частичные записи не откатываем и не скрываем. Не повторять вызов при неизвестном исходе.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker: " + UnityEngine.Application.dataPath);
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+string requestText = System.IO.File.ReadAllText("tasks/hand-rig-quality/tools/r2-correction-request.json");
+var envelope = Newtonsoft.Json.Linq.JObject.Parse(requestText);
+var request = Newtonsoft.Json.JsonConvert.DeserializeObject<VrBattlegrounds.Editor.Avatars.GripExtractionRequest>(requestText);
+string[] expectedRecipes = {
+    "HandsPack_Gun_Grip", "HandsPack_Gun_Support", "HandsPack_Uzi_Grip", "HandsPack_PPK_Grip", "HandsPack_PPK_Support",
+    "HandsPack_Revolver_Grip", "HandsPack_Revolver_Support", "HandsPack_SniperRifle_Grip", "HandsPack_SniperRifle_Support",
+    "Kinemation_R08_Grip", "Kinemation_R08_Support", "Kinemation_Herrington_Grip", "Kinemation_Herrington_Support",
+    "Kinemation_Mk14_Grip", "Kinemation_Mk14_Support", "Kinemation_TR15_Grip", "Kinemation_TR15_Support"
+};
+string[] expectedWeapons = { "BrowningHiPower", "Uzi", "PPK", "Revolver", "SniperRifle", "R08", "Herrington", "Mk14", "TR15" };
+var weaponPaths = expectedWeapons.Select(n => "Assets/Prefabs/Weapons/" + n + "/" + n + ".prefab").ToArray();
+if (request == null || request.Source != "pack" || request.Mode != "apply" || request.Target != "MEF_cyborg_hands" ||
+    request.Anchor != "palm" || request.Encoding != "rig" || !request.Analyze || request.RegisterPoses != false ||
+    request.RemoveReplacedAligns != false || request.NormalOffsetMm != 0 || request.MaxNormalOffsetMm != 15 ||
+    request.ToleranceMm != 0.5f || request.ToleranceDeg != 0.5f || request.ReturnFull ||
+    request.NormalOffsetMmByHand == null || request.NormalOffsetMmByHand.Count != 0 || request.CurlDegByHand == null || request.CurlDegByHand.Count != 14 ||
+    request.Recipes == null || !request.Recipes.SequenceEqual(expectedRecipes) ||
+    request.OutDir != "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run")
+    throw new System.InvalidOperationException("Запрос отличается от согласованного второго R2 Apply.");
+System.Func<string, string> sha256 = path => {
+    using (var stream = System.IO.File.OpenRead(path))
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+var prereqs = envelope["executionPrerequisites"] as Newtonsoft.Json.Linq.JObject;
+if (prereqs == null || (string)prereqs["mergedSaveCommit"] != "846fa4bca06e59a627e5c80975091369896ab6d3" ||
+    (string)prereqs["firstInputCommit"] != "16ca6506" || (string)prereqs["firstResultCommit"] != "13ef52db5fa48c6bc58525cbd6332c38e4f37c0c")
+    throw new System.InvalidOperationException("Нет закреплённой цепочки merged-save → Measure695 → Apply704.");
+var evidenceFiles = new System.Collections.Generic.Dictionary<string, System.Tuple<string, string>> {
+    { "measureValidation", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-measure-20261015T005618-153f3f99e8c54082b77897250b9d3f8a/r2-measure-validation.json", "c0c977649c1b68af7f1e67d75e1c0f45b4ec8f3165918237a9135f438256d30d") },
+    { "firstApplyValidation", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-apply-20261015T061148-e7c8adc2b02f4779bcf6c52224d43808/r2-apply-validation.json", "cc2963b7f526922b33928e13c29ea5ec2eabbf3b185447afab6bccd955ad7a01") },
+    { "firstApplyPipeline", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-apply-20261015T061148-e7c8adc2b02f4779bcf6c52224d43808/grip-extraction-apply.json", "49ae4f70ba63e7735d02f0ba89e9d4ddf50f9e7a05d9679f8e388539ba49796b") },
+    { "firstApplyCorrectedReview", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-nongrip-review-704/review.json", "17c31b58c6696ea13e1c1a721cb4591aaf9d5718da6027db56d98eda38f37fc7") },
+    { "candidateFragment", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/candidate-request-fragment.json", "7a9493b41cf6d46ac9a274b1b931a21fad138f22f17c0479b8fcd40c46f2ac36") },
+    { "candidateReview", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/Review.md", "dd3389ba040d0a74aa226ff965d5fc466f60ad07868ac77a14f6618e4c321c43") },
+    { "candidateHandReview", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/hand-review-34.json", "0ef6200e3d67e292457bd66aa02e4786bfc6b24c50725345034e1ff75c51a652") },
+    { "candidateSourceHashes", System.Tuple.Create("F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/source-sha256.json", "0b540fcaf9c857deb2cf5abdd59e97512e0e67c52aaae49a20e18336f91f7072") }
+};
+foreach (var pair in evidenceFiles) {
+    string path = (string)prereqs[pair.Key + "Path"], hash = (string)prereqs[pair.Key + "Sha256"];
+    if (path != pair.Value.Item1 || hash != pair.Value.Item2 || !System.IO.File.Exists(path) || sha256(path) != hash)
+        throw new System.InvalidOperationException("Изменилось закреплённое evidence: " + pair.Key + "; Apply не запускался.");
+}
+string measurePath = evidenceFiles["measureValidation"].Item1, measureSha = evidenceFiles["measureValidation"].Item2;
+var measure = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(measurePath));
+if ((bool?)measure["passed"] != true || (string)measure["Status"] != "ok" || (int?)measure["points"] != 17 ||
+    (int?)measure["handCount"] != 34 || (int?)measure["written"] != 0 ||
+    !(measure["failures"] is Newtonsoft.Json.Linq.JArray) || measure["failures"].HasValues ||
+    !(measure["changed"] is Newtonsoft.Json.Linq.JArray) || measure["changed"].HasValues ||
+    !(measure["newPoseFiles"] is Newtonsoft.Json.Linq.JArray) || measure["newPoseFiles"].HasValues ||
+    !(measure["before"] is Newtonsoft.Json.Linq.JObject))
+    throw new System.InvalidOperationException("Measure695 не подтверждает R2 17/34 без записей и изменений.");
+var firstApply = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(evidenceFiles["firstApplyValidation"].Item1));
+var firstPipeline = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(evidenceFiles["firstApplyPipeline"].Item1));
+var correctedReview = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(evidenceFiles["firstApplyCorrectedReview"].Item1));
+var firstAfterJson = firstApply["after"] as Newtonsoft.Json.Linq.JObject;
+if ((bool?)firstApply["passed"] != false || (string)firstApply["status"] != "ok" || firstApply["operationError"].Type != Newtonsoft.Json.Linq.JTokenType.Null ||
+    (int?)firstApply["points"] != 17 || (int?)firstApply["handCount"] != 34 || firstAfterJson == null || firstAfterJson.Count != 2522 ||
+    (firstApply["failures"] as Newtonsoft.Json.Linq.JArray)?.Count != 1 || (firstApply["nonGripChanges"] as Newtonsoft.Json.Linq.JArray)?.Count != 97 ||
+    !(firstApply["unexpected"] is Newtonsoft.Json.Linq.JArray) || firstApply["unexpected"].HasValues ||
+    !(firstApply["foreignDirtyChanges"] is Newtonsoft.Json.Linq.JArray) || firstApply["foreignDirtyChanges"].HasValues ||
+    !(firstApply["identityChanges"] is Newtonsoft.Json.Linq.JArray) || firstApply["identityChanges"].HasValues ||
+    !(firstApply["guidChanges"] is Newtonsoft.Json.Linq.JArray) || firstApply["guidChanges"].HasValues ||
+    (bool?)correctedReview["passed"] != true || (int?)correctedReview["unexplainedCount"] != 0 ||
+    !(correctedReview["unexplained"] is Newtonsoft.Json.Linq.JArray) || correctedReview["unexplained"].HasValues ||
+    (bool?)correctedReview["originalValidationPassed"] != false || (int?)correctedReview["covered"] != 97 || (int?)correctedReview["reported"] != 97 ||
+    (string)correctedReview["baseline"] != (string)prereqs["firstInputCommit"] || (string)correctedReview["result"] != (string)prereqs["firstResultCommit"])
+    throw new System.InvalidOperationException("Apply704/raw false и отдельное исправленное review не подтверждают безопасный baseline.");
+if ((string)firstPipeline["status"] != "ok" || (string)firstPipeline["mode"] != "Apply" ||
+    (string)firstPipeline["source"] != "pack" || (string)firstPipeline["target"] != request.Target ||
+    (string)firstPipeline["anchor"] != "PalmCenter" || (string)firstPipeline["encoding"] != "TargetRigWorld" ||
+    (firstPipeline["points"] as Newtonsoft.Json.Linq.JArray)?.Count != 17 ||
+    firstPipeline["points"].Sum(p => (p["hands"] as Newtonsoft.Json.Linq.JArray)?.Count ?? 0) != 34 ||
+    !firstPipeline["points"].Select(p => (string)p["pose"]).SequenceEqual(expectedRecipes) ||
+    (double?)firstPipeline["request"]?["normalOffsetMm"] != 0 ||
+    (firstPipeline["request"]?["normalOffsetMmByHand"] as Newtonsoft.Json.Linq.JObject)?.Count != 0 ||
+    (firstPipeline["request"]?["curlDegByHand"] as Newtonsoft.Json.Linq.JObject)?.Count != 0)
+    throw new System.InvalidOperationException("Первый pipeline не подтверждает source pack R2 17/34 с нулевыми коррекциями.");
+foreach (var pair in ((Newtonsoft.Json.Linq.JObject)measure["before"]).Properties())
+    if (!Newtonsoft.Json.Linq.JToken.DeepEquals(pair.Value, firstApply["before"]?[pair.Name]))
+        throw new System.InvalidOperationException("Нарушена историческая цепочка Measure695 → Apply704: " + pair.Name);
+var firstAfter = firstAfterJson.Properties().ToDictionary(p => p.Name, p => (string)p.Value);
+var candidate = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(evidenceFiles["candidateFragment"].Item1));
+if (!Newtonsoft.Json.Linq.JToken.DeepEquals(envelope["normalOffsetMmByHand"], candidate["normalOffsetMmByHand"]) ||
+    !Newtonsoft.Json.Linq.JToken.DeepEquals(envelope["curlDegByHand"], candidate["curlDegByHand"]) ||
+    (candidate["normalOffsetMmByHand"] as Newtonsoft.Json.Linq.JObject)?.Count != 0 ||
+    (candidate["curlDegByHand"] as Newtonsoft.Json.Linq.JObject)?.Count != 14 ||
+    candidate["curlDegByHand"].Children<Newtonsoft.Json.Linq.JProperty>().Sum(p => (p.Value as Newtonsoft.Json.Linq.JObject)?.Count ?? 0) != 24)
+    throw new System.InvalidOperationException("Maps отличаются от reviewed fragment 14 рук / 24 curl.");
+var candidateHandReview = Newtonsoft.Json.Linq.JArray.Parse(System.IO.File.ReadAllText(evidenceFiles["candidateHandReview"].Item1));
+var sourceHashes = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(evidenceFiles["candidateSourceHashes"].Item1));
+if (candidateHandReview.Count != 34 || candidateHandReview.Select(r => (string)r["key"]).Distinct().Count() != 34 ||
+    (string)sourceHashes["sourceApply"]?["path"] != evidenceFiles["firstApplyPipeline"].Item1 ||
+    (string)sourceHashes["sourceApply"]?["sha256"] != evidenceFiles["firstApplyPipeline"].Item2 ||
+    (sourceHashes["fullFitReports"] as Newtonsoft.Json.Linq.JObject)?.Count != 34)
+    throw new System.InvalidOperationException("Нет полного закреплённого источника 34 Fit отчётов.");
+const string authorRoot = "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai";
+var fullFits = new System.Collections.Generic.Dictionary<string, Newtonsoft.Json.Linq.JObject>(System.StringComparer.OrdinalIgnoreCase);
+foreach (var pair in ((Newtonsoft.Json.Linq.JObject)sourceHashes["fullFitReports"]).Properties()) {
+    string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(authorRoot, pair.Name)).Replace('\\', '/');
+    if (!System.IO.File.Exists(path) || sha256(path) != (string)pair.Value)
+        throw new System.InvalidOperationException("Исходный Fit изменён: " + path);
+    fullFits.Add(path, Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(path)));
+}
+System.Func<double, bool> finite = v => !double.IsNaN(v) && !double.IsInfinity(v);
+foreach (var hand in ((Newtonsoft.Json.Linq.JObject)candidate["curlDegByHand"]).Properties()) {
+    var row = candidateHandReview.Single(r => (string)r["key"] == hand.Name);
+    if ((string)row["decision"] != "candidate" || !Newtonsoft.Json.Linq.JToken.DeepEquals(row["candidateCurlDeg"], hand.Value))
+        throw new System.InvalidOperationException("Кандидат не совпадает с hand review: " + hand.Name);
+    string sourceFitPath = System.IO.Path.GetFullPath((string)row["fullReport"]).Replace('\\', '/');
+    Newtonsoft.Json.Linq.JObject fit;
+    if (!fullFits.TryGetValue(sourceFitPath, out fit) || !string.IsNullOrEmpty((string)fit["Error"]) || (string)fit["CorrectionHints"]?["Status"] != "computed")
+        throw new System.InvalidOperationException("Нет полного исходного Fit hints: " + hand.Name);
+    foreach (var finger in ((Newtonsoft.Json.Linq.JObject)hand.Value).Properties()) {
+        var hints = (fit["CorrectionHints"]?["Fingers"] as Newtonsoft.Json.Linq.JArray)?.Where(h => (string)h["Finger"] == finger.Name).ToArray();
+        if (hints == null || hints.Length != 1) throw new System.InvalidOperationException("Неоднозначный curl hint: " + hand.Name + "/" + finger.Name);
+        var hint = hints[0];
+        double curl = (double)finger.Value;
+        string[] numeric = { "CurlDeg", "StartMm", "TargetMm", "ExpectedMm", "ExpectedDepthMm", "DepthLimitMm" };
+        if (numeric.Any(k => hint[k] == null || !finite((double)hint[k])) || !finite(curl) || curl < -45 || curl > 60 || System.Math.Abs(curl) < 0.5 ||
+            (bool?)hint["Recommended"] != true || (bool?)hint["Converged"] != true || (bool?)hint["DepthLimited"] != false ||
+            (double)hint["CurlDeg"] != curl || System.Math.Abs((double)hint["ExpectedMm"] - (double)hint["TargetMm"]) > System.Math.Abs((double)hint["StartMm"] - (double)hint["TargetMm"]) ||
+            (double)hint["ExpectedDepthMm"] > (double)hint["DepthLimitMm"] + 0.05)
+            throw new System.InvalidOperationException("Curl не удовлетворяет reviewed onlyRecommended/finite/converged/non-depth: " + hand.Name + "/" + finger.Name);
+    }
+}
+var selected = VrBattlegrounds.Editor.Avatars.PackClipGripSource.AllPoints().Where(p => expectedRecipes.Contains(p.Pose)).ToArray();
+if (selected.Length != 17 || selected.Any(p => p.AlignSource != "HandsPack") || !selected.Select(p => p.Pose).OrderBy(p => p).SequenceEqual(expectedRecipes.OrderBy(p => p)) ||
+    !selected.Select(p => p.Weapon).Distinct().OrderBy(p => p).SequenceEqual(weaponPaths.OrderBy(p => p)))
+    throw new System.InvalidOperationException("Каталог R2 изменился.");
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.Get(request.Target);
+string recordGuid = profile.ResolveRecordGuid();
+if (recordGuid != (string)firstPipeline["recordGuid"]) throw new System.InvalidOperationException("Изменился target record GUID.");
+var posePaths = selected.Select(p => profile.PosePathFor(p)).ToArray();
+var allowed = new System.Collections.Generic.HashSet<string>(weaponPaths.Concat(posePaths), System.StringComparer.Ordinal);
+if (!allowed.SetEquals(firstApply["allowed"].Select(p => (string)p)) || !allowed.SetEquals(firstApply["reportedWritten"].Select(p => (string)p)))
+    throw new System.InvalidOperationException("Изменился scope 9 weapons + 17 existing poses.");
+if (allowed.Count != 26) throw new System.InvalidOperationException("Ожидались 26 разрешённых ассетов.");
+foreach (string path in allowed.Concat(new[] { profile.RigPrefabPath, profile.RecordAvatarPath }))
+    if (!System.IO.File.Exists(path) || !System.IO.File.Exists(path + ".meta") || string.IsNullOrEmpty(UnityEditor.AssetDatabase.AssetPathToGUID(path)))
+        throw new System.InvalidOperationException("Нет baseline ассета/meta/GUID: " + path);
+var poses = posePaths.Select(p => UnityEditor.AssetDatabase.LoadAssetAtPath<UltimateXR.Manipulation.HandPoses.UxrHandPoseAsset>(p)).ToArray();
+if (poses.Any(p => p == null)) throw new System.InvalidOperationException("Нет существующей baseline позы; создание запрещено.");
+var registration = VrBattlegrounds.Editor.Avatars.GripPoseAssets.CheckRegistered(profile.PoseRegistryPath, poses);
+if (registration.Count != 0) throw new System.InvalidOperationException("Поза не зарегистрирована; Base не дописываем: " + string.Join("; ", registration));
+// Тот же no-import preflight и набор исходных FBX, что у R2 Measure.
+var paths = new System.Collections.Generic.SortedSet<string>(System.StringComparer.Ordinal);
+var sourcePrefabs = new System.Collections.Generic.List<string>();
+foreach (var k in VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All.Where(k => selected.Any(p => p.Weapon == VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.PrefabPath(k)))) {
+    string sourcePath = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Prefabs/Weapons/" + k.PackPrefab + ".prefab";
+    var sourcePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(sourcePath);
+    if (sourcePrefab == null) throw new System.InvalidOperationException("Нет source prefab: " + sourcePath);
+    VrBattlegrounds.Editor.Gameplay.KinemationWeapon.RequireReadable(sourcePrefab, k.Attachments);
+    sourcePrefabs.Add(sourcePath);
+    foreach (string path in VrBattlegrounds.Editor.Gameplay.KinemationWeapon.ReadableSourcePaths(sourcePrefab, k.Attachments)) { paths.Add(path); paths.Add(path + ".meta"); }
+    string animDir = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Animations/" + k.AnimFolder;
+    foreach (string path in System.IO.Directory.GetFiles(animDir, "*.FBX", System.IO.SearchOption.AllDirectories)) { paths.Add(path.Replace('\\', '/')); paths.Add(path.Replace('\\', '/') + ".meta"); }
+}
+foreach (var r in VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.Recipes.Where(r => expectedRecipes.Contains(r.Pose))) {
+    string folder = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/" + r.Folder;
+    string modelPath = folder + "/Mesh/" + r.Mesh + ".FBX";
+    paths.Add(modelPath); paths.Add(modelPath + ".meta");
+    foreach (string path in System.IO.Directory.GetFiles(folder + "/Animations", "*.FBX", System.IO.SearchOption.AllDirectories)) { paths.Add(path.Replace('\\', '/')); paths.Add(path.Replace('\\', '/') + ".meta"); }
+}
+var seeds = weaponPaths.Concat(sourcePrefabs).Concat(new[] { profile.RigPrefabPath, profile.RecordAvatarPath }).Distinct().ToArray();
+foreach (string path in UnityEditor.AssetDatabase.GetDependencies(seeds, true)) {
+    if (!path.StartsWith("Assets/") || !System.IO.File.Exists(path)) continue;
+    paths.Add(path);
+    if (System.IO.File.Exists(path + ".meta")) paths.Add(path + ".meta");
+}
+foreach (string path in System.IO.Directory.GetFiles(profile.PoseFolder, "*", System.IO.SearchOption.AllDirectories)) paths.Add(path.Replace('\\', '/'));
+foreach (string path in allowed.Concat(new[] { profile.RigPrefabPath, profile.RecordAvatarPath })) { paths.Add(path); paths.Add(path + ".meta"); }
+// Authoring покрывается firstApply.after; все 2522 исторических строки и новые foreign пути охраняем.
+var authoringRequiredPaths = paths.ToArray();
+foreach (string path in firstAfter.Keys) paths.Add(path);
+System.Func<System.Collections.Generic.Dictionary<int, UnityEngine.Object>> findDirtyAssets = () =>
+    UnityEngine.Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
+        .Where(o => o != null && UnityEditor.EditorUtility.IsPersistent(o) && UnityEditor.EditorUtility.IsDirty(o))
+        .ToDictionary(o => o.GetInstanceID(), o => o);
+var dirtyObjectsBefore = findDirtyAssets();
+var dirtyPathsBefore = dirtyObjectsBefore.ToDictionary(p => p.Key, p => UnityEditor.AssetDatabase.GetAssetPath(p.Value).Replace('\\', '/'));
+var dirtyTargetPaths = dirtyPathsBefore.Values.Where(p => allowed.Contains(p)).Distinct().ToArray();
+// Persistent не гарантирует наличие файла: объекты без пути остаются в per-instance проверке флагов.
+var foreignDirtyPaths = dirtyPathsBefore.Values.Where(p => !string.IsNullOrEmpty(p)).Distinct().OrderBy(p => p, System.StringComparer.Ordinal).ToArray();
+var foreignDirtyBefore = dirtyObjectsBefore.ToDictionary(p => p.Key, p => new {
+    instanceId = p.Key, path = dirtyPathsBefore[p.Key], name = p.Value.name, type = p.Value.GetType().FullName,
+    exists = true, isPersistent = UnityEditor.EditorUtility.IsPersistent(p.Value), isDirty = UnityEditor.EditorUtility.IsDirty(p.Value) });
+request.OutDir = System.IO.Path.Combine(request.OutDir, "r2-correction-" + System.DateTime.UtcNow.ToString("yyyyMMddTHHmmss") + "-" + System.Guid.NewGuid().ToString("N"));
+System.IO.Directory.CreateDirectory(request.OutDir);
+string preflightPath = System.IO.Path.Combine(request.OutDir, "preflight.json");
+System.IO.File.WriteAllText(preflightPath, Newtonsoft.Json.JsonConvert.SerializeObject(new {
+    scope = "R2 preflight до записи assets", dirtyTargetPaths, foreignDirtyBefore,
+    diskPresence = foreignDirtyPaths.ToDictionary(p => p, p => new { file = System.IO.File.Exists(p), meta = System.IO.File.Exists(p + ".meta") })
+}, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+if (dirtyTargetPaths.Length != 0)
+    throw new System.InvalidOperationException("Целевые assets уже dirty; Apply не запускался: " + string.Join(", ", dirtyTargetPaths.Take(10)) + "; " + preflightPath);
+// Для виртуальных путей Unity охраняем отсутствие файла/meta; для файлов — их байты.
+foreach (string path in foreignDirtyPaths) { paths.Add(path); paths.Add(path + ".meta"); }
+System.Action<string, int, int> progress = (phase, hashed, total) => {
+    string json = Newtonsoft.Json.JsonConvert.SerializeObject(new { utc = System.DateTime.UtcNow.ToString("O"), phase, hashed, total });
+    System.IO.File.WriteAllText(System.IO.Path.Combine(request.OutDir, "progress.json"), json, new System.Text.UTF8Encoding(false));
+    System.IO.File.AppendAllText(System.IO.Path.Combine(request.OutDir, "progress.jsonl"), json + "\n", new System.Text.UTF8Encoding(false));
+};
+var currentHashes = new System.Collections.Generic.Dictionary<string, string>();
+progress("prehash", 0, firstAfter.Count);
+foreach (var pair in firstAfter) {
+    string hash = System.IO.File.Exists(pair.Key) ? sha256(pair.Key) : null;
+    if (hash != pair.Value) throw new System.InvalidOperationException("Диск изменился после Apply704 (байты/отсутствие): " + pair.Key);
+    currentHashes[pair.Key] = hash;
+    if (currentHashes.Count % 100 == 0) progress("prehash", currentHashes.Count, firstAfter.Count);
+}
+progress("prehash_complete", currentHashes.Count, firstAfter.Count);
+if (authoringRequiredPaths.Any(p => !firstAfter.ContainsKey(p))) throw new System.InvalidOperationException("Apply704.after не охватил текущие входы authoring.");
+// Сверенный текущий hash используется повторно; второй полный цикл SHA256 не нужен.
+var before = paths.ToDictionary(p => p, p => currentHashes.ContainsKey(p) ? currentHashes[p] : System.IO.File.Exists(p) ? sha256(p) : null);
+var guidPaths = paths.Where(p => !p.EndsWith(".meta") && System.IO.File.Exists(p + ".meta")).ToArray();
+var guidsBefore = guidPaths.ToDictionary(p => p, p => UnityEditor.AssetDatabase.AssetPathToGUID(p));
+var identitiesBefore = weaponPaths.ToDictionary(p => p, p => VrBattlegrounds.Editor.Avatars.GripPrefabIdentityGuard.Snapshot(p));
+// Точный parent повторяет HandsPackPoseImporter.AlignTransform: MeshContainer/Grabs либо корень.
+// Исключаем только avatar subtree конкретного рецепта; существующие ancestors сравниваем полностью.
+var targetRoots = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>();
+foreach (string path in weaponPaths) {
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    if (root == null) throw new System.InvalidOperationException("Нет target prefab: " + path);
+    string prefix = root.transform.Find("MeshContainer/Grabs") != null ? "MeshContainer/Grabs/" : "";
+    var points = selected.Where(p => p.Weapon == path).ToArray();
+    if (points.Select(p => p.GrabPoint).Distinct().Count() != points.Length)
+        throw new System.InvalidOperationException("Неоднозначные выбранные grab point indices: " + path);
+    targetRoots[path] = points.ToDictionary(p => p.Pose, p => prefix + p.AlignSource + "/" + p.Pose + "/" + profile.AlignAvatarName);
+    foreach (string targetRoot in targetRoots[path].Values)
+        if (root.transform.Find(targetRoot) == null || root.transform.Find(targetRoot + "/Left") == null || root.transform.Find(targetRoot + "/Right") == null)
+            throw new System.InvalidOperationException("Нет существующего Apply704 align subtree: " + path + "|" + targetRoot);
+}
+// Проверяем реальную схему EditorJsonUtility до masking. Никаких whole-array/category исключений.
+System.Func<Newtonsoft.Json.Linq.JObject, string, System.Collections.Generic.List<Newtonsoft.Json.Linq.JToken>> grabTokensFor = (json, path) => {
+    var payload = (json["MonoBehaviour"] ?? json) as Newtonsoft.Json.Linq.JObject;
+    var primary = payload?["_grabPoint"] as Newtonsoft.Json.Linq.JObject;
+    var additional = payload?["_additionalGrabPoints"] as Newtonsoft.Json.Linq.JArray;
+    if (primary == null || additional == null || additional.Any(p => !(p is Newtonsoft.Json.Linq.JObject)))
+        throw new System.InvalidOperationException("Неизвестная схема root UxrGrabbableObject JSON: " + path);
+    var tokens = new System.Collections.Generic.List<Newtonsoft.Json.Linq.JToken> { primary };
+    tokens.AddRange(additional);
+    foreach (var point in selected.Where(p => p.Weapon == path)) {
+        if (point.GrabPoint < 0 || point.GrabPoint >= tokens.Count || !(tokens[point.GrabPoint]["_avatarGripPoseEntries"] is Newtonsoft.Json.Linq.JArray))
+            throw new System.InvalidOperationException("Нет выбранного grab index/avatar entries: " + path + "#" + point.GrabPoint);
+        var entries = (Newtonsoft.Json.Linq.JArray)tokens[point.GrabPoint]["_avatarGripPoseEntries"];
+        if (entries.Any(e => !(e is Newtonsoft.Json.Linq.JObject) || e["_avatarPrefabGuid"]?.Type != Newtonsoft.Json.Linq.JTokenType.String) ||
+            entries.Count(e => (string)e["_avatarPrefabGuid"] == recordGuid) != 1)
+            throw new System.InvalidOperationException("Целевая GUID запись должна быть единственной: " + path + "#" + point.GrabPoint);
+    }
+    return tokens;
+};
+System.Func<string, System.Collections.Generic.List<object>> targetRecordSnapshot = path => {
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var grabbable = root == null ? null : root.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+    if (grabbable == null) throw new System.InvalidOperationException("Нет root UxrGrabbableObject: " + path);
+    grabTokensFor(Newtonsoft.Json.Linq.JObject.Parse(UnityEditor.EditorJsonUtility.ToJson(grabbable)), path);
+    var records = new System.Collections.Generic.List<object>();
+    string prefix = root.transform.Find("MeshContainer/Grabs") != null ? "MeshContainer/Grabs/" : "";
+    foreach (var point in selected.Where(p => p.Weapon == path)) {
+        var grabPoint = grabbable.GetGrabPoint(point.GrabPoint);
+        var matches = grabPoint?.AvatarGripPoseEntries?.Where(e => e != null && e.AvatarPrefabGuid == recordGuid).ToArray();
+        if (matches == null || matches.Length != 1) throw new System.InvalidOperationException("Неединственная runtime target record: " + path + "#" + point.GrabPoint);
+        var grip = matches[0];
+        string posePath = profile.PosePathFor(point);
+        string targetRoot = prefix + point.AlignSource + "/" + point.Pose + "/" + profile.AlignAvatarName;
+        string leftPath = targetRoot + "/Left", rightPath = targetRoot + "/Right";
+        if (targetRoots[path][point.Pose] != targetRoot ||
+            grip.HandPose != UnityEditor.AssetDatabase.LoadAssetAtPath<UltimateXR.Manipulation.HandPoses.UxrHandPoseAsset>(posePath) ||
+            UnityEditor.AssetDatabase.GetAssetPath(grip.HandPose) != posePath || grip.PoseBlendValue != 0 ||
+            grip.GripAlignTransformHandLeft == null || grip.GripAlignTransformHandRight == null ||
+            grip.GripAlignTransformHandLeft != root.transform.Find(leftPath) || grip.GripAlignTransformHandRight != root.transform.Find(rightPath) ||
+            UnityEditor.AnimationUtility.CalculateTransformPath(grip.GripAlignTransformHandLeft, root.transform) != leftPath ||
+            UnityEditor.AnimationUtility.CalculateTransformPath(grip.GripAlignTransformHandRight, root.transform) != rightPath)
+            throw new System.InvalidOperationException("Target record pose/blend/точные L/R align paths неверны: " + path + "#" + point.GrabPoint);
+        records.Add(new { point.Pose, point.GrabPoint, recordGuid, posePath, poseGuid = UnityEditor.AssetDatabase.AssetPathToGUID(posePath),
+            blend = grip.PoseBlendValue, leftPath, rightPath, targetRoot });
+    }
+    return records;
+};
+// Ссылки instanceID приводим к стабильному GlobalObjectId после точного удаления target GUID entry.
+System.Func<string, System.Collections.Generic.Dictionary<string, string>> nonGripSnapshot = path => {
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    if (root == null) throw new System.InvalidOperationException("Нет prefab для non-grip snapshot: " + path);
+    var map = new System.Collections.Generic.Dictionary<string, string>();
+    foreach (var t in root.GetComponentsInChildren<UnityEngine.Transform>(true)) {
+        string hierarchy = UnityEditor.AnimationUtility.CalculateTransformPath(t, root.transform);
+        if (targetRoots[path].Values.Any(targetRoot => hierarchy == targetRoot || hierarchy.StartsWith(targetRoot + "/", System.StringComparison.Ordinal))) continue;
+        string key = hierarchy + "#" + t.GetSiblingIndex();
+        map[key + "|object"] = Newtonsoft.Json.JsonConvert.SerializeObject(new { t.name, t.gameObject.layer, t.gameObject.tag, t.gameObject.activeSelf,
+            position = new[] { t.localPosition.x, t.localPosition.y, t.localPosition.z }, rotation = new[] { t.localRotation.x, t.localRotation.y, t.localRotation.z, t.localRotation.w }, scale = new[] { t.localScale.x, t.localScale.y, t.localScale.z } });
+        int index = 0;
+        foreach (var component in t.GetComponents<UnityEngine.Component>()) {
+            if (component == null) { map[key + "|missing#" + index++] = "missing"; continue; }
+            if (component is UnityEngine.Transform) continue;
+            var json = Newtonsoft.Json.Linq.JObject.Parse(UnityEditor.EditorJsonUtility.ToJson(component));
+            if (component is UltimateXR.Manipulation.UxrGrabbableObject && t == root.transform) {
+                var tokens = grabTokensFor(json, path);
+                foreach (var point in selected.Where(p => p.Weapon == path))
+                    foreach (var entry in tokens[point.GrabPoint]["_avatarGripPoseEntries"].Children().Where(e => (string)e["_avatarPrefabGuid"] == recordGuid).ToArray()) entry.Remove();
+            }
+            foreach (var property in json.Descendants().OfType<Newtonsoft.Json.Linq.JProperty>().Where(p => p.Name == "instanceID").ToArray()) {
+                var obj = UnityEditor.EditorUtility.InstanceIDToObject((int)property.Value);
+                property.Value = obj == null ? "null" : UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow(obj).ToString();
+            }
+            map[key + "|" + component.GetType().FullName + "#" + index++] = json.ToString(Newtonsoft.Json.Formatting.None);
+        }
+    }
+    return map;
+};
+var targetRecordsBefore = weaponPaths.ToDictionary(p => p, targetRecordSnapshot);
+var nonGripBefore = weaponPaths.ToDictionary(p => p, nonGripSnapshot);
+// Повторная проверка после всех читающих preflight-инспекторов; при изменении снимка пакет не запускаем.
+var dirtyObjectsPreRun = findDirtyAssets();
+if (!new System.Collections.Generic.HashSet<int>(dirtyObjectsBefore.Keys).SetEquals(dirtyObjectsPreRun.Keys) ||
+    dirtyObjectsPreRun.Any(p => p.Value != dirtyObjectsBefore[p.Key] || UnityEditor.AssetDatabase.GetAssetPath(p.Value).Replace('\\', '/') != dirtyPathsBefore[p.Key]))
+    throw new System.InvalidOperationException("Dirty assets изменились во время preflight; Apply не запускался.");
+System.IO.File.WriteAllText(System.IO.Path.Combine(request.OutDir, "before.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new { before, guidsBefore, identitiesBefore, nonGripBefore, targetRoots, targetRecordsBefore,
+    foreignDirtyPaths, foreignDirtyBefore, authoringRequiredPaths, evidenceFiles, measurePath, measureSha, prerequisites = prereqs }, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+var foreignDirtyAfter = new System.Collections.Generic.Dictionary<int, object>();
+var foreignDirtyChanges = new System.Collections.Generic.List<string>();
+System.Action inspectForeignDirty = () => {
+    foreignDirtyAfter.Clear(); foreignDirtyChanges.Clear();
+    foreach (var pair in dirtyObjectsBefore) {
+        var obj = UnityEditor.EditorUtility.InstanceIDToObject(pair.Key);
+        bool exists = obj != null && obj == pair.Value;
+        string path = exists ? UnityEditor.AssetDatabase.GetAssetPath(obj).Replace('\\', '/') : null;
+        bool isPersistent = exists && UnityEditor.EditorUtility.IsPersistent(obj);
+        bool isDirty = exists && UnityEditor.EditorUtility.IsDirty(obj);
+        foreignDirtyAfter[pair.Key] = new { instanceId = pair.Key, path, exists, isPersistent, isDirty };
+        if (!exists || !isPersistent || !isDirty || path != dirtyPathsBefore[pair.Key])
+            foreignDirtyChanges.Add(dirtyPathsBefore[pair.Key] + "|instanceID=" + pair.Key + "|exists=" + exists + "|persistent=" + isPersistent + "|dirty=" + isDirty + "|path=" + path);
+    }
+    foreach (var pair in findDirtyAssets()) {
+        string path = UnityEditor.AssetDatabase.GetAssetPath(pair.Value).Replace('\\', '/');
+        if (!allowed.Contains(path) && !dirtyObjectsBefore.ContainsKey(pair.Key))
+            foreignDirtyChanges.Add(path + "|new_foreign_dirty_instanceID=" + pair.Key);
+    }
+};
+VrBattlegrounds.Editor.Avatars.GripExtractionReport result = null;
+string operationError = null;
+progress("apply_analyze", currentHashes.Count, firstAfter.Count);
+try { result = VrBattlegrounds.Editor.Avatars.GripExtraction.Run(request); }
+catch (System.Exception e) { operationError = e.ToString(); }
+// Run освобождает source/rig/transients/prefab contents через существующие using/finally.
+// Даже error/partial проверяем по диску: Written может не охватить сохранение перед исключением.
+var failures = new System.Collections.Generic.List<string>();
+if (operationError != null) failures.Add(operationError);
+if (result == null || result.Status != "ok") failures.Add("GripExtraction: " + result?.Status + "; " + result?.Error);
+try {
+inspectForeignDirty();
+if (foreignDirtyChanges.Count != 0) failures.Add("Изменены foreign dirty объекты/флаги: " + foreignDirtyChanges.Count);
+var after = new System.Collections.Generic.Dictionary<string, string>();
+progress("posthash", 0, paths.Count);
+foreach (string path in paths) {
+    after[path] = System.IO.File.Exists(path) ? sha256(path) : null;
+    if (after.Count % 100 == 0) progress("posthash", after.Count, paths.Count);
+}
+progress("posthash_complete", after.Count, paths.Count);
+var changed = paths.Where(p => before[p] != after[p]).ToArray();
+var unexpected = changed.Where(p => !allowed.Contains(p)).ToArray();
+if (unexpected.Length != 0) failures.Add("Изменены запрещённые входы: " + string.Join(", ", unexpected));
+var newPoseFiles = System.IO.Directory.GetFiles(profile.PoseFolder, "*", System.IO.SearchOption.AllDirectories).Select(p => p.Replace('\\', '/')).Where(p => !paths.Contains(p)).ToArray();
+if (newPoseFiles.Length != 0) failures.Add("Созданы новые файлы поз/meta.");
+var guidsAfter = guidPaths.ToDictionary(p => p, p => UnityEditor.AssetDatabase.AssetPathToGUID(p));
+var guidChanges = guidPaths.Where(p => guidsBefore[p] != guidsAfter[p]).ToArray();
+if (guidChanges.Length != 0) failures.Add("Изменены GUID: " + string.Join(", ", guidChanges));
+var identitiesAfter = weaponPaths.ToDictionary(p => p, p => VrBattlegrounds.Editor.Avatars.GripPrefabIdentityGuard.Snapshot(p));
+var nonGripAfter = weaponPaths.ToDictionary(p => p, nonGripSnapshot);
+var targetRecordsAfter = weaponPaths.ToDictionary(p => p, targetRecordSnapshot);
+var identityChanges = new System.Collections.Generic.List<string>();
+var nonGripChanges = new System.Collections.Generic.List<string>();
+var assetIds = new System.Collections.Generic.List<object>();
+foreach (string path in weaponPaths) {
+    foreach (var pair in identitiesBefore[path])
+        if (!identitiesAfter[path].ContainsKey(pair.Key) || identitiesAfter[path][pair.Key] != pair.Value) identityChanges.Add(path + "|" + pair.Key);
+    foreach (var pair in nonGripBefore[path])
+        if (!nonGripAfter[path].ContainsKey(pair.Key) || nonGripAfter[path][pair.Key] != pair.Value) nonGripChanges.Add(path + "|" + pair.Key);
+    // Все target subtrees уже исключены точно; новые ключи вне них запрещены, включая ancestors.
+    foreach (string key in nonGripAfter[path].Keys.Where(k => !nonGripBefore[path].ContainsKey(k)))
+        nonGripChanges.Add(path + "|added|" + key);
+    string text = System.IO.File.ReadAllText(path);
+    uint canonical = Mirror.NetworkIdentity.AssetGuidToUint(new System.Guid(guidsBefore[path]));
+    var matches = System.Text.RegularExpressions.Regex.Matches(text, @"^  _assetId: (\d+)|propertyPath: _assetId\r?\n\s+value: (\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+    var values = matches.Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value).ToArray();
+    bool valid = values.Length > 0 && values.All(v => v == canonical.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    if (!valid) failures.Add(path + ": _assetId на диске неканонический.");
+    assetIds.Add(new { path, canonical, onDisk = values, valid });
+}
+if (identityChanges.Count != 0) failures.Add("Изменены/утрачены identity: " + identityChanges.Count);
+if (nonGripChanges.Count != 0) failures.Add("Изменены/утрачены данные вне целевого хвата: " + nonGripChanges.Count);
+var hands = new System.Collections.Generic.List<object>();
+var fitOverall = new System.Collections.Generic.Dictionary<string, int>();
+var palmSeverity = new System.Collections.Generic.Dictionary<string, int>();
+var fitStatus = new System.Collections.Generic.Dictionary<string, int>();
+int normalRecommended = 0, curlRecommendedHands = 0, curlRecommendedFingers = 0, appliedCurlHands = 0, appliedCurlFingers = 0;
+if (result != null) foreach (var point in result.Points) {
+    if (!string.IsNullOrEmpty(point.Error)) failures.Add(point.Pose + ": " + point.Error);
+    foreach (var hand in point.Hands) {
+        var fit = hand.Fit;
+        string handKey = point.Pose + "/" + hand.Side;
+        System.Collections.Generic.Dictionary<string, float> requestedCurl;
+        request.CurlDegByHand.TryGetValue(handKey, out requestedCurl);
+        var actualCurl = hand.CurlDeg ?? new System.Collections.Generic.Dictionary<string, float>();
+        if (requestedCurl != null) { appliedCurlHands++; appliedCurlFingers += actualCurl.Count; }
+        if (hand.NormalOffsetMm != 0 || hand.NormalOffsetClamped ||
+            actualCurl.Count != (requestedCurl?.Count ?? 0) || actualCurl.Any(p => requestedCurl == null || !requestedCurl.ContainsKey(p.Key) || p.Value != requestedCurl[p.Key]))
+            failures.Add(handKey + ": фактические correction maps/normal не совпадают с точным запросом; clamp не разрешён.");
+        // analysis_incomplete без Error — штатная приблизительность static Fit, не полная приёмка.
+        if (fit == null || (fit.Status != "analysis_complete" && fit.Status != "analysis_incomplete") || !string.IsNullOrEmpty(fit.Error) ||
+            string.IsNullOrEmpty(fit.Overall) || string.IsNullOrEmpty(fit.PalmSeverity) || string.IsNullOrEmpty(fit.ReportPath) || !System.IO.File.Exists(fit.ReportPath) ||
+            string.IsNullOrEmpty(fit.ReviewSheet) || !System.IO.File.Exists(fit.ReviewSheet))
+            failures.Add(point.Pose + "/" + hand.Side + ": Fit не дал полного кандидата ревью.");
+        if (hand.Palm == null || !finite(hand.Palm.ErrorMm) || !finite(hand.Palm.AxesErrorDeg) || hand.Palm.ErrorMm > 0.5 || hand.Palm.AxesErrorDeg > 0.5 ||
+            !hand.RuntimeVsWorldDeg.HasValue || !finite(hand.RuntimeVsWorldDeg.Value) || hand.RuntimeVsWorldDeg.Value > 0.5 ||
+            hand.MetacarpalInfo == null || hand.MetacarpalInfo.Length != 4 || hand.MetacarpalInfo.Any(v => !v))
+            failures.Add(point.Pose + "/" + hand.Side + ": числовая посадка/кодирование не подтверждены.");
+        string overall = fit?.Overall ?? "missing", palm = fit?.PalmSeverity ?? "missing";
+        string status = fit?.Status ?? "missing";
+        fitStatus[status] = fitStatus.ContainsKey(status) ? fitStatus[status] + 1 : 1;
+        fitOverall[overall] = fitOverall.ContainsKey(overall) ? fitOverall[overall] + 1 : 1;
+        palmSeverity[palm] = palmSeverity.ContainsKey(palm) ? palmSeverity[palm] + 1 : 1;
+        if (fit != null && fit.NormalOffsetRecommended) normalRecommended++;
+        int curls = fit?.SuggestedCurlDeg?.Count ?? 0;
+        if (curls != 0) curlRecommendedHands++;
+        curlRecommendedFingers += curls;
+        hands.Add(new { point.Pose, point.Weapon, point.GrabPoint, hand.Side, hand.Palm, hand.RuntimeVsWorldDeg, hand.MetacarpalInfo, hand.NormalOffsetMm, hand.NormalOffsetClamped, hand.CurlDeg, fit });
+    }
+}
+if (appliedCurlHands != 14 || appliedCurlFingers != 24) failures.Add("Ожидались ровно 14 рук / 24 применённых curl.");
+if (result == null || result.Points.Count != 17 || hands.Count != 34) failures.Add("Ожидались 17 точек / 34 руки.");
+var reportedWritten = result == null ? new string[0] : result.Points.SelectMany(p => p.Written).Distinct().ToArray();
+if (!allowed.SetEquals(reportedWritten)) failures.Add("Written не охватывает ровно 26 разрешённых ассетов.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating) failures.Add("Редактор занят после пакета; дождаться завершения перед finish.");
+string reportPath = System.IO.Path.Combine(request.OutDir, "r2-correction-validation.json");
+var report = new { passed = failures.Count == 0, scope = "R2 second authoring Apply + static Fit; сериализация/инварианты и кандидат ревью, без contact/gameplay/Quest приёмки",
+    status = result?.Status, operationError, extractionReport = result?.ReportPath, points = result?.Points.Count, handCount = hands.Count,
+    allowed, reportedWritten, changed, actualWrittenPaths = changed.Where(p => allowed.Contains(p)).ToArray(), unexpected, newPoseFiles,
+    before, after, foreignDirtyPaths, foreignDirtyBefore, foreignDirtyAfter, foreignDirtyChanges,
+    guidsBefore, guidsAfter, guidChanges, identitiesBefore, identitiesAfter, identityChanges,
+    nonGripBefore, nonGripAfter, nonGripChanges, targetRoots, targetRecordsBefore, targetRecordsAfter, assetIds, hands, fitStatus, fitOverall, palmSeverity, normalRecommended, curlRecommendedHands, curlRecommendedFingers, appliedCurlHands, appliedCurlFingers,
+    failures, warnings = result?.Warnings, prerequisites = prereqs, evidenceFiles, measurePath, measureSha };
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+progress("validation_saved", after.Count, paths.Count);
+return new { report.passed, report.scope, report.status, report.points, report.handCount, changedCount = changed.Length,
+    writtenCount = reportedWritten.Length, unexpectedCount = unexpected.Length, fitStatus, fitOverall, palmSeverity, normalRecommended, curlRecommendedHands, curlRecommendedFingers, appliedCurlHands, appliedCurlFingers,
+    foreignDirtyObjectCount = foreignDirtyBefore.Count, foreignDirtyPathCount = foreignDirtyPaths.Length, foreignDirtyChangeCount = foreignDirtyChanges.Count,
+    failureCount = failures.Count, examples = failures.Concat(foreignDirtyChanges).Concat(nonGripChanges).Concat(identityChanges).Take(10).ToArray(), reportPath, report.extractionReport };
+} catch (System.Exception inspectionError) {
+    // Сохраняем известный исход и фактические байты даже при отказе последующего инспектора.
+    var afterFailure = new System.Collections.Generic.Dictionary<string, string>();
+    var inspectionErrors = new System.Collections.Generic.List<string> { inspectionError.ToString() };
+    try { inspectForeignDirty(); }
+    catch (System.Exception e) { inspectionErrors.Add("Foreign dirty inspection: " + e); }
+    progress("failure_posthash", 0, paths.Count);
+    foreach (string path in paths) {
+        try { afterFailure[path] = System.IO.File.Exists(path) ? sha256(path) : null; }
+        catch (System.Exception e) { inspectionErrors.Add(path + ": " + e.Message); }
+        if (afterFailure.Count % 100 == 0) progress("failure_posthash", afterFailure.Count, paths.Count);
+    }
+    var changedFailure = afterFailure.Keys.Where(p => before[p] != afterFailure[p]).ToArray();
+    string partialReportPath = System.IO.Path.Combine(request.OutDir, "r2-correction-validation.json");
+    System.IO.File.WriteAllText(partialReportPath, Newtonsoft.Json.JsonConvert.SerializeObject(new { passed = false,
+        scope = "R2 second authoring/static Fit; инспекция неполная, приёмки нет", operationError, inspectionErrors,
+        extractionReport = result?.ReportPath, status = result?.Status, reportedWritten = result?.Written,
+        before, after = afterFailure, foreignDirtyPaths, foreignDirtyBefore, foreignDirtyAfter, foreignDirtyChanges,
+        changed = changedFailure, actualWrittenPaths = changedFailure.Where(p => allowed.Contains(p)).ToArray(),
+        unexpected = changedFailure.Where(p => !allowed.Contains(p)).ToArray(), failures, evidenceFiles, targetRoots, targetRecordsBefore, measurePath, measureSha }, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+    progress("failure_validation_saved", afterFailure.Count, paths.Count);
+    return new { passed = false, failureCount = failures.Count + inspectionErrors.Count, examples = failures.Concat(inspectionErrors).Take(10).ToArray(), reportPath = partialReportPath, extractionReport = result?.ReportPath };
+}

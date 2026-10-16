@@ -19,6 +19,8 @@ namespace VrBattlegrounds.Editor.Avatars
     {
         private readonly GameObject                        _root;
         private readonly Dictionary<Transform, Quaternion> _bind = new Dictionary<Transform, Quaternion>();
+        private readonly PreviewRenderUtility _scenePreview;
+        private bool _disposed;
 
         public GripTargetRig(string prefabPath)
         {
@@ -61,9 +63,38 @@ namespace VrBattlegrounds.Editor.Avatars
 
         public static readonly UxrHandSide[] Sides = { UxrHandSide.Left, UxrHandSide.Right };
 
+        /// <summary>Временная копия сценового аватара, включая несохранённые пальцы. Сценовый оригинал не меняется.</summary>
+        public GripTargetRig(UxrAvatar sceneAvatar)
+        {
+            if (!sceneAvatar || EditorUtility.IsPersistent(sceneAvatar)) throw new ArgumentException("Нужен сценовый SDK-аватар.");
+            Vector3 scale = sceneAvatar.transform.lossyScale;
+            if (scale.x <= 0 || Mathf.Abs(scale.x - scale.y) > 1e-5f || Mathf.Abs(scale.x - scale.z) > 1e-5f)
+                throw new ArgumentException("Временной копии нужен положительный uniform scale аватара.");
+            var source = PrefabUtility.GetCorrespondingObjectFromSource(sceneAvatar.gameObject);
+            PrefabPath = source ? AssetDatabase.GetAssetPath(source) : "";
+            _scenePreview = new PreviewRenderUtility();
+            try
+            {
+                _root = _scenePreview.InstantiatePrefabInScene(sceneAvatar.gameObject);
+                _root.transform.SetPositionAndRotation(sceneAvatar.transform.position, sceneAvatar.transform.rotation);
+                _root.transform.localScale = scale;
+                foreach (var behaviour in _root.GetComponentsInChildren<Behaviour>(true)) behaviour.enabled = false;
+                Avatar = _root.GetComponent<UxrAvatar>();
+                if (!Avatar) throw new ArgumentException("В копии отсутствует UxrAvatar.");
+                foreach (var side in Sides)
+                {
+                    var wrist = Avatar.GetHand(side).Wrist;
+                    if (!wrist) throw new ArgumentException("В копии отсутствует запястье " + side);
+                    foreach (var bone in wrist.GetComponentsInChildren<Transform>(true)) _bind[bone] = bone.localRotation;
+                }
+            }
+            catch { _scenePreview.Cleanup(); throw; }
+        }
+
         public string PrefabPath { get; }
 
         public UxrAvatar Avatar { get; }
+        public Transform RootTransform => _root.transform;
 
         public UxrAvatarHand Hand(UxrHandSide side) => Avatar.GetHand(side);
 
@@ -140,6 +171,9 @@ namespace VrBattlegrounds.Editor.Avatars
 
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
+            if (_scenePreview != null) { _scenePreview.Cleanup(); return; }
             if (_root != null)
             {
                 PrefabUtility.UnloadPrefabContents(_root);

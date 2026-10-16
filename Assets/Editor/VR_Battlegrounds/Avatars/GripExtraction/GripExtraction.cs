@@ -190,7 +190,11 @@ namespace VrBattlegrounds.Editor.Avatars
                     }
                 }
 
-                if (save) AssetDatabase.SaveAssets();
+                if (save)
+                {
+                    // Сохраняем только позы запроса: общая запись затронула бы чужие dirty assets.
+                    foreach (UxrHandPoseAsset pose in poses.Values) AssetDatabase.SaveAssetIfDirty(pose);
+                }
 
                 if (save && profile.RegisterPoses)
                 {
@@ -215,8 +219,6 @@ namespace VrBattlegrounds.Editor.Avatars
                         foreach (GripExtractionResult point in weapon) point.Written.Add(weapon.Key);
                     }
                 }
-
-                if (save) AssetDatabase.SaveAssets();
             }
             finally
             {

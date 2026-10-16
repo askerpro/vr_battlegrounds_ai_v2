@@ -210,6 +210,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// </summary>
         private void OnDisable()
         {
+            ContactEditMode = UxrHandPoseContactEditMode.Manual;
             DiagnosticsClosed?.Invoke(this);
             EditorApplication.playModeStateChanged -= EditorApplication_PlaymodeStateChanged;
             SceneView.duringSceneGui               -= SceneView_DuringSceneGUI;
@@ -1219,7 +1220,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 // Handle finger spinners
 
-                if (_avatar != null && GUI.enabled)
+                if (_avatar != null && GUI.enabled && ContactEditMode == UxrHandPoseContactEditMode.Manual)
                 {
                     HandleFingerSpinners(leftHandTexturePos, rightHandTexturePos, _selectGameObjectOnClick, CurrentPoseType, CurrentBlendPoseType);
                 }
@@ -1395,6 +1396,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <param name="sceneView">Scene information</param>
         private void SceneView_DuringSceneGUI(SceneView sceneView)
         {
+            ContactEditingSceneGUI?.Invoke(this, sceneView);
             if (_avatar != null)
             {
                 // Do something with Unity's Handles class

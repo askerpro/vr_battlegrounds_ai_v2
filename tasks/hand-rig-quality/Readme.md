@@ -1,13 +1,139 @@
 # Качество кистей и хватов MEF
 
-**Задача/владелец:** `hand-rig-quality`, эксперт `avatar-grip`. **Обновлено:** 2026-10-15 (приёмка save и переход к extraction-run).
+**Последний native — 757 DONE/received, 2026-10-15:** обе эталонные кисти15/15 материальных точек.
+Viper v2 default priority0: контакт8/15→9/15, полная численная цель не достигнута; качество не принято.
+1240 source hashes без изменений,17 artifacts SHA-проверены, worker освобождён.
+Реальные изображения встроены в reports/sdk-contact-757-Review.md. SDK83 и product импортированы
+в Unity без compile errors; UI-interaction/forward/Undo/runtime этим capture не проверялись.
+
+**Native блокер 756 — 2026-10-15:** begin не дошёл до RUNNING:16 ошибок обратной ссылки
+named HandPoseReview → default Editor. Capture/Apply/tests не запускались. Recovery завершён8741;
+сохранены только8 Unity-generated meta из R d0e6e01aac9c1340090b7c55375ffbce295cad5a,
+GUID перенесённого controller сохранён. Очередь освобождена сопровождающим.
+Локально направление исправлено: controller в default GripAuthoring, named Review оставляет совместимый
+фасад. Раздельно скомпилированы SDK108(0errors/21legacy warnings), Review24(0/0), product46(0/0,
+включая diagnostic body). Это offline scope; готовится новый input/nonce r2 для Unity после recovery.
+
+**Текущая работа — SDK editor v3 + X-Ray v4 + CyborgHandsBase (2026-10-16, принято пользователем):** ручной режим, заданные
+sticky surface targets, последовательный «Обхватить предмет», анатомически ограниченный CCD IK по фалангам (1-DOF сгиб IP и 2-DOF MCP),
+двухсторонний синк с выбранным `UxrGrabbableObject` в Inspector и авто-сохранение dirty-поз при закрытии окна.
+SDK83 зарезервирован для typed commit через SDK с Undo и проверкой рабочего контекста.
+Обновлён общий конвейер рентгена (X-Ray v4): непрозрачная внешняя оболочка оружия (`ZWrite=1, ZTest=LessEqual, Cull=Back` —
+внутренние детали скрыты), просвечивающая кисть (`HandOccluded` позади оружия + `HandDepth`/`Hand` спереди без самопросвечивания пальцев),
+пересечение мешей подкрашено **красным** (`Intersection`, `BuildIntersectionMesh`), точки контакта ±2мм отмечены **жёлтым** (`ContactColor`).
+Перестроено дерево префабов `PlayerBase_SdkHands -> CyborgHandsBase (71b74b0d08444f49bbb7aa2828d0890a) -> { PlayerControllersCyborgAvatar, MEF_cyborg_hands_Player }` с удалением родных перчаток MEF из базы и сохранением всех 65 поз на `CyborgHandsBase`.
+Во всех 80 компонентах `UxrGrabbableObject` (100 точек захвата в 43 префабах оружия и планшета) удалены перекрывающие записи дочерних вариантов, зарегистрирован `CyborgHandsBase` с привязкой к точкам `MEF_cyborg_hands` и выбран `_selectedAvatarForGrips = CyborgHandsBase`.
+Пользователь подтвердил приёмку в Unity («все работает как я и хотел… давай закоммитим текущее состояние и вольем в origin/dev и продолжим»).
+Контракт: contracts/sdk-hand-pose-contact-editing-v3.md.
+
+**Текущее решение пользователя — 2026-10-15:** площадь отменена как критерий. Нужны автоматически
+выбранные фиксированные опорные точки на ладонной коже в середине каждой фаланги и касание ±2мм.
+Уточнение solver v2: конечные фаланги и ладонь тянутся к указанным материальным точкам объекта;
+промежуточные касаются поверхности. DistalPriority0..1 default0 плавно ослабляет их штрафы,
+при1 полностью отключает их, включая эквивалентный общий collision guard. Проникновения остаются
+диагностикой. Контракт contracts/distal-palm-contact-ik-v2.md. Отдельный режим DistalPalmTargets,
+bounded palm translation и окно шести object targets реализованы. После исправлений статического
+ревью общая offline-компиляция42sources/406refs0/0; нативный solve и качество ещё не проверены.
+Готовится режим одной кисти и проверенный зеркальный перенос второй. Наработки площади сохранены
+byte-exact:24файла+SHA manifest в drafts/contact-area-20261015/; старые отчёты/PNG остаются в reports/.
+Новый контракт contracts/phalanx-contact-points-v1.md. Прогон749 завершён и получен, worker освобождён:
+правая кисть14/15 точек (missing thumb/proximal), зеркало11/15. Полный набор пока не готов.
+Существующие HandMeshCaptureTests3/3 PASS; это не подтверждение качества нового метода.
+Дальше: диагностика выбора/зеркала, предпросмотр исправленных точек, затем сравнение хвата до/после
+с IK и пользовательская проверка. Новые/переписанные тесты, включая временные probes, отложены до неё.
+Поддержка пистолета исключена из текущей оценки по решению пользователя: контакт с ведущей кистью
+будет отдельным следующим шагом после подтверждения хороших хватов на опорных точках.
+Отчёт с изображениями: reports/phalanx-contact-unity/749-Review.md.
+Геометрическая диагностика755 DONE/received, Rf9e2aa0d64309f49a83e755ce37a5dfed579c6fc:
+12native файлов SHA-проверены, assets/paths/unexpected пусты, worker освобождён.
+Дамп геометрии и весов: reports/phalanx-contact-unity/geometry-20261015-r1/. Идёт разбор причины.
+Fullskin collision — отдельный guard. Старые записи площади ниже относятся к сохранённому черновику.
+
+**Задача/владелец:** `hand-rig-quality`, эксперт `avatar-grip`. **Обновлено:** 2026-10-15 (R2 отклонён; фиксированные опорные точки и редакторский IK, площадь в черновике).
 **Worktree:** `F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai`, ветка `codex/hands-rig-quality`.
-Проверено после fetch/rebase 2026-10-15: `origin/dev 5435b3488`, HEAD до приёмки `ea2b4a7b6`, ветка впереди на 3 коммита.
+
+## История R2 и предыдущих прототипов
+
+Ниже сохранены результаты и ограничения прежних подходов; актуальные требования v2 и следующие
+действия указаны выше и в plan.json/current_work. Площадь и прежние проверки не принимают v2.
+
+**Решение пользователя после715:** «текущую работу как готовую для продакшна не принимаю».
+Часто отсутствует плотный обхват рукояти всей поверхностью кисти и пальцев. Автоматический curl
+и SDK-band `ok` не считаются критерием качества. Новых accepted commit/merge нет.
+Пользовательские ориентиры: Viper, TR15 с глушителем, SRS Desert Tech, AK107 (точные prefab соответствия уточняются).
+У ориентиров тоже остаются небольшие проникновения; анимация курка явно отложена.
+Пользователь поручил реализацию IK ладони/подушечек субагенту и предложил метрику площади контакта.
+Текущий этап `grip-contact-authoring`: фиксированная разметка ладони и пяти пальцев,
+доля площади в пределах ±2мм, отдельные зазоры/проникновения и проверка всей кожи при IK.
+Ядро метрики, ограниченный solver, opt-in source capture и окно разметки реализованы;
+offline-компиляция пройдена, пробы метрики30/30, solver12/12 и anchor/source/collision16/16.
+Связка solver с реальным BakeMesh и явными материальными якорями реализована.
+Технические Unity-проверки прототипа описаны ниже; runtime/Quest, анатомическая разметка и соответствие source/target ещё не проверены;
+контактные цели нельзя считать валидными без явного соответствия материальных участков.
+Контракт: contracts/grip-contact-authoring-v1.md. Новый отчёт встраивает картинки до/после прямо в текст.
+Подробности: changelog/2026-10-15-r2-human-rejection.md; новый visual review — reports/r2-human-review-715/Review.md.
+Последняя игровая проверка715: HEAD/база `04fc9de88`; технические прогоны733/735 описаны ниже.
+Общая offline-компиляция39 исходников с обоими smoke-пакетами прошла без ошибок/предупреждений.
+Этап `grip-contact-authoring` running. 726 CANCELLED до запуска. Повтор733 DONE/received,
+input`e2a795a7040ca892d0bff6c03cc128e1c96d6b26`, base`47c0102778d00b6a06f6c3eceb96aff2e425493d`,
+R`5c276808f9473eefa092c9c5c42fae4605639b0a`:14 автоматически созданных meta, unexpected=[],2 native артефакта.
+Unity import/compile исходников733 без ошибок; существующие HandMeshCaptureTests **3/3 PASS**,0 failed/skipped.
+IK-smoke FAILED до первого check: общий renderer кисти в нескольких LOD ошибочно отклонён валидатором.
+Нативный completed receipt получен после transport timeout120s; код не повторяли. Worker освобождён.
+LOD-проверка исправлена в исходнике, smoke-скрипты сохранены в C#6; свежая offline-компиляция39/406 —0/0.
+Эти правки ещё не проверены в Unity. Source/mask-smoke не исполнялся: Roslyn отсутствует, а auto-review
+отклонил переход на auto/C#6 как replay после другого Session terminated. Пользователь явно разрешил
+новый preview-прогон `contact-authoring-reapproval-20261015-r1`: временные копии, без Apply и сохранения поз/префабов.
+Новый прогон735 DONE/received: input442ced07fee157da9d5baf35be902f462bacd802,
+R2bf118ea334ec7d2526e07be071aff43ad01bc68, paths=[], unexpected=[]. IK **12/12 PASS**
+на реальной BakeMesh-коже; существующие HandMeshCaptureTests **3/3 PASS**, cleanup PASS.
+Source/mask FAIL: Viper — MeshFilter отсутствует у muzzle flash; Uzi — guard scale узла Rectangle001.
+1482 pinned inputs без изменений. Mask API/render не достигнуты из-за source fail, новых PNG нет.
+Оба MCP timeout120 завершились нативными отчётами, без повторов. Worker освобождён.
+Исправлены safe mesh predicate Viper и scale guard Uzi: проверяются используемые transforms
+и все их предки, посторонний sibling Line Rectangle001 больше не блокирует capture.
+Uniform/no-shear/reflection guard на потребляемых данных сохранён. Mask callback использует
+resolved prefab анализатора; source и mask smoke разделены. Offline39/4060/0, Unity-повтор ещё впереди.
+739 истёк до claim, Unity не запускался. Тот же source/mask input240ffc95c7aa8e784a6945d6dc71b31ff2d0051b
+выполнен740 наbase6669db54ff2629c716c2678f67f2c23841c60c93.740DONE/received,
+Rf6e61e628d268126a2346d928dbda8ab7f91ad94, paths/unexpected пусты. Uzi source и Viper2mask cases PASS;
+общий smoke FAIL3completed/7failure entries: Viper source nonuniform String и Uzi target1degenerate triangle.
+1482inputs unchanged; cleanupPASS. Native198.585052s, timeout300 вернул ответ, replay не было.
+2реальных PNG встроены в reports/contact-authoring-integration-20261015/740-Review.md;
+это synthetic mask preview, не анатомическая разметка и не before/after исправления хвата.
+IK12/12 повторять не требуется. Инфраструктура не изменялась.
+Свежий отчёт: reports/contact-authoring-integration-20261015/735-Review.md; infra_issue8307.
+План: tools/contact-authoring-unity-plan.json. Отчёт: reports/contact-authoring-integration-20261015/733-Review.md.
+Accepted commit/merge не выполнялись. Отчёт: reports/contact-authoring-integration-20261015/Summary.md.
+R2 Apply704 выполнил 17 точек/34 руки; отдельная проверка объяснила все 97 замечаний старого валидатора,
+не меняя исходный отчёт. Weapon-system подтвердил сохранность механики и идентификаторов (7799).
+Применены 24 рекомендованных curl для 14 рук/7 поз. Попытка705 остановилась до Apply:
+JSON Integer/Float не совпали при строгом сравнении. Исправлены только три числовых литерала;
+аудит v5 с фактическим Newtonsoft 13 PASS. Correction712 DONE/received R`1a71e6af6274dcb02071ea8be876ecd547a3d598`:
+17 точек/34 руки, 34 Fit+PNG; validation PASS, изменены ровно7 поз, неожиданностей нет.
+GUID/identity/nonGrip/foreignDirty изменений нет, 9 weapon prefabs не менялись во втором проходе.
+Existing IDs/hand-chain **17 PASS / 0 FAIL / 0 SKIP**, cleanup PASS; worker освобождён.
+Static Fit: gross19→10, notable7→4, ok8→20; это не приёмка контакта. Финальное weapon-owner review
+конкретного R`1a71e6af…` завершено без блокеров (7901). Ответ avatar-ik (7892),
+принятие в Unity/шлеме и accepted commit остаются открытыми.
+Сравнение фактического mesh: pad-excess улучшился у24/24 пальцев; full finger depth выросла у16/24
+(порог сводки0,05мм), pad depth — у21/24. Требуется визуальная доводка/проверка; автоматически не принимать.
+Независимый immutable review51/51PASS. Подробности: reports/r2-fit-comparison-712/Comparison.md и Assessment.md.
+В хабе `grip-extraction-r2=verified` для R`1a71e6af…` только в техническом scope;
+evidence reports/r2-verified-712.json явно фиксирует humanAccepted=false/contactAccepted=false.
+Общий следующий этап `grip-extraction-run` (R3–R5) остаётся planned до merged R2.
+Ручная игровая проверка715 завершена: пользователь сообщил «Закончил, есть замечания»; приёмки нет.
+Input8a1f531e (runtime assets побайтово равны R712), PlayLaunch Offline→Lobby, VR host/OculusXR active.
+PlayLaunch.Cancel выполнен один раз; Idle/Ownerempty/Playingfalse/CleanupPassedtrue,
+nativeMirror server/client выключены, профиль восстановлен.715DONE/received R61a6f3368053b627db2464f8ce29832deb269ec0,
+paths/unexpected пусты,10полныхотчётовархивированы. Пользователь отклонил production-приёмку из-за неплотного обхвата;
+ассеты проверка не меняла. Дальнейшие R2 Apply и R3–R5 не запускаются до пересмотра подхода.
 Принятая правка `53b512cf6` (ранее `a9db66196` / `1dca4d3f5` / `4a11f5391`) — исправление `_assetId` в Grip Extraction;
 **Unity Apply Viper PASS** на базе 97a320c88; новый прогон683: **56 PASS / 1 FAIL / 57**, полный Result сохранён.
 Идентификаторы и цепочки поз PASS; FAIL — пустой список отключения своей головы у старого Cyborg.
 677 — init failure, 680 и старые635/647 UNKNOWN сохранены; пользователь принял вливание save 2026-10-15;
-публикация выполняется штатно. Остальные два коммита — передача и решения пользователя.
+Правка влита fast-forward в `origin/dev 846fa4bca`; хаб подтвердил merged (7558), content_drift=[].
+FIFO request-base692 DONE (7620), принятая правка опубликована в worker; затем база1812dc5bf.
 
 ## Цель
 
@@ -30,14 +156,14 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
 
 ## Дальше — следующий шаг
 
-1. **Влить принятую правку `53b512cf6`** (GripRecordWriter: после `SaveAsPrefabAsset` —
+1. **Принятая правка влита `846fa4bca`** (GripRecordWriter: после `SaveAsPrefabAsset` —
    `NetworkAssetIdNormalizer.Normalize` + сверка `_assetId` на диске с `NetworkIdentity.AssetGuidToUint`).
    Apply Viper647 PASS, идентификаторы и цепочки поз683 PASS; пользователь: «тогда вливаем и переходим к run extraction?».
    Единственный FAIL старого Cyborg передан avatar-ik (7525), не переобъявляется PASS.
-   Fast-forward в origin/dev и FIFO request-base; это **условие weapon-system 6388**.
+   Fast-forward подтверждён, FIFO request-base692 подан; **условие weapon-system 6388** выполнено.
 2. **MKR9, основная точка, левая рука — кисть мимо рукояти** (подтверждено в шлеме; это и F4 у MEF).
    Разобрать зеркалирование источника для левой руки в `PackClipGripSource`, перезаписать.
-3. **`grip-extraction-run`** (зарегистрирован, planned): R2 — остальные 17 точек паков → MEF_cyborg_hands;
+3. **`grip-extraction-run`**: пакет R2 Measure подготовлен — 17 точек/34 руки/9 стволов → MEF_cyborg_hands;
    R3 — записи Cyborg → MEF_cyborg_hands (SDK-оружие, магазины, патроны, планшет, жетон); R4/R5 — по
    решению пользователя. Порядок прохода: apply с опорой по ладони + анализ → только `Recommended`
    подсказки (curl, сдвиг по нормали; руку «мимо рукояти» не догибать) → второй apply → листы ревью → шлем.
@@ -49,14 +175,62 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
 
 ## Возобновление Codex — 2026-10-14
 
-- Хаб: `hand-rig-quality`, owner `avatar-grip`; девять этапов `merged`.
+- Хаб: `hand-rig-quality`, owner `avatar-grip`; десять этапов `merged`, включая save-validation7558.
   `grip-save-validation`: после release683 получена приёмка пользователя 2026-10-15;
   Apply PASS на прежней базе; свежие EditMode 56/57, Cyborg own-head FAIL остаётся отдельным дефектом.
-  Приёмка касается сохранения `_assetId`; публикация и запись merged выполняются по штатному маршруту.
+  Приёмка касается сохранения `_assetId`; merged7558, SHA846fa4bca, content_drift=[], dependency_gaps=[].
   `grip-extraction-run` и последующие этапы остаются `planned`.
-  `grip-extraction-run` ещё не выполнялся. Общий mode off; очередь и аренды Unity сохранены.
+  **`grip-extraction-r2-measure` verified:** Unity695 durable PASS17точек/34руки/0записей,
+  2400hashes unchanged; maxPalm0,0009мм/maxRuntime0°. Input9d35a289/base1812dc5bf.
+  MCPквитанция потеряна после30с; C# продолжил работу и завершился, повторного Run не было.
+  Full validation SHA256 `c0c977649c1b68af7f1e67d75e1c0f45b4ec8f3165918237a9135f438256d30d`.
+  Cleanup/nativeidle PASS, DONE/received R`aac0b5d5`,paths/unexpected=[];3JSON заархивированы695.
+  Запрос и проверяющее тело: tools/r2-measure-request.json,
+  tools/run-r2-measure.cs.txt. Проверка hashes,17/34/9,written0,palm≤0,5мм,runtime/world≤0,5°,
+  пястные дескрипторы; затем native guard/cleanup и release. Measure не даёт Fit/contact/Quest acceptance.
+  Avatar-ik conditional ACK7563: только R2 HandPoses, GUID сохраняются, Player/Base/meta и rig неизменны;
+  RegisterPoses=false. Weapon-system7571: Measure readonly разрешён; write-ACK только на девять точных префабов R2.
+  Выделены `grip-extraction-r2-measure` (task artifacts, после save merged) и `grip-extraction-r2`
+  (девять weapon prefabs и17 существующих pose assets; после Measure verified).
+  Общий `grip-extraction-run` сохраняет будущие R3–R5 и зависит от R2 merged; их scope не принимается заранее.
+  Begin широкого run обнаружил UNORDERED_OVERLAP haptics-system/item-clicks; порядок Apply запрошен в хаб.
+  MKR9/R3/UI исключены из текущего R2.
+  Активные узкие ACK: avatar-ik7601, weapon-system7631rev2; initial Apply+Analyze/Fit разрешён
+  после verified Measure, отдельный pre-save contact не требуется. Contact/corrections/IDs/ownerdiff/Quest — до приёмки.
+  Haptics7627: запись девяти стволов/HandPoses не пересекает их Tablet_Base/Haptics; broadrun пока отдельно.
+  Подготовлен initial Apply пакет tools/r2-apply-request.json + run-r2-apply.cs.txt;
+  static review без блокеров, Roslyn semantic0errors. В698 helper остановил Apply до Run:
+  persistent dirty shaderassets в worker + два глобальных SaveAssets в GripExtraction.Write (193/219).
+  Новые R2 ассеты не записаны;698DONE/received R07d5ef0d,paths/unexpected=[],cleanupPASS.
+  R2 возвращён planned. Новый scoped-save planned: сохранить только pose assets текущего запроса,
+  убрать финальный SaveAll (weapon/registry уже сохраняются своими writers). Пользователь согласовал дизайн 2026-10-15;
+  правка и повторный R2 Apply+Fit в работе, новые тесты до пользовательской проверки не пишутся.
+  Scoped-save verified на input0cb68d2f: Unity701 refresh/compile и Android gate PASS0errors,
+  existing EditMode17/17PASS (IDs4 + hand-chain13), cleanupPASS; DONE/received R56057601,paths/unexpected=[].
+  702 остановлен до Run: persistent dirty object без файлового пути; DONE/received Rd5881d37,
+  cleanupPASS,paths/unexpected=[]. Guard уточнён: pathless остаются под per-instance/dirty проверкой,
+  все непустые foreign paths/meta — под SHA256. Повторный Apply+Fit готовится, записи R2 ещё нет.
+  703 также остановлен до Run на виртуальном `Library/unity default resources` без meta;
+  cleanupPASS,DONE/received R2b1218ec,paths/unexpected=[]. Guard теперь сравнивает disk-state:
+  hash существующего файла либо его отсутствие (null), включая meta; появление/удаление/изменение запрещено.
+  Строгие 2400 Measure-входов не ослаблены; dirtytargets и все instance/path/flags проверяются как прежде.
+  Полный preflight.json пишется до отказов, новый повтор Apply+Fit готовится.
+  **704 Apply+Fit выполнен:** statusok17точек/34руки,34Fit+PNG; 2400 prehash и2522posthash,
+  изменены9weaponprefabs,17posebytesunchanged; unexpected/GUID/identity/foreigndirty=[] (501objects).
+  Исходный validator false только97nonGripChanges: ошибки путиGrabs и JSONоболочкиMonoBehaviour.
+  Отдельный offline YAML/snapshot proof97/97PASS,unexplained0, повторён principal; originalfalse сохранён.
+  Fit19gross/7notable/8ok,staticapproximate; отобраны14рук/24curlв7позах,12manual/8unchanged,
+  normalmapempty (две подсказки-21,7мм вне15мм). Второй проход712 выполнен, результаты ниже.
+  Cleanup/nativeidle PASS;704DONE/received R13ef52db,8JSONarchived,acceptedcommit/Questacceptance нет.
+  **712 correction Apply+Fit PASS:** 24curl/14рук/7поз,17точек/34руки,34Fit+PNG;
+  inputc7ebbfec/base04fc9de88, result1a71e6af,11полныхартефактовархивированы,DONE/received.
+  validatione3737c85: unexpected/GUID/identity/nonGrip/foreignDirty пусты;9weaponbytesunchanged.
+  Existing17tests PASS/0FAIL/0SKIP, cleanupPASS; staticFit10gross/4notable/20ok.
+  Сравнение фактического контакта и owner review открыты; принятого коммита нет.
+  Временная очистка чужих dirty flags и сохранение загруженных weaponprefabs через SaveAssetIfDirty исключены.
+  Общий mode off; очередь и аренды Unity сохранены.
 - Старый маршрут Claude очищен (epoch 15). Свой Codex route опубликован после свежего desktop listing
-  (epoch 21, `codex-app-threads`, thread `01a13af7-d0e0-7382-b1f7-c0f78057e8ed`).
+  (актуальный epoch 24, `codex-app-threads`, thread `01a13af7-d0e0-7382-b1f7-c0f78057e8ed`).
   Межзадачная доставка — canonical inbox; native-уведомление дополняет его и не означает ACK.
 - Network подтвердил событием 6647: общий помощник сохранения и патч Mirror остаются после
   `network-sync-hardening`; локальная нормализация не ждёт их реализации.

@@ -48,6 +48,9 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>Точки касания подушечек, если источник их знает; иначе null.</summary>
         public GripPadContact[] Pads;
 
+        /// <summary>Опциональный исходный кадр для материальной разметки и контактов; сам по себе не заполняет Pads.</summary>
+        public GripSourceContactFrame SourceContactFrame;
+
         /// <summary>Исходный кадр пака — только для сверки R0 с <see cref="HandsPackGripAligner" />.</summary>
         internal HandsPackPoseExtractor.Sample Legacy;
 

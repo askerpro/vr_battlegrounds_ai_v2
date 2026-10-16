@@ -66,7 +66,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             var request=settings.Copy();request.RenderImages=true;
             request.OutputDirectory=Path.GetFullPath(Path.Combine("UserReports/HandPoseFit",DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+"-"+Guid.NewGuid().ToString("N").Substring(0,8)));
             report.Settings=request;report.CreatedUtc=DateTime.UtcNow.ToString("O");
-            report.LivePreviewMethod="sdk_preview_runtime_skinning; gpu_voxel_distance_field_approximate; full_metrics_cpu_geometry";
+            report.LivePreviewMethod="native_BakeMesh_all_weights_original_material_keys; shared_xray; legacy_fullskin_diagnostics";
             if(liveField!=null){report.LiveFieldVoxelMm=liveField.VoxelMetres*1000;report.LiveFieldErrorMm=liveField.ErrorMetres*1000;}
             foreach(var surface in report.Surfaces) {
                 var triangles=surface.Kind=="hand"?snapshot.Hand:snapshot.ObjectSurface;
@@ -75,9 +75,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             HandPoseFitAnalyzer.AnalyzeCaptured(snapshot,report);
             if(sceneCamera && report.Error==null) {
                 var frame=Matrix4x4.TRS(root.transform.position,root.transform.rotation,Vector3.one);
-                HandPoseFitRenderer.RenderEditorView(snapshot,report,
-                    frame.inverse.MultiplyPoint3x4(sceneCamera.transform.position),Quaternion.Inverse(root.transform.rotation)*sceneCamera.transform.rotation,
-                    sceneCamera.orthographic,sceneCamera.orthographicSize,sceneCamera.fieldOfView);
+                HandPoseFitRenderer.RenderEditorView(snapshot,report,HandPoseXrayRenderer.CameraState.Capture(sceneCamera,frame.inverse));
                 File.WriteAllText(report.JsonPath,JsonConvert.SerializeObject(report,FitUnityJsonConverter.Settings),new UTF8Encoding(false));
             }
             return report;

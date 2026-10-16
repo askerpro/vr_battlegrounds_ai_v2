@@ -1465,6 +1465,10 @@ PrefabInstance:
       value: dfca7640-32ff-4a70-84d9-48f702993430
       objectReference: {fileID: 0}
     - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
+      propertyPath: _prefabGuid
+      value: a58abb6b878ca5b40b79c14fae6f5645
+      objectReference: {fileID: 0}
+    - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
       propertyPath: __isInPrefab
       value: 1
       objectReference: {fileID: 0}

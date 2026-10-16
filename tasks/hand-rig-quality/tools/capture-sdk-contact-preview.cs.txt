@@ -1,0 +1,100 @@
+// Фактические снимки нового метода; без тестовых ожиданий, Apply и сохранения игровых assets.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'), "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+string directory = "tasks/hand-rig-quality/reports/sdk-contact-20261016-xray-v4";
+if (System.IO.Directory.Exists(directory)) throw new System.InvalidOperationException("Nonce уже использован; сначала установить исход операции.");
+System.IO.Directory.CreateDirectory(directory);
+var started = System.DateTime.UtcNow;
+System.Action<string, object> Write = (name, value) => System.IO.File.WriteAllText(System.IO.Path.Combine(directory, name),
+    Newtonsoft.Json.JsonConvert.SerializeObject(value, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), new System.Text.UTF8Encoding(false));
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(profile.RigPrefabPath).GetComponent<UltimateXR.Avatar.UxrAvatar>();
+var weapon = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/Weapons/Viper/Viper.prefab");
+var grab = weapon.GetComponent<UltimateXR.Manipulation.UxrGrabbableObject>();
+var pose = grab.GetGrabPoint(0).GetGripPoseInfo(avatar)?.HandPose;
+if (!pose) throw new System.InvalidOperationException("Нет конкретной позы Viper/point0 для avatar GUID chain.");
+var hashes = new System.Collections.Generic.SortedDictionary<string, string>(System.StringComparer.Ordinal);
+System.Func<string, string> Hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create()) using (var stream = System.IO.File.OpenRead(path))
+        return System.BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+foreach (var seed in new[] { profile.RigPrefabPath, UnityEditor.AssetDatabase.GetAssetPath(weapon), UnityEditor.AssetDatabase.GetAssetPath(pose) })
+foreach (var path in UnityEditor.AssetDatabase.GetDependencies(seed, true))
+{
+    if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path)) hashes[path] = Hash(path);
+    if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path + ".meta")) hashes[path + ".meta"] = Hash(path + ".meta");
+}
+Write("progress.json", new { phase = "reference_capture", startedUtc = started.ToString("O") });
+string error = null;
+object rightSummary = null, leftSummary = null, numerical = null;
+try
+{
+    var right = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Right);
+    var left = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Left);
+    var probes = right.CreateProbes();
+    var mirrored = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Mirror(right, left, probes);
+    right.Export(System.IO.Path.Combine(directory, "right-reference"), probes);
+    left.Export(System.IO.Path.Combine(directory, "left-reference"), mirrored);
+    rightSummary = new { probes.Valid, selected = probes.Probes.Count(p => string.IsNullOrEmpty(p.Error)), probes.ExpectedCount, probes.Errors };
+    leftSummary = new { mirrored.Valid, selected = mirrored.Probes.Count(p => string.IsNullOrEmpty(p.Error)), mirrored.ExpectedCount, mirrored.Errors };
+    Write("selection.json", new { right = rightSummary, left = leftSummary });
+    if (probes.Valid)
+    {
+        var request = new VrBattlegrounds.Editor.HandPoseReview.HandPoseFitRequest {
+            AvatarPrefab = avatar, ObjectPrefab = weapon, PoseOverride = pose, Side = UltimateXR.Core.UxrHandSide.Right, GrabPoint = 0,
+            GrabbableIndexPath = "", IncludeOtherHand = false
+        };
+        Write("progress.json", new { phase = "v2_candidate", startedUtc = started.ToString("O") });
+        var prepared = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactIkPreviewCapture.Prepare(request, probes, .03f, 96, true);
+        var candidate = prepared.Run(0, prepared.View.InitialTargets);
+        var before = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandPhalanxContactProbes.Evaluate(prepared.View.BeforeHand,
+            new VrBattlegrounds.Editor.HandPoseReview.FitSurface(prepared.View.ObjectSurface), prepared.View.BindingFingerprint, probes, 2);
+        var after = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandPhalanxContactProbes.Evaluate(candidate.AfterHand,
+            new VrBattlegrounds.Editor.HandPoseReview.FitSurface(prepared.View.ObjectSurface), prepared.View.BindingFingerprint, probes, 2);
+        var bounds = new UnityEngine.Bounds(prepared.View.BeforeHand[0].A, UnityEngine.Vector3.zero);
+        foreach (var triangle in prepared.View.BeforeHand) { bounds.Encapsulate(triangle.A); bounds.Encapsulate(triangle.B); bounds.Encapsulate(triangle.C); }
+        var rotation = prepared.View.CameraRotation;
+        var position = bounds.center - rotation * UnityEngine.Vector3.forward * .3f;
+        float size = UnityEngine.Mathf.Max(bounds.size.x, UnityEngine.Mathf.Max(bounds.size.y, bounds.size.z)) * .65f;
+        System.Action<string, VrBattlegrounds.Editor.HandPoseReview.FitTriangle[], VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandPhalanxProbeReport> Render = (name, hand, probeReport) => {
+            string target = System.IO.Path.Combine(directory, name); System.IO.Directory.CreateDirectory(target);
+            using (var snapshot = VrBattlegrounds.Editor.HandPoseReview.HandPoseFitSnapshot.FromGeometry())
+            {
+                snapshot.Hand.AddRange(hand); snapshot.ObjectSurface.AddRange(prepared.View.ObjectSurface);
+                var report = new VrBattlegrounds.Editor.HandPoseReview.HandPoseFitReport {
+                    OutputDirectory = target, Settings = new VrBattlegrounds.Editor.HandPoseReview.HandPoseFitRequest { ImageSize = 1024, ShowContactMarkers = true, ContactMarkerRadiusPixels = 4f }
+                };
+                if (probeReport?.Points != null)
+                {
+                    report.ContactMarkers.AddRange(probeReport.Points
+                        .Where(p => p.WithinBand == true && p.DistanceMm.HasValue)
+                        .Select(p => new VrBattlegrounds.Editor.HandPoseReview.FitContactCandidate {
+                            Position = p.Position, TargetPosition = p.NearestObjectPosition,
+                            DistanceMm = (float)p.DistanceMm.Value, FingerSegment = p.SegmentId, Inside = false
+                        }));
+                }
+                VrBattlegrounds.Editor.HandPoseReview.HandPoseFitRenderer.RenderEditorView(snapshot, report, position, rotation, true, size, 30);
+            }
+        };
+        Render("before", prepared.View.BeforeHand, before); Render("after", candidate.AfterHand, after);
+        Write("candidate.json", new { sourceAvatar = profile.RigPrefabPath, objectPath = UnityEditor.AssetDatabase.GetAssetPath(weapon),
+            posePath = UnityEditor.AssetDatabase.GetAssetPath(pose), targetSource = "explicit opt-in initial-skin projection; unreviewed; not pack-clip correspondence",
+            DistalPriority = 0, before, after, candidate, view = prepared.View });
+        numerical = new { candidate.NumericalReached, candidate.PalmOffsetMeters, candidate.Diagnostics, candidate.Errors };
+        string imageRoot = System.IO.Path.GetFullPath(directory).Replace('\\', '/');
+        System.IO.File.WriteAllText(System.IO.Path.Combine(directory, "review.md"),
+            "# Viper: фактический кандидат IK\n\nКачество не принято. Цели — разовая проекция начальной кожи, не эталон из клипа. DistalPriority=0.\n\n"
+            + "![До](" + imageRoot + "/before/editor-view-xray.png)\n\n![После](" + imageRoot + "/after/editor-view-xray.png)\n\n"
+            + "Измеряются только фиксированные точки ±2мм; sign unknown. Численный результат и raw diagnostics — candidate.json. SDK UI interaction/runtime/Quest не проверены.\n",
+            new System.Text.UTF8Encoding(false));
+    }
+}
+catch (System.Exception exception) { error = exception.ToString(); }
+var changed = hashes.Keys.Where(path => !System.IO.File.Exists(path) || Hash(path) != hashes[path]).ToArray();
+Write("receipt.json", new { scope = "native reference points and unreviewed v2 candidate images; no tests/Apply/SDK commit",
+    startedUtc = started.ToString("O"), completedUtc = System.DateTime.UtcNow.ToString("O"), error,
+    right = rightSummary, left = leftSummary, numerical, assetHashesBefore = hashes, changedAssets = changed });
+Write("progress.json", new { phase = "completed", error, changedAssetCount = changed.Length });
+return new { report = directory + "/receipt.json", error, right = rightSummary, left = leftSummary, changedAssetCount = changed.Length };

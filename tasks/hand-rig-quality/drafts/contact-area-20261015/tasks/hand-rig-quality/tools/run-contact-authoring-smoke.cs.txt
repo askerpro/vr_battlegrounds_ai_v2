@@ -1,0 +1,135 @@
+// Тело execute_code. Только собственная RUNNING аренда. Это smoke API, не оценка качества хвата.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+string directory = "tasks/hand-rig-quality/reports/contact-authoring-unity-pilot/source-mask-contact-authoring-source-mask-20261015-r2";
+if (System.IO.Directory.Exists(directory)) throw new System.InvalidOperationException("Каталог попытки уже существует: сначала установить предыдущий исход; этот nonce повторно не запускать.");
+System.IO.Directory.CreateDirectory(directory);
+string startedUtc = System.DateTime.UtcNow.ToString("O");
+var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+var failures = new System.Collections.Generic.List<string>();
+var results = new System.Collections.Generic.List<object>();
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+var catalog = VrBattlegrounds.Editor.Avatars.PackClipGripSource.AllPoints().ToArray();
+var points = new[] { "Viper", "Uzi" }.Select(name => catalog.First(p => System.IO.Path.GetFileNameWithoutExtension(p.Weapon) == name && p.GrabPoint == 0)).ToArray();
+var sourceRecipes = VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All
+    .Where(k => points.Any(p => p.Weapon == VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.PrefabPath(k))).ToArray();
+var seeds = new System.Collections.Generic.List<string>(points.Select(p => p.Weapon));
+seeds.Add(profile.RigPrefabPath); seeds.Add(profile.RecordAvatarPath);
+seeds.AddRange(points.Select(p => profile.PosePathFor(p)));
+foreach (var recipe in sourceRecipes)
+{
+    string path = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Prefabs/Weapons/" + recipe.PackPrefab + ".prefab";
+    var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    VrBattlegrounds.Editor.Gameplay.KinemationWeapon.RequireReadable(prefab, recipe.Attachments);
+    seeds.Add(path);
+    seeds.AddRange(VrBattlegrounds.Editor.Gameplay.KinemationWeapon.ReadableSourcePaths(prefab, recipe.Attachments));
+}
+var paths = new System.Collections.Generic.SortedSet<string>(System.StringComparer.Ordinal);
+foreach (string seed in seeds)
+    foreach (string path in UnityEditor.AssetDatabase.GetDependencies(seed, true))
+    {
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path)) paths.Add(path);
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path + ".meta")) paths.Add(path + ".meta");
+    }
+System.Func<string, string> hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+    using (var stream = System.IO.File.OpenRead(path))
+        return System.BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+var before = paths.ToDictionary(p => p, p => hash(p));
+System.Action<string, object> Write = (path, value) => System.IO.File.WriteAllText(path,
+    Newtonsoft.Json.JsonConvert.SerializeObject(value, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), new System.Text.UTF8Encoding(false));
+Write(directory + "/progress.json", new { phase = "started", startedUtc, elapsedSeconds = stopwatch.Elapsed.TotalSeconds, scope = "API smoke; synthetic masks; no acceptance" });
+using (var source = new VrBattlegrounds.Editor.Avatars.PackClipGripSource())
+foreach (var point in points)
+{
+    try
+    {
+        Write(directory + "/progress.json", new { phase = "source", point.Pose, point.Weapon, nativeUtc = System.DateTime.UtcNow.ToString("O"), elapsedSeconds = stopwatch.Elapsed.TotalSeconds });
+        var ordinary = source.Sample(point);
+        var sampled = source.Sample(point, true);
+        var frame = sampled.SourceContactFrame;
+        bool unchanged = ordinary.WristBodyPosition == sampled.WristBodyPosition && ordinary.WristBodyRotation == sampled.WristBodyRotation
+            && ordinary.PalmCenter == sampled.PalmCenter && ordinary.BodyScale == sampled.BodyScale
+            && ordinary.Hand.Equals(sampled.Hand);
+        bool detached = frame != null && frame.Skins.Length > 0 && frame.Skins.All(s => s.Mesh.Bones.Length == 0 && s.Mesh.BonePaths.Length > 0)
+            && frame.Hands.Any(h => h.Side == point.SourceSide && h.SemanticRole == "recipe_hand" && !h.Inferred && h.MeshBindings.Length > 0);
+        if (!unchanged || !detached || sampled.Pads != null || frame.ContactTargetsValidated)
+            failures.Add(point.Pose + ": source geometry/ordinary path invariant");
+        // Matrix4x4 имеет рекурсивные свойства inverse/transpose: в JSON записываются только 16 чисел.
+        Write(directory + "/source-" + point.Pose + ".json", new {
+            frame.SourceKind, frame.Model, frame.Weapon, frame.Clip, frame.WeaponRestClip,
+            frame.TimeSeconds, frame.SemanticSourceSide,
+            bodyFrameToWorldColumnMajor = System.Linq.Enumerable.Range(0, 16).Select(i => frame.BodyFrameToWorld[i]).ToArray(),
+            frame.BodySourceUniformScale, frame.Hands, frame.Skins, frame.ObjectMeshes,
+            frame.ObjectGeometryCoverage, frame.ObjectGeometryCoverageDescription,
+            frame.UnavailableHands, frame.ContactTargetsValidated
+        });
+        results.Add(new { kind = "source", point.Pose, point.SourceKind, unchanged, detached,
+            hands = frame.Hands.Select(h => new { h.Side, h.SemanticRole, h.Inferred }).ToArray(),
+            skins = frame.Skins.Length, objectMeshes = frame.ObjectMeshes.Length,
+            frame.BodySourceUniformScale, frame.ObjectGeometryCoverage, frame.ObjectGeometryCoverageDescription });
+    }
+    catch (System.Exception error) { failures.Add("source " + point.Pose + ": " + error); }
+    // Ошибка источника не должна скрывать независимую проверку target mask API/рендера.
+    foreach (var side in VrBattlegrounds.Editor.Avatars.GripTargetRig.Sides)
+    {
+        try
+        {
+            string caseDir = directory + "/" + point.Pose + "-" + side;
+            Write(directory + "/progress.json", new { phase = "capture", point.Pose, side, nativeUtc = System.DateTime.UtcNow.ToString("O"), elapsedSeconds = stopwatch.Elapsed.TotalSeconds });
+            var capture = VrBattlegrounds.Editor.GripAuthoring.ContactMask.HandContactMaskCapture.Capture(
+                new VrBattlegrounds.Editor.HandPoseReview.HandPoseFitRequest {
+                    AvatarPath = profile.RigPrefabPath, ObjectPath = point.Weapon,
+                    PoseOverridePath = profile.PosePathFor(point), Side = side, GrabPoint = point.GrabPoint,
+                    SampleCount = 100, PadSamplesPerFinger = 16, OutputDirectory = caseDir + "/capture"
+                });
+            var mask = capture.NewMask();
+            var empty = capture.Evaluate(mask);
+            if (!empty.ValidNumericCoverage || empty.ReadyForComparison || empty.Total.CurrentCoveragePercent.HasValue)
+                failures.Add(point.Pose + side + ": empty mask semantics");
+            // Явный синтетический набор граней проверяет API. Это не разметка подушечек и не процент качества.
+            foreach (string region in VrBattlegrounds.Editor.GripAuthoring.ContactMask.HandContactMaskCapture.RegionNames)
+            {
+                var selected = capture.Hand.Where(t => t.Zone == region || (region == "palm" && t.Zone == "palm_wrist")).Take(2)
+                    .Select(t => new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactTriangleKey(t.Source, t.SourceSubMesh, t.SourceTriangle)).ToArray();
+                capture.SetTriangles(mask, selected, region);
+            }
+            mask.Metadata.Provenance = "synthetic API smoke; first two topology triangles per zone; not anatomical contact mask";
+            var measured = capture.Evaluate(mask);
+            if (!measured.ValidNumericCoverage || measured.ReadyForComparison || mask.Metadata.Reviewed
+                || measured.Total.GapPercent.HasValue || measured.Total.DeepPenetrationPercent.HasValue || measured.Total.MaxDepthMm.HasValue)
+                failures.Add(point.Pose + side + ": draft/unknown-sign invariants");
+            var stale = Newtonsoft.Json.JsonConvert.DeserializeObject<VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactMask>(
+                Newtonsoft.Json.JsonConvert.SerializeObject(mask));
+            stale.Metadata.BindingFingerprint = "deliberately-stale";
+            var staleResult = capture.Evaluate(stale);
+            if (staleResult.ValidNumericCoverage || staleResult.ReadyForComparison) failures.Add(point.Pose + side + ": stale binding accepted");
+            byte[] png = capture.RenderMaskPreview(mask, 512);
+            if (png.Length < 100 || png[0] != 137 || png[1] != 80 || png[2] != 78 || png[3] != 71)
+                failures.Add(point.Pose + side + ": missing PNG");
+            string reportPath = capture.Export(caseDir, mask, measured, png);
+            var roundTrip = capture.LoadMask(caseDir + "/mask.json");
+            if (roundTrip.Metadata.BindingFingerprint != capture.BindingFingerprint || roundTrip.Triangles.Count != mask.Triangles.Count)
+                failures.Add(point.Pose + side + ": mask roundtrip");
+            results.Add(new { kind = "mask_api", point.Pose, side, capture.BindingFingerprint,
+                handTriangles = capture.Hand.Length, objectTriangles = capture.ObjectSurface.Length,
+                selectedTriangles = mask.Triangles.Count, measured.Status, measured.ValidNumericCoverage,
+                measured.ReadyForComparison, measured.ExecutedSampleQueries, pngBytes = png.Length, reportPath });
+        }
+        catch (System.Exception error) { failures.Add("mask " + point.Pose + " " + side + ": " + error); }
+    }
+}
+var changed = before.Keys.Where(path => !System.IO.File.Exists(path) || hash(path) != before[path]).ToArray();
+if (changed.Length > 0) failures.Add("Input assets changed: " + string.Join(", ", changed));
+bool busy = UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating;
+if (busy) failures.Add("Editor busy after smoke");
+var report = new { passed = failures.Count == 0, scope = "Unity editor API smoke, detached source capture and synthetic mask rendering; no anatomical mask/IK grip quality/runtime/Quest acceptance",
+    directory, startedUtc, completedUtc = System.DateTime.UtcNow.ToString("O"), elapsedSeconds = stopwatch.Elapsed.TotalSeconds,
+    results, pinnedFiles = before.Count, changed, before, failures, busy };
+Write(directory + "/validation.json", report);
+Write(directory + "/progress.json", new { phase = "complete", report.passed, cases = results.Count, report.startedUtc, report.completedUtc, report.elapsedSeconds });
+return new { report.passed, report.scope, cases = results.Count, pinnedFiles = before.Count, changed, failures, reportPath = directory + "/validation.json" };

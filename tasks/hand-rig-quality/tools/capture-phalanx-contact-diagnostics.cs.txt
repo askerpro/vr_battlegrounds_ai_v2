@@ -1,0 +1,73 @@
+// Диагностический захват фактической эталонной кожи. Без тестовых ожиданий и Apply.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'), "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+string directory = "tasks/hand-rig-quality/reports/phalanx-contact-unity/geometry-20261015-r1";
+if (System.IO.Directory.Exists(directory)) throw new System.InvalidOperationException("Nonce уже использован; сначала установить исход операции.");
+System.IO.Directory.CreateDirectory(directory);
+var started = System.DateTime.UtcNow;
+System.Action<string, object> Write = (name, value) => System.IO.File.WriteAllText(directory + "/" + name,
+    Newtonsoft.Json.JsonConvert.SerializeObject(value, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), new System.Text.UTF8Encoding(false));
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(profile.RigPrefabPath);
+var avatar = prefab.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+var hashes = new System.Collections.Generic.SortedDictionary<string, string>(System.StringComparer.Ordinal);
+System.Func<string, string> Hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create()) using (var stream = System.IO.File.OpenRead(path))
+        return System.BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+foreach (var seed in new[] { profile.RigPrefabPath, UnityEditor.AssetDatabase.GetAssetPath(avatar.DefaultHandPose) })
+foreach (var path in UnityEditor.AssetDatabase.GetDependencies(seed, true))
+{
+    if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path)) hashes[path] = Hash(path);
+    if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path + ".meta")) hashes[path + ".meta"] = Hash(path + ".meta");
+}
+Write("progress.json", new { phase = "capture", startedUtc = started.ToString("O") });
+string error = null;
+try
+{
+    var right = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Right);
+    var left = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Left);
+    var selected = right.CreateProbes();
+    var mirrored = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Mirror(right, left, selected);
+    foreach (var capture in new[] { right, left })
+    {
+        var side = capture.Side.ToString().ToLowerInvariant();
+        Write(side + "-geometry.json", new {
+            side, capture.BindingFingerprint, capture.ReferencePosePath, capture.Segments,
+            triangles = capture.Hand.Select(t => new { t.A, t.B, t.C, t.Zone, t.FingerSegment, t.Source, t.SourceSubMesh, t.SourceTriangle }).ToArray()
+        });
+        var sources = new System.Collections.Generic.List<object>();
+        foreach (var source in capture.Hand.Select(t => t.Source).Distinct())
+        {
+            var transform = avatar.transform.Find(source);
+            var skin = transform ? transform.GetComponent<UnityEngine.SkinnedMeshRenderer>() : null;
+            if (!skin || !skin.sharedMesh) { sources.Add(new { source, error = "Renderer исходного материала не найден" }); continue; }
+            var counts = skin.sharedMesh.GetBonesPerVertex();
+            var weights = skin.sharedMesh.GetAllBoneWeights();
+            try
+            {
+                sources.Add(new {
+                    source, meshPath = UnityEditor.AssetDatabase.GetAssetPath(skin.sharedMesh),
+                    bones = skin.bones.Select(b => b ? UnityEditor.AnimationUtility.CalculateTransformPath(b, avatar.transform) : null).ToArray(),
+                    bonesPerVertex = counts.ToArray(),
+                    weights = weights.Select(w => new { w.boneIndex, w.weight }).ToArray(),
+                    submeshes = System.Linq.Enumerable.Range(0, skin.sharedMesh.subMeshCount).Select(i => skin.sharedMesh.GetTriangles(i)).ToArray()
+                });
+            }
+            finally { counts.Dispose(); weights.Dispose(); }
+        }
+        Write(side + "-source-weights.json", sources);
+        capture.Export(directory + "/" + side, capture.Side == UltimateXR.Core.UxrHandSide.Right ? selected : mirrored);
+    }
+}
+catch (System.Exception exception) { error = exception.ToString(); }
+var changed = hashes.Keys.Where(path => !System.IO.File.Exists(path) || Hash(path) != hashes[path]).ToArray();
+Write("receipt.json", new {
+    scope = "Диагностика эталонной геометрии, исходных весов и зеркала; не тест и не приёмка качества хвата",
+    startedUtc = started.ToString("O"), completedUtc = System.DateTime.UtcNow.ToString("O"), error,
+    assetHashesBefore = hashes, changedAssets = changed
+});
+Write("progress.json", new { phase = "completed", error, changedAssetCount = changed.Length });
+return new { report = directory + "/receipt.json", error, changedAssetCount = changed.Length };

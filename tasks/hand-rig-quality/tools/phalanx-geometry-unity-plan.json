@@ -1,0 +1,32 @@
+{
+  "task": "hand-rig-quality",
+  "stage": "grip-contact-authoring",
+  "owner": "avatar-grip",
+  "nonce": "geometry-20261015-r1",
+  "status": "755-DONE-received-diagnostic-only",
+  "ticket": 755,
+  "inputSha": "a7799b80385430282a2e7c0dafabca4ddacdabd1",
+  "baseSha": "ed8b79f17aa27219df2bf63eb0b28007ce404c1d",
+  "resultSha": "f9e2aa0d64309f49a83e755ce37a5dfed579c6fc",
+  "nativeArtifactCountShaVerified": 12,
+  "sourceAssetHashesCompared": 960,
+  "actualAssetChanges": [],
+  "priorTicket": 754,
+  "priorOutcome": "CANCELLED offer_expired, epoch0, Unity не запускалась. Брокер обновлён до ed8b79f17; подготовлен новый input на этой базе.",
+  "scope": "Диагностика 749: две эталонные BakeMesh кисти, segments, material triangles и реальные веса исходного mesh. Без новых тестов, заданных ожиданий, IK solve или Apply.",
+  "script": "tasks/hand-rig-quality/tools/capture-phalanx-contact-diagnostics.cs.txt",
+  "reportRoot": "tasks/hand-rig-quality/reports/phalanx-contact-unity/geometry-20261015-r1",
+  "executeTimeoutSeconds": 300,
+  "actions": [
+    "Checkpoint из своей обновлённой ветки; request/watch-ticket/claim/begin; fresh guard idle",
+    "Один диагностический capture script: геометрия, веса, текущий selection/mirror, PNG, hashes и completed receipt",
+    "При timeout/disconnect сначала проверить durable/native состояние, не повторять исполнение",
+    "Refresh if dirty, fresh guard: нет активной операции/своих preview leftovers",
+    "Немедленный finish с точными собственными файлами, receive; анализ после освобождения worker"
+  ],
+  "expectedAssetChanges": [],
+  "inputScopeNote": "755 исключает два новых IK preview файла: после отказа автоматической проверки сужен пакет, единственный output — task/reports. Новые meta не ожидались и не получены.",
+  "releaseConditions": "Операция завершена, временные preview уничтожены, нет тестов/Play/import; не ждать человека и не диагностировать под арендой",
+  "next": "По native geometry доказаны radial cutoff thumb/proximal, разная длина SDK distal tip и ложная ambiguity соседних faces. Точечные source fixes внесены; native повтор после компиляции SDK v3. Качество не принято.",
+  "deferred": ["Pistol support", "Новые тесты до пользовательской проверки", "Production Apply/merge"]
+}

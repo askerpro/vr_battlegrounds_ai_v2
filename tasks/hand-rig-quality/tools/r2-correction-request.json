@@ -1,0 +1,111 @@
+{
+  "source": "pack",
+  "recipes": [
+    "HandsPack_Gun_Grip",
+    "HandsPack_Gun_Support",
+    "HandsPack_Uzi_Grip",
+    "HandsPack_PPK_Grip",
+    "HandsPack_PPK_Support",
+    "HandsPack_Revolver_Grip",
+    "HandsPack_Revolver_Support",
+    "HandsPack_SniperRifle_Grip",
+    "HandsPack_SniperRifle_Support",
+    "Kinemation_R08_Grip",
+    "Kinemation_R08_Support",
+    "Kinemation_Herrington_Grip",
+    "Kinemation_Herrington_Support",
+    "Kinemation_Mk14_Grip",
+    "Kinemation_Mk14_Support",
+    "Kinemation_TR15_Grip",
+    "Kinemation_TR15_Support"
+  ],
+  "target": "MEF_cyborg_hands",
+  "anchor": "palm",
+  "encoding": "rig",
+  "mode": "apply",
+  "outDir": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run",
+  "normalOffsetMm": 0,
+  "normalOffsetMmByHand": {},
+  "curlDegByHand": {
+    "HandsPack_Gun_Grip/Left": {
+      "middle": 23.9,
+      "little": 35.8
+    },
+    "HandsPack_Gun_Grip/Right": {
+      "middle": 23.5,
+      "little": 35.3
+    },
+    "HandsPack_Uzi_Grip/Left": {
+      "middle": 57.9,
+      "ring": 45.8,
+      "little": 52.0
+    },
+    "HandsPack_Uzi_Grip/Right": {
+      "middle": 27.5,
+      "ring": 21.9,
+      "little": 30.3
+    },
+    "HandsPack_PPK_Grip/Left": {
+      "middle": 33.0
+    },
+    "HandsPack_PPK_Grip/Right": {
+      "middle": 32.9
+    },
+    "HandsPack_Revolver_Grip/Left": {
+      "ring": 18.9,
+      "little": 26.1
+    },
+    "HandsPack_Revolver_Grip/Right": {
+      "ring": 18.7,
+      "little": 26.0
+    },
+    "HandsPack_SniperRifle_Support/Left": {
+      "index": 11.9,
+      "middle": 13.9
+    },
+    "HandsPack_SniperRifle_Support/Right": {
+      "index": 11.8,
+      "middle": 13.9
+    },
+    "Kinemation_Herrington_Grip/Left": {
+      "middle": -11.7
+    },
+    "Kinemation_Herrington_Grip/Right": {
+      "middle": -11.8
+    },
+    "Kinemation_TR15_Support/Left": {
+      "index": 27.6
+    },
+    "Kinemation_TR15_Support/Right": {
+      "index": 28.1
+    }
+  },
+  "maxNormalOffsetMm": 15,
+  "registerPoses": false,
+  "removeReplacedAligns": false,
+  "analyze": true,
+  "toleranceMm": 0.5,
+  "toleranceDeg": 0.5,
+  "returnFull": false,
+  "executionPrerequisites": {
+    "mergedSaveCommit": "846fa4bca06e59a627e5c80975091369896ab6d3",
+    "firstInputCommit": "16ca6506",
+    "firstResultCommit": "13ef52db5fa48c6bc58525cbd6332c38e4f37c0c",
+    "measureValidationPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-measure-20261015T005618-153f3f99e8c54082b77897250b9d3f8a/r2-measure-validation.json",
+    "measureValidationSha256": "c0c977649c1b68af7f1e67d75e1c0f45b4ec8f3165918237a9135f438256d30d",
+    "firstApplyValidationPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-apply-20261015T061148-e7c8adc2b02f4779bcf6c52224d43808/r2-apply-validation.json",
+    "firstApplyValidationSha256": "cc2963b7f526922b33928e13c29ea5ec2eabbf3b185447afab6bccd955ad7a01",
+    "firstApplyPipelinePath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-apply-20261015T061148-e7c8adc2b02f4779bcf6c52224d43808/grip-extraction-apply.json",
+    "firstApplyPipelineSha256": "49ae4f70ba63e7735d02f0ba89e9d4ddf50f9e7a05d9679f8e388539ba49796b",
+    "firstApplyCorrectedReviewPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-nongrip-review-704/review.json",
+    "firstApplyCorrectedReviewSha256": "17c31b58c6696ea13e1c1a721cb4591aaf9d5718da6027db56d98eda38f37fc7",
+    "candidateFragmentPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/candidate-request-fragment.json",
+    "candidateFragmentSha256": "7a9493b41cf6d46ac9a274b1b931a21fad138f22f17c0479b8fcd40c46f2ac36",
+    "candidateReviewPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/Review.md",
+    "candidateReviewSha256": "dd3389ba040d0a74aa226ff965d5fc466f60ad07868ac77a14f6618e4c321c43",
+    "candidateHandReviewPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/hand-review-34.json",
+    "candidateHandReviewSha256": "0ef6200e3d67e292457bd66aa02e4786bfc6b24c50725345034e1ff75c51a652",
+    "candidateSourceHashesPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/r2-fit-review-704/source-sha256.json",
+    "candidateSourceHashesSha256": "0b540fcaf9c857deb2cf5abdd59e97512e0e67c52aaae49a20e18336f91f7072"
+  }
+}

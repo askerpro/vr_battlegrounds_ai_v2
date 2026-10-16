@@ -562,7 +562,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 3863316331985776183, guid: fefcf679beb2d0f42b6cce742988357e, type: 3}
+  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -609,7 +609,7 @@ MonoBehaviour:
       _gripAlignTransformHandLeft: {fileID: 217338919773643549}
       _gripAlignTransformHandRight: {fileID: 661718639372432620}
     - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
-      _handPose: {fileID: 11400000, guid: e2f8bc7c0195daa4092d8071a7494e7f, type: 2}
+      _handPose: {fileID: 11400000, guid: 847fcb01f6e19e7478553c43c6532863, type: 2}
       _poseBlendValue: 0.68
       _gripAlignTransformHandLeft: {fileID: 11590045862608475}
       _gripAlignTransformHandRight: {fileID: 5525712181469843925}

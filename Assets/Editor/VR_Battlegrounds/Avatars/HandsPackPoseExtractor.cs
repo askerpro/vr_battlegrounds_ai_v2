@@ -50,7 +50,8 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <param name="side">Рука пака, с которой снимается поза</param>
         /// <param name="bodyMesh">Меш корпуса оружия в паке</param>
         /// <param name="bodyBone">Кость, к которой привязан корпус</param>
-        public static Sample Extract(GameObject model, AnimationClip clip, float time, UxrHandSide side, string bodyMesh, string bodyBone)
+        public static Sample Extract(GameObject model, AnimationClip clip, float time, UxrHandSide side, string bodyMesh, string bodyBone,
+                                     System.Action<GripSourceCaptureContext> sourceContactCapture = null)
         {
             var instance = Object.Instantiate(model);
             instance.hideFlags = HideFlags.HideAndDontSave;
@@ -63,6 +64,10 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 // Оси — по bind-позе, до кадра клипа: так же SDK считает их у аватара.
                 SolveAxes(arm.Hand, side, out UxrUniversalLocalAxes handAxes, out UxrUniversalLocalAxes fingerAxes);
+
+                string[] unavailableHands = null;
+                GripSourceLiveHand[] sourceHands = sourceContactCapture == null ? null :
+                    GripSourceContactCapture.PrepareHands(s => BuildArm(bones, s), out unavailableHands);
 
                 clip.SampleAnimation(instance, time);
 
@@ -77,6 +82,15 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 Matrix4x4 hand     = Matrix4x4.TRS(arm.Hand.Wrist.position, handAxes.UniversalRotation, Vector3.one);
                 Matrix4x4 relative = hand.inverse * body.bones[bone].localToWorldMatrix * body.sharedMesh.bindposes[bone];
+
+                if (sourceContactCapture != null) GripSourceContactCapture.Deliver(sourceContactCapture, new GripSourceCaptureContext
+                {
+                    SourceKind = PackClipGripSource.Hands, CharacterRoot = instance, ObjectRoot = instance,
+                    ModelAsset = model, Clip = clip, Time = time, SourceSide = side,
+                    LiveHands = sourceHands, UnavailableHands = unavailableHands,
+                    BodyToWorld = body.bones[bone].localToWorldMatrix * body.sharedMesh.bindposes[bone],
+                    ObjectRenderers = new Renderer[] { body }
+                });
 
                 return new Sample
                 {

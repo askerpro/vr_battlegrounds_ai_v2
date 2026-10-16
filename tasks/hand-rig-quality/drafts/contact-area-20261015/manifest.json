@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-15",
+  "status": "draft_not_accepted",
+  "reason": "Пользователь заменил площадь на фиксированные опорные точки фаланг ±2мм и попросил сохранить наработки площади.",
+  "files": [
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactMask/HandContactMaskCapture.cs",
+      "sha256": "cd56ad92e77e3c5e77075f6a674e301dd908a782b497e6a196270d4bef0d7f1f",
+      "bytes": 18691
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactMask/HandContactMaskCapture.cs.meta",
+      "sha256": "ebf203faa5a9cf0623b3efa4c51b916f54284d64aa8e34ecf75e74478e91ac34",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactMask/HandContactMaskWindow.cs",
+      "sha256": "adf2be22d60ff1fd9567048065d5be418b6cba696501993518f968b6635f41e0",
+      "bytes": 18239
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactMask/HandContactMaskWindow.cs.meta",
+      "sha256": "c884f7f595be6fbdc5eae99bae1a21ad37a9e68f92fd8eae2c2a30b6e8e8d3e4",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkModel.cs",
+      "sha256": "ae4e87110bd98841c765b87fcae483908391b07393fb7fe53508a2044f8991c5",
+      "bytes": 5309
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkModel.cs.meta",
+      "sha256": "180c7b2570f2dd46d09e643a1126e79803939f53232f7f8eec424962305b3c15",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkPreviewSession.cs",
+      "sha256": "cc38c43626535a60b2164b231fc203c7a2db76b48e06da376822f01bbef2811d",
+      "bytes": 26126
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkPreviewSession.cs.meta",
+      "sha256": "2abc7a63083452ce81bdb5c0f4c3740b4e782b895150c14f850bc53068b9a164",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkPreviewValidation.cs",
+      "sha256": "6190994685b642bf4472438ecc06d4c1b239686f2447752c7a9db2b2890cc957",
+      "bytes": 9367
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkPreviewValidation.cs.meta",
+      "sha256": "7186477c7694e9aead899245bd15369b1a0d1e7dda695379846dc2c3f8dac543",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkRigDriver.cs",
+      "sha256": "8c568bc16bc97260513bdab2b1915f8c3e9a3d59fb9093b2e02210b1b7f1b8d6",
+      "bytes": 7628
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkRigDriver.cs.meta",
+      "sha256": "13d98a5236ffedb4ad3cefcfb64d7284a8197d7a34a4d3974e57346d3fb0b6a3",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkSolver.cs",
+      "sha256": "4599e69902061a05c00fea0a266cb550a6796b23a4d8fc9674be7cf6f74bf340",
+      "bytes": 17699
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkSolver.cs.meta",
+      "sha256": "3d87991b8a23e959b42974566d7b17dcb6b0083e73b729f367bde4c17ceeedda",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkSurfaceAnchor.cs",
+      "sha256": "179f225f1dba7f2f1ce7cffaa37e09caa3294996f4fd5c24c8076a303838ea9b",
+      "bytes": 9041
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactIk/ContactIkSurfaceAnchor.cs.meta",
+      "sha256": "451ec4b7e178ab189e0cb62b6cc616c4c961955162426345ce0b7927d014719a",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactMask.cs",
+      "sha256": "9d4df2b59505103478373881fa13ba047d09913d947f386591218d84e5ac8a9c",
+      "bytes": 3409
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactMask.cs.meta",
+      "sha256": "23819a8c5877fd4847508ab0130a266f9380356876cb84ec279d9d89f372673a",
+      "bytes": 59
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactCoverage.cs",
+      "sha256": "ce3c9800be2c0b1193ed072aa00d6ece5c11475e8663f96e645b93d9020e5958",
+      "bytes": 25764
+    },
+    {
+      "path": "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactCoverage.cs.meta",
+      "sha256": "cb1f8f204f6a56a2263e48805c795dc46be614ed5675c231fa31107658daf9e9",
+      "bytes": 59
+    },
+    {
+      "path": "tasks/hand-rig-quality/contracts/grip-contact-authoring-v1.md",
+      "sha256": "0ee2a2f7affcf9a234f9de27e9fea00982d021914b83ec55f856abb5200dee5e",
+      "bytes": 5513
+    },
+    {
+      "path": "tasks/hand-rig-quality/tools/run-contact-authoring-smoke.cs.txt",
+      "sha256": "c81dc0aa7507bd843ba5593bb7a7a9decd1c873fde612eddc840eb5e30f99ede",
+      "bytes": 11614
+    },
+    {
+      "path": "tasks/hand-rig-quality/tools/run-contact-ik-preview-smoke.cs.txt",
+      "sha256": "3868244f646d02ba32eb72e5f9a6808c6ef6d7a298511788071981adecc8f50a",
+      "bytes": 17208
+    },
+    {
+      "path": "tasks/hand-rig-quality/tools/compile-contact-authoring.py",
+      "sha256": "78e2686f669ef56d961126408d5d619982ab0fdc33856f75c2df2e582c3a4e7a",
+      "bytes": 5892
+    }
+  ]
+}

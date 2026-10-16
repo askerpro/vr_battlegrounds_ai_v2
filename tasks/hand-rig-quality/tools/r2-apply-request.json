@@ -1,0 +1,42 @@
+{
+  "source": "pack",
+  "recipes": [
+    "HandsPack_Gun_Grip",
+    "HandsPack_Gun_Support",
+    "HandsPack_Uzi_Grip",
+    "HandsPack_PPK_Grip",
+    "HandsPack_PPK_Support",
+    "HandsPack_Revolver_Grip",
+    "HandsPack_Revolver_Support",
+    "HandsPack_SniperRifle_Grip",
+    "HandsPack_SniperRifle_Support",
+    "Kinemation_R08_Grip",
+    "Kinemation_R08_Support",
+    "Kinemation_Herrington_Grip",
+    "Kinemation_Herrington_Support",
+    "Kinemation_Mk14_Grip",
+    "Kinemation_Mk14_Support",
+    "Kinemation_TR15_Grip",
+    "Kinemation_TR15_Support"
+  ],
+  "target": "MEF_cyborg_hands",
+  "anchor": "palm",
+  "encoding": "rig",
+  "mode": "apply",
+  "outDir": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run",
+  "normalOffsetMm": 0,
+  "normalOffsetMmByHand": {},
+  "curlDegByHand": {},
+  "maxNormalOffsetMm": 15,
+  "registerPoses": false,
+  "removeReplacedAligns": false,
+  "analyze": true,
+  "toleranceMm": 0.5,
+  "toleranceDeg": 0.5,
+  "returnFull": false,
+  "executionPrerequisites": {
+    "mergedSaveCommit": "846fa4bca06e59a627e5c80975091369896ab6d3",
+    "measureValidationPath": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/extraction-run/r2-measure-20261015T005618-153f3f99e8c54082b77897250b9d3f8a/r2-measure-validation.json",
+    "measureValidationSha256": "c0c977649c1b68af7f1e67d75e1c0f45b4ec8f3165918237a9135f438256d30d"
+  }
+}

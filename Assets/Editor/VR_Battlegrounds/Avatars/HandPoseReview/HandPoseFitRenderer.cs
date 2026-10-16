@@ -28,10 +28,12 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             string[] names={"front","back","left","right","top","bottom"};
             Vector3[] dirs={Vector3.forward,Vector3.back,Vector3.left,Vector3.right,Vector3.up,Vector3.down};
             var resources=new List<Object>();var objects=new List<GameObject>();
+            using var xray=HandPoseXrayRenderer.CreateMaterials();
             try {
                 Material solid=Material(shader,false,false),ghost=Material(shader,true,false),line=Material(shader,true,true);resources.Add(solid);resources.Add(ghost);resources.Add(line);
                 Material markers=Material(shader,true,true);markers.renderQueue=3002;resources.Add(markers);
                 Mesh hand=Mesh(snapshot.Hand,_=>HandColor),weapon=Mesh(snapshot.ObjectSurface,_=>ObjectColor),wire=Wire(snapshot.ObjectSurface,new Color(.85f,.86f,.89f,.32f));resources.Add(hand);resources.Add(weapon);resources.Add(wire);
+                Mesh intersection=BuildIntersectionMesh(snapshot.Hand,full);if(intersection) resources.Add(intersection);
                 var selected=new HashSet<(string,int,int)>(snapshot.ContactHand.Select(t=>(t.Source,t.SourceSubMesh,t.SourceTriangle)));
                 Mesh heat=Mesh(snapshot.Hand,t=>{
                     if(full.IntersectionCount(t)>0) return new Color(1,.2f,.8f);
@@ -57,8 +59,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     Mesh pads=Mesh(snapshot.Hand,t=>colors.TryGetValue((t.Source,t.SourceSubMesh,t.SourceTriangle),out var c)?c:new Color(.4f,.4f,.45f));resources.Add(pads);padsg=Add(snapshot,pads,solid);objects.Add(padsg);
                 }
                 string[] modeNames=padsg?new[]{"normal","xray","distance","section","pads"}:new[]{"normal","xray","distance","section"};
-                GameObject otherg=null,volumeg=null,regionsg=null;
-                if(snapshot.OtherHand.Count>0) {Mesh other=Mesh(snapshot.OtherHand,_=>new Color(.65f,.35f,.9f));resources.Add(other);otherg=Add(snapshot,other,solid);objects.Add(otherg);}
+                GameObject otherg=null,volumeg=null,regionsg=null;Mesh other=null;
+                if(snapshot.OtherHand.Count>0) {other=Mesh(snapshot.OtherHand,_=>new Color(.65f,.35f,.9f));resources.Add(other);otherg=Add(snapshot,other,solid);objects.Add(otherg);}
                 if(snapshot.AnalysisVolume.Count>0) {Mesh volume=Wire(snapshot.AnalysisVolume,new Color(1,.65f,.15f,.8f));resources.Add(volume);volumeg=Add(snapshot,volume,line);objects.Add(volumeg);}
                 if(r.ContactRegions.Length>0) {Mesh bounds=RegionBounds(r.ContactRegions);resources.Add(bounds);regionsg=Add(snapshot,bounds,line);objects.Add(regionsg);}
                 for(int view=0;view<6;view++) {
@@ -66,9 +68,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     camera.transform.position=center+dir*2+up*labelShift;camera.transform.rotation=Quaternion.LookRotation(-dir,up);
                     for(int mode=0;mode<modeNames.Length;mode++) {
                         string modeName=modeNames[mode];
-                        hg.SetActive(mode==0||mode==1);wg.SetActive(mode!=3);wireg.SetActive(mode==1||mode==2||mode==4);heatg.SetActive(mode==2);
+                        hg.SetActive(mode==0);wg.SetActive(mode!=3&&mode!=1);wireg.SetActive(mode==2||mode==4);heatg.SetActive(mode==2);
                         if(padsg) padsg.SetActive(mode==4);
-                        if(otherg) otherg.SetActive(mode==0||mode==1);
+                        if(otherg) otherg.SetActive(mode==0);
                         if(volumeg) volumeg.SetActive(mode==1||mode==2);
                         if(regionsg) regionsg.SetActive(mode==1||mode==2);
                         wg.GetComponent<MeshRenderer>().sharedMaterial=mode==1||mode==2||mode==4?ghost:solid;
@@ -86,7 +88,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                                 Mesh points=ContactMarkers(pairs,camera,r.ImageSize,r.ContactMarkerRadiusPixels);
                                 sectionMeshes.Add(points);sectionObjects.Add(Add(snapshot,points,markers));
                             }
-                            snapshot.Preview.BeginStaticPreview(new Rect(0,0,r.ImageSize,r.ImageSize));snapshot.Preview.Render(true);
+                            snapshot.Preview.BeginStaticPreview(new Rect(0,0,r.ImageSize,r.ImageSize));
+                            if(mode==1) HandPoseXrayRenderer.DrawPreview(snapshot.Preview,xray,hand,weapon,Matrix4x4.identity,otherHand:other,intersection:intersection);
+                            snapshot.Preview.Render(true);
                             Texture2D texture=snapshot.Preview.EndStaticPreview();
                             try {
                                 FitRasterLabels.Label(texture,report,modeName,names[view],frame);
@@ -97,9 +101,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                     }
                 }
                 var html=new StringBuilder("<!doctype html><meta charset='utf-8'><title>Посадка кисти</title><style>body{background:#151a21;color:#ddd;font:16px sans-serif}section{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}img{width:100%}figure{margin:0}h2{grid-column:1/-1}</style><h1>Посадка кисти</h1><p>Обычный вид · рентген · расстояние · сечение. Голубой → оранжевый: unsigned дистанция. Пурпурный: касание/пересечение. Красный: подтверждённое вложение. Серый: вне контактной маски. Допуск близости не является нормой качества.</p>");
-                html.Append("<p>Точки в диапазоне "+r.ContactDistanceMinMm.ToString("0.##",CultureInfo.InvariantCulture)+"–"+r.ProximityMm.ToString("0.##",CultureInfo.InvariantCulture)+" мм включительно: "+report.ContactMarkers.Count+" показано из "+report.ContactCandidateCount+". На кисти: зелёный — снаружи, жёлтый — знак неизвестен, красный — внутри. Голубое кольцо — ближайшая точка предмета; линия соединяет пару. В рентгене видны и скрытые точки. "+(r.ShowContactMarkers?"":"Маркеры выключены.")+"</p>");
+                html.Append("<p>Точки в диапазоне "+r.ContactDistanceMinMm.ToString("0.##",CultureInfo.InvariantCulture)+"–"+r.ProximityMm.ToString("0.##",CultureInfo.InvariantCulture)+" мм включительно: "+report.ContactMarkers.Count+" показано из "+report.ContactCandidateCount+". В рентгене внешняя оболочка оружия скрывает его внутренние детали, кисть просвечивает, пересечение с мешом выделено красным, а точки контакта — жёлтым. "+(r.ShowContactMarkers?"":"Маркеры выключены.")+"</p>");
                 string Escape(string value) => System.Security.SecurityElement.Escape(value??"");
-                html.Append("<p>Источник: "+Escape(report.CaptureSource)+"; кадр "+report.CaptureFrame+"; состояние "+Escape(report.StateName)+". Фиолетовая поверхность — другая кисть; оранжевые рёбра — аналитический объём; зелёные рамки — контактные регионы.</p><h2>Достоверность</h2><ul>");
+                html.Append("<p>Источник: "+Escape(report.CaptureSource)+"; кадр "+Escape(report.CaptureFrame.ToString(CultureInfo.InvariantCulture))+"; состояние "+Escape(report.StateName)+". Фиолетовая поверхность — другая кисть; оранжевые рёбра — аналитический объём; зелёные рамки — контактные регионы.</p><h2>Достоверность</h2><ul>");
                 foreach(var item in report.Reliability) html.Append("<li>"+Escape(item.Metric)+": "+Escape(item.Status)+" — "+Escape(item.Reason)+"</li>");html.Append("</ul><h2>Контакт по фалангам</h2><table><tr><th>Зона</th><th>P50, мм</th><th>Доля близости</th><th>Неизвестный знак</th></tr>");
                 foreach(var item in report.Segments) html.Append("<tr><td>"+Escape(item.Zone)+"</td><td>"+item.DistanceP50Mm.ToString("F2",CultureInfo.InvariantCulture)+"</td><td>"+item.NearSurfaceFraction.ToString("P1",CultureInfo.InvariantCulture)+"</td><td>"+item.UnknownSignSamples+"</td></tr>");html.Append("</table>");
                 if(metrics!=null) {
@@ -129,34 +133,76 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         /// <summary>Тот же frozen mesh с направлением текущей SceneView; original scene не читается.</summary>
         public static void RenderEditorView(HandPoseFitSnapshot snapshot,HandPoseFitReport report,Vector3 position,Quaternion rotation,bool orthographic,float size,float fov)
         {
-            var resources=new List<Object>();var objects=new List<GameObject>();
-            try {
-                var shader=Shader.Find("Hidden/VRBattlegrounds/HandPoseFit");
-                var ghost=Material(shader,true,false);var markers=Material(shader,true,true);
-                resources.Add(ghost);resources.Add(markers);
-                var hand=Mesh(snapshot.Hand,_=>HandColor);var weapon=Mesh(snapshot.ObjectSurface,_=>ObjectColor);
-                resources.Add(hand);resources.Add(weapon);objects.Add(Add(snapshot,weapon,ghost));objects.Add(Add(snapshot,hand,ghost));
-                if(snapshot.OtherHand.Count>0) { var other=Mesh(snapshot.OtherHand,_=>new Color(.55f,.28f,.95f));resources.Add(other);objects.Add(Add(snapshot,other,ghost)); }
-                var camera=snapshot.Preview.camera;
+            RenderEditorViewCore(snapshot,report,camera=>{
                 camera.transform.SetPositionAndRotation(position,rotation);
-                camera.orthographic=orthographic;camera.orthographicSize=size;camera.fieldOfView=fov;
-                camera.nearClipPlane=.0001f;camera.farClipPlane=1000;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.08f,.10f,.13f);
-                if(report.Settings.ShowContactMarkers) {
-                    var points=ContactMarkers(report.ContactMarkers,camera,report.Settings.ImageSize,report.Settings.ContactMarkerRadiusPixels);
-                    resources.Add(points);objects.Add(Add(snapshot,points,markers));
+                camera.orthographic=orthographic;camera.orthographicSize=size;camera.fieldOfView=fov;camera.aspect=1;
+                camera.nearClipPlane=.0001f;camera.farClipPlane=1000;camera.ResetProjectionMatrix();
+            },1);
+        }
+
+        /// <summary>Экспорт исходной проекции без превращения прямоугольного SceneView в квадратный кадр.</summary>
+        public static void RenderEditorView(HandPoseFitSnapshot snapshot,HandPoseFitReport report,HandPoseXrayRenderer.CameraState camera)
+        {
+            if(camera==null)throw new ArgumentNullException(nameof(camera));
+            RenderEditorViewCore(snapshot,report,camera.Apply,camera.Aspect);
+        }
+
+        static void RenderEditorViewCore(HandPoseFitSnapshot snapshot,HandPoseFitReport report,Action<Camera> configure,float aspect)
+        {
+            var resources=new List<Object>();
+            using var xray=HandPoseXrayRenderer.CreateMaterials();
+            try {
+                var hand=Mesh(snapshot.Hand,_=>HandColor);var weapon=Mesh(snapshot.ObjectSurface,_=>xray.VisualStyle.ObjectColor);
+                resources.Add(hand);resources.Add(weapon);Mesh other=null;
+                if(snapshot.OtherHand.Count>0) {other=Mesh(snapshot.OtherHand,_=>Color.white);resources.Add(other);}
+                Mesh intersection= null;
+                if(snapshot.ObjectSurface.Count>0 && snapshot.Hand.Count>0) {
+                    var surface=new FitSurface(snapshot.ObjectSurface.ToArray());
+                    intersection=BuildIntersectionMesh(snapshot.Hand,surface);
+                    if(intersection) resources.Add(intersection);
                 }
-                snapshot.Preview.BeginStaticPreview(new Rect(0,0,report.Settings.ImageSize,report.Settings.ImageSize));
+                var camera=snapshot.Preview.camera;
+                configure(camera);camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=xray.VisualStyle.Background;camera.cullingMask=-1;
+                int width=Mathf.Max(1,Mathf.RoundToInt(report.Settings.ImageSize*Mathf.Min(1,aspect)));
+                int height=Mathf.Max(1,Mathf.RoundToInt(report.Settings.ImageSize*Mathf.Min(1,1/aspect)));
+                Mesh points=null;
+                if(report.Settings.ShowContactMarkers && report.ContactMarkers.Count>0) {
+                    points=ContactMarkers(report.ContactMarkers,camera,height,report.Settings.ContactMarkerRadiusPixels);
+                    resources.Add(points);
+                }
+                snapshot.Preview.BeginStaticPreview(new Rect(0,0,width,height));
+                // BeginStaticPreview может подстроить camera aspect: возвращаем точную исходную проекцию.
+                configure(camera);
+                HandPoseXrayRenderer.DrawPreview(snapshot.Preview,xray,hand,weapon,Matrix4x4.identity,otherHand:other,intersection:intersection);
+                if(points)snapshot.Preview.DrawMesh(points,Matrix4x4.identity,xray.Overlay,0);
                 snapshot.Preview.Render(true);var texture=snapshot.Preview.EndStaticPreview();
                 try {
                     FitRasterLabels.Label(texture,report,"xray","editor-view",report.Settings.FrameSizeMeters);
                     File.WriteAllBytes(Path.Combine(report.OutputDirectory,"editor-view-xray.png"),texture.EncodeToPNG());
                 } finally {Object.DestroyImmediate(texture);}
-                report.Cameras.Add(new FitCameraReport {View="editor-view",Mode="xray_cpu_frozen",Image="editor-view-xray.png",
-                    Position=position,Forward=rotation*Vector3.forward,Up=rotation*Vector3.up,OrthographicSizeMeters=orthographic?size:0});
+                report.Cameras.Add(new FitCameraReport {View="editor-view",Mode="xray_shared_frozen",Image="editor-view-xray.png",
+                    Position=camera.transform.position,Forward=camera.transform.forward,Up=camera.transform.up,OrthographicSizeMeters=camera.orthographic?camera.orthographicSize:0});
+                File.WriteAllText(Path.Combine(report.OutputDirectory,"editor-view-camera.json"),Newtonsoft.Json.JsonConvert.SerializeObject(new {
+                    policy="handpose-xray-v4",width,height,camera.aspect,camera.orthographic,camera.orthographicSize,camera.fieldOfView,
+                    camera.nearClipPlane,camera.farClipPlane,
+                    projection=Enumerable.Range(0,16).Select(i=>camera.projectionMatrix[i]).ToArray(),
+                    background=new[]{camera.backgroundColor.r,camera.backgroundColor.g,camera.backgroundColor.b,camera.backgroundColor.a},
+                    position=camera.transform.position,rotation=camera.transform.rotation,
+                    diagnosticLayer=report.Settings.ShowContactMarkers?"yellow_contact_markers_and_red_mesh_intersection":"red_mesh_intersection"
+                },FitUnityJsonConverter.Settings),new UTF8Encoding(false));
                 File.AppendAllText(Path.Combine(report.OutputDirectory,"index.html"),
                     "<section><h2>Текущий ракурс · frozen editor geometry</h2><img src='editor-view-xray.png'></section>",new UTF8Encoding(false));
-            } finally {foreach(var go in objects)Object.DestroyImmediate(go);foreach(var resource in resources)Object.DestroyImmediate(resource);}
+            } finally {foreach(var resource in resources)Object.DestroyImmediate(resource);snapshot.Preview.camera.ResetProjectionMatrix();}
         }
+
+        /// <summary>Выделяет общую / пересекающуюся часть меша кисти с поверхностью предмета для красной подсветки.</summary>
+        public static Mesh BuildIntersectionMesh(IEnumerable<FitTriangle> hand,FitSurface weaponSurface)
+        {
+            if(hand==null||weaponSurface==null) return null;
+            var hit=hand.Where(t=>weaponSurface.IntersectionCount(t)>0||weaponSurface.WindingNumber((t.A+t.B+t.C)/3f)>=.5).ToList();
+            return hit.Count>0?Mesh(hit,_=>HandPoseXrayRenderer.Style.Default.IntersectionColor):null;
+        }
+
         internal static Material Material(Shader shader,bool transparent,bool unlit)
         {var m=new Material(shader){hideFlags=HideFlags.HideAndDontSave};m.SetFloat("_Src",transparent?(int)BlendMode.SrcAlpha:(int)BlendMode.One);m.SetFloat("_Dst",transparent?(int)BlendMode.OneMinusSrcAlpha:(int)BlendMode.Zero);m.SetFloat("_ZWrite",transparent?0:1);m.SetFloat("_ZTest",transparent?(int)CompareFunction.Always:(int)CompareFunction.LessEqual);m.SetFloat("_Shade",unlit?0:1);m.SetFloat("_Alpha",transparent&&!unlit?.15f:1);m.renderQueue=transparent?3000:2000;return m;}
         internal static GameObject Add(HandPoseFitSnapshot snapshot,Mesh mesh,Material material)
@@ -175,29 +221,31 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         static Mesh ContactMarkers(IEnumerable<FitContactCandidate> pairs,Camera camera,int imageSize,float radiusPixels)
         {
             var v=new List<Vector3>();var c=new List<Color>();
-            float pixel=2*camera.orthographicSize/imageSize,radius=radiusPixels*pixel;
-            Vector3 right=camera.transform.right,up=camera.transform.up,towardCamera=-camera.transform.forward*pixel*.15f;
-            Color cyan=new Color(.2f,1,1),dark=new Color(.02f,.03f,.04f);
+            Vector3 right=camera.transform.right,up=camera.transform.up;
+            Color contactYellow=HandPoseXrayRenderer.Style.Default.ContactColor,dark=new Color(.02f,.03f,.04f);
             void Triangle(Vector3 a,Vector3 b,Vector3 d,Color color) {v.Add(a);v.Add(b);v.Add(d);c.Add(color);c.Add(color);c.Add(color);}
             void Disk(Vector3 p,float size,Color color) {
                 for(int i=0;i<12;i++) {float a=i*Mathf.PI/6,b=(i+1)*Mathf.PI/6;Triangle(p,p+(right*Mathf.Cos(a)+up*Mathf.Sin(a))*size,p+(right*Mathf.Cos(b)+up*Mathf.Sin(b))*size,color);}
             }
             foreach(var pair in pairs) {
+                float depth=camera.orthographic?1:Mathf.Max(.001f,Vector3.Dot(pair.Position-camera.transform.position,camera.transform.forward));
+                float pixel=2*depth/(Mathf.Max(1e-6f,Mathf.Abs(camera.projectionMatrix[1,1]))*imageSize),radius=radiusPixels*pixel;
+                Vector3 towardCamera=-camera.transform.forward*pixel*.15f;
                 Vector3 hand=pair.Position+towardCamera,target=pair.TargetPosition+towardCamera;
                 Vector3 projected=target-hand;projected-=camera.transform.forward*Vector3.Dot(projected,camera.transform.forward);
                 if(projected.sqrMagnitude>pixel*pixel*.01f) {
                     Vector3 width=Vector3.Cross(camera.transform.forward,projected).normalized*pixel*.5f;
-                    Triangle(hand-width,hand+width,target+width,cyan);Triangle(hand-width,target+width,target-width,cyan);
+                    Triangle(hand-width,hand+width,target+width,contactYellow);Triangle(hand-width,target+width,target-width,contactYellow);
                 }
-                // Кольцо предмета больше точки кисти: при нулевом зазоре обе метки читаются.
-                float outer=radius*1.6f,inner=radius*1.2f;
+                // Кольцо на поверхности предмета и диск точки контакта окрашены в жёлтый с тёмным контуром.
+                float outer=radius*1.55f,inner=radius*1.18f;
                 for(int i=0;i<12;i++) {
                     float a=i*Mathf.PI/6,b=(i+1)*Mathf.PI/6;
                     Vector3 ra=right*Mathf.Cos(a)+up*Mathf.Sin(a),rb=right*Mathf.Cos(b)+up*Mathf.Sin(b);
-                    Triangle(target+ra*outer,target+rb*outer,target+rb*inner,cyan);Triangle(target+ra*outer,target+rb*inner,target+ra*inner,cyan);
+                    Triangle(target+ra*outer,target+rb*outer,target+rb*inner,contactYellow);Triangle(target+ra*outer,target+rb*inner,target+ra*inner,contactYellow);
                 }
-                Disk(hand,radius*1.15f,dark);
-                Disk(hand+towardCamera*.1f,radius,pair.Inside==true?new Color(1,.15f,.12f):pair.Inside==false?new Color(.2f,1,.25f):new Color(1,.9f,.1f));
+                Disk(hand,radius*1.25f,dark);
+                Disk(hand+towardCamera*.1f,radius,pair.Inside==true?HandPoseXrayRenderer.Style.Default.IntersectionColor:contactYellow);
             }
             var mesh=new Mesh{indexFormat=IndexFormat.UInt32,hideFlags=HideFlags.HideAndDontSave};mesh.SetVertices(v);mesh.SetColors(c);mesh.SetTriangles(Enumerable.Range(0,v.Count).ToArray(),0);mesh.RecalculateBounds();return mesh;
         }

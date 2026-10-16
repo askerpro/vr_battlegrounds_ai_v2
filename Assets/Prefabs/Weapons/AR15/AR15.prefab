@@ -116,7 +116,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 3
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
+  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -143,7 +143,7 @@ MonoBehaviour:
       _gripAlignTransformHandLeft: {fileID: 849679097925906954}
       _gripAlignTransformHandRight: {fileID: 4715229113916629490}
     - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
-      _handPose: {fileID: 11400000, guid: 20f1183c36a20c44d8e2cf19a1f81b5a, type: 2}
+      _handPose: {fileID: 11400000, guid: c3ce1af3fe76eb8469c78798575439c1, type: 2}
       _poseBlendValue: 0
       _gripAlignTransformHandLeft: {fileID: 381889811901270123}
       _gripAlignTransformHandRight: {fileID: 1385412275803973356}
@@ -182,7 +182,7 @@ MonoBehaviour:
       _gripAlignTransformHandLeft: {fileID: 1756741188493614283}
       _gripAlignTransformHandRight: {fileID: 6743926215089443604}
     - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
-      _handPose: {fileID: 11400000, guid: e2f8bc7c0195daa4092d8071a7494e7f, type: 2}
+      _handPose: {fileID: 11400000, guid: 847fcb01f6e19e7478553c43c6532863, type: 2}
       _poseBlendValue: 0.443
       _gripAlignTransformHandLeft: {fileID: 2288981233234416591}
       _gripAlignTransformHandRight: {fileID: 7934183759380451275}
@@ -2953,7 +2953,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: b6fe59db941fa944696ece5e1aabc032, type: 3}
+  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -3197,9 +3197,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4667631426267724316}
     - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
+      propertyPath: _selectedAvatarForGrips
+      value: 
+      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+    - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 
       objectReference: {fileID: 2745877218544597236}
+    - target: {fileID: 6115187647502898987, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[5]._handPose
+      value: 
+      objectReference: {fileID: 11400000, guid: 847fcb01f6e19e7478553c43c6532863, type: 2}
     - target: {fileID: 6308617285841064264, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       propertyPath: m_Name
       value: AR15_Magazine

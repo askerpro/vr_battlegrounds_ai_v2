@@ -1,0 +1,191 @@
+// Тело execute_code, только в собственной RUNNING аренде. Технический smoke, не улучшение/приёмка хвата.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
+    UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null)
+    throw new System.InvalidOperationException("Редактор занят или открыт prefab stage.");
+for (int sceneIndex = 0; sceneIndex < UnityEngine.SceneManagement.SceneManager.sceneCount; sceneIndex++)
+    if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(sceneIndex).isDirty)
+        throw new System.InvalidOperationException("Есть несохранённая сцена; smoke не запускается.");
+string directory = "tasks/hand-rig-quality/reports/contact-authoring-unity-pilot/ik-contact-authoring-reapproval-20261015-r1";
+if (System.IO.Directory.Exists(directory)) throw new System.InvalidOperationException("Каталог попытки уже существует: сначала установить предыдущий исход; этот nonce повторно не запускать.");
+System.IO.Directory.CreateDirectory(directory);
+System.Action<string, object> Write = (path, value) => System.IO.File.WriteAllText(path,
+    Newtonsoft.Json.JsonConvert.SerializeObject(value, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), new System.Text.UTF8Encoding(false));
+var failures = new System.Collections.Generic.List<string>();
+var checks = new System.Collections.Generic.List<string>();
+var details = new System.Collections.Generic.Dictionary<string, object>();
+System.Action<string, bool> Check = (name, passed) => { if (passed) checks.Add(name); else failures.Add(name); };
+Write(directory + "/progress.json", new { phase = "started", scope = "technical actual BakeMesh binding; draft synthetic targets/masks; no acceptance" });
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+string posePath = profile.PoseFolder + "/Kinemation_Viper_Grip.asset";
+string weaponPath = "Assets/Prefabs/Weapons/Viper/Viper.prefab";
+var paths = new System.Collections.Generic.SortedSet<string>(System.StringComparer.Ordinal);
+foreach (string seed in new[] { profile.RigPrefabPath, posePath, weaponPath })
+    foreach (string path in UnityEditor.AssetDatabase.GetDependencies(seed, true))
+    {
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path)) paths.Add(path);
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path + ".meta")) paths.Add(path + ".meta");
+    }
+System.Func<string, string> Hash = path =>
+{
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+    using (var stream = System.IO.File.OpenRead(path)) return System.BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+var before = paths.ToDictionary(p => p, p => Hash(p));
+System.Func<VrBattlegrounds.Editor.HandPoseReview.FitTriangle[], VrBattlegrounds.Editor.HandPoseReview.FitTriangle[], double> GeometryMm = (a, b) =>
+{
+    if (a.Length != b.Length) throw new System.InvalidOperationException("Изменился состав кожи.");
+    double maximum = 0;
+    for (int i = 0; i < a.Length; i++)
+    {
+        if (a[i].Source != b[i].Source || a[i].SourceSubMesh != b[i].SourceSubMesh || a[i].SourceTriangle != b[i].SourceTriangle)
+            throw new System.InvalidOperationException("Изменились материальные ID кожи.");
+        maximum = System.Math.Max(maximum, UnityEngine.Vector3.Distance(a[i].A, b[i].A) * 1000);
+        maximum = System.Math.Max(maximum, UnityEngine.Vector3.Distance(a[i].B, b[i].B) * 1000);
+        maximum = System.Math.Max(maximum, UnityEngine.Vector3.Distance(a[i].C, b[i].C) * 1000);
+    }
+    return maximum;
+};
+UnityEngine.GameObject weapon = null;
+try
+{
+    var pose = UnityEditor.AssetDatabase.LoadAssetAtPath<UltimateXR.Manipulation.HandPoses.UxrHandPoseAsset>(posePath);
+    if (!pose) throw new System.InvalidOperationException("Нет существующей Viper pose.");
+    weapon = UnityEditor.PrefabUtility.LoadPrefabContents(weaponPath);
+    var objectTriangles = new System.Collections.Generic.List<VrBattlegrounds.Editor.HandPoseReview.FitTriangle>();
+    // Полный доступный MeshFilter inventory; LOD/сборка/размещение не приняты, поэтому FullAssembly=false.
+    foreach (var filter in weapon.GetComponentsInChildren<UnityEngine.MeshFilter>(true))
+    {
+        var mesh = filter.sharedMesh; if (!mesh) continue;
+        var matrix = filter.transform.localToWorldMatrix;
+        using (var data = UnityEditor.MeshUtility.AcquireReadOnlyMeshData(mesh))
+        using (var vertices = new Unity.Collections.NativeArray<UnityEngine.Vector3>(data[0].vertexCount, Unity.Collections.Allocator.Temp))
+        {
+            data[0].GetVertices(vertices);
+            for (int sub = 0; sub < data[0].subMeshCount; sub++)
+            {
+                var descriptor = data[0].GetSubMesh(sub); if (descriptor.topology != UnityEngine.MeshTopology.Triangles) continue;
+                var indices = new int[descriptor.indexCount];
+                if (mesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16)
+                {
+                    var raw = data[0].GetIndexData<ushort>(); for (int i = 0; i < indices.Length; i++) indices[i] = raw[descriptor.indexStart + i] + descriptor.baseVertex;
+                }
+                else
+                {
+                    var raw = data[0].GetIndexData<int>(); for (int i = 0; i < indices.Length; i++) indices[i] = raw[descriptor.indexStart + i] + descriptor.baseVertex;
+                }
+                for (int i = 0; i < indices.Length; i += 3)
+                {
+                    var t = new VrBattlegrounds.Editor.HandPoseReview.FitTriangle(matrix.MultiplyPoint3x4(vertices[indices[i]]), matrix.MultiplyPoint3x4(vertices[indices[i + 1]]), matrix.MultiplyPoint3x4(vertices[indices[i + 2]]))
+                    { Source = VrBattlegrounds.Editor.HandPoseReview.HandPoseFitSnapshot.HumanPath(filter.transform, weapon.transform), SourceSubMesh = sub, SourceTriangle = i / 3 };
+                    if (t.Area > 1e-12f) objectTriangles.Add(t);
+                }
+            }
+        }
+    }
+    if (objectTriangles.Count == 0) throw new System.InvalidOperationException("Нет доступной геометрии Viper.");
+    using (var rig = new VrBattlegrounds.Editor.Avatars.GripTargetRig(profile.RigPrefabPath))
+    {
+        var side = UltimateXR.Core.UxrHandSide.Right;
+        var priorDescriptor = VrBattlegrounds.Editor.Avatars.GripPoseEncoder.Descriptor(pose, side);
+        rig.RestoreBind(); rig.Apply(side, priorDescriptor);
+        var primary = rig.Grabber(side).GetComponent<UltimateXR.Manipulation.UxrGrabber>().HandRenderer as UnityEngine.SkinnedMeshRenderer;
+        if (!primary || !primary.sharedMesh) throw new System.InvalidOperationException("SDK primary HandRenderer не SMR.");
+        var renderers = new[] { primary };
+        var frame = UnityEngine.Matrix4x4.identity;
+        var baseline = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+        var distal = rig.Hand(side).Index.Distal;
+        var axis = rig.Avatar.AvatarRigInfo.GetArmInfo(side).FingerUniversalLocalAxes.LocalRight;
+        var dofs = new[] { new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkDof
+            { Id = "smoke/right/index/distal/sdk-local-right", Bone = distal, LocalAxis = axis, MinDegrees = -5, MaxDegrees = 5 } };
+        var candidates = baseline.Where(t => t.FingerSegment == "index/distal").ToArray();
+        if (candidates.Length == 0) throw new System.InvalidOperationException("Нет index/distal кожи.");
+        var axisWorld = distal.TransformDirection(axis).normalized;
+        // Якорь выбран для заметного движения вокруг явной SDK оси; это технический lever, не semantic pad mapping.
+        var selected = candidates.OrderByDescending(t => UnityEngine.Vector3.Cross((t.A + t.B + t.C) / 3 - distal.position, axisWorld).sqrMagnitude)
+            .ThenBy(t => t.Source, System.StringComparer.Ordinal).ThenBy(t => t.SourceSubMesh).ThenBy(t => t.SourceTriangle).First();
+        var anchor = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkSurfaceAnchor
+            { Source = selected.Source, SourceSubMesh = selected.SourceSubMesh, SourceTriangle = selected.SourceTriangle, Barycentric = new UnityEngine.Vector3(1f/3, 1f/3, 1f/3) };
+        VrBattlegrounds.Editor.HandPoseReview.FitTriangle[] expected;
+        using (var driver = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkRigDriver(rig, side, dofs))
+        {
+            driver.Apply(new[] { 3f });
+            expected = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+        }
+        var restored = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+        Check("temporary_driver_restores_prior", GeometryMm(baseline, restored) < .01);
+        double movement = GeometryMm(baseline, expected);
+        Check("actual_baked_skin_moves", movement > .01);
+        var targetPoint = anchor.Evaluate(expected);
+        string fingerprint = "technical-smoke-draft|" + side + "|" + UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(primary.sharedMesh));
+        var mask = new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactMask
+        { Metadata = new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactMaskMetadata
+            { BindingFingerprint = fingerprint, Reviewed = false, Provenance = "technical smoke: one explicit stable triangle per skinweight zone; not accepted contact regions" } };
+        string[] regionNames = { "palm", "thumb", "index", "middle", "ring", "little" };
+        foreach (string region in regionNames)
+        {
+            mask.Regions.Add(new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactMaskRegion { Region = region });
+            var triangle = baseline.Where(t => region == "palm" ? t.FingerSegment == "palm_wrist" : t.Zone == region)
+                .OrderBy(t => t.Source, System.StringComparer.Ordinal).ThenBy(t => t.SourceSubMesh).ThenBy(t => t.SourceTriangle).First();
+            mask.Triangles.Add(new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactMaskTriangle
+            { Source = triangle.Source, SourceSubMesh = triangle.SourceSubMesh, SourceTriangle = triangle.SourceTriangle, Region = region, ReferenceAreaMm2 = triangle.Area * 1e6, Weight = 1 });
+        }
+        var target = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkTarget
+            { PatchId = "synthetic-index-distal-plus3", PositionMeters = targetPoint.PositionMeters, Normal = targetPoint.Normal, MatchNormal = true, PositionToleranceMeters = .00001f, NormalToleranceDegrees = .1f };
+        var bindings = new[] { new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPatchBinding
+            { Anchor = anchor, Target = target, CorrespondenceReviewed = false, Provenance = "synthetic +3deg actual-target-rig motion; no source semantic correspondence" } };
+        var minimumCoverage = regionNames.ToDictionary(name => name, name => 0.0);
+        var policy = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewPolicy(.5, 0, 0, minimumCoverage,
+            new VrBattlegrounds.Editor.HandPoseReview.HandPosePotentialContactCoverageSettings
+            { ContactBandMm = 2, Subdivisions = 2, CheckConvergence = false, MaxSampleQueries = 1000 }, 16, 42, 10000);
+        var objectEvidence = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkObjectEvidence
+            { GeometryReviewed = false, FullAssembly = false, OutwardOrientationReviewed = false, Evidence = "technical inventory only; placement/LOD/object assembly unreviewed" };
+        UltimateXR.Manipulation.HandPoses.UxrHandDescriptor captured;
+        using (var session = new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession(rig, side, renderers, false, frame,
+            objectTriangles.ToArray(), mask, fingerprint, dofs, bindings, policy, objectEvidence))
+        {
+            Write(directory + "/progress.json", new { phase = "session", handTriangles = baseline.Length, objectTriangles = objectTriangles.Count });
+            var zero = session.Evaluate(new[] { 0f });
+            var plus = session.Evaluate(new[] { 3f });
+            var repeated = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+            Check("actual_bakemesh_repeatable", GeometryMm(expected, repeated) < .01);
+            Check("unknown_signed_patch_remains_null", !plus.Anchors[0].SignedDistanceMm.HasValue && !plus.Evaluation.Patches[0].SignedClearanceMeters.HasValue);
+            Check("unknown_collision_depth_remains_null", !plus.Collision.SampledMaximumDepthMm.HasValue);
+            Check("unreviewed_incomplete_not_reliable", !plus.Evaluation.Reliable && !plus.Evaluation.FullSurfaceChecked && !plus.Evaluation.ContactCoverageSatisfied);
+            var result = session.Solve(new VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkSettings
+                { MaxEvaluations = 4, InitialStepDegrees = 3, MinimumStepDegrees = 3, PriorWeight = 0 });
+            Check("bounded_search_cannot_false_solve", !result.Solved && result.RequiresReview && result.Evaluations <= 4);
+            Check("synthetic_target_reached_without_quality_acceptance", result.TargetsReached && !result.Solved);
+            session.ApplyFinal(new[] { 3f }); captured = session.CaptureDescriptor();
+            Check("explicit_final_descriptor_captured", captured != null);
+            details["zero"] = zero; details["plus3"] = plus; details["search"] = result;
+            details["syntheticTargetReached"] = result.TargetsReached;
+        }
+        var afterDispose = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+        Check("session_dispose_restores_prior", GeometryMm(baseline, afterDispose) < .01);
+        rig.RestoreBind(); rig.Apply(side, captured);
+        var descriptorReplay = VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame);
+        double replayError = GeometryMm(expected, descriptorReplay);
+        Check("descriptor_replays_selected_joint_geometry", replayError < .01);
+        rig.RestoreBind(); rig.Apply(side, priorDescriptor);
+        Check("prior_restored_after_descriptor_probe", GeometryMm(baseline,
+            VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkPreviewSession.CaptureHandTriangles(rig, side, renderers, frame)) < .01);
+        details["identity"] = new { profile.RigPrefabPath, posePath, weaponPath, side = side.ToString(), renderer = VrBattlegrounds.Editor.HandPoseReview.HandPoseFitSnapshot.HumanPath(primary.transform, rig.Avatar.transform), primaryMesh = UnityEditor.AssetDatabase.GetAssetPath(primary.sharedMesh) };
+        details["draftMask"] = mask; details["anchor"] = anchor; details["dofs"] = new { id = dofs[0].Id, min = -5, max = 5, meaning = "draft technical range; not accepted anatomy" };
+        details["actualMovementMm"] = movement; details["descriptorReplayErrorMm"] = replayError;
+        details["handTriangles"] = baseline.Length; details["objectTriangles"] = objectTriangles.Count;
+    }
+}
+catch (System.Exception error) { failures.Add(error.GetType().Name + ": " + error.Message); details["exception"] = error.ToString(); }
+finally
+{
+    if (weapon) UnityEditor.PrefabUtility.UnloadPrefabContents(weapon);
+    foreach (var pair in before) if (!System.IO.File.Exists(pair.Key) || Hash(pair.Key) != pair.Value) failures.Add("asset_changed: " + pair.Key);
+    details["scope"] = "Technical actual BakeMesh/descriptor integration only. Synthetic joint target and draft mask; not source contact mapping, grip improvement, anatomy acceptance or full collision validation.";
+    details["passed"] = failures.Count == 0; details["checks"] = checks; details["failures"] = failures; details["assetHashesBefore"] = before;
+    Write(directory + "/report.json", details);
+    Write(directory + "/progress.json", new { phase = "completed", passed = failures.Count == 0, checks = checks.Count, failures = failures.Count });
+}
+return new { passed = failures.Count == 0, checks = checks.Count, failures = failures.Take(10).ToArray(), report = directory + "/report.json", scope = "technical BakeMesh integration only; no grip acceptance" };

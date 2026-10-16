@@ -3,9 +3,23 @@
   "owner": "avatar-grip",
   "client": "codex",
   "worktree": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai",
-  "base_sha": "1001415bed29124af821a9a641d0bae2a7224a5b",
+  "base_sha": "e15feb92bb09638767879d7b1e7b8a3f9df65b29",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
   "title": "Качество кистей и хватов MEF",
+  "current_work": {
+    "stage": "grip-contact-authoring",
+    "updated": "2026-10-16",
+    "contract": "tasks/hand-rig-quality/contracts/sdk-hand-pose-contact-editing-v3.md",
+    "status": "user-accepted-2026-10-16; CyborgHandsBase-hierarchy-and-80-grabbables-bound; merging-to-origin-dev",
+    "last_worker": { "ticket": 757, "input": "14d401177b43a396dffd3be9d894b11e369bc5b9", "result": "304ae4e1f18727d9981332095ef1a2c3c8395536", "phase": "DONE", "received": true, "native_artifacts_sha_verified": 17, "reference_points": {"right":15,"left":15}, "Viper_contact_count": {"before":8,"after":9,"expected":15}, "numerical_targets_reached": true, "source_hash_count":1240, "changed_assets":["Assets/Prefabs/Player/CyborgHandsBase.prefab","Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Player.prefab"], "report":"reports/sdk-contact-757-Review.md", "UI_interaction_checked":true },
+    "prior_worker_failure": { "ticket":756,"capture_started":false,"recovery_complete_event":8741,"recovery_result":"d0e6e01aac9c1340090b7c55375ffbce295cad5a","meta_transferred":8,"cause":"named Review referenced default Editor; fixed locally and compiled separately" },
+    "last_successful_capture": { "ticket": 755, "input": "a7799b80385430282a2e7c0dafabca4ddacdabd1", "result": "f9e2aa0d64309f49a83e755ce37a5dfed579c6fc", "received": true, "changed_assets": [], "native_artifacts_sha_verified": 12 },
+    "next": [
+      "Создать второй цветовой вариант MEF_cyborg_hands (аналог Optimized_MEF_Player_Black)",
+      "Вывести MEF_cyborg_hands из Experimental в основные аватары, а старые MEF с оригинальными руками перенести в папку неиспользуемых префабов"
+    ],
+    "deferred": ["Поддерживающая рука пистолета"]
+  },
   "stages": [
     {
       "id": "static-analyzer",
@@ -234,6 +248,95 @@
       "needs": []
     },
     {
+      "id": "grip-extraction-r2-measure",
+      "writes": [
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/tools/**",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-save-validation",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "grip-extraction-scoped-save",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripExtraction.cs",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/tools/**",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        { "task": "hand-rig-quality", "stage": "grip-save-validation", "state": "merged" }
+      ],
+      "needs": []
+    },
+    {
+      "id": "grip-extraction-r2",
+      "writes": [
+        "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab",
+        "Assets/Prefabs/Weapons/Uzi/Uzi.prefab",
+        "Assets/Prefabs/Weapons/PPK/PPK.prefab",
+        "Assets/Prefabs/Weapons/Revolver/Revolver.prefab",
+        "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab",
+        "Assets/Prefabs/Weapons/R08/R08.prefab",
+        "Assets/Prefabs/Weapons/Herrington/Herrington.prefab",
+        "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
+        "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_Uzi_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_R08_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_R08_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Support.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Grip.asset",
+        "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Support.asset",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/tools/**",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-save-validation",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-r2-measure",
+          "state": "verified"
+      },
+      {
+        "task": "hand-rig-quality",
+        "stage": "grip-extraction-scoped-save",
+        "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "grip-extraction-run",
       "writes": [
         "Assets/Prefabs/Weapons/**",
@@ -243,10 +346,14 @@
         "tasks/hand-rig-quality/Readme.md",
         "tasks/hand-rig-quality/Details.md",
         "tasks/hand-rig-quality/tool.md",
+        "tasks/hand-rig-quality/tools/**",
         "tasks/hand-rig-quality/plan.json",
         "tasks/hand-rig-quality/changelog/**"
       ],
       "after": [
+        { "task": "weapon-system", "stage": "r08-magazine-only", "state": "merged" },
+        { "task": "hand-rig-quality", "stage": "grip-extraction-r2", "state": "merged" },
+        { "task": "hand-rig-quality", "stage": "grip-contact-authoring", "state": "merged" },
         {
           "task": "hand-rig-quality",
           "stage": "grip-extraction",
@@ -286,6 +393,68 @@
         {
           "task": "hand-rig-quality",
           "stage": "grip-extraction-run",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "grip-contact-authoring",
+      "writes": [
+        "tasks/hand-rig-quality/drafts/**",
+        "Assets/ThirdParty/UltimateXR/Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.cs",
+        "Assets/ThirdParty/UltimateXR/Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.ContactEditing.cs",
+        "Assets/ThirdParty/UltimateXR/Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.ContactEditing.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripTargetRig.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseSdkContactEditing.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseSdkContactEditing.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseSdkDiagnostics.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseSdkPreviewSession.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseFitSnapshot.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseFitRenderer.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseFit.shader",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseXrayRenderer.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseXrayRenderer.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPoseEditorCapture.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/**",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactMask.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactMask.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactCoverage.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/HandPosePotentialContactCoverage.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackPoseExtractor.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackPoseImporter.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/KinemationPoseExtractor.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripSample.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/PackClipGripSource.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripSourceContactCapture.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/GripSourceContactCapture.cs.meta",
+        "tasks/hand-rig-quality/Readme.md",
+        "tasks/hand-rig-quality/Details.md",
+        "tasks/hand-rig-quality/plan.json",
+        "tasks/hand-rig-quality/contracts/**",
+        "tasks/hand-rig-quality/tools/**",
+        "tasks/hand-rig-quality/changelog/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-r2",
+          "state": "verified"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "contact-metrics",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "sdk-hands-seam",
           "state": "merged"
         }
       ],

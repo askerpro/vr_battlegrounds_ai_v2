@@ -1,0 +1,13 @@
+// Отдельный GUI кадр уже прошёл после открытия; закрываем только своё окно с уникальным заголовком.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'), "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+var owned = UnityEngine.Resources.FindObjectsOfTypeAll<VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeWindow>()
+    .Where(w => w.titleContent.text == "Опорные точки point-band-20261015-r1").ToArray();
+foreach (var window in owned) window.Close();
+var result = new { closedOwnWindows = owned.Length, remainingOwn = UnityEngine.Resources.FindObjectsOfTypeAll<VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeWindow>()
+    .Count(w => w.titleContent.text == "Опорные точки point-band-20261015-r1"), nativeUtc = System.DateTime.UtcNow.ToString("O") };
+string directory = "tasks/hand-rig-quality/reports/phalanx-contact-unity/point-band-20261015-r1";
+if (System.IO.Directory.Exists(directory)) System.IO.File.WriteAllText(directory + "/window-cleanup.json", Newtonsoft.Json.JsonConvert.SerializeObject(result), new System.Text.UTF8Encoding(false));
+return result;

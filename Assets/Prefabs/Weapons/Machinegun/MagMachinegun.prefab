@@ -438,6 +438,10 @@ PrefabInstance:
       value: c3c052d7-850b-48f4-8f54-79a22b08e8ee
       objectReference: {fileID: 0}
     - target: {fileID: 8080005682541851921, guid: 6112527c66de1c34c9738c780e843457, type: 3}
+      propertyPath: _selectedAvatarForGrips
+      value: 
+      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+    - target: {fileID: 8080005682541851921, guid: 6112527c66de1c34c9738c780e843457, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 
       objectReference: {fileID: 5070843356615260700}

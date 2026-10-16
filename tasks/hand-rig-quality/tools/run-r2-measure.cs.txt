@@ -1,0 +1,97 @@
+// Пакет R2 Measure: только в собственной RUNNING аренде; ассеты не сохраняются.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'),
+    "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker: " + UnityEngine.Application.dataPath);
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+var request = Newtonsoft.Json.JsonConvert.DeserializeObject<VrBattlegrounds.Editor.Avatars.GripExtractionRequest>(
+    System.IO.File.ReadAllText("tasks/hand-rig-quality/tools/r2-measure-request.json"));
+if (request.Mode != "measure" || request.Target != "MEF_cyborg_hands" || request.Recipes.Length != 17)
+    throw new System.InvalidOperationException("Пакет R2 не совпадает с подготовленным запросом.");
+request.OutDir = System.IO.Path.Combine(request.OutDir, "r2-measure-" + System.DateTime.UtcNow.ToString("yyyyMMddTHHmmss") + "-" + System.Guid.NewGuid().ToString("N"));
+var catalog = VrBattlegrounds.Editor.Avatars.PackClipGripSource.AllPoints().ToArray();
+var selected = catalog.Where(p => request.Recipes.Contains(p.Pose)).ToArray();
+if (selected.Length != 17 || selected.Select(p => p.Weapon).Distinct().Count() != 9)
+    throw new System.InvalidOperationException("Каталог R2 изменился: остановка до Measure.");
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.Get(request.Target);
+var seeds = selected.Select(p => p.Weapon).Concat(new[] { profile.RigPrefabPath, profile.RecordAvatarPath }).Distinct().ToArray();
+var paths = new System.Collections.Generic.SortedSet<string>(System.StringComparer.Ordinal);
+var sourcePrefabs = new System.Collections.Generic.List<string>();
+var kinRecipes = VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All
+    .Where(k => selected.Any(p => p.Weapon == VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.PrefabPath(k))).ToArray();
+foreach (var k in kinRecipes) {
+    string sourcePath = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Prefabs/Weapons/" + k.PackPrefab + ".prefab";
+    var sourcePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(sourcePath);
+    if (sourcePrefab == null) throw new System.InvalidOperationException("Нет source prefab: " + sourcePath);
+    // Остановиться до конструктора модели, который иначе мог бы выполнить SaveAndReimport.
+    VrBattlegrounds.Editor.Gameplay.KinemationWeapon.RequireReadable(sourcePrefab, k.Attachments);
+    sourcePrefabs.Add(sourcePath);
+    foreach (string path in VrBattlegrounds.Editor.Gameplay.KinemationWeapon.ReadableSourcePaths(sourcePrefab, k.Attachments)) {
+        paths.Add(path); paths.Add(path + ".meta");
+    }
+    string animDir = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack + "Animations/" + k.AnimFolder;
+    foreach (string path in System.IO.Directory.GetFiles(animDir, "*.FBX", System.IO.SearchOption.AllDirectories)) {
+        paths.Add(path.Replace('\\', '/')); paths.Add(path.Replace('\\', '/') + ".meta");
+    }
+}
+foreach (var r in VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.Recipes.Where(r => request.Recipes.Contains(r.Pose))) {
+    string folder = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/" + r.Folder;
+    string modelPath = folder + "/Mesh/" + r.Mesh + ".FBX";
+    paths.Add(modelPath); paths.Add(modelPath + ".meta");
+    foreach (string path in System.IO.Directory.GetFiles(folder + "/Animations", "*.FBX", System.IO.SearchOption.AllDirectories)) {
+        paths.Add(path.Replace('\\', '/')); paths.Add(path.Replace('\\', '/') + ".meta");
+    }
+}
+seeds = seeds.Concat(sourcePrefabs).Distinct().ToArray();
+foreach (var path in UnityEditor.AssetDatabase.GetDependencies(seeds, true)) {
+    if (!path.StartsWith("Assets/") || !System.IO.File.Exists(path)) continue;
+    paths.Add(path);
+    if (System.IO.File.Exists(path + ".meta")) paths.Add(path + ".meta");
+}
+foreach (var path in System.IO.Directory.GetFiles(profile.PoseFolder, "*", System.IO.SearchOption.AllDirectories)) paths.Add(path.Replace('\\', '/'));
+System.Func<string, string> sha256 = path => {
+    using (var stream = System.IO.File.OpenRead(path))
+    using (var hash = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(hash.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+var before = paths.ToDictionary(p => p, sha256);
+var result = VrBattlegrounds.Editor.Avatars.GripExtraction.Run(request);
+var failures = new System.Collections.Generic.List<string>();
+if (result.Status != "ok") failures.Add("GripExtraction: " + result.Status + "; " + result.Error);
+if (result.Points.Count != 17 || result.Written.Count != 0) failures.Add("Число точек/записей: " + result.Points.Count + "/" + result.Written.Count);
+var hands = new System.Collections.Generic.List<object>();
+double maxPalmMm = 0, maxPalmDeg = 0, maxRuntimeDeg = 0;
+System.Func<double, bool> finite = v => !double.IsNaN(v) && !double.IsInfinity(v);
+foreach (var point in result.Points) {
+    if (!string.IsNullOrEmpty(point.Error)) failures.Add(point.Pose + ": " + point.Error);
+    if (point.Written.Count != 0) failures.Add(point.Pose + ": записаны ассеты в Measure.");
+    foreach (var hand in point.Hands) {
+        if (hand.Palm == null || !finite(hand.Palm.ErrorMm) || !finite(hand.Palm.AxesErrorDeg) || hand.Palm.ErrorMm > 0.5 || hand.Palm.AxesErrorDeg > 0.5)
+            failures.Add(point.Pose + "/" + hand.Side + ": несовпадение опоры ладони.");
+        if (!hand.RuntimeVsWorldDeg.HasValue || !finite(hand.RuntimeVsWorldDeg.Value) || hand.RuntimeVsWorldDeg.Value > 0.5)
+            failures.Add(point.Pose + "/" + hand.Side + ": runtime/world не подтверждён.");
+        if (hand.MetacarpalInfo == null || hand.MetacarpalInfo.Length != 4 || hand.MetacarpalInfo.Any(v => !v))
+            failures.Add(point.Pose + "/" + hand.Side + ": дескриптор без пястных.");
+        if (hand.Palm != null) { maxPalmMm = System.Math.Max(maxPalmMm, hand.Palm.ErrorMm); maxPalmDeg = System.Math.Max(maxPalmDeg, hand.Palm.AxesErrorDeg); }
+        if (hand.RuntimeVsWorldDeg.HasValue) maxRuntimeDeg = System.Math.Max(maxRuntimeDeg, hand.RuntimeVsWorldDeg.Value);
+        hands.Add(new { point.Pose, point.Weapon, point.GrabPoint, hand.Side, hand.Palm, hand.RuntimeVsWorldDeg, hand.MetacarpalInfo, hand.ExistingRecord, hand.PoseVsExistingDeg });
+    }
+}
+if (hands.Count != 34) failures.Add("Ожидались 34 руки, получено " + hands.Count);
+var changed = before.Keys.Where(p => !System.IO.File.Exists(p) || sha256(p) != before[p]).ToArray();
+if (changed.Length != 0) failures.Add("Изменились входные файлы: " + string.Join(", ", changed));
+var newPoseFiles = System.IO.Directory.GetFiles(profile.PoseFolder, "*", System.IO.SearchOption.AllDirectories).Select(p => p.Replace('\\', '/')).Where(p => !paths.Contains(p)).ToArray();
+if (newPoseFiles.Length != 0) failures.Add("Появились файлы поз в Measure.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    failures.Add("Редактор занят после Measure.");
+var report = new {
+    passed = failures.Count == 0,
+    scope = "R2 Unity Measure: числовая посадка и кодирование; без Fit/contact/Play/Quest и без сохранения ассетов",
+    result.Status, result.ReportPath, points = result.Points.Count, handCount = hands.Count,
+    written = result.Written.Count, hashCount = before.Count, changed, newPoseFiles,
+    maxPalmMm, maxPalmDeg, maxRuntimeDeg, catalog = selected.Select(p => new { p.Pose, p.Weapon, p.GrabPoint, p.SourceKind, p.BodyPath, p.SourceSide }).ToArray(),
+    before, hands, failures, result.Warnings
+};
+string reportPath = System.IO.Path.Combine(request.OutDir, "r2-measure-validation.json");
+System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObject(report, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+return new { report.passed, report.scope, report.Status, report.points, report.handCount, report.written, report.hashCount, maxPalmMm, maxPalmDeg, maxRuntimeDeg, failures, reportPath, result.ReportPath };

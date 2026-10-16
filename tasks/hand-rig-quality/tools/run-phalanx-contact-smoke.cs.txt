@@ -1,0 +1,98 @@
+// Только собственная RUNNING аренда. Фиксированные точки, без Apply игровых поз.
+if (!string.Equals(UnityEngine.Application.dataPath.Replace('\\', '/'), "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai/Assets", System.StringComparison.OrdinalIgnoreCase))
+    throw new System.InvalidOperationException("Редактор не worker.");
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+    throw new System.InvalidOperationException("Редактор занят.");
+string directory = "tasks/hand-rig-quality/reports/phalanx-contact-unity/point-band-20261015-r1";
+if (System.IO.Directory.Exists(directory)) throw new System.InvalidOperationException("Nonce уже использован; сначала установить исход, не повторять.");
+System.IO.Directory.CreateDirectory(directory);
+string startedUtc = System.DateTime.UtcNow.ToString("O");
+var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+var failures = new System.Collections.Generic.List<string>();
+var checks = new System.Collections.Generic.List<string>();
+var details = new System.Collections.Generic.Dictionary<string, object>();
+System.Action<string, object> Write = (path, value) => System.IO.File.WriteAllText(path,
+    Newtonsoft.Json.JsonConvert.SerializeObject(value, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), new System.Text.UTF8Encoding(false));
+System.Action<string, bool> Check = (name, ok) => { if (ok) checks.Add(name); else failures.Add(name); };
+System.Func<string, string> Hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create()) using (var stream = System.IO.File.OpenRead(path))
+        return System.BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+};
+Write(directory + "/progress.json", new { phase = "started", startedUtc });
+var profile = VrBattlegrounds.Editor.Avatars.GripTargetProfile.MefCyborgHands();
+var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(profile.RigPrefabPath);
+var avatar = prefab.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+var catalog = VrBattlegrounds.Editor.Avatars.PackClipGripSource.AllPoints().ToArray();
+var points = new[] { "Viper", "Uzi" }.Select(name => catalog.First(p => System.IO.Path.GetFileNameWithoutExtension(p.Weapon) == name && p.GrabPoint == 0)).ToArray();
+var paths = new System.Collections.Generic.SortedSet<string>(System.StringComparer.Ordinal);
+foreach (var seed in new[] { profile.RigPrefabPath, profile.RecordAvatarPath }.Concat(points.Select(p => p.Weapon)).Concat(points.Select(p => profile.PosePathFor(p))))
+    foreach (var path in UnityEditor.AssetDatabase.GetDependencies(seed, true))
+    {
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path)) paths.Add(path);
+        if (path.StartsWith("Assets/", System.StringComparison.Ordinal) && System.IO.File.Exists(path + ".meta")) paths.Add(path + ".meta");
+    }
+var before = paths.ToDictionary(p => p, p => Hash(p));
+try
+{
+    Write(directory + "/progress.json", new { phase = "reference", nativeUtc = System.DateTime.UtcNow.ToString("O"), elapsedSeconds = stopwatch.Elapsed.TotalSeconds });
+    var right = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Right);
+    var left = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Capture(avatar, UltimateXR.Core.UxrHandSide.Left);
+    var selected = right.CreateProbes();
+    Write(directory + "/right-selection.json", selected);
+    Check("right_all_expected_phalanges_selected", selected.Valid && selected.ExpectedCount == right.Segments.Length && selected.ExpectedCount > 0);
+    if (selected.Valid)
+    {
+        var bindings = right.CreateIkBindings(selected);
+        Check("ik_receives_all_fixed_unreviewed_points", bindings.Length == selected.ExpectedCount && bindings.All(b => !b.CorrespondenceReviewed && b.Target.Mode == VrBattlegrounds.Editor.Avatars.ContactIk.ContactIkTargetMode.FixedPointBand));
+    }
+    details["right"] = new { handTriangles = right.Hand.Length, right.BindingFingerprint, right.ReferencePosePath, right.Segments, selection = selected };
+    var mirrored = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Mirror(right, left, selected);
+    Write(directory + "/left-mirror.json", mirrored);
+    Check("left_mirror_complete_and_inferred", mirrored.Valid && mirrored.Inferred && mirrored.ExpectedCount == selected.ExpectedCount);
+    details["left"] = new { handTriangles = left.Hand.Length, left.BindingFingerprint, left.ReferencePosePath, selection = mirrored };
+    right.Export(directory + "/right", selected);
+    left.Export(directory + "/left", mirrored);
+    var loaded = right.LoadProbes(directory + "/right/probes.json");
+    Check("json_roundtrip_fixed_material_keys", loaded.BindingFingerprint == selected.BindingFingerprint && loaded.Probes.Zip(selected.Probes, (a, b) => a.Source == b.Source && a.SourceSubMesh == b.SourceSubMesh && a.SourceTriangle == b.SourceTriangle && a.Barycentric == b.Barycentric).All(x => x));
+    var stale = Newtonsoft.Json.JsonConvert.DeserializeObject<VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandPhalanxProbeSet>(
+        Newtonsoft.Json.JsonConvert.SerializeObject(selected, VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings), VrBattlegrounds.Editor.HandPoseReview.FitUnityJsonConverter.Settings);
+    stale.BindingFingerprint = "deliberately-stale";
+    var staleReport = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandPhalanxContactProbes.Evaluate(right.Hand,
+        new VrBattlegrounds.Editor.HandPoseReview.FitSurface(right.Hand), right.BindingFingerprint, stale, 2);
+    Check("stale_never_becomes_pass", !staleReport.Valid && !staleReport.AllWithinBand);
+    foreach (var point in points)
+    foreach (var side in new[] { UltimateXR.Core.UxrHandSide.Left, UltimateXR.Core.UxrHandSide.Right })
+    {
+        string label = point.Pose + "-" + side;
+        Write(directory + "/progress.json", new { phase = "measure", label, nativeUtc = System.DateTime.UtcNow.ToString("O"), elapsedSeconds = stopwatch.Elapsed.TotalSeconds });
+        var set = side == UltimateXR.Core.UxrHandSide.Right ? selected : mirrored;
+        var report = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeCapture.Measure(new VrBattlegrounds.Editor.HandPoseReview.HandPoseFitRequest {
+            AvatarPrefab = avatar, ObjectPath = point.Weapon, PoseOverridePath = profile.PosePathFor(point),
+            Side = side, GrabPoint = point.GrabPoint, OutputDirectory = directory + "/" + label
+        }, set);
+        Write(directory + "/" + label + ".json", report);
+        details[label] = report;
+        Check(label + "_all_fixed_points_measured", report.Valid && report.MeasuredCount == set.ExpectedCount && report.MissingCount == 0);
+        Check(label + "_signed_unknown_is_not_zero", report.Points.All(p => !p.SignedDistanceMm.HasValue));
+    }
+    var window = VrBattlegrounds.Editor.GripAuthoring.ContactPoints.HandContactProbeWindow.OpenPrepared(avatar, UltimateXR.Core.UxrHandSide.Right);
+    window.titleContent = new UnityEngine.GUIContent("Опорные точки point-band-20261015-r1");
+    window.Repaint();
+    Check("prepared_window_opened", window != null);
+}
+catch (System.Exception error) { failures.Add(error.ToString()); }
+var changed = before.Keys.Where(p => !System.IO.File.Exists(p) || Hash(p) != before[p]).ToArray();
+Check("source_assets_unchanged", changed.Length == 0);
+details["changed"] = changed;
+details["pinnedFiles"] = before.Count;
+details["assetHashesBefore"] = before;
+details["checks"] = checks;
+details["failures"] = failures;
+details["passed"] = failures.Count == 0;
+details["startedUtc"] = startedUtc;
+details["completedUtc"] = System.DateTime.UtcNow.ToString("O");
+details["elapsedSeconds"] = stopwatch.Elapsed.TotalSeconds;
+details["scope"] = "editor fixed phalanx points/mirror/actual BakeMesh; no accepted grip, gameplay or Quest proof";
+Write(directory + "/report.json", details);
+Write(directory + "/progress.json", new { phase = "completed", passed = failures.Count == 0, checks = checks.Count, failures = failures.Count, startedUtc, completedUtc = details["completedUtc"], elapsedSeconds = stopwatch.Elapsed.TotalSeconds });
+return new { passed = failures.Count == 0, checks = checks.Count, failures = failures.Take(10).ToArray(), report = directory + "/report.json" };

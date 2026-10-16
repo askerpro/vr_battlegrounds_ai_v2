@@ -1,0 +1,41 @@
+{
+  "task": "hand-rig-quality",
+  "owner": "avatar-grip",
+  "stage": "grip-contact-authoring",
+  "nonce": "sdk-contact-20261015-r2",
+  "status": "757-DONE-received-diagnostic-only; quality-unaccepted",
+  "completedTicket": 757,
+  "completedInput": "14d401177b43a396dffd3be9d894b11e369bc5b9",
+  "completedResult": "304ae4e1f18727d9981332095ef1a2c3c8395536",
+  "nativeArtifactsShaVerified": 17,
+  "selectedReferencePoints": {"right":15,"left":15},
+  "ViperBandContacts": {"before":8,"after":9,"expected":15},
+  "numericalReached": false,
+  "sourceAssetHashesUnchanged": 1240,
+  "review": "tasks/hand-rig-quality/reports/sdk-contact-757-Review.md",
+  "recoveryEvent": 8741,
+  "recoverySha": "d0e6e01aac9c1340090b7c55375ffbce295cad5a",
+  "recoveryMetaTransferred": 8,
+  "ticket": 756,
+  "failedInput": "57c07a51ce6b006540553fff1a208caf3863086b",
+  "infraEvent": 8711,
+  "operatorHandoffEvent": 8724,
+  "compileEvidence": "tasks/hand-rig-quality/reports/phalanx-contact-integration/compile-sdk83-v3-assemblies-r1/compile-result.json",
+  "compileScope": "Real assembly boundary: SDK108 0errors21legacywarnings, namedReview24 0/0, product46 including diagnostic body0/0; stable source hashes; no tests executed",
+  "script": "tasks/hand-rig-quality/tools/capture-sdk-contact-preview.cs.txt",
+  "scope": "Import SDK83/product sources, capture both neutral reference point sets and one unreviewed Viper v2 candidate with common-xray before/after. No test assertions, SDK pose commit, Apply or asset saves.",
+  "output": "tasks/hand-rig-quality/reports/sdk-contact-20261015-r2",
+  "requestOutputSemanticsEvidence": "F:/UnityProjects/agent-infra/editor_broker/cli.py:37 defines --output action=append; :229 passes args.output list. Each additional output is an exact Unity-generated .meta path, never a broad Assets tree.",
+  "assetOutputs": [
+    "Assets/Editor/VR_Battlegrounds/Avatars/GripAuthoring/ContactPoints/HandPoseSdkContactDiagnostics.cs.meta"
+  ],
+  "actions": [
+    "Fetch/rebase origin/dev preserving WIP; final compile and owned physical/staged EOL checks",
+    "Technical checkpoint, request, long watch-ticket with same-process immediate claim, begin, fresh idle guard",
+    "Run the capture once, timeout first inspect receipt/progress/native state",
+    "Save complete MCP envelopes, refresh if required, fresh guard, finish immediately, receive",
+    "Copy SHA-verified report artifacts and embed actual PNGs from own checkout into review document"
+  ],
+  "release": "Capture completed or failed with cleanup; no own previews/operation/import/tests/Play. Release before diagnosis or waiting for user.",
+  "notCovered": ["SDK UI interaction and Undo runtime", "Forward quality", "Pistol support", "Runtime/headset/Quest", "Production acceptance"]
+}

@@ -655,17 +655,53 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _selectedAvatarForGrips
+      value: 
+      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: _previewPosesRegenerationType
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._avatarPrefabGuid
+      value: 71b74b0d08444f49bbb7aa2828d0890a
+      objectReference: {fileID: 0}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandLeft
+      value: 
+      objectReference: {fileID: 520450662602145974}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _grabPoint._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandRight
+      value: 
+      objectReference: {fileID: 1086594744194395592}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.data[3]._handPose
+      value: 
+      objectReference: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.data[3]._poseBlendValue
+      value: 0.923
+      objectReference: {fileID: 0}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+      propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.data[3]._avatarPrefabGuid
+      value: 71b74b0d08444f49bbb7aa2828d0890a
+      objectReference: {fileID: 0}
+    - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandLeft
       value: 
-      objectReference: {fileID: 762325160052041763}
+      objectReference: {fileID: 7039819470957742827}
     - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: _additionalGrabPoints.Array.data[0]._avatarGripPoseEntries.Array.data[3]._gripAlignTransformHandRight
       value: 
-      objectReference: {fileID: 1336859777034315552}
+      objectReference: {fileID: 9179589724644057505}
     - target: {fileID: 6757312051717965300, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -837,19 +873,29 @@ PrefabInstance:
       addedObject: {fileID: 6404941036714178760}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
---- !u!4 &762325160052041763 stripped
+--- !u!4 &520450662602145974 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: 2528210746322755395, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 3367377402964391894, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
   m_PrefabInstance: {fileID: 2991042123976554336}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1336859777034315552 stripped
+--- !u!4 &1086594744194395592 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: 4255666441354301504, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+  m_CorrespondingSourceObject: {fileID: 2780423973028584104, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
   m_PrefabInstance: {fileID: 2991042123976554336}
   m_PrefabAsset: {fileID: 0}
 --- !u!224 &2741621162904224028 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1120940125455627900, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+  m_PrefabInstance: {fileID: 2991042123976554336}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7039819470957742827 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5201699850521591179, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
+  m_PrefabInstance: {fileID: 2991042123976554336}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &9179589724644057505 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6261732803296499393, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
   m_PrefabInstance: {fileID: 2991042123976554336}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &3912528629311414940

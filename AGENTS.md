@@ -101,13 +101,18 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   Если канал недоступен, сообщи об этом человеку; не оставляй отчёт только в чате.
 - Агенты не чинят и не обходят инфраструктуру самостоятельно, включая локальные
   инфраструктурные launchers/config, маршрутизацию и состояние занятого worker.
-  Ремонт, recovery и deployment выполняет только явно назначенный сопровождающий.
+  Ремонт, чужой/аварийный recovery и deployment выполняет только явно назначенный сопровождающий.
   Собственная аренда worker не является назначением на обслуживание. Разрешены
   read-only status/log/help и работа по собственной разрешённой игровой или SDK-задаче,
   включая исправления и сборки в своём build checkout. Продолжай независимую работу.
   При неизвестном исходе Unity-операции не делай retry/replay, clear_stuck или recover
-  и не освобождай активную операцию через finish. После подтверждённого завершения
-  своего подготовленного пакета и cleanup сразу выполни штатный finish.
+  и не освобождай активную операцию через finish. Если же собственная аренда истекла
+  (`RECOVERY_REQUIRED`), исход операции известен и прогон в Unity завершён, владелец билета
+  может штатно закрыть блокировку командой `python Tools/agents/editor-broker.py recover --ticket <id> --token <token>`
+  (сохраняет снимок `R`), либо — когда изменения и dirty-состояние на worker сохранять не нужно —
+  быстрым `python Tools/agents/editor-broker.py recover --ticket <id> --token <token> --force`
+  (сбрасывает dirty-сцены/ассеты/Prefab Stage и возвращает worker к `baseline_sha` без снимка `R`).
+  После подтверждённого завершения своего подготовленного пакета и cleanup сразу выполни штатный finish.
 - At session start/resume, the principal agent refreshes its own native route in the hub
   from a fresh native listing, or clears it when this client cannot address peer sessions.
   Before notifying another task, resolve its candidate and confirm both endpoints in a
@@ -120,7 +125,7 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
 - **Same: main checkout.** Work directly with the user's checkout/Editor, without a worker lease. Do not manage worker, queue or .agent-state unless assigned.
 - **Different: linked worktree.** Write only there; the main checkout is read-only. Unity mutations require your RUNNING broker lease and guard. The proxy must run from your worktree.
 - Before a worker request prepare exact actions/release conditions and fetch/rebase origin/dev. Route: checkpoint → request → watch-ticket → claim → begin → guard → execute/wait → finish → receive.
-- Finish immediately after your prepared package and cleanup, including failed checks, before diagnosis, edits or waiting for a person. Do not finish during an active operation. Renew only for ongoing Unity work.
+- Finish immediately after your prepared package and cleanup, including failed checks, before diagnosis, edits or waiting for a person. Do not finish during an active operation. Renew only for ongoing Unity work. If your own lease expired (`RECOVERY_REQUIRED`) after a known completed operation, use `recover --ticket <id> --token <token>` (saves `R`) or `recover --ticket <id> --token <token> --force` (discards worker changes/dirty scenes/Prefab Stage and resets to `baseline_sha` without `R`).
 - Never interrupt human Play Mode, dirty scenes, prefab stages or others' tests.
 - При ремонте инфраструктуры очередь продолжает работать: сопровождающий отключает coordination-проверки через штатный mode off, сохраняет FIFO, аренды, результаты и guards живой операции. После подготовки, тестов и ревью сопровождающий ставит доставку исправления в конец очереди. Не отменять чужие заявки и не требовать повторной постановки из-за обслуживания.
 - При проблемах интеграции MCP параллельно готовить миграцию тестов и автоматизации на Unity CLI через тот же брокер: immutable spec, полный XML/log, durable результат и штатные finish/receive. Подготовка не разрешает запускать второй Editor в открытом worker, обходить аренду или внедрять свой альтернативный клиент. Исполнителя и общий backend выпускает сопровождающий; владельцы готовят входы и условия приёмки своей задачи.

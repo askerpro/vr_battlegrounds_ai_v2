@@ -26,12 +26,13 @@
   ответ8832 отправлен, гейты BotGunner не ослабляются, следующий B7 читает public OutcomeCount без правок игры.
   B0/B4 ответили timeout, но native history подтвердил SUCCESS54,59/63,15с; replay/recovery не было.
   Infra8478/8483/8489: exact tool input/reply/history в `reports/751-visual-b0-infra.json`.
-  Canonical performance8491 требует seed-before-AddBots от launch/test-stand; запрос8548 доставлен.
-  Native performance8367 ранее отклонён auto-review; ответ получен canonical, этот маршрут продолжению не мешает.
+  Canonical performance8491 требует seed-before-AddBots от launch/test-stand; по ответу vr-test-stand8857 (на8548)
+  сейчас `UseRandomSeed`/`RandomSeed` в `PlayLaunchConfiguration` нет, запрошен Вариант B (8861: `InitState` в `OnServerSceneChanged` до `EnsureCount` + receipt в `PlayLaunch.Status()`).
   Grip8565 получил кадры и identity-ограничения. Binding r3: weapon ACK8581, затем owner contract-agree
   (publication80e62dd6); state=agreed, active не объявлен до принятого вливания.
-  По8657 (ответ network на8363): S8P (`Role.Player` с `TeamIndex=0`) блокирует `GameMode.AllPlayersHaveModeTeam()` в Elimination
-  и создаёт авторитетный аватар; ответ8834 отправлен network, запрос8836 направлен `owner:gameplay` по режиму наблюдателя S8.
+  По8657/8843/8847/8849 (`network`+`gameplay` на8363/8836): S8P (`Role.Player` с `TeamIndex=0`) отклонён;
+  канонический S8 — `GameRole.Spectator` (`HandleSpectatorConnect`/`OnSpectatorConnect`/`Role==Player`-гейты, ответы8834/8853/8855).
+  Подготовлен полный guarded пакет `tools/cc3-perf/` и проверена exact компиляция H (`1b2f88612`) и C (`4210b8ed6`) с pinned probe (`errors=0`).
   External-mode finger pose boundary передан avatar-ik8576/grip8578. [Итоги751](changelog/2026-10-15-visual-lifecycle751.md).
 - **747 DONE/receive**: функциональный ServerOnly M2, input=`74a81dca5`, B=`018e63d4f`, epoch632,
   R=`2db52022dd1184e308604d7b0c545b95c2cf6867`, paths0/unexpected0. Своей аренды нет.
@@ -249,10 +250,10 @@ E: попадания10/22, PE25/28; target root однажды сместилс
 3. До принятия gameplay закрыть runtime-авторинг `R08.prefab` (F5 `MagazineOnly`, SDK82, 8758) с `weapon-system`
    и finger-pose/source identity с `avatar-ik`/`grip`; не ослаблять gates, не выдавать authored binding за applied pose.
    Отказ OfferPurchase, map/reload, pause/resume и Respawn требуют отдельных реально наблюдаемых переходов.
-4. После seed/setup контракта8548, решения `gameplay`/`network` по режиму наблюдателя S8 (8657/8836; S8P отклонён)
+4. После внедрения Варианта B `seedBeforeAddBots` в `vr-test-stand` (8857/8861/8863), согласованной `gameplay`+`network` цепочки `GameRole.Spectator` для S8 (8843/8849; S8P отклонён)
    и fresh SDK81/82 grants — новый exact input/FIFO для Host hybrid/candidate×N8/N10, S8, remote-human (командный клиент
    с исключением local avatar netId) и позднего входа по perf-методике7933.
-   Common probe C semantic PASS, H exact compile ещё pending; исторический M3 не baseline.
+   Common probe H (`1b2f88612`) и C (`4210b8ed6`) exact compile + `tools/cc3-perf/` (5 C#6 payloads, `analyze.py`) PASS (`errors=0`); исторический M3 не baseline.
 5. Зональное ревью и демонстрация пользователю. После Unity/headset-приёмки — актуализация тестов cc-5,
    финальный scoped candidate, проверка и fast-forward публикация origin/dev. До этого не вливать.
 

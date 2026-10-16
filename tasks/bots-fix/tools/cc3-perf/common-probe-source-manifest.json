@@ -1,10 +1,10 @@
 {
-  "schema": "cc3-common-perf-probe-source@1",
-  "date": "2026-10-15",
-  "status": "PREPARED_NOT_ACCEPTED_NOT_LAUNCH_READY",
+  "schema": "cc3-common-perf-probe-source@2",
+  "date": "2026-10-16",
+  "status": "PREPARED_OFFLINE_VERIFIED_AWAITING_EXTERNAL_GRANTS",
   "owner": "bots-fix",
-  "acceptedBase": "018e63d4fcc8c97355165474f0e080abd34aa79a",
-  "candidateReference": "748d8e8493bf48d8155d6a0b374bf88c75794034",
+  "acceptedBase": "1b2f88612f563172db6c57249feae2f9d46d0491",
+  "candidateReference": "4210b8ed644a2ecbdddad9af38f4b1ee2298c403",
   "sourceCommit": "2fa11b2767f23d4c709f739deb629fd378307c97",
   "files": [
     {
@@ -29,12 +29,12 @@
     "sdkCopiesAllowed": false,
     "borrowedComponents": [],
     "wholeHistoricalCommitImportAllowed": false,
-    "overlayScope": "Только эти own probe paths и own tools/cc3-perf; gameplay C задаётся отдельным manifest, H остаётся accepted Hybrid из B"
+    "overlayScope": "Только эти own probe paths и own tools/cc3-perf; gameplay C задаётся отдельным manifest, H остаётся accepted Hybrid из origin/dev"
   },
   "assembly": {
     "name": "VrBattlegrounds.BotCombatStand",
     "existingDefineConstraint": "UNITY_EDITOR",
-    "verifiedContext": "Unity6000.4.1f1 WindowsEditor references; managed C#9",
+    "verifiedContext": "Unity6000.4.1f1 WindowsEditor references; managed C#9 + C#6 MCP payloads",
     "playerOrQuestVerified": false
   },
   "publicRequest": {
@@ -46,7 +46,14 @@
     "finishApi": "BotStandMatchProbeGate.FinishActive(string reason)",
     "directorEquipAvailable": false,
     "finishCompletedBoolAvailable": false,
-    "cc2PayloadsCompatibleUnchanged": false
+    "cc2PayloadsCompatibleUnchanged": false,
+    "guardedCc3Payloads": [
+      "tasks/bots-fix/tools/cc3-perf/b0-preflight.cs",
+      "tasks/bots-fix/tools/cc3-perf/b3-runtime-launch.cs",
+      "tasks/bots-fix/tools/cc3-perf/b4-runtime-watch.cs",
+      "tasks/bots-fix/tools/cc3-perf/b5-runtime-status.cs",
+      "tasks/bots-fix/tools/cc3-perf/b6-runtime-stop.cs"
+    ]
   },
   "additionalTrace": {
     "required": "OFF",
@@ -58,34 +65,43 @@
   },
   "verification": {
     "hybrid": {
-      "scope": "static public API map against exact B",
+      "scope": "exact 17-source stand slice compile against freshly built Hybrid UltimateXR.dll + VrBattlegrounds.Weapons.Core.dll + Game.dll from origin/dev (1b2f88612)",
       "staticMismatchFound": false,
-      "semanticCompilation": null,
+      "semanticCompilation": "PASS",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 8,
+      "warningsInPinnedProbe": 0,
+      "outputSha256": "74d46130a1d56a5a7faf2c52df1e6df18294bc92093e6f30cf5b057730976012",
+      "gameReferenceSha256": "14ef1fefd0f02708ef350fb51255f9a079dca00460f6ef668c60b27f8b715147",
+      "sdkReferenceSha256": "1334ab8b0e2d690336f90cf3a7b5ba87f8cf8463b29b0a6b84aadd05fab58487",
+      "weaponsCoreReferenceSha256": "58f728bdb3cbf978e973c4775d5541aa0b1d504778d4641982823f1ef70963f7",
       "runtime": null
     },
     "candidate": {
-      "scope": "18-source stand slice compile; one pinned probe source replacement; readonly main-provided C DLL refs",
+      "scope": "exact 18-source stand slice compile against freshly built Candidate UltimateXR.dll + VrBattlegrounds.Weapons.Core.dll + Game.dll from bots-fix (4210b8ed6) + 5 C#6 cc3-perf payloads",
       "exitCode": 0,
       "errors": 0,
       "warnings": 29,
       "warningCodes": ["CS0618"],
       "warningsInPinnedProbe": 0,
-      "response": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-stand.rsp",
-      "log": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-stand.log",
-      "summary": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-summary.json",
-      "outputSha256": "791aa4ef4d612d5fef12ad2f4f0fa2f9c523f15e059b491843724e1c47b8b459",
-      "gameReferenceSha256": "857b1c0a802c7e200f9c5a01d837384dd8d6ae73de4f880c8fa50b8f54f854d8",
-      "sdkReferenceSha256": "3194d73951a819cbceec2c92a8463126c8ce7e9c38a3a242a08bdef31ddfc923",
+      "payloadsCompiled": 5,
+      "payloadsErrors": 0,
+      "outputSha256": "ac3a318baed80157c9ca7da94f76e7a8d94b3bb69d20d5b2e0eacf6cf2832224",
+      "gameReferenceSha256": "296919d29927c9e8ccd2238e760cd1121549167d18b0b5954372bd1f02a87559",
+      "sdkReferenceSha256": "54a30bff557e796853602c043deb95190e03362578f675fa4b0c5d351e061876",
+      "weaponsCoreReferenceSha256": "34322cb80ab853786282ee5f0f6fbba7d122c9137317184de11e7998612f96e0",
       "runtimeInputGrant": false,
       "runtime": null
     }
   },
   "pending": {
-    "exactHybridSemanticBuild": "PENDING; Library not asserted exact B",
+    "exactHybridSemanticBuild": "DONE_OFFLINE_PASS",
+    "guardedCc3Payload": "DONE_OFFLINE_PASS (b0/b3/b4/b5/b6 C#6 + compile-check.ps1 + analyze.py)",
     "seedBeforeAddBots8548": "PENDING_OWNER_ROUTE; no Seed field in PlayLaunchConfiguration",
-    "hostSdk81Grant": "PENDING; no borrowing/copy authorized here",
+    "r08Authoring8758": "PENDING_WEAPON_SYSTEM_UNITY_AUTHORING (R08.prefab F5 MagazineOnly SDK82)",
+    "s8Spectator8657_8836": "PENDING_GAMEPLAY_NETWORK_CONTRACT (Role.Spectator vs passive observer in EliminationMode)",
     "performance8367": "PENDING",
-    "guardedCc3Payload": "PENDING; old cc2 API differs",
     "hardwareQualityUrpNavmesh": null,
     "runtimeRecorderAndMarkerValidity": null,
     "traceOffRuntimeProof": null

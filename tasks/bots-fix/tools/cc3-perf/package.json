@@ -1,0 +1,58 @@
+{
+  "package": "bots-fix cc-3: guarded-пакет общей пробы производительности и сети (H8/C8, H10/C10, S8, RH)",
+  "date": "2026-10-16",
+  "basedOn": "tasks/bots-fix/tools/cc2-director + tasks/bots-fix/tools/cc0-match",
+  "spec": "tasks/bots-fix/tools/cc3-perf/acceptance.md",
+  "manifest": "tasks/bots-fix/tools/cc3-perf/common-probe-source-manifest.json",
+  "outputRoot": "tasks/bots-fix/reports/cc3-perf",
+  "owner": "bots-fix.cc3-perf",
+  "attempt": "attempt-1",
+  "payloadLanguage": "C# 6 / текущие globals MCP execute_code",
+  "expectedChangedPaths": [],
+  "commonProbe": {
+    "sourceCommit": "2fa11b2767f23d4c709f739deb629fd378307c97",
+    "path": "Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs",
+    "sha256": "5a0611c9aa311f9ae9b4eed7258041defac5bf43a7193cd2435b4df5a3e130cc",
+    "metaGuid": "5d236333c33745b59741cdb31bebf141",
+    "requestFields": ["RunTag", "OutputDirectory", "ExpiresUtc", "WriteSeconds"],
+    "writeSeconds": 10,
+    "finishApi": "BotStandMatchProbeGate.FinishActive(string reason)",
+    "additionalTraceCollectors": "OFF (B7, Blaze/public trace subscribers, shot-tail, NetObserver/NetReceiveTrace не устанавливаются)"
+  },
+  "cells": [
+    { "cell": "H8", "tree": "Hybrid (accepted origin/dev + pinned common probe)", "role": "host", "clients": 0, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "C8", "tree": "Candidate (bots-fix cutover + pinned common probe)", "role": "host", "clients": 0, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "H10", "tree": "Hybrid (accepted origin/dev + pinned common probe)", "role": "host", "clients": 0, "bots": 10, "humans": 1, "minPlayers": 11, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "C10", "tree": "Candidate (bots-fix cutover + pinned common probe)", "role": "host", "clients": 0, "bots": 10, "humans": 1, "minPlayers": 11, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "RH", "tree": "Candidate remote-human team control (network 8657/8834)", "role": "server", "clients": 1, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "S8", "tree": "Candidate passive observer (pending gameplay/network 8657/8836)", "role": "server", "clients": 2, "bots": 8, "humans": 0, "minPlayers": 8, "gameRole": "Spectator", "readiness": "connected", "blockedUntil": "gameplay/network 8657/8836" }
+  ],
+  "limits": {
+    "watchSeconds": 600,
+    "noLiveSeconds": 120,
+    "transitionCapacity": 256,
+    "watchStatusPeriodSeconds": 5,
+    "tickPeriodSeconds": 0.25,
+    "probeRequestExpiresMinutes": 25
+  },
+  "guards": [
+    "Один неизменный BotStandMatchProbeRequest (WriteSeconds=10, без DirectorEquip) до PlayLaunch.Play",
+    "Durable CreateNew+Flush(true) маркеры launch.json, admin-stop-intent.json, finish-intent.json, cancel-intent.json до вызовов; отсутствие return запрещает replay",
+    "Четыре завершённых раунда (roundScored 1..4, включая ничьи) -> StateEventAuthority.IsWorldAuthority -> MapReferee.Stop на Round>=5, либо подтверждённый exact naturalEnd latch + durable matchFinished/modeFinished",
+    "Единственный вызов BotStandMatchProbeGate.FinishActive(reason) (1 аргумент string) с проверкой actual final=true на диске до PlayLaunch.Cancel",
+    "B6 удаляет только неизменённую собственную заявку при Idle и копирует полные PlayLaunch log archives собственного RunId с проверкой SHA256 до finish/receive"
+  ],
+  "steps": [
+    { "id": "B0", "payload": "b0-preflight.cs", "repeatable": true, "pass": "passed=true, PlanHash записан" },
+    { "id": "B3", "payload": "b3-runtime-launch.cs", "repeatable": false, "pass": "started=true; B5 затем Ready+probeActive" },
+    { "id": "B4", "payload": "b4-runtime-watch.cs", "repeatable": false, "pass": "installed=true; ждёт 4 scored раунда либо naturalEnd, затем FinishActive(reason) и Cancel" },
+    { "id": "B5", "payload": "b5-runtime-status.cs", "repeatable": true, "kind": "read-only compact" },
+    { "id": "B6", "payload": "b6-runtime-stop.cs", "repeatable": "только cleanup; неизвестный Cancel не повторяется", "pass": "Idle, editor not playing, CleanupPassed=true, own request удалена, probe final=true, архивы логов скопированы" },
+    { "id": "analyze", "action": "python -I tasks/bots-fix/tools/cc3-perf/analyze.py --attempt attempt-1" }
+  ],
+  "openDependencies": {
+    "seedBeforeAddBots": "launch-infra/performance 8491/8548 (публичного Seed в PlayLaunchConfiguration пока нет)",
+    "r08Authoring": "weapon-system 8758 (R08.prefab F5 MagazineOnly Unity authoring)",
+    "s8Spectator": "gameplay/network 8657/8836 (режим пассивного наблюдателя S8 в EliminationMode)"
+  }
+}

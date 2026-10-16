@@ -1,6 +1,7 @@
 // B4 MUTATION (Play стенда после warmup): очередь cc1-round1 подэтапа cc-1 в ТЕКУЩЕМ Live. Фаза подставляется в const Phase.
 // p1 = E-ak105-ref 30, PE-ppk-ref 30, H-ppk-holster 30, U-unarmed 20, P-purchase-ak105 35 (145 с; T07, seed 101);
-// p2 = G-ghost-respawn-ak105 40 (T07), AB-T01/AB-T06/AB-T08 (AK105, по 25 с) (115 с). Live Respawn 300 с вмещает фазу.
+// p2 = G-ghost-respawn-ak105 40 (T07), AB-T01/AB-T06/AB-T08 (AK105, по 25 с) (115 с).
+// p3 = те же G/AB с новым журналом + DirectorEquip 15 с. Только новый output root, история не переоценивается.
 // Опции снаряжения исполняет стенд (BotStandEquipmentScript), замеры попаданий/снаряжения — BotStandPlayerFlowProbe
 // (summary.json cases[].Metrics["playerFlow"]). Этот payload только наблюдает (чтение) и добавляет Metrics["cc1"]:
 //  - kit: состав бот-компонентов каждого тела проверяемого бота (живое/призрак) и контрольной цели;
@@ -23,8 +24,10 @@ var all = new[] {
     new { id = "G-ghost-respawn-ak105", phase = "p2", scenario = T07, weapon = "AK105_Weapon", rifle = true, seconds = 40f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = 8f, respawnAt = 20f },
     new { id = "AB-T01-ak105", phase = "p2", scenario = VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T01, weapon = "AK105_Weapon", rifle = true, seconds = 25f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f },
     new { id = "AB-T06-ak105", phase = "p2", scenario = VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T06, weapon = "AK105_Weapon", rifle = true, seconds = 25f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f },
-    new { id = "AB-T08-ak105", phase = "p2", scenario = VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T08, weapon = "AK105_Weapon", rifle = true, seconds = 25f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f } };
-var combos = all.Where(c => c.phase == Phase).ToArray();
+    new { id = "AB-T08-ak105", phase = "p2", scenario = VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.T08, weapon = "AK105_Weapon", rifle = true, seconds = 25f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f },
+    new { id = "D-director-equip", phase = "p3", scenario = VrBattlegrounds.DevTools.BotCombatStand.BotStandScenarioId.DirectorEquip, weapon = (string)null, rifle = false, seconds = 15f, zero = false, noRecoil = false, holster = false, unarmed = false, purchase = (string)null, purchaseAt = -1f, killAt = -1f, respawnAt = -1f } };
+if (Phase != "p1" && Phase != "p2" && Phase != "p3") throw new ArgumentException("Неизвестная фаза очереди: " + Phase);
+var combos = all.Where(c => c.phase == Phase || (Phase == "p3" && c.phase == "p2")).ToArray();
 if (AppDomain.CurrentDomain.GetData(Marker) != null) return new { executionCompleted = true, refused = true, reason = "Очередь уже подключена." };
 if (System.IO.File.Exists(PhaseRoot + "/queue.json")) return new { executionCompleted = true, refused = true, reason = "queue.json уже существует." };
 if (!EditorApplication.isPlaying || !Mirror.NetworkServer.active || VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.Instance == null) throw new InvalidOperationException("Нужен Play стенда.");
@@ -231,8 +234,17 @@ Action sample = () => {
                 pending["result"] = "moved"; pending = null;
             } else if (Time.time - pendingT > 3f) closePending("noMove3s");
         }
-        if (Time.time <= traceUntil && trace.Count < 4000)
-            trace.Add(new object[] { R3(t), Time.frameCount, animState, animatorState, R3(nt), inTransition, R3(pos.x), R3(pos.z), R3(speed) });
+        if (Time.time <= traceUntil && trace.Count < 4000) {
+            // Те же post-UXR кадры: движение proxy не подменяет проверку фактического тела и стоп.
+            var subjectBody = subject != null ? subject.GetComponent<VrBattlegrounds.Bots.BotBody>() : null;
+            var subjectAvatar = subject != null ? subject.GetComponent<UltimateXR.Avatar.UxrAvatar>() : null;
+            var subjectCamera = subjectAvatar != null ? subjectAvatar.CameraTransform : null;
+            trace.Add(new object[] { R3(t), Time.frameCount, animState, animatorState, R3(nt), inTransition,
+                R3(pos.x), R3(pos.z), R3(speed), subject != null ? (object)subject.GetInstanceID() : null,
+                subject != null ? V3(subject.transform.position) : null,
+                subjectBody != null ? V3(subjectBody.Feet) : null,
+                subjectCamera != null ? V3(subjectCamera.position) : null });
+        }
     } catch (Exception error) { if (sampleErrors.Count < 16) sampleErrors.Add(error.GetType().Name + ": " + error.Message); }
 };
 
@@ -278,7 +290,10 @@ Action<VrBattlegrounds.DevTools.BotCombatStand.BotStandCaseResult> onFinished = 
         var folder = System.IO.Path.Combine(VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.LastOutput, result.Id + "-" + result.Seed);
         System.IO.Directory.CreateDirectory(folder);
         System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-trace.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
-            columns = new[] { "t", "frame", "animState", "animatorState", "nt", "inTransition", "x", "z", "agentSpeed" }, rows = trace }));
+            scope = "Один post-UXR callback: proxy, subject root/feet/camera; bounded окно после смены состояния.",
+            limit = 4000, boundedWindow = true,
+            columns = new[] { "t", "frame", "animState", "animatorState", "nt", "inTransition", "x", "z", "agentSpeed",
+                "subjectBodyId", "subjectRoot", "subjectFeet", "subjectCamera" }, rows = trace }));
         System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "cc1-target-trace.json"), Newtonsoft.Json.JsonConvert.SerializeObject(new {
             limit = 2048, observedFrames = sampleFrames, truncated = sampleFrames > targetTrace.Count,
             validityScope = "Только ссылки и activeInHierarchy; калибровка не утверждается. Начальные samples не исключены.",

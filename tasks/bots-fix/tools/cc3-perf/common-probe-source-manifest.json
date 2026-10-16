@@ -1,0 +1,93 @@
+{
+  "schema": "cc3-common-perf-probe-source@1",
+  "date": "2026-10-15",
+  "status": "PREPARED_NOT_ACCEPTED_NOT_LAUNCH_READY",
+  "owner": "bots-fix",
+  "acceptedBase": "018e63d4fcc8c97355165474f0e080abd34aa79a",
+  "candidateReference": "748d8e8493bf48d8155d6a0b374bf88c75794034",
+  "sourceCommit": "2fa11b2767f23d4c709f739deb629fd378307c97",
+  "files": [
+    {
+      "path": "Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs",
+      "sha256": "5a0611c9aa311f9ae9b4eed7258041defac5bf43a7193cd2435b4df5a3e130cc",
+      "bytes": 55426,
+      "lineEndings": "LF"
+    },
+    {
+      "path": "Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs.meta",
+      "sha256": "d2ceec02d7db6a2309abba927c721a1e75591df9d1d90a8471884c99d5a261ca",
+      "guid": "5d236333c33745b59741cdb31bebf141",
+      "bytes": 243,
+      "lineEndings": "LF"
+    }
+  ],
+  "sourcePolicy": {
+    "historicalOwnSourceNotAcceptedResult": true,
+    "materializedInTaskFolder": false,
+    "identicalBytesRequiredForHybridAndCandidate": true,
+    "singleDeclarationRequired": true,
+    "sdkCopiesAllowed": false,
+    "borrowedComponents": [],
+    "wholeHistoricalCommitImportAllowed": false,
+    "overlayScope": "Только эти own probe paths и own tools/cc3-perf; gameplay C задаётся отдельным manifest, H остаётся accepted Hybrid из B"
+  },
+  "assembly": {
+    "name": "VrBattlegrounds.BotCombatStand",
+    "existingDefineConstraint": "UNITY_EDITOR",
+    "verifiedContext": "Unity6000.4.1f1 WindowsEditor references; managed C#9",
+    "playerOrQuestVerified": false
+  },
+  "publicRequest": {
+    "fields": ["RunTag", "OutputDirectory", "ExpiresUtc", "WriteSeconds"],
+    "writeSeconds": 10,
+    "runTag": null,
+    "outputDirectory": null,
+    "expiresUtc": null,
+    "finishApi": "BotStandMatchProbeGate.FinishActive(string reason)",
+    "directorEquipAvailable": false,
+    "finishCompletedBoolAvailable": false,
+    "cc2PayloadsCompatibleUnchanged": false
+  },
+  "additionalTrace": {
+    "required": "OFF",
+    "installedByPinnedSource": false,
+    "runtimeVerified": null,
+    "doNotInstall": ["B7", "Blaze/public trace subscribers", "shot-tail observer", "NetObserver/NetReceiveTrace"],
+    "standardMetricsEnabled": ["match timeline", "frame/GC/markers", "console", "NetworkDiagnostics"],
+    "privateReflectionAllowed": false
+  },
+  "verification": {
+    "hybrid": {
+      "scope": "static public API map against exact B",
+      "staticMismatchFound": false,
+      "semanticCompilation": null,
+      "runtime": null
+    },
+    "candidate": {
+      "scope": "18-source stand slice compile; one pinned probe source replacement; readonly main-provided C DLL refs",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 29,
+      "warningCodes": ["CS0618"],
+      "warningsInPinnedProbe": 0,
+      "response": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-stand.rsp",
+      "log": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-stand.log",
+      "summary": "C:/Users/asker/AppData/Local/Temp/bots-cc3-commonprobe-wui4o6fj/candidate-replacement-summary.json",
+      "outputSha256": "791aa4ef4d612d5fef12ad2f4f0fa2f9c523f15e059b491843724e1c47b8b459",
+      "gameReferenceSha256": "857b1c0a802c7e200f9c5a01d837384dd8d6ae73de4f880c8fa50b8f54f854d8",
+      "sdkReferenceSha256": "3194d73951a819cbceec2c92a8463126c8ce7e9c38a3a242a08bdef31ddfc923",
+      "runtimeInputGrant": false,
+      "runtime": null
+    }
+  },
+  "pending": {
+    "exactHybridSemanticBuild": "PENDING; Library not asserted exact B",
+    "seedBeforeAddBots8548": "PENDING_OWNER_ROUTE; no Seed field in PlayLaunchConfiguration",
+    "hostSdk81Grant": "PENDING; no borrowing/copy authorized here",
+    "performance8367": "PENDING",
+    "guardedCc3Payload": "PENDING; old cc2 API differs",
+    "hardwareQualityUrpNavmesh": null,
+    "runtimeRecorderAndMarkerValidity": null,
+    "traceOffRuntimeProof": null
+  }
+}

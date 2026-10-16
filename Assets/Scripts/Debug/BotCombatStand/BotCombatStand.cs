@@ -49,7 +49,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private void OnDestroy() { Cleanup(); if (Instance == this) Instance = null; }
 
         public static BotStandRunHandle RunAll(BotStandRunOptions options) =>
-            RunCases(options, (BotStandScenarioId[])Enum.GetValues(typeof(BotStandScenarioId)));
+            RunCases(options, ((BotStandScenarioId[])Enum.GetValues(typeof(BotStandScenarioId))).Where(id => id != BotStandScenarioId.DirectorEquip).ToArray());
 
         public static BotStandRunHandle RunCases(BotStandRunOptions options, params BotStandScenarioId[] ids)
         {
@@ -67,6 +67,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             if ((Instance._output + Path.DirectorySeparatorChar).StartsWith(assets, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Отчёты стенда нельзя сохранять в Assets.");
             options = JsonConvert.DeserializeObject<BotStandRunOptions>(JsonConvert.SerializeObject(options));
+            if (ids.Contains(BotStandScenarioId.DirectorEquip)) BotStandDirectorEquipJournal.ValidateOptions(options);
             if (options.ObserveShotTail && (ids.Any(id => id != BotStandScenarioId.T07) || options.CaseSeconds != 30f ||
                 options.KillAtSeconds >= 0f || options.RespawnAtSeconds >= 0f || !string.IsNullOrEmpty(options.PurchaseWeaponName)))
                 throw new ArgumentException("ObserveShotTail требует T07, активные 30 с и неизменные тело/оружие (без смерти, respawn и покупки).");
@@ -132,13 +133,13 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     if (!supported) throw new NotSupportedException(result.Error);
                     var category = options.Rifle ? WeaponCategory.Rifle : WeaponCategory.Pistol;
                     WeaponInfo weapon = Weapons?.FirstOrDefault(w => w != null && w.Category == category && w.WeaponPrefab != null && (string.IsNullOrEmpty(options.WeaponName) || w.name == options.WeaponName));
-                    if (weapon == null) throw new InvalidOperationException("Нет оружия нужной категории.");
+                    if (weapon == null && id != BotStandScenarioId.DirectorEquip) throw new InvalidOperationException("Нет оружия нужной категории.");
                     WeaponInfo purchase = string.IsNullOrEmpty(options.PurchaseWeaponName) ? null :
                         Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null && w.name == options.PurchaseWeaponName);
                     _netMarkers = new BotStandNetSendMarkers();
                     _session.Begin(id, weapon, options, purchase);
                     _session.HoldForReadiness(result);
-                    _conditions = new BotStandShotConditions(_session, options);
+                    if (id != BotStandScenarioId.DirectorEquip) _conditions = new BotStandShotConditions(_session, options);
                 }
                 catch (NotSupportedException e) { result.Status = "Unsupported"; result.Error = e.Message; }
                 catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
@@ -154,7 +155,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     try
                     {
                         BotStandMeasurements.ValidateFixture(id, _session);
-                        _probe = new BotStandPlayerFlowProbe(_session);
+                        if (id != BotStandScenarioId.DirectorEquip) _probe = new BotStandPlayerFlowProbe(_session);
                         // Передача единственного окна без yield: Director не допускает два окна одного тела.
                         _session.ReleaseReadinessFire();
                         if (options.ObserveShotTail) _shotTail = new BotStandShotTailObservation(_session, result, start, duration);
@@ -222,9 +223,13 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     _conditions.Dispose(); _conditions = null;
                 }
                 BotStandMeasurements.Evaluate(result);
+                // Закрываем подписку до внешних обработчиков; их validation ещё может отклонить case.
+                _session.WriteDirectorMetrics(result, false, "awaiting CaseFinished validation");
                 if (result.Frames.Count == 0 && result.Status != "InvalidFixture" && result.Status != "Unsupported") { result.Status = "InvalidFixture"; result.Error = "Нет кадров акторов."; }
                 try { CaseFinished?.Invoke(result); }
                 catch (Exception e) { result.Status = "InvalidFixture"; result.Error = e.Message; }
+                _session.WriteDirectorMetrics(result, !_cancel && result.Status != "InvalidFixture" && result.Status != "Unsupported",
+                    _cancel ? "cancelled" : result.Status);
                 _results.Add(result);
                 _activeCase=null;
                 _status.Completed++;
@@ -255,6 +260,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     _shotTail?.Dispose(); _shotTail = null;
                     var interrupted=_activeCase; _activeCase=null;
                     interrupted.Status="InvalidFixture"; interrupted.Error=_status?.Error ?? "Сценарий прерван до завершения.";
+                    _session?.WriteDirectorMetrics(interrupted, false, "cleanup: " + interrupted.Error);
                     try { CaseFinished?.Invoke(interrupted); } catch(Exception e) { interrupted.Error += " Запись: " + e.Message; }
                     _results.Add(interrupted); _status.Completed++; _status.InvalidFixture++;
                     _status.Passed=false; _status.IsFinished=true;
@@ -302,7 +308,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         {
             if (!NetworkServer.active) { result.Status = "InvalidFixture"; result.Error = "Сервер остановлен."; return; }
             if(_session?.Subject?.ActiveAvatar==null) { result.Status="InvalidFixture"; result.Error="Проверяемый актор исчез."; return; }
-            if(result.Id!="T02" && _session.Target?.ActiveAvatar==null) { result.Status="InvalidFixture"; result.Error="Контрольная цель исчезла."; return; }
+            if(result.Id!="T02" && result.Id!="DirectorEquip" && _session.Target?.ActiveAvatar==null) { result.Status="InvalidFixture"; result.Error="Контрольная цель исчезла."; return; }
             if (BotDirector.Instance == null) return;
             foreach (var session in _session.OwnedBots)
             {

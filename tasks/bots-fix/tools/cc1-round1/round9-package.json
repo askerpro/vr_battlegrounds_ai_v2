@@ -1,0 +1,42 @@
+{
+  "purpose": "Свежая диагностика G attribution, движения proxy/body и явного DirectorEquip после Unity734",
+  "accepted_gameplay": false,
+  "root": "tasks/bots-fix/reports/cc1-round9",
+  "phase": "p3",
+  "input": "build-input.py: exact accepted broker base + owned delta, без borrowed SDK; HEAD/index сохраняются",
+  "preconditions": [
+    "fetch/rebase origin/dev с сохранением собственных правок; fresh mode/route/inbox",
+    "готовые source и scoped review; 7 assemblies + 10 C#6 payload errors0, owned physical/staged LF",
+    "checkpoint → request FIFO → claim → begin → guard; собственная RUNNING lease",
+    "idle editor без чужих dirty scenes/prefab stages/tests; read-only MCP history probe после begin"
+  ],
+  "actions": [
+    "B0/B1 с новым Root: preflight и минимальный controller",
+    "B9 public discovery восьми fixtures; стандартный run_tests один фактический job, полный terminal result/coverage",
+    "Если run_tests явно отказал refresh_required ДО создания job: штатный refresh, затем первый job; UNKNOWN не повторять",
+    "B3 PlayLaunch с Phase=p3, warmup до completed/InvalidFixture0; read-only MCP probe после reload",
+    "B8 precache snapshot p3-before-queue: actual ServerOnly, UsePrecaching=false/container0",
+    "B4 Phase=p3: G40s + AB T01/T06/T08 по25s + DirectorEquip15s, все seed101",
+    "B5 наблюдение durable queue; lease renew только при реально продолжающейся Unity работе",
+    "B8 p3-after-queue, B6/B5 cleanup: playingfalse/launchIdle/standownedfalse; native guard tests/compile/importfalse",
+    "Немедленный штатный finish с артефактами подготовленного пакета; receive и проверенная копия raw reports",
+    "Offline analysis только после finish, отдельные derived outputs, исходные734 отчёты не менять"
+  ],
+  "new_observations": {
+    "G": "damageTrace enabled только KillAtSeconds>=0, source/current/target actor IDs + managed/destroyed null и Bind history; hits/foreign classifier сохранён",
+    "AB": "первые9 колонок trace сохранены, subjectBodyId/root/BotBody.Feet/camera в том же bounded post-UXR callback; это не bone-foot acceptance",
+    "DirectorEquip": "AutoEquip=true, без scripted equipment/target; пассивные реальные buy/offer/contextReset/effectiveArm и sampled firearm inventory",
+    "lifecycle": "Одиночный DirectorEquip не доказывает второй матч/sameMind/refusal. Для них отдельный uninterrupted MatchProbe request.DirectorEquip=true; perf defaultfalse"
+  },
+  "stop": [
+    "CameraFade/precache growth, runtime fatal, потеря управляемого PlayLaunch/queue или InvalidFixture",
+    "При неизвестном исходе операции: durable/native evidence и сообщение сопровождающему; no retry/replay/recover",
+    "После terminal stop и cleanup finish до диагностики, редактирования или ожидания человека"
+  ],
+  "acceptance": [
+    "Новый G event позволяет установить source либо честный UNKNOWN; foreign1 из734 не превращается в PASS задним числом",
+    "Движение proxy сопоставлено с actual subject root/Feet по frame; no-proxy/ghost и физические кости отдельно",
+    "DirectorEquip не имеет второго writer; repeated OfferPurchase на ту же пару body/token отсутствует в полном журнале",
+    "Результат case/весь clip-cutover остаётся NeedsReview до полного match/network/perf/визуальной Unity/Quest приёмки"
+  ]
+}

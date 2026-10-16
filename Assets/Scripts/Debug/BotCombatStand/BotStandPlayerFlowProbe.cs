@@ -190,12 +190,145 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private int _ghostTeam;
         private int _unarmedFrames, _unarmedBlazeFrames, _unarmedRestFrames, _unarmedShotRequests;
         private UxrActor _subjectActor, _targetActor;
+        private readonly DamageTrace _damageTrace;
         private bool _disposed;
+
+        /// <summary>Пассивный журнал публичного урона: ограничивает память, не меняет классификацию попаданий.</summary>
+        private sealed class DamageTrace
+        {
+            private const int MaxEvents = 512;
+            private const int MaxBindings = 32;
+            private sealed class Binding
+            {
+                public UxrActor Actor;
+                public Dictionary<string, object> Row;
+            }
+
+            private readonly List<object> _events = new List<object>();
+            private readonly List<Binding> _bindings = new List<Binding>();
+            private int _observed, _dropped, _bindingsDropped, _errors;
+            private string _firstError;
+
+            private static Dictionary<string, object> Clock() => new Dictionary<string, object>
+            {
+                ["frame"] = Time.frameCount, ["gameTime"] = Time.time,
+                ["realtime"] = Time.realtimeSinceStartup, ["networkTime"] = NetworkTime.localTime
+            };
+
+            public void Bind(string role, PlayerController player, UxrActor actor)
+            {
+                try
+                {
+                    if (_bindings.Count >= MaxBindings) { _bindingsDropped++; return; }
+                    var row = Clock();
+                    row["role"] = role;
+                    row["actorInstanceId"] = actor != null ? (object)actor.GetInstanceID() : null;
+                    row["managedNull"] = ReferenceEquals(actor, null);
+                    row["unityNull"] = actor == null;
+                    row["destroyedNull"] = !ReferenceEquals(actor, null) && actor == null;
+                    row["bodyInstanceId"] = player != null ? (object)player.GetInstanceID() : null;
+                    row["avatarNetId"] = player != null ? (object)player.netId : null;
+                    row["sessionNetId"] = player != null ? (object)player.SessionNetId : null;
+                    row["alive"] = player != null ? (object)player.IsAlive : null;
+                    _bindings.Add(new Binding { Actor = actor, Row = row });
+                }
+                catch (Exception e) { Error(e); }
+            }
+
+            private Dictionary<string, object> Actor(UxrActor actor)
+            {
+                bool managedNull = ReferenceEquals(actor, null);
+                bool unityNull = actor == null;
+                Binding known = null;
+                if (!managedNull)
+                    for (int i = _bindings.Count - 1; i >= 0; i--)
+                        if (ReferenceEquals(_bindings[i].Actor, actor)) { known = _bindings[i]; break; }
+                // Managed-ссылка позволяет найти сохранённые IDs после Unity Destroy; к мёртвому объекту не обращаемся.
+                PlayerController player = !unityNull ? actor.GetComponentInParent<PlayerController>() : null;
+                return new Dictionary<string, object>
+                {
+                    ["managedNull"] = managedNull, ["unityNull"] = unityNull,
+                    ["destroyedNull"] = !managedNull && unityNull,
+                    ["actorInstanceId"] = known != null ? known.Row["actorInstanceId"] :
+                        !unityNull ? (object)actor.GetInstanceID() : null,
+                    ["bodyInstanceId"] = known != null ? known.Row["bodyInstanceId"] :
+                        player != null ? (object)player.GetInstanceID() : null,
+                    ["avatarNetId"] = known != null ? known.Row["avatarNetId"] :
+                        player != null ? (object)player.netId : null,
+                    ["sessionNetId"] = known != null ? known.Row["sessionNetId"] :
+                        player != null ? (object)player.SessionNetId : null,
+                    ["bindingRole"] = known != null ? known.Row["role"] : null,
+                    ["bindingFrame"] = known != null ? known.Row["frame"] : null
+                };
+            }
+
+            public void Damage(UxrDamageEventArgs e, UxrActor currentSubject, UxrActor boundTarget, int hits, int foreign)
+            {
+                _observed++;
+                if (_events.Count >= MaxEvents) { _dropped++; return; }
+                try
+                {
+                    var row = Clock();
+                    row["source"] = Actor(e.ActorSource);
+                    row["currentSubject"] = Actor(currentSubject);
+                    row["eventTarget"] = Actor(e.ActorTarget);
+                    row["boundTarget"] = Actor(boundTarget);
+                    row["sourceReferenceEqualsCurrent"] = ReferenceEquals(e.ActorSource, currentSubject);
+                    row["creditedToCurrentSubject"] = currentSubject != null && e.ActorSource == currentSubject;
+                    row["hitsAfter"] = hits;
+                    row["foreignAfter"] = foreign;
+                    row["damageType"] = e.DamageType.ToString();
+                    row["damage"] = e.Damage;
+                    row["dies"] = e.Dies;
+                    row["raycastValid"] = e.DamageType == UxrDamageType.ProjectileHit;
+                    if (e.DamageType == UxrDamageType.ProjectileHit)
+                    {
+                        Collider collider = e.RaycastHit.collider;
+                        row["colliderInstanceId"] = collider != null ? (object)collider.GetInstanceID() : null;
+                        row["colliderName"] = collider != null ? collider.name : null;
+                        Vector3 point = e.RaycastHit.point;
+                        row["hitPoint"] = new[] { point.x, point.y, point.z };
+                    }
+                    _events.Add(row);
+                }
+                catch (Exception error) { _dropped++; Error(error); }
+            }
+
+            private void Error(Exception error)
+            {
+                _errors++;
+                if (_firstError != null) return;
+                string message = error.GetType().Name + ": " + error.Message;
+                _firstError = message.Length <= 240 ? message : message.Substring(0, 240);
+            }
+
+            public Dictionary<string, object> Write()
+            {
+                var bindings = new List<object>();
+                foreach (Binding binding in _bindings) bindings.Add(binding.Row);
+                return new Dictionary<string, object>
+                {
+                    ["enabled"] = true,
+                    ["eventLimit"] = MaxEvents, ["bindingLimit"] = MaxBindings,
+                    ["observedEvents"] = _observed, ["dropped"] = _dropped,
+                    ["bindingsDropped"] = _bindingsDropped, ["errors"] = _errors, ["firstError"] = _firstError,
+                    ["incomplete"] = _dropped != 0 || _bindingsDropped != 0 || _errors != 0,
+                    ["events"] = _events, ["bindings"] = bindings,
+                    ["scope"] = "Только публичный DamageReceived подписанной контрольной цели и Bind тел. " +
+                                "До подписки события неизвестны; точный projectile ID/terminal не доступен. " +
+                                "Actor IDs уничтоженного объекта известны только при сохранённой managed-ссылке из Bind. " +
+                                "Классификация hits/foreignDamage не изменена."
+                };
+            }
+        }
 
         public BotStandPlayerFlowProbe(BotStandSession session)
         {
             _session = session;
             _start = Time.time;
+            // Только сценарий со штатной смертью: обычные/perf case не выделяют журнал и его строки.
+            BotStandRunOptions options = BotCombatStand.Instance != null ? BotCombatStand.Instance.ActiveOptions : null;
+            _damageTrace = options != null && options.KillAtSeconds >= 0f ? new DamageTrace() : null;
             for (int i = 0; i < MarkerNames.Length; i++)
             {
                 _markerMs[i] = new List<float>();
@@ -259,6 +392,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _poseGrid.Reset();
             _sessionNetId = player.Session != null ? player.Session.netId : 0;
             _subjectActor = player._actor;
+            _damageTrace?.Bind("subject", player, _subjectActor);
             _footReady = false;
             _rootKnown = false;
             _rightEpoch = _leftEpoch = 0;
@@ -574,6 +708,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _targetSessionNetId = target != null && target.Session != null ? target.Session.netId : 0;
             if (_targetActor != null) _targetActor.DamageReceived -= OnDamage;
             _targetActor = actor;
+            _damageTrace?.Bind("target", target, _targetActor);
             if (_targetActor != null) _targetActor.DamageReceived += OnDamage;
         }
 
@@ -917,6 +1052,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             // Каждое попадание по контрольной цели должно быть засчитано актору бота (в стенде стреляет только он).
             if (_subjectActor != null && e.ActorSource == _subjectActor) _hits++;
             else _foreignDamage++;
+            _damageTrace?.Damage(e, _subjectActor, _targetActor, _hits, _foreignDamage);
         }
 
         private void OnOutMessage(NetworkDiagnostics.MessageInfo info)
@@ -982,6 +1118,11 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 ["hitsOnTarget"] = _hits,
                 ["hitRate"] = shots > 0 ? _hits / (float)shots : 0f,
                 ["foreignDamageEventsOnTarget"] = _foreignDamage,
+                ["damageTrace"] = _damageTrace?.Write() ?? new Dictionary<string, object>
+                {
+                    ["enabled"] = false, ["coverage"] = "unknown", ["incomplete"] = true,
+                    ["reason"] = "Журнал выключен: KillAtSeconds < 0 либо ActiveOptions недоступны."
+                },
                 ["gate"] = new Dictionary<string, object>
                 {
                     ["maxAimErrorDeg"] = BotPlayerFlowSettings.MaxShotAimErrorDegrees,

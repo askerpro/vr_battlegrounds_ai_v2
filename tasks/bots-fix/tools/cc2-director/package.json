@@ -1,0 +1,71 @@
+{
+  "package": "bots-fix cc-2: непрерывная функциональная Elimination lifecycle-проба директора",
+  "date": "2026-10-15",
+  "basedOn": "tasks/bots-fix/tools/cc0-match",
+  "outputRoot": "tasks/bots-fix/reports/cc2-lifecycle-round2",
+  "run": "M2",
+  "attempt": "attempt-1",
+  "owner": "bots-fix.cc2-lifecycle",
+  "payloadLanguage": "C# 6 / текущие globals MCP execute_code",
+  "expectedChangedPaths": [],
+  "launch": {
+    "route": "PlayLaunch.Plan -> immutable probe request -> PlayLaunch.Play -> Ready -> B4",
+    "scenePath": "Assets/Scenes/Maps/TestMap1.unity",
+    "role": "server",
+    "clientCount": 0,
+    "botCount": 2,
+    "humans": 0,
+    "minPlayers": 2,
+    "modeId": "elimination",
+    "autoGoLive": true,
+    "readiness": "map-playable",
+    "portPolicy": "auto",
+    "seed": "UNKNOWN/notControlled: публичного Seed в PlayLaunchConfiguration нет; reseed не вводится",
+    "probe": "одна неизменная request.DirectorEquip=true до Play, WriteSeconds=5; не Finish и не пересоздавать между матчами"
+  },
+  "scope": "FUNCTIONAL ServerOnly M2. Не Host perf, N8/N10/S8 или Quest. Первый переход явно adminStop либо naturalEnd; naturalEnd не подтверждает adminStop.",
+  "runtimeSequence": [
+    "Штатный AutoGoLive первого матча, без запасного GoLive",
+    "Durable probe: roundScored1..4 с ничьими, Buy round1 обеих сессий; roundWon только диагностический счётчик",
+    "Если first live Round>=5: firstCompletionKind=adminStop, один durable admin-stop-intent + Flush(true) -> StateEventAuthority.IsWorldAuthority -> MapReferee.Stop",
+    "Если первый mode завершён естественно: firstCompletionKind=naturalEnd, exact readonly referee.Finished latch + durable matchFinished/modeFinished в пределах120с; без вызова Stop",
+    "Готовый Warmup descriptor своего run/referee/activeMode, новый ModeEpoch, два наблюдения после stopFrame+1",
+    "Один durable admin-golive-intent + Flush(true) -> StateEventAuthority.IsWorldAuthority -> MapReferee.GoLive",
+    "Второй ready Elimination descriptor, новый ModeEpoch/ModeNetId, Round1, те же session instance/netId",
+    "Round>=2 второго матча и Buy round1/contextReset обеих сессий с прежним mindId по непрерывному journal",
+    "FinishActive(normal,true) до одного PlayLaunch.Cancel своего owner/run",
+    "B6 удаляет только неизменённую собственную request после Idle; main finish/receive"
+  ],
+  "limits": {
+    "watchSeconds": 720,
+    "noLiveOrWarmupSeconds": 120,
+    "transitionCapacity": 256,
+    "watchStatusPeriodSeconds": 5,
+    "tickPeriodSeconds": 0.25,
+    "probeRequestExpiresMinutes": 25
+  },
+  "failure": "cap/quit/noLive/error/foreign-session-loss/descriptor loss/dropped -> FinishActive(reason,false), затем Cancel только своего owner/run. Интенты пишутся CreateNew+Flush(true) до вызовов; неизвестный исход не повторяется. Чужие launch, request, боты и Unity процессы не меняются.",
+  "steps": [
+    { "id": "B0", "payload": "b0-preflight.cs", "repeatable": true, "pass": "passed=true, PlanHash записан" },
+    { "id": "B3", "payload": "b3-runtime-launch.cs", "repeatable": false, "pass": "started=true; B5 затем Ready+probeActive" },
+    { "id": "B4", "payload": "b4-runtime-watch.cs", "repeatable": false, "pass": "installed=true; main сохраняет RUNNING lease/guard, ждёт callback через B5" },
+    { "id": "B7", "payload": "b7-combat-observation.cs", "repeatable": false, "kind": "пассивные bounded combat tuples; после B4, без управления стрельбой" },
+    { "id": "B5", "payload": "b5-runtime-status.cs", "repeatable": true, "kind": "read-only compact" },
+    { "id": "B6", "payload": "b6-runtime-stop.cs", "repeatable": "только cleanup; неизвестный Cancel не повторяется", "pass": "Idle, editor not playing, CleanupPassed=true, own request удалена, probe final" },
+    { "id": "release", "action": "main broker finish сразу после prepared package/cleanup; затем receive полных reports/log archives" }
+  ],
+  "reports": {
+    "root": "runtime/attempt-1/M2",
+    "immutable": "launch.json, launch-status.json, probe-request-evidence.json, probe-request-immutable.json",
+    "watch": "watch-install.json, watch.json schema@2 (bounded transitions, session IDs, epochs, firstMinds/secondMinds, completed-round proof, firstCompletionKind и naturalEnd latch/proof)",
+    "intents": "admin-stop/golive, finish, cancel: *-intent.json и *-return.json; отсутствие return не разрешает replay",
+    "probe": "probe/main-pid*.json: полный directorEquip events/inventory и match timeline с economy/phase/round/body/shot/damage",
+    "cleanup": "stop.json + SHA256-проверенные копии полных PlayLaunch log archives внутри reports до finish",
+    "combat": "combat-observation.json: публичные gun/holding/visibility/AI/SDK snapshots; AI request counter и недоступные private-сигналы UNKNOWN"
+  },
+  "acceptance": "Нулевые journal/timeline drops/errors, полный final probe, firstNaturalProof=true и sameMindProof=true — условия собранного функционального опыта. Финальная пользовательская приёмка остаётся отдельной.",
+  "pending": ["pause/resume", "reload той же карты", "reload другой карты", "новая жизнь Respawn", "естественный refusal", "invalid descriptor", "полный spawn provenance", "Quest", "performance/network scale"],
+  "previousRun": "747 DONE/receive: первый natural match-end Round6, но watcher ошибочно требовал4wins; общий пакет incomplete и второй матч не запущен. Исторический результат неизменён.",
+  "companionVisual": "В одной технической аренде сначала отдельный tools/cc1-visual G на reports/cc1-visual-candidate1 с полной очисткой до Idle/owned=false. Только после terminal запускается этот M2. Все действия подготовлены заранее; при нештатном исходе общий пакет прекращается с собственной cleanup/finish. Human acceptance внутри аренды не ожидается.",
+  "offlineValidation": "Новый output/input после исправления только диагностического watcher. Main выполняет общую C#6 payload компиляцию и builder checkpoint; новые тесты не создаются."
+}

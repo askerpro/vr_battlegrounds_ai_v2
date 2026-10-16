@@ -1,12 +1,52 @@
 # Боты: player-flow и Blaze AI
 
-Обновлено: 2026-10-15, Codex. Владелец `bots`, задача `bots-fix`, worktree
+Обновлено: 2026-10-16, Antigravity. Владелец `bots`, задача `bots-fix`, worktree
 `F:/CodexWorktrees/bots/Vr_Battlegrounds_ai`, ветка `bots-fix`.
 [План](plan.json), [архитектура](player-flow-plan.md), [cc-1](cc1-plan.md), [детали](Details.md).
 [Прежний подробный Readme](changelog/2026-10-14-readme-before-worker-ready.md).
 
 ## Статус
 
+- **751 DONE/receive**: input=`748d8e8493bf48d8155d6a0b374bf88c75794034`, B=`018e63d4f`, epoch636;
+  R=`ef429ee1b99c2c29bbca079b89076091ac03041f`, paths0/unexpected0/binary_invalid0. Своей аренды нет.
+  220 broker artifacts /52 991 399 байт; копия `reports/received751/`, SHA256 mismatch0, оба полных launch logs сохранены.
+  82 собственных пути, borrowed SDK0, отдельные index/ref, HEAD/index сохранены.
+  Выполнены последовательно visual G и M2 с полной cleanup между фазами и штатным finish после пакета.
+  M2: scored1…4 (ничьи включены), один adminStop→Warmup→GoLive, epoch2→3→4,
+  те же session/Mind, Round1 Buy/contextReset второго матча, затем Round2.
+  Probe final/completed=true, incomplete=false; runtime/console errors/drops0. Новые игровые тесты не создавались.
+  Офлайн:7 сборок и visual5/M2 6 C#6 payloads errors0. Review исправил wins/completed-round gate,
+  exact naturalEnd branch, callback type и преждевременный completedObservation до stopped.
+  G: две exact-frame пары old1487/new2520, обе руки, captures2/detached/pending0, без ошибок съёмки.
+  Source/pose metadata неполны (runtimePose и weaponSource GUID null); fit analysis_incomplete, ownerDecision UNKNOWN.
+  B7: R08 в536 Combat samples без WeaponSystem, при SDKready/loaded и SeesTarget=true444; shots0.
+  Обязательный sameGO host gate BotGunner подтверждён; weapon-system получил defect_review8563.
+  По8583/8587/8591/8758: R08 переведён на F5 `MagazineOnly` (SDK82 + unified ledger + scoped R08 writer в коде r65,
+  согласовано с network8755/grip8732), но `R08.prefab` ещё не авторизован в Unity (stalled delayCall, infra8750);
+  ответ8832 отправлен, гейты BotGunner не ослабляются, следующий B7 читает public OutcomeCount без правок игры.
+  B0/B4 ответили timeout, но native history подтвердил SUCCESS54,59/63,15с; replay/recovery не было.
+  Infra8478/8483/8489: exact tool input/reply/history в `reports/751-visual-b0-infra.json`.
+  Canonical performance8491 требует seed-before-AddBots от launch/test-stand; запрос8548 доставлен.
+  Native performance8367 ранее отклонён auto-review; ответ получен canonical, этот маршрут продолжению не мешает.
+  Grip8565 получил кадры и identity-ограничения. Binding r3: weapon ACK8581, затем owner contract-agree
+  (publication80e62dd6); state=agreed, active не объявлен до принятого вливания.
+  По8657 (ответ network на8363): S8P (`Role.Player` с `TeamIndex=0`) блокирует `GameMode.AllPlayersHaveModeTeam()` в Elimination
+  и создаёт авторитетный аватар; ответ8834 отправлен network, запрос8836 направлен `owner:gameplay` по режиму наблюдателя S8.
+  External-mode finger pose boundary передан avatar-ik8576/grip8578. [Итоги751](changelog/2026-10-15-visual-lifecycle751.md).
+- **747 DONE/receive**: функциональный ServerOnly M2, input=`74a81dca5`, B=`018e63d4f`, epoch632,
+  R=`2db52022dd1184e308604d7b0c545b95c2cf6867`, paths0/unexpected0. Своей аренды нет.
+  Прогон достиг Round6; watcher завершён incomplete: первый матч закончился/сменил mode до admin Stop.
+  Stop/GoLive не вызывались, второй матч и sameMind не проверены. Runtime errors/console errors/drops0.
+  Probe final=true, directorEquip.completed=false/incomplete=true; 34 events и418 inventory samples.
+  CleanupPassed=true, Playfalse/launchIdle, собственный request удалён; штатные finish/receive выполнены.
+  Broker сохранил14 reports, копия `reports/received747/cc2-lifecycle-round1/`: 13 815 199 байт, SHA256 mismatch0.
+  Причина — ошибочное условие watcher roundWon>=4 вместо четырёх завершённых раундов; исход не переименован в PASS.
+  Raw подтверждает natural end Round6 (счёт1:3), 25 shots/16 hits/4 kills; деньги обеих сессий сходятся с half-reset.
+  Восемь оплаченных Buy имеют по одному accepted Offer, четыре noPurchase не оплачены. [Итоги747](changelog/2026-10-15-lifecycle747.md).
+  После rebase источник=`4d66f9a8c`, stash`3c7f980d3` сохранён. Офлайн7 assemblies+5 payload errors0;
+  scoped review исправил проверку durable final. 75 input paths, borrowed SDK/foreign0, HEAD/index сохранены.
+  Владелец хвата8388 запросил отдельный visual обеих рук с avatar/weapon/side/grabpoint/pose/sourceID;
+  acceptance по8355 не выдан. Network S8 fallback8363 и perf seed8367 ожидают ответов владельцев.
 - **738 DONE/receive**, A=`0a8a1b4de`, B=`6669db54f`, epoch625,
   R=`de33426c3fe8e68b39218dcd1cede44feb2f5881`, paths0/unexpected0; своей аренды нет.
   B0/B1 PASS, fresh discovery49/T1 **49/49 PASS** с полным coverage, missing0/extra0.
@@ -201,15 +241,19 @@ E: попадания10/22, PE25/28; target root однажды сместилс
 
 ## Дальше
 
-Текущий порядок после734:
+Текущий порядок после751:
 
 1. Журналы G и DirectorEquip внедрены и проверены в738; старый foreign1 и неупражнённые отрицательные ветви не закрыты.
-2. Готовится `tools/cc2-director/`: непрерывный функциональный ServerOnly M2, четыре естественных раунда,
-   штатный Stop→GoLive и второй матч с тем же Mind. Это не Host perf и не естественный конец матча.
-   Отказ OfferPurchase, сброс map/reload и pause/resume требуют отдельных реально наблюдаемых переходов.
-3. Новый точный input и FIFO-пакет для оставшихся runtime вопросов; полный матч, M8/M10/S8 и поздний вход
-   по согласованной perf-методике7933 со свежей hybrid baseline. SDK81/shot observer требуют отдельных актуальных grants.
-4. Зональное ревью и демонстрация пользователю. После Unity/headset-приёмки — актуализация тестов cc-5,
+2. M2 исправлен и выполнен в751: четыре раунда с ничьими, adminStop→Warmup→GoLive,
+   новый Round1 Buy/contextReset на прежних Mind, затем Round2. Natural full match-end отдельно в747.
+3. До принятия gameplay закрыть runtime-авторинг `R08.prefab` (F5 `MagazineOnly`, SDK82, 8758) с `weapon-system`
+   и finger-pose/source identity с `avatar-ik`/`grip`; не ослаблять gates, не выдавать authored binding за applied pose.
+   Отказ OfferPurchase, map/reload, pause/resume и Respawn требуют отдельных реально наблюдаемых переходов.
+4. После seed/setup контракта8548, решения `gameplay`/`network` по режиму наблюдателя S8 (8657/8836; S8P отклонён)
+   и fresh SDK81/82 grants — новый exact input/FIFO для Host hybrid/candidate×N8/N10, S8, remote-human (командный клиент
+   с исключением local avatar netId) и позднего входа по perf-методике7933.
+   Common probe C semantic PASS, H exact compile ещё pending; исторический M3 не baseline.
+5. Зональное ревью и демонстрация пользователю. После Unity/headset-приёмки — актуализация тестов cc-5,
    финальный scoped candidate, проверка и fast-forward публикация origin/dev. До этого не вливать.
 
 Предыдущая последовательность и обращения ниже — исторический журнал до734; текущий порядок указан выше.

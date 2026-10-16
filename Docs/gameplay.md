@@ -866,7 +866,10 @@ B0/B1 PASS, свежий discovery — 8 fixtures/49 Runnable, штатный T1
 Две фазы PlayLaunch ServerOnly дали 9 случаев `NeedsReview`, без InvalidFixture, runtime errors и CameraFade.
 В738 T1 повторно49/49, пять диагностических случаев NeedsReview: подтверждены правильные source/target G,
 один новый Mk14 в sampled DirectorEquip inventory и движение тела вместе с proxy. Старые UNKNOWN не закрыты.
-Нужны полный матч, M8, сеть с наблюдателями, поздний вход и Quest-приёмка.
+В747 наблюдался полный Elimination до естественного конца; в751 — четыре завершённых раунда,
+adminStop→Warmup→второй матч до Round2 на тех же Mind с новой закупкой, errors/drops0.
+Открыты R08 без обязательного WeaponSystem, external finger-pose boundary, visual/source identity,
+Host M8/M10 со свежей базой, сеть с наблюдателями, поздний вход и Quest-приёмка.
 Подробности — [интеграция Blaze](../tasks/bots-fix/product-docs/bots-blaze-integration.md)
 и [текущий статус](../tasks/bots-fix/Readme.md).
 [BotCombatStand](../tasks/bots-fix/product-docs/bot-combat-stand.md) измеряет серверный тракт и фиксирует позы после SDK.

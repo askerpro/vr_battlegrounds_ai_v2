@@ -1,5 +1,5 @@
 // B8: только наблюдение precache/container/memory в собственном worker; SDK/состояние игры не меняет.
-const string Root = "tasks/bots-fix/reports/cc1-round2";
+const string Root = "tasks/bots-fix/reports/cc1-round1";
 const string Label = "p1-before-queue";
 string projectRoot = System.IO.Path.GetFullPath(Application.dataPath + "/..").Replace("\\", "/");
 if (projectRoot != "F:/CodexWorktrees/unity-editor-worker/Vr_Battlegrounds_ai")

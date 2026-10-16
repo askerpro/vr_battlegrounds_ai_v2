@@ -15,6 +15,29 @@ using VrBattlegrounds.Player.Avatars;
 
 namespace VrBattlegrounds.Bots
 {
+    /// <summary>Пассивный снимок решения директора. MindIdentity — непрозрачная ссылка, не право менять память бота.</summary>
+    public readonly struct BotDirectorEquipmentObservation
+    {
+        public readonly string Kind;
+        public readonly PlayerSession Session;
+        public readonly PlayerController Body;
+        public readonly object MindIdentity;
+        public readonly MapRunSnapshot Snapshot;
+        public readonly int ShopToken;
+        public readonly VrBattlegrounds.Arsenal.WeaponInfo Weapon;
+        public readonly bool? Accepted;
+        public readonly bool ContextReset, ArmBefore, ArmAfter;
+
+        public BotDirectorEquipmentObservation(string kind, PlayerSession session, PlayerController body, object mindIdentity,
+            MapRunSnapshot snapshot, int shopToken, VrBattlegrounds.Arsenal.WeaponInfo weapon, bool? accepted,
+            bool contextReset, bool armBefore, bool armAfter)
+        {
+            Kind = kind; Session = session; Body = body; MindIdentity = mindIdentity; Snapshot = snapshot;
+            ShopToken = shopToken; Weapon = weapon; Accepted = accepted; ContextReset = contextReset;
+            ArmBefore = armBefore; ArmAfter = armAfter;
+        }
+    }
+
     /// <summary>
     /// Боты — игроки без шлема (T-48: игровая фича, раньше — отладка). Только сервер. Создаётся
     /// по запросу: «Матч с ботами» на «Обзоре» планшета (<see cref="BotMatchStarter"/>), кнопки
@@ -47,6 +70,24 @@ namespace VrBattlegrounds.Bots
     public sealed class BotDirector : MonoBehaviour
     {
         public static BotDirector Instance { get; private set; }
+
+        /// <summary>Только наблюдение: без подписчиков снимки и списки вызовов не создаются.</summary>
+        public static event System.Action<BotDirectorEquipmentObservation> EquipmentObserved;
+
+        private static void ObserveEquipment(string kind, PlayerSession bot, PlayerController avatar, BotMind mind,
+            MapRunSnapshot snapshot, int token, bool contextReset, bool? accepted, bool armBefore, bool armAfter)
+        {
+            var handlers = EquipmentObserved;
+            if (handlers == null) return;
+            var observation = new BotDirectorEquipmentObservation(kind, bot, avatar, mind, snapshot, token,
+                mind.Purchase, accepted, contextReset, armBefore, armAfter);
+            foreach (System.Action<BotDirectorEquipmentObservation> handler in handlers.GetInvocationList())
+            {
+                // Диагностика не меняет исход Buy/OfferPurchase и не срывает Think чужим исключением.
+                try { handler(observation); }
+                catch (System.Exception) { /* Ошибки собственного журнала считает наблюдатель. */ }
+            }
+        }
 
         private static readonly ProfilerMarker ThinkMarker = new ProfilerMarker("BotDirector.Think");
 
@@ -312,7 +353,11 @@ namespace VrBattlegrounds.Bots
 
             bool alive = avatar.IsAlive;
             int token = BotSenses.ShopToken(avatar);
-            bool purchaseContextReady = mind.AutoEquip && TrySyncPurchaseContext(mind, avatar);
+            MapRunSnapshot purchaseSnapshot = default;
+            bool contextReset = false;
+            bool purchaseContextReady = mind.AutoEquip && TrySyncPurchaseContext(mind, avatar, out purchaseSnapshot, out contextReset);
+            if (contextReset)
+                ObserveEquipment("contextReset", bot, avatar, mind, purchaseSnapshot, token, true, null, gunner.ArmRequested, gunner.ArmRequested);
             bool shopped = mind.ShoppedFor(token);
             // В бою восприятие и маршруты принадлежат Blaze, а не всеведущему NearestEnemy. Без оружия (Unarmed)
             // Blaze не создаётся — не атакует и не просит выстрел; ноги — по приказу (домой, к закупке). Пассивный
@@ -346,23 +391,29 @@ namespace VrBattlegrounds.Bots
                 mind.Purchase = BotShopper.Buy(bot);
                 mind.ShopToken = token;
                 shopped = true;
+                ObserveEquipment("buy", bot, avatar, mind, purchaseSnapshot, token, contextReset, null, gunner.ArmRequested, gunner.ArmRequested);
             }
 
             if (mind.AutoEquip)
             {
                 if (BotOrders.ShouldArm(stage, alive, shopped))
                 {
+                    // OfferPurchase тоже может вызвать Arm: исходное значение снимаем до предложения.
+                    bool armBefore = gunner.ArmRequested;
                     if (purchaseContextReady && shopped && mind.Purchase != null &&
                         (!ReferenceEquals(mind.PurchaseOfferedBody, avatar) || mind.PurchaseOfferedToken != token))
                     {
                         // Даже отказ стрелка завершает предложение: не повторяем его из каждого тика.
                         mind.PurchaseOfferedBody = avatar;
                         mind.PurchaseOfferedToken = token;
-                        gunner.OfferPurchase(mind.Purchase);
+                        bool accepted = gunner.OfferPurchase(mind.Purchase);
+                        ObserveEquipment("offer", bot, avatar, mind, purchaseSnapshot, token, contextReset, accepted, armBefore, gunner.ArmRequested);
                     }
 
                     // Покупку принимает только OfferPurchase; без неё стрелок берёт штатный пистолет из кобуры.
                     gunner.Arm(null);
+                    if (!armBefore && gunner.ArmRequested)
+                        ObserveEquipment("armRequested", bot, avatar, mind, purchaseSnapshot, token, contextReset, null, false, true);
                 }
                 else if (stage == BotStage.NoMatch || stage == BotStage.BetweenRounds)
                     gunner.StandDown();
@@ -373,18 +424,20 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>Контекст закупки берётся только из опубликованного запуска и его текущего режима.</summary>
-        private static bool TrySyncPurchaseContext(BotMind mind, PlayerController avatar)
+        private static bool TrySyncPurchaseContext(BotMind mind, PlayerController avatar, out MapRunSnapshot snapshot, out bool changed)
         {
+            snapshot = default;
+            changed = false;
             MapReferee referee = MapReferee.Instance;
             GameMode mode = referee != null ? referee.ActiveGameMode : null;
             MapRunAuthority authority = MapRunAuthority.Instance;
             if (referee == null || mode == null || authority == null) return false;
 
-            MapRunSnapshot snapshot = authority.Current;
+            snapshot = authority.Current;
             if (!snapshot.IsReady || !snapshot.Key.IsValid || snapshot.ModeEpoch == 0 ||
                 snapshot.RefereeNetId != referee.netId || snapshot.ActiveModeNetId != mode.netId) return false;
 
-            mind.SyncPurchaseContext(snapshot.Key, snapshot.ModeEpoch, mode is EliminationMode ? null : avatar);
+            changed = mind.SyncPurchaseContext(snapshot.Key, snapshot.ModeEpoch, mode is EliminationMode ? null : avatar);
             return true;
         }
 

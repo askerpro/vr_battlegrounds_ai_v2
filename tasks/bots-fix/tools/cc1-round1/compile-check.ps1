@@ -4,6 +4,7 @@
 param(
     [string]$Work = (Join-Path $env:TEMP 'bots-cc1-round1-compile'),
     [string]$LangVersion = '6',
+    [string]$PayloadDirectory = $PSScriptRoot,
     [string[]]$Own = @(
         'Assets/Scripts/Bots/',
         'Assets/Scripts/Debug/BotCombatStand/',
@@ -13,7 +14,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path
-$payloadRoot = $PSScriptRoot
+$payloadRoot = (Resolve-Path -LiteralPath $PayloadDirectory).Path
 $botsMetadataRoot = 'F:/UnityProjects/Vr_Battlegrounds_ai'
 $csc = 'C:/Program Files/dotnet/sdk/9.0.311/Roslyn/bincore/csc.dll'
 if (Test-Path -LiteralPath $Work) { $Work = $Work + '-' + [DateTime]::UtcNow.Ticks }

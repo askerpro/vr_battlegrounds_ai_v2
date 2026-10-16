@@ -69,9 +69,9 @@ namespace VrBattlegrounds.Bots
         /// Директор сменил контекст закупки: новый запуск карты, режим или жизнь без раундов — новое решение.
         /// В Elimination <paramref name="body"/> — null: смена тела в том же раунде не оплачивает покупку повторно.
         /// </summary>
-        public void SyncPurchaseContext(MapRunKey runKey, ulong modeEpoch, PlayerController body)
+        public bool SyncPurchaseContext(MapRunKey runKey, ulong modeEpoch, PlayerController body)
         {
-            if (_shopRunKey == runKey && _shopModeEpoch == modeEpoch && ReferenceEquals(_shopBody, body)) return;
+            if (_shopRunKey == runKey && _shopModeEpoch == modeEpoch && ReferenceEquals(_shopBody, body)) return false;
 
             _shopRunKey = runKey;
             _shopModeEpoch = modeEpoch;
@@ -80,6 +80,7 @@ namespace VrBattlegrounds.Bots
             Purchase = null;
             PurchaseOfferedBody = null;
             PurchaseOfferedToken = -1;
+            return true;
         }
 
         public void Remember(BotBody body, int sceneHandle)

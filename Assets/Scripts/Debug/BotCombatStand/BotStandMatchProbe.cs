@@ -36,6 +36,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public string ExpiresUtc;
         /// <summary>Период промежуточной записи отчёта, секунды.</summary>
         public float WriteSeconds = 10f;
+        /// <summary>Только lifecycle-приёмка cc-2: решения директора и инвентарь. Для perf-замеров выключено.</summary>
+        public bool DirectorEquip;
     }
 
     /// <summary>
@@ -93,11 +95,11 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         }
 
         /// <summary>Финальная запись и остановка пробы этого процесса (B6 до Cancel). Путь отчёта или null.</summary>
-        public static string FinishActive(string reason)
+        public static string FinishActive(string reason, bool directorObservationCompleted = false)
         {
             BotStandMatchProbe probe = Active;
             if (probe == null) return null;
-            probe.Finish(reason);
+            probe.Finish(reason, directorObservationCompleted);
             return probe.ReportPath;
         }
 
@@ -215,6 +217,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private readonly object _logLock = new object();
         private int _errors, _exceptions, _asserts, _relayErrors, _relayWarnings, _warnings;
         private readonly List<string> _errorSamples = new List<string>();
+        private BotStandDirectorEquipJournal _directorEquip;
+        private float _nextDirectorInventory;
+        private bool _directorObservationCompleted;
 
         public void Configure(BotStandMatchProbeRequest request)
         {
@@ -230,12 +235,21 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 _markerSumByLabel[i] = new double[MarkerNames.Length];
                 _markerMaxByLabel[i] = new float[MarkerNames.Length];
             }
+            if (isActiveAndEnabled) StartDirectorObservation();
+        }
+
+        private void StartDirectorObservation()
+        {
+            // AddComponent вызывает OnEnable до Configure; подписываемся после получения opt-in заявки.
+            if (_directorEquip == null && !_finished && _request != null && _request.DirectorEquip)
+                _directorEquip = new BotStandDirectorEquipJournal();
         }
 
         private float Now => Time.realtimeSinceStartup - _start;
 
         private void OnEnable()
         {
+            StartDirectorObservation();
             Application.logMessageReceivedThreaded += OnLog;
             Application.quitting += OnQuitting;
             for (int i = 0; i < MarkerNames.Length; i++) _recorders[i] = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, MarkerNames[i]);
@@ -268,6 +282,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
         private void Teardown()
         {
+            _directorEquip?.Dispose();
             EliminationMode.RoundPhaseChangedServer -= OnPhaseServer;
             MatchEconomy.TransactionServer -= OnTransaction;
             MatchEconomy.MoneyChangedLocal -= OnMoneyChanged;
@@ -295,18 +310,27 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         }
 
         /// <summary>Закрыть окно, записать финальный отчёт и перестать накапливать (B6 — до Cancel).</summary>
-        public void Finish(string reason)
+        public void Finish(string reason, bool directorObservationCompleted = false)
         {
             if (_finished) return;
             CloseWindow();
             _finishReason = reason;
             _finished = true;
+            // Финальный файл возможен и после обрыва. Завершённое окно явно подтверждает владелец пакета.
+            _directorObservationCompleted = directorObservationCompleted;
+            _directorEquip?.SampleInventory("finish");
+            _directorEquip?.Dispose();
             Write(true, reason);
         }
 
         private void Update()
         {
             if (_finished || _request == null) return;
+            if (_directorEquip != null && Time.realtimeSinceStartup >= _nextDirectorInventory)
+            {
+                _directorEquip?.SampleInventory();
+                _nextDirectorInventory = Time.realtimeSinceStartup + 1f;
+            }
             bool server = NetworkServer.active;
             bool clientOnly = NetworkClient.active && !server;
             if (server) _everServer = true;
@@ -868,6 +892,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["frame"] = FrameReport(),
                     ["console"] = ConsoleReport()
                 };
+                report["directorEquipEnabled"] = _request.DirectorEquip;
+                if (_directorEquip != null) report["directorEquip"] = _directorEquip.Report(final && _directorObservationCompleted, reason);
                 if (_everServer)
                 {
                     report["match"] = MatchReport();

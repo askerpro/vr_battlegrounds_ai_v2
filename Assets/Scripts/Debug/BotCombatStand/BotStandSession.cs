@@ -27,6 +27,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public System.Collections.Generic.IReadOnlyList<PlayerSession> OwnedBots => _ownedBots;
         /// <summary>Сценарий снаряжения проверяемого бота (этап pf-equipment): начало, покупка, смерть, возрождение.</summary>
         public BotStandEquipmentScript Equipment { get; private set; }
+        public BotStandDirectorEquipJournal DirectorEquip { get; private set; }
         private BotStandScenarioId _id;
         private BotStandRunOptions _options;
         private int _configuredRig;
@@ -45,15 +46,28 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public void Begin(BotStandScenarioId id, WeaponInfo weapon, BotStandRunOptions options, WeaponInfo purchase = null)
         {
             _id = id; _options = options;
-            BotStandEquipmentScript.Validate(options, weapon, purchase);
+            bool directorEquip = id == BotStandScenarioId.DirectorEquip;
+            if (directorEquip) BotStandDirectorEquipJournal.ValidateOptions(options);
+            else BotStandEquipmentScript.Validate(options, weapon, purchase);
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority)
                 throw new InvalidOperationException("Стенду нужна серверная authority.");
             if (BotDirector.Instance != null && BotDirector.Instance.Bots.Count != 0)
                 throw new InvalidOperationException("Есть чужие боты — стенд их не удаляет.");
             var director = BotDirector.EnsureInstance();
-            Subject = director.AddBot(new BotAddOptions { AutoEquip = false });
+            if (directorEquip)
+            {
+                Equipment = null;
+                DirectorEquip = new BotStandDirectorEquipJournal();
+            }
+            Subject = director.AddBot(new BotAddOptions { AutoEquip = directorEquip });
             if (Subject != null) _ownedBots.Add(Subject);
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
+            if (directorEquip)
+            {
+                DirectorEquip.RestrictTo(Subject);
+                DirectorEquip.SampleInventory("afterAddBot");
+                return; // Штатный директор владеет телом, закупкой и вооружением; контрольной цели нет.
+            }
             if (options.AvatarIndex >= 0)
                 AvatarManager.Instance.ChangeAvatar(null, Subject, Subject.TeamIndex, options.AvatarIndex);
             Place(Subject, Lane(id == BotStandScenarioId.T03 || id == BotStandScenarioId.T04 || id == BotStandScenarioId.T05 ? new Vector3(-3.5f, 0f, -4f) : new Vector3(0f, 0f, -5f)), 0f);
@@ -188,6 +202,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         public void Tick(float elapsed, float duration)
         {
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority) return;
+            DirectorEquip?.SampleInventory();
             // Снаряжение проверяемого бота по времени (покупка, смерть, возрождение) — штатными серверными путями.
             Equipment?.Tick(Subject, elapsed);
             var brain = Subject?.ActiveAvatar != null ? Subject.ActiveAvatar.GetComponent<BotCombatDriver>()?.Brain : null;
@@ -225,6 +240,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
         public void Dispose()
         {
+            DirectorEquip?.Dispose();
             if (_readinessSubscribed) UxrManager.AvatarsUpdated -= ObserveReadiness;
             _readinessSubscribed = false;
             ReleaseReadinessFire();
@@ -245,6 +261,14 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
             _target = null;
             if(hadActors && (BotDirector.Instance==null || BotDirector.Instance.Bots.Count==0)) BotNavMesh.Clear();
+        }
+
+        public void WriteDirectorMetrics(BotStandCaseResult result, bool completed, string reason)
+        {
+            if (DirectorEquip == null) return;
+            DirectorEquip.SampleInventory("final");
+            DirectorEquip.Dispose();
+            result.Metrics["directorEquip"] = DirectorEquip.Report(completed, reason);
         }
     }
 }

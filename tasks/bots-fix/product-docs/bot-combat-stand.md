@@ -81,6 +81,13 @@ T1 повторно 49/49 с полным coverage. G source/target 30/30 сог
 в sampled inventory. Полное число спавнов и неупражнённые ветви не объявляются доказанными.
 [Разбор738](../changelog/2026-10-15-round9.md).
 
+В751 отдельно сняты две пары обеих рук G (old1487/new2520); 38 shots/29 hits/foreign0.
+Кадры и frozen geometry сохранены, но pose/source identity неполна, fit analysis_incomplete,
+±2мм не являются owner acceptance. M2 подтвердил четыре завершённых раунда и
+adminStop→Warmup→второй матч до Round2 на тех же Mind с новой закупкой, errors/drops0.
+Найден отдельный блокер R08 без обязательного WeaponSystem; передан владельцу оружия.
+Ни Host performance, ни S8, ни Quest этим не проверены. [Область результатов751](../changelog/2026-10-15-visual-lifecycle751.md).
+
 История доказательств сохраняется отдельно: в ticket679 PPK получил 67/68, исторический отказ
 не превращается в PASS после нового T1. Ticket687 дал 49/49 PASS штатного T1 на своём точном
 входе с borrowed SDK; это не полный runtime, SDK acceptance или Quest. Исторические результаты

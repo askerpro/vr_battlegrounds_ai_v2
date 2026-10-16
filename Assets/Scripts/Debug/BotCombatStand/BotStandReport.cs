@@ -21,6 +21,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             {
                 html.Append("<article id='").Append(item.Id).Append('-').Append(item.Seed).Append("'><h2>").Append(item.Id).Append('/').Append(item.Seed).Append(" — ").Append(item.Status).Append("</h2><p>").Append(E(item.Error)).Append(E(string.Join("; ",item.Findings))).Append("</p>");
                 if(item.Images.Count>0) html.Append("<p><a href='").Append(item.Id).Append('-').Append(item.Seed).Append("/report.html'>Открыть все ракурсы и кисти</a></p>");
+                if (item.Metrics.TryGetValue("directorEquip", out var directorEquip))
+                    html.Append("<p>DirectorEquip — пассивные решения директора и сетевой инвентарь. UNKNOWN не означает PASS; lifecycle проверяется отдельной непрерывной пробой матча.</p><details><summary>Журнал DirectorEquip</summary><pre>")
+                        .Append(E(Newtonsoft.Json.JsonConvert.SerializeObject(directorEquip, Newtonsoft.Json.Formatting.Indented))).Append("</pre></details>");
                 if(item.Frames.Count>0)
                 {
                     html.Append("<svg viewBox='0 0 240 200'><rect x='1' y='1' width='238' height='198' fill='none' stroke='#667'/>");

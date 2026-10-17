@@ -24,6 +24,8 @@ namespace VrBattlegrounds.DevTools
         public bool AutoGoLive = true;
         public int MinPlayers = 1;
         public int BotCount;
+        public bool UseRandomSeed;
+        public int RandomSeed;
         public bool PauseOnFocusLoss = true;
         public bool ScreenshotOnButtonB;
         public bool AllowUnmarked;

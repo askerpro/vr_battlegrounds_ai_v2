@@ -283,6 +283,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 ConnectionEpoch = _connectionEpoch, AvatarNetId = session?.ActiveAvatarNetId ?? 0, SessionNetId = session?.netId ?? 0,
                 ServerSessions = PlayersManager.Instance?.Sessions.Count ?? 0, ClientManagerReady = GameNetworkDiscovery.ClientManagerReady,
                 DeviceToken = ClientDeviceIdentity.HasTemporaryToken ? ClientDeviceIdentity.BaseToken : PlayerPrefs.GetString("DeviceToken", ""),
+                RandomSeedApplied = DebugBootstrapGate.RandomSeedApplied,
+                AppliedRandomSeed = DebugBootstrapGate.AppliedRandomSeed,
+                RandomSeedAppliedBeforeBots = DebugBootstrapGate.RandomSeedAppliedBeforeBots,
+                RandomSeedAppliedScene = DebugBootstrapGate.RandomSeedAppliedScene,
 #if !VRBG_NO_E2E
                 E2EStatus = _e2e != null ? _e2e.Result?.Status : null, E2EFinished = _e2e != null && _e2e.Finished,
                 E2EPassed = _e2e != null && _e2e.Result != null && _e2e.Result.Passed

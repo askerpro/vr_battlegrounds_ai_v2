@@ -43,6 +43,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public string LogArchiveDirectory;
         /// <summary>Готовые архивы «&lt;participant&gt;-&lt;pid&gt;.log»; пишутся при Release/Leave участника, во время running пусто.</summary>
         public string[] LogArchives;
+        public bool RandomSeedApplied;
+        public int AppliedRandomSeed;
+        public bool RandomSeedAppliedBeforeBots;
+        public string RandomSeedAppliedScene;
     }
 
     /// <summary>Один facade окна и MCP. Backend запуска остаётся у PlayModeTestStand/штатной сети.</summary>
@@ -230,6 +234,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
             _lease = RequestOwner.Acquire(owner, plan.Configuration);
             try
             {
+                DebugBootstrapGate.ResetRandomSeedReceipt();
                 SessionState.SetString(RequestKey, JsonUtility.ToJson(new RequestState { Owner = owner, RunId = RequestOwner.RunId, Plan = plan }));
                 SessionState.EraseString(ErrorKey);
             }
@@ -310,11 +315,18 @@ namespace VrBattlegrounds.EditorTools.TestStand
             string[] archives = archive != null && (run == null || run.Phase != "running") && Directory.Exists(archive)
                 ? Directory.GetFiles(archive, "*.log").Select(p => p.Replace('\\', '/')).OrderBy(p => p, StringComparer.Ordinal).ToArray()
                 : Array.Empty<string>();
+            var participants = ReadRequest() != null && run == null ? Array.Empty<StandParticipantState>() : backend.Participants;
+            var seedParticipant = participants.FirstOrDefault(p => p.Server) ?? participants.FirstOrDefault(p => p.RandomSeedApplied);
+            bool nativeSeed = seedParticipant == null && ReadRequest()?.Owner == "native-play" && DebugBootstrapGate.RandomSeedApplied;
             return JsonUtility.ToJson(new PlayLaunchStatus { RunId = runId,
                 Owner = run?.Owner ?? ReadRequest()?.Owner, State = state, Error = error, Ready = ready,
                 CleanupPassed = ReadRequest() != null && run == null ? false : backend.CleanupPassed, Playing = backend.Playing,
-                Participants = ReadRequest() != null && run == null ? Array.Empty<StandParticipantState>() : backend.Participants,
-                LogArchiveDirectory = archive, LogArchives = archives });
+                Participants = participants,
+                LogArchiveDirectory = archive, LogArchives = archives,
+                RandomSeedApplied = seedParticipant?.RandomSeedApplied ?? nativeSeed,
+                AppliedRandomSeed = seedParticipant != null ? seedParticipant.AppliedRandomSeed : (nativeSeed ? DebugBootstrapGate.AppliedRandomSeed : 0),
+                RandomSeedAppliedBeforeBots = seedParticipant?.RandomSeedAppliedBeforeBots ?? (nativeSeed && DebugBootstrapGate.RandomSeedAppliedBeforeBots),
+                RandomSeedAppliedScene = seedParticipant != null ? seedParticipant.RandomSeedAppliedScene : (nativeSeed ? DebugBootstrapGate.RandomSeedAppliedScene : null) });
         }
         public static string Cancel(string runId, string owner)
         {

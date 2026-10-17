@@ -14,14 +14,36 @@ namespace VrBattlegrounds.DevTools
         public static bool IsSuppressed { get; private set; }
         private static ManagedLaunchScope _managed;
         public static bool ManagedLaunchActive => _managed != null;
+        public static bool RandomSeedApplied { get; private set; }
+        public static int AppliedRandomSeed { get; private set; }
+        public static bool RandomSeedAppliedBeforeBots { get; private set; }
+        public static string RandomSeedAppliedScene { get; private set; }
+
         public static System.IDisposable BeginManagedLaunch()
         {
             if (_managed != null) throw new System.InvalidOperationException("У launch уже есть локальный владелец.");
+            ResetRandomSeedReceipt();
             _managed = new ManagedLaunchScope(); return _managed;
         }
         private sealed class ManagedLaunchScope : System.IDisposable
         {
             public void Dispose() { if (ReferenceEquals(_managed, this)) _managed = null; }
+        }
+
+        public static void RecordRandomSeedApplied(int seed, bool beforeBots, string sceneName)
+        {
+            RandomSeedApplied = true;
+            AppliedRandomSeed = seed;
+            RandomSeedAppliedBeforeBots = beforeBots;
+            RandomSeedAppliedScene = sceneName;
+        }
+
+        public static void ResetRandomSeedReceipt()
+        {
+            RandomSeedApplied = false;
+            AppliedRandomSeed = 0;
+            RandomSeedAppliedBeforeBots = false;
+            RandomSeedAppliedScene = null;
         }
 
         /// <summary>
@@ -59,6 +81,7 @@ namespace VrBattlegrounds.DevTools
             EditorRoleOverride = null;
             EditorClientAddressOverride = null;
             EditorBeforeServerStart = null;
+            ResetRandomSeedReceipt();
         }
     }
 }

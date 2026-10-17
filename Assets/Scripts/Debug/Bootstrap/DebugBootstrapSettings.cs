@@ -49,6 +49,20 @@ namespace VrBattlegrounds.DevTools
             set => PlayLaunchSettings.Change(c => c.BotCount = System.Math.Max(0, value));
         }
 
+        /// <summary>Фиксировать ли генератор случайных чисел Unity перед первичным спавном ботов на сервере.</summary>
+        public static bool UseRandomSeed
+        {
+            get => PlayLaunchSettings.Effective.UseRandomSeed;
+            set => PlayLaunchSettings.Change(c => c.UseRandomSeed = value);
+        }
+
+        /// <summary>Зерно генератора случайных чисел Unity при <see cref="UseRandomSeed"/>.</summary>
+        public static int RandomSeed
+        {
+            get => PlayLaunchSettings.Effective.RandomSeed;
+            set => PlayLaunchSettings.Change(c => c.RandomSeed = value);
+        }
+
         /// <summary>
         /// Карта, которую загрузить после старта сервера; пусто — не грузить. Только на текущую сессию редактора:
         /// её пишет <c>PlayModeStartFromOffline</c>, когда Play жмут на открытой карте.

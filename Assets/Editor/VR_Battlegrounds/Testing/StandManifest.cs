@@ -187,6 +187,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public string E2EStatus;
         public bool E2EFinished;
         public bool E2EPassed;
+        public bool RandomSeedApplied;
+        public int AppliedRandomSeed;
+        public bool RandomSeedAppliedBeforeBots;
+        public string RandomSeedAppliedScene;
     }
 
     [Serializable]

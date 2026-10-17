@@ -49,6 +49,7 @@ namespace VrBattlegrounds.DevTools
 
         // Флаг: карта уже была запрошена в этой сессии — не грузить повторно.
         private bool _mapLoadRequested;
+        private bool _randomSeedApplied;
 
         // Перенос аватара в зону команды при спавне (TryTeleportToSpawnZone) удалён:
         // игровая логика на телепорт не опирается. Спавн сам берёт зону команды
@@ -236,6 +237,17 @@ namespace VrBattlegrounds.DevTools
             // Боты — как игроки, подключившиеся к серверу сразу: первая загруженная сцена.
             // EnsureCount только добавляет, повторная смена сцены лишних не создаст.
             int botCount = DebugBootstrapSettings.BotCount;
+            if (!_randomSeedApplied && DebugBootstrapSettings.UseRandomSeed)
+            {
+                _randomSeedApplied = true;
+                int seed = DebugBootstrapSettings.RandomSeed;
+                string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                string appliedScene = string.IsNullOrEmpty(activeScene) ? sceneName : activeScene;
+                UnityEngine.Random.InitState(seed);
+                DebugBootstrapGate.RecordRandomSeedApplied(seed, true, appliedScene);
+                GameLog.Debug.Info(
+                    $"[DebugOrchestrator] OnServerSceneChanged: применён Random.InitState({seed}) до BotDirector.EnsureCount({botCount}) на сцене='{appliedScene}'");
+            }
             if (botCount > 0)
             {
                 VrBattlegrounds.Bots.BotDirector.EnsureInstance()?.EnsureCount(botCount);

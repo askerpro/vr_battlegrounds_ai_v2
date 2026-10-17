@@ -1,8 +1,8 @@
 # Адресный стенд и интеграция Play Launch
 
-Обновлено: 2026-10-14 (возобновление Codex, свежая сверка хаба rev 36). Владелец: эксперт `launch-infra`. Worktree:
+Обновлено: 2026-10-17. Владелец: эксперт `launch-infra`. Worktree:
 `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand` (общая с quest-perf-pipeline).
-План хаба rev 36. **Все этапы влиты; активной работы нет.** Кандидаты следующих этапов — бэклог эксперта
+План хаба rev 36. Все принятые этапы и поддержка детерминированного seed (Variant B `UseRandomSeed`/`RandomSeed` + 4 поля квитанции в `StandParticipantStatus` по запросу `bots-fix` 8861/8869) влиты в `origin/dev`. Кандидаты следующих этапов — бэклог эксперта
 `experts/launch-infra/backlog.md` (0c stand-deferred-client, 0d stand-kcp-timeout, 0e stand-back-to-back, 0h хвосты).
 
 ## Ждёт пользователя
@@ -13,6 +13,7 @@
 
 - 2026-10-12: «смок тесты на то, что игра работает по сети мы будем делать на ботах… надо их разблокировать» →
   этап `stand-preview-preflight` (принят и влит 2026-10-13, `d2fe15ae`).
+- 2026-10-17: влить оба готовых инфраструктурных пакета (`gpu-launch-inputs` r2 и Variant B `UseRandomSeed`/`RandomSeed` для `vr-test-stand`) в `origin/dev`, чтобы `performance` и `bots-fix` забрали их штатным `git rebase origin/dev`.
 
 ## Цель и границы
 

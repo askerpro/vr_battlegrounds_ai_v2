@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
+using Mirror;
 using UltimateXR.Avatar;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
@@ -10,6 +11,7 @@ using UltimateXR.Manipulation;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Editor.Avatars.Workbench;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -51,13 +53,15 @@ namespace VrBattlegrounds.Editor.Avatars
         public const string CyborgBaseGuid              = "71b74b0d08444f49bbb7aa2828d0890a";
         public const string CyborgAvatarGuid            = "8e0e06323e4754f479a9f19788554652";
         public const string MefCyborgPlayerGuid         = "2aa0ab6714e2413f9d829637b62df0c0";
+        public const string SdkHandsBasePath            = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
         public const string CanonicalCyborgHandsBasePath = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
         public const string LegacyMefCyborgBasePath     = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Base.prefab";
         public const string CyborgAvatarPath            = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
-        public const string MefCyborgPlayerPath         = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Player.prefab";
-        public const string MefCyborgModelPath          = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/Model/MEF_CyborgHands.fbx";
+        public const string MefCyborgPlayerPath         = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
+        public const string MefCyborgPlayerBlackPath    = "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab";
+        public const string MefCyborgModelPath          = "Assets/Prefabs/Player/MEF_cyborg_hands/Model/MEF_CyborgHands.fbx";
 
-        private const string CyborgFolder = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands";
+        private const string CyborgFolder = "Assets/Prefabs/Player/MEF_cyborg_hands";
 
         public string Name;
 
@@ -150,7 +154,7 @@ namespace VrBattlegrounds.Editor.Avatars
 
         /// <summary>
         /// Единый профиль общей базы CyborgHandsBase для всех аватаров с пересаженными руками киборга
-        /// (Cyborg_Player, MEF_cyborg_hands_Player и др.).
+        /// (MEF_cyborg_hands_Player, MEF_cyborg_hands_Player_Black и др.).
         /// </summary>
         public static GripTargetProfile CyborgHands()
         {
@@ -210,12 +214,12 @@ namespace VrBattlegrounds.Editor.Avatars
     }
 
     /// <summary>
-    /// Перестройка и проверка иерархии префабов с кистями киборга по целевой схеме:
-    /// <c>PlayerBase_SdkHands -&gt; CyborgHandsBase -&gt; { PlayerControllersCyborgAvatar, MEF_cyborg_hands_Player }</c>.
+    /// Перестройка и проверка иерархии префабов с кистями киборга и вывод MEF_cyborg_hands из Experimental в основные аватары.
     /// </summary>
     public static class CyborgHandsPrefabTree
     {
-        private const string BaseStandaloneRigName = "CyborgHands_Rig";
+        private const string UnusedFolder = "Assets/Prefabs/Player/Unused";
+        private const string ManagersPrefabPath = "Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
 
         [MenuItem("VR Battlegrounds/Avatars/Черновики/Cyborg Hands/Validate CyborgHandsBase Prefab Tree")]
         public static void ValidateFromMenu()
@@ -232,15 +236,17 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>
-        /// Выполняет миграцию дерева префабов CyborgHandsBase с сохранением GUID всех существующих аватаров.
+        /// Выполняет миграцию дерева префабов CyborgHandsBase, вывод MEF_cyborg_hands в основные аватары,
+        /// сборку чёрного варианта и перенос старых MEF в папку Unused с сохранением GUID.
         /// </summary>
         public static string RebuildTree()
         {
+            PromoteExperimentalAndArchiveUnused();
             string basePath = EnsureCanonicalBasePath();
             ReplaceNativeMefGlovesWithCyborgHandsInBase(basePath);
-            StripBodyRenderersAndDetachParentInBase(basePath);
-            EnsureChildVariantUsesBase(GripTargetProfile.MefCyborgPlayerPath, basePath, clearHandPosesOverride: false);
-            RebaseCyborgAvatarToCyborgHandsBase(GripTargetProfile.CyborgAvatarPath, basePath);
+            ConfigureBaseRenderersAndParent(basePath);
+            EnsureMefCyborgPlayerVariant(GripTargetProfile.MefCyborgPlayerPath, basePath);
+            ConfigureMainAvatarsRegistryTeamsAndCorpses();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return ValidateTree();
@@ -258,7 +264,54 @@ namespace VrBattlegrounds.Editor.Avatars
             AppendAvatarLine(sb, "CyborgHandsBase", basePath);
             AppendAvatarLine(sb, "PlayerControllersCyborgAvatar", GripTargetProfile.CyborgAvatarPath);
             AppendAvatarLine(sb, "MEF_cyborg_hands_Player", GripTargetProfile.MefCyborgPlayerPath);
+            AppendAvatarLine(sb, "MEF_cyborg_hands_Player_Black", GripTargetProfile.MefCyborgPlayerBlackPath);
             return sb.ToString();
+        }
+
+        private static void PromoteExperimentalAndArchiveUnused()
+        {
+            if (!AssetDatabase.IsValidFolder(UnusedFolder))
+            {
+                AssetDatabase.CreateFolder("Assets/Prefabs/Player", "Unused");
+            }
+
+            MoveAssetIfPresent(
+                "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Player.prefab",
+                GripTargetProfile.MefCyborgPlayerPath);
+            MoveAssetIfPresent(
+                "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands",
+                "Assets/Prefabs/Player/MEF_cyborg_hands");
+
+            MoveAssetIfPresent("Assets/Prefabs/Player/Optimized_MEF_Player.prefab", $"{UnusedFolder}/Optimized_MEF_Player.prefab");
+            MoveAssetIfPresent("Assets/Prefabs/Player/Optimized_MEF_Player_Black.prefab", $"{UnusedFolder}/Optimized_MEF_Player_Black.prefab");
+            MoveAssetIfPresent("Assets/Prefabs/Player/MEF_Base_Avatar.prefab", $"{UnusedFolder}/MEF_Base_Avatar.prefab");
+            MoveAssetIfPresent("Assets/Prefabs/Player/Experimental/MEF_sdk_hands", $"{UnusedFolder}/MEF_sdk_hands");
+            MoveAssetIfPresent("Assets/Prefabs/Player/Experimental/Optimized_MEF_Player_VRIK.prefab", $"{UnusedFolder}/Optimized_MEF_Player_VRIK.prefab");
+            MoveAssetIfPresent("Assets/Data/Player/Avatars/MEF_cyborg_hands.asset", $"{UnusedFolder}/MEF_cyborg_hands.asset");
+            MoveAssetIfPresent("Assets/Data/Player/Avatars/MEF_sdk_hands.asset", $"{UnusedFolder}/MEF_sdk_hands.asset");
+
+            if (AssetDatabase.IsValidFolder("Assets/Prefabs/Player/Experimental"))
+            {
+                string[] remaining = AssetDatabase.FindAssets("", new[] { "Assets/Prefabs/Player/Experimental" });
+                if (remaining.Length == 0)
+                {
+                    AssetDatabase.DeleteAsset("Assets/Prefabs/Player/Experimental");
+                }
+            }
+        }
+
+        private static void MoveAssetIfPresent(string sourcePath, string destPath)
+        {
+            if (string.Equals(sourcePath, destPath, StringComparison.OrdinalIgnoreCase)) return;
+            bool sourceExists = File.Exists(sourcePath) || Directory.Exists(sourcePath) || AssetDatabase.IsValidFolder(sourcePath);
+            bool destExists = File.Exists(destPath) || Directory.Exists(destPath) || AssetDatabase.IsValidFolder(destPath);
+            if (!sourceExists || destExists) return;
+
+            string error = AssetDatabase.MoveAsset(sourcePath, destPath);
+            if (!string.IsNullOrEmpty(error))
+            {
+                throw new InvalidOperationException($"Не удалось переместить {sourcePath} -> {destPath}: {error}");
+            }
         }
 
         private static void AppendAvatarLine(StringBuilder sb, string label, string path)
@@ -414,7 +467,7 @@ namespace VrBattlegrounds.Editor.Avatars
                     }
                 }
 
-                PrefabUtility.SaveAsPrefabAsset(playerRoot, GripTargetProfile.MefCyborgPlayerPath);
+                AvatarMaintenanceTools.SavePrefab(playerRoot, GripTargetProfile.MefCyborgPlayerPath);
             }
             finally
             {
@@ -423,22 +476,24 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>
-        /// Делает <c>CyborgHandsBase</c> корневым префабом ветки киборг-рук (<c>_parentPrefab = null</c> без <c>PlayerBase_SdkHands</c>)
-        /// и скрывает меши тела в базовом префабе, оставляя видимыми только кисти киборга на гуманоидном риге.
+        /// Сохраняет наследование <c>CyborgHandsBase -&gt; PlayerBase_SdkHands</c> и скрывает меши тела в базовом префабе,
+        /// оставляя видимыми в самой базе только кисти киборга на гуманоидном риге.
         /// </summary>
-        private static void StripBodyRenderersAndDetachParentInBase(string basePath)
+        private static void ConfigureBaseRenderersAndParent(string basePath)
         {
+            var sdkHandsBaseGo = AssetDatabase.LoadAssetAtPath<GameObject>(GripTargetProfile.SdkHandsBasePath);
             var baseRoot = PrefabUtility.LoadPrefabContents(basePath);
             try
             {
+                baseRoot.name = Path.GetFileNameWithoutExtension(basePath);
                 var avatar = baseRoot.GetComponent<UxrAvatar>();
                 if (avatar != null)
                 {
                     var so = new SerializedObject(avatar);
                     var parentProp = so.FindProperty("_parentPrefab");
-                    if (parentProp != null)
+                    if (parentProp != null && sdkHandsBaseGo != null)
                     {
-                        parentProp.objectReferenceValue = null;
+                        parentProp.objectReferenceValue = sdkHandsBaseGo;
                     }
 
                     var guidProp = so.FindProperty("__prefabGuid") ?? so.FindProperty("_prefabGuid");
@@ -456,149 +511,73 @@ namespace VrBattlegrounds.Editor.Avatars
                     bool isHandRenderer =
                         smr.name.IndexOf("Hand", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         smr.name.IndexOf("Glove", StringComparison.OrdinalIgnoreCase) >= 0;
-                    if (!isHandRenderer)
-                    {
-                        smr.enabled = false;
-                    }
+                    smr.enabled = isHandRenderer;
                 }
 
-                PrefabUtility.SaveAsPrefabAsset(baseRoot, basePath);
+                AvatarMaintenanceTools.SavePrefab(baseRoot, basePath);
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(baseRoot);
             }
-        }
 
-        private static void SetGrabberRendererEntry(SerializedProperty element, UxrGrabber grabber, Renderer handRenderer)
-        {
-            if (element == null) return;
-            var grabberProp = element.FindPropertyRelative("_grabber");
-            var rendererProp = element.FindPropertyRelative("_handRenderer");
-            if (grabberProp != null) grabberProp.objectReferenceValue = grabber;
-            if (rendererProp != null) rendererProp.objectReferenceValue = handRenderer;
-        }
-
-        private static UxrGrabber EnsureGrabber(Transform wrist, string grabberName, UxrHandSide side, Renderer handRenderer, UxrAvatar donorAvatar, bool isLeft)
-        {
-            if (wrist == null) return null;
-            var grabberTransform = wrist.Find(grabberName);
-            if (grabberTransform == null)
+            var savedBaseGo = AssetDatabase.LoadAssetAtPath<GameObject>(basePath);
+            var savedBaseAvatar = savedBaseGo != null ? savedBaseGo.GetComponent<UxrAvatar>() : null;
+            if (savedBaseAvatar != null && sdkHandsBaseGo != null)
             {
-                var go = new GameObject(grabberName);
-                grabberTransform = go.transform;
-                grabberTransform.SetParent(wrist, false);
-            }
-
-            UxrGrabber donorGrabber = null;
-            foreach (var g in donorAvatar.GetComponentsInChildren<UxrGrabber>(true))
-            {
-                if (g != null && g.Side == side)
-                {
-                    donorGrabber = g;
-                    break;
-                }
-            }
-
-            if (donorGrabber != null)
-            {
-                grabberTransform.localPosition = donorGrabber.transform.localPosition;
-                grabberTransform.localRotation = donorGrabber.transform.localRotation;
-                grabberTransform.localScale = donorGrabber.transform.localScale;
-            }
-
-            var grabber = grabberTransform.GetComponent<UxrGrabber>();
-            if (grabber == null) grabber = grabberTransform.gameObject.AddComponent<UxrGrabber>();
-
-            var so = new SerializedObject(grabber);
-            var sideProp = so.FindProperty("_side");
-            if (sideProp != null) sideProp.enumValueIndex = (int)side;
-            var rendererProp = so.FindProperty("_handRenderer");
-            if (rendererProp != null) rendererProp.objectReferenceValue = handRenderer;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            return grabber;
-        }
-
-        private static void MapHandProperty(SerializedObject targetSo, SerializedObject donorSo, string prefix, Transform targetRigRoot)
-        {
-            MapBoneRef(targetSo, donorSo, $"{prefix}._wrist", targetRigRoot);
-            foreach (string finger in new[] { "_thumb", "_index", "_middle", "_ring", "_little" })
-            {
-                MapBoneRef(targetSo, donorSo, $"{prefix}.{finger}._metacarpal", targetRigRoot);
-                MapBoneRef(targetSo, donorSo, $"{prefix}.{finger}._proximal", targetRigRoot);
-                MapBoneRef(targetSo, donorSo, $"{prefix}.{finger}._intermediate", targetRigRoot);
-                MapBoneRef(targetSo, donorSo, $"{prefix}.{finger}._distal", targetRigRoot);
+                var savedSo = new SerializedObject(savedBaseAvatar);
+                var parentProp = savedSo.FindProperty("_parentPrefab");
+                if (parentProp != null) parentProp.objectReferenceValue = sdkHandsBaseGo;
+                var guidProp = savedSo.FindProperty("__prefabGuid") ?? savedSo.FindProperty("_prefabGuid");
+                if (guidProp != null) guidProp.stringValue = GripTargetProfile.CyborgBaseGuid;
+                savedSo.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SavePrefabAsset(savedBaseGo);
             }
         }
 
-        private static void MapBoneRef(SerializedObject targetSo, SerializedObject donorSo, string propertyPath, Transform targetRigRoot)
-        {
-            var donorProp = donorSo.FindProperty(propertyPath);
-            var targetProp = targetSo.FindProperty(propertyPath);
-            if (donorProp == null || targetProp == null) return;
-
-            var donorTransform = donorProp.objectReferenceValue as Transform;
-            targetProp.objectReferenceValue = donorTransform != null
-                ? FindTransformByName(targetRigRoot, donorTransform.name)
-                : null;
-        }
-
-        private static void CopyVector3Property(SerializedObject targetSo, SerializedObject donorSo, string propertyPath)
-        {
-            var donorProp = donorSo.FindProperty(propertyPath);
-            var targetProp = targetSo.FindProperty(propertyPath);
-            if (donorProp != null && targetProp != null)
-            {
-                targetProp.vector3Value = donorProp.vector3Value;
-            }
-        }
-
-        private static void RebaseCyborgAvatarToCyborgHandsBase(string cyborgAvatarPath, string basePath)
-        {
-            string text = File.ReadAllText(cyborgAvatarPath, Encoding.UTF8);
-            string updated = Regex.Replace(
-                text,
-                @"(\b(?:m_TransformParent|m_SourcePrefab):\s*\{fileID:\s*100100000,\s*guid:\s*)" + GripTargetProfile.SdkHandsBaseGuid + @"(\b)",
-                "${1}" + GripTargetProfile.CyborgBaseGuid + "${2}");
-            if (!string.Equals(text, updated, StringComparison.Ordinal))
-            {
-                File.WriteAllText(cyborgAvatarPath, updated.Replace("\r\n", "\n"), new UTF8Encoding(false));
-                AssetDatabase.ImportAsset(cyborgAvatarPath, ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            EnsureChildVariantUsesBase(cyborgAvatarPath, basePath, clearHandPosesOverride: true);
-        }
-
-        private static void EnsureChildVariantUsesBase(string childPath, string basePath, bool clearHandPosesOverride)
+        private static void EnsureMefCyborgPlayerVariant(string childPath, string basePath)
         {
             var baseGo = AssetDatabase.LoadAssetAtPath<GameObject>(basePath);
-            var baseAvatar = baseGo != null ? baseGo.GetComponent<UxrAvatar>() : null;
-            if (baseAvatar == null) return;
+            if (baseGo == null) return;
 
             string childGuid = AssetDatabase.AssetPathToGUID(childPath);
             var root = PrefabUtility.LoadPrefabContents(childPath);
             try
             {
-                var inheritedHandsRig = root.transform.Find(BaseStandaloneRigName);
-                if (inheritedHandsRig != null)
-                {
-                    inheritedHandsRig.gameObject.SetActive(false);
-                }
-
-                bool hasOwnCyborgRig = root.transform.Find("Cyborg") != null;
                 var mefRig = root.transform.Find("MEF_Rig");
-                if (hasOwnCyborgRig && mefRig != null)
-                {
-                    mefRig.gameObject.SetActive(false);
-                }
-                else if (!hasOwnCyborgRig && mefRig != null)
+                if (mefRig != null)
                 {
                     mefRig.gameObject.SetActive(true);
-                    foreach (var smr in mefRig.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                }
+
+                var body0 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Body_LOD0");
+                var body1 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Body_LOD1");
+                var body2 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Body_LOD2");
+                var head0 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Head_LOD0");
+                var head1 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Head_LOD1");
+                var head2 = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_Optimized_Head_LOD2");
+                var gloveL = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_CyborgHands_Glove_L");
+                var gloveR = FindByName<SkinnedMeshRenderer>(root.transform, "MEF_CyborgHands_Glove_R");
+
+                var allSkins = new[] { body0, body1, body2, head0, head1, head2, gloveL, gloveR }
+                    .Where(r => r != null)
+                    .ToArray();
+                foreach (var smr in allSkins)
+                {
+                    smr.gameObject.SetActive(true);
+                    smr.enabled = true;
+                }
+
+                var lodGroup = root.GetComponentInChildren<LODGroup>(true);
+                if (lodGroup != null && body0 != null && head0 != null && gloveL != null && gloveR != null)
+                {
+                    LOD[] lods = lodGroup.GetLODs();
+                    if (lods.Length >= 3)
                     {
-                        if (smr == null || smr.sharedMesh == null) continue;
-                        if (smr.sharedMesh.name.IndexOf("Hands_gloves", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                        smr.enabled = true;
+                        lods[0].renderers = new Renderer[] { body0, head0, gloveL, gloveR };
+                        lods[1].renderers = new Renderer[] { body1 ?? body0, head1 ?? head0, gloveL, gloveR };
+                        lods[2].renderers = new Renderer[] { body2 ?? body1 ?? body0, head2 ?? head1 ?? head0, gloveL, gloveR };
+                        lodGroup.SetLODs(lods);
                     }
                 }
 
@@ -611,16 +590,20 @@ namespace VrBattlegrounds.Editor.Avatars
                     var guidProp = so.FindProperty("__prefabGuid") ?? so.FindProperty("_prefabGuid");
                     if (guidProp != null && !string.IsNullOrEmpty(childGuid)) guidProp.stringValue = childGuid;
 
-                    if (clearHandPosesOverride)
+                    var renderersProp = so.FindProperty("_avatarRenderers");
+                    if (renderersProp != null && allSkins.Length > 0)
                     {
-                        var posesProp = so.FindProperty("_handPoses");
-                        if (posesProp != null) PrefabUtility.RevertPropertyOverride(posesProp, InteractionMode.AutomatedAction);
+                        renderersProp.arraySize = allSkins.Length;
+                        for (int i = 0; i < allSkins.Length; i++)
+                        {
+                            renderersProp.GetArrayElementAtIndex(i).objectReferenceValue = allSkins[i];
+                        }
                     }
 
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
 
-                PrefabUtility.SaveAsPrefabAsset(root, childPath);
+                AvatarMaintenanceTools.SavePrefab(root, childPath);
             }
             finally
             {
@@ -637,22 +620,94 @@ namespace VrBattlegrounds.Editor.Avatars
                 var guidProp = savedSo.FindProperty("__prefabGuid") ?? savedSo.FindProperty("_prefabGuid");
                 if (guidProp != null && !string.IsNullOrEmpty(childGuid)) guidProp.stringValue = childGuid;
                 savedSo.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(savedAvatar);
+                PrefabUtility.SavePrefabAsset(savedChildGo);
             }
         }
 
-        private static Transform FindTransformByName(Transform root, string targetName)
+        private static void ConfigureMainAvatarsRegistryTeamsAndCorpses()
         {
-            if (root == null || string.IsNullOrEmpty(targetName)) return null;
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            var mefPlayerGo = AssetDatabase.LoadAssetAtPath<GameObject>(GripTargetProfile.MefCyborgPlayerPath);
+            var optimizedMefData = AssetDatabase.LoadAssetAtPath<AvatarData>("Assets/Data/Player/Avatars/OptimizedMEF.asset");
+            if (optimizedMefData != null && mefPlayerGo != null)
             {
-                if (t != null && string.Equals(t.name, targetName, StringComparison.Ordinal))
-                {
-                    return t;
-                }
+                optimizedMefData.prefab = mefPlayerGo;
+                EditorUtility.SetDirty(optimizedMefData);
             }
 
-            return null;
+            TeamColorVariantBuilder.BuildBlack();
+
+            var optimizedMefBlackData = AssetDatabase.LoadAssetAtPath<AvatarData>("Assets/Data/Player/Avatars/OptimizedMEF_Black.asset");
+            var cyborgData = AssetDatabase.LoadAssetAtPath<AvatarData>("Assets/Data/Player/Avatars/Cyborg.asset");
+
+            var registry = AssetDatabase.LoadAssetAtPath<AvatarRegistry>("Assets/Data/Player/Avatars/AvatarsRegistry.asset");
+            if (registry != null)
+            {
+                registry.avatars = new[] { optimizedMefData, optimizedMefBlackData, cyborgData }
+                    .Where(a => a != null)
+                    .ToArray();
+                EditorUtility.SetDirty(registry);
+            }
+
+            var terroristsTeam = AssetDatabase.LoadAssetAtPath<TeamData>("Assets/Data/Teams/Terrorists_Team.asset");
+            if (terroristsTeam != null && optimizedMefData != null)
+            {
+                terroristsTeam.avatars = new List<AvatarData> { optimizedMefData };
+                EditorUtility.SetDirty(terroristsTeam);
+            }
+
+            var ctTeam = AssetDatabase.LoadAssetAtPath<TeamData>("Assets/Data/Teams/CounterTerrorists_Team.asset");
+            if (ctTeam != null && optimizedMefBlackData != null)
+            {
+                ctTeam.avatars = new List<AvatarData> { optimizedMefBlackData };
+                EditorUtility.SetDirty(ctTeam);
+            }
+
+            CorpseBuilder.Build();
+
+            MoveAssetIfPresent("Assets/Prefabs/Player/Corpses/Optimized_MEF_Player_Corpse.prefab", $"{UnusedFolder}/Optimized_MEF_Player_Corpse.prefab");
+            MoveAssetIfPresent("Assets/Prefabs/Player/Corpses/Optimized_MEF_Player_Black_Corpse.prefab", $"{UnusedFolder}/Optimized_MEF_Player_Black_Corpse.prefab");
+
+            UpdateManagersSpawnPrefabs(registry);
+        }
+
+        private static void UpdateManagersSpawnPrefabs(AvatarRegistry registry)
+        {
+            if (registry == null || !File.Exists(ManagersPrefabPath)) return;
+
+            var unusedPrefabs = new[]
+            {
+                $"{UnusedFolder}/Optimized_MEF_Player.prefab",
+                $"{UnusedFolder}/Optimized_MEF_Player_Black.prefab",
+                $"{UnusedFolder}/MEF_Base_Avatar.prefab",
+                $"{UnusedFolder}/MEF_sdk_hands/MEF_sdk_hands_Player.prefab",
+                $"{UnusedFolder}/Optimized_MEF_Player_VRIK.prefab"
+            }
+            .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+            .Where(go => go != null)
+            .ToHashSet();
+
+            var root = PrefabUtility.LoadPrefabContents(ManagersPrefabPath);
+            try
+            {
+                var manager = root.GetComponentInChildren<NetworkManager>(true);
+                if (manager != null && manager.spawnPrefabs != null)
+                {
+                    manager.spawnPrefabs.RemoveAll(p => p == null || unusedPrefabs.Contains(p));
+                    foreach (var prefab in AvatarRegistryTools.Prefabs(registry))
+                    {
+                        if (!manager.spawnPrefabs.Contains(prefab))
+                        {
+                            manager.spawnPrefabs.Add(prefab);
+                        }
+                    }
+
+                    PrefabUtility.SaveAsPrefabAsset(root, ManagersPrefabPath);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         private static T FindByName<T>(Transform root, string targetName) where T : Component

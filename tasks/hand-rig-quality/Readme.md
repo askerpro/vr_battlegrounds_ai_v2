@@ -14,16 +14,15 @@ GUID перенесённого controller сохранён. Очередь ос
 фасад. Раздельно скомпилированы SDK108(0errors/21legacy warnings), Review24(0/0), product46(0/0,
 включая diagnostic body). Это offline scope; готовится новый input/nonce r2 для Unity после recovery.
 
-**Текущая работа — SDK editor v3 + X-Ray v4 + CyborgHandsBase (2026-10-16, принято пользователем):** ручной режим, заданные
-sticky surface targets, последовательный «Обхватить предмет», анатомически ограниченный CCD IK по фалангам (1-DOF сгиб IP и 2-DOF MCP),
-двухсторонний синк с выбранным `UxrGrabbableObject` в Inspector и авто-сохранение dirty-поз при закрытии окна.
-SDK83 зарезервирован для typed commit через SDK с Undo и проверкой рабочего контекста.
-Обновлён общий конвейер рентгена (X-Ray v4): непрозрачная внешняя оболочка оружия (`ZWrite=1, ZTest=LessEqual, Cull=Back` —
-внутренние детали скрыты), просвечивающая кисть (`HandOccluded` позади оружия + `HandDepth`/`Hand` спереди без самопросвечивания пальцев),
-пересечение мешей подкрашено **красным** (`Intersection`, `BuildIntersectionMesh`), точки контакта ±2мм отмечены **жёлтым** (`ContactColor`).
-Перестроено дерево префабов `PlayerBase_SdkHands -> CyborgHandsBase (71b74b0d08444f49bbb7aa2828d0890a) -> { PlayerControllersCyborgAvatar, MEF_cyborg_hands_Player }` с удалением родных перчаток MEF из базы и сохранением всех 65 поз на `CyborgHandsBase`.
-Во всех 80 компонентах `UxrGrabbableObject` (100 точек захвата в 43 префабах оружия и планшета) удалены перекрывающие записи дочерних вариантов, зарегистрирован `CyborgHandsBase` с привязкой к точкам `MEF_cyborg_hands` и выбран `_selectedAvatarForGrips = CyborgHandsBase`.
-Пользователь подтвердил приёмку в Unity («все работает как я и хотел… давай закоммитим текущее состояние и вольем в origin/dev и продолжим»).
+**Текущая работа — SDK editor v3 + X-Ray v4 + CyborgHandsBase (2026-10-16, влито в `origin/dev` `1b2f88612`) и перевод `MEF_cyborg_hands` в основные аватары команд (билет 772 DONE, ждёт проверки пользователя):**
+- Влито fast-forward в `origin/dev` (`1b2f88612f563172db6c57249feae2f9d46d0491`, база worker обновлена в билете 771): рентген v4, анатомический IK-редактор контактов, дерево `PlayerBase_SdkHands -> CyborgHandsBase` и привязка всех 80 `UxrGrabbableObject` к `CyborgHandsBase`.
+- В билете 772 (`R: b01d4c98a01f1996ac77dbade41d01d85e6c12cd`, worker освобождён сразу после проверок):
+  1. Восстановлены полное тело MEF (6 `SkinnedMeshRenderer` LOD0..2 тела и головы), `LODGroup`, часы `WristWatch` на запястье, `TeamUniformColors`, `CorpseSource`, `_localDisabledGameObjects` (3 головы) и `_avatarRenderers` (6 мешей тела) на `MEF_cyborg_hands_Player.prefab` как чистом Prefab Variant от `CyborgHandsBase.prefab` (`PlayerBase_SdkHands -> CyborgHandsBase -> MEF_cyborg_hands_Player`).
+  2. Выведены из `Experimental/` в основные `Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab` (GUID `2aa0ab6714e2413f9d829637b62df0c0` сохранён) и `Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/`.
+  3. Создан второй цветовой вариант команды `Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab` (GUID `60604d8891226f64592f880c9b2da883`) через штатный `TeamColorVariantBuilder` (`Assets/Editor/VR_Battlegrounds/Avatars/TeamColorVariantBuilder.cs`) как Prefab Variant от `MEF_cyborg_hands_Player.prefab` с заменой только 6 материалов LOD тела/головы (`MEF_Optimized.mat` → `MEF_Optimized_Black.mat`), и собраны оба рэгдолла трупов (`MEF_cyborg_hands_Player_Corpse.prefab`, `MEF_cyborg_hands_Player_Black_Corpse.prefab`).
+  4. Обновлены `OptimizedMEF.asset` (`MEF_cyborg_hands_Player`), `OptimizedMEF_Black.asset` (`MEF_cyborg_hands_Player_Black`), `AvatarsRegistry.asset`, `Terrorists_Team.asset`, `CounterTerrorists_Team.asset` и `--- MANAGERS ---.prefab`.
+  5. Неиспользуемые префабы MEF с оригинальными руками и экспериментальные ассеты перенесены с сохранением `.meta`/GUID в `Assets/Prefabs/Player/Unused/`.
+  6. Прогнаны EditMode-проверки `VrBattlegrounds.Tests.Prefabs.*` (отчёт `reports/editmode-prefabs-test-report.json`) и `Persist UltimateXR Unique Ids`: `AvatarHandPoseChainTests`, `TeamAvatarsTests`, `TeamUniformTests`, `CorpseTests`, `AvatarRendererOwnershipTests`, `NetworkAssetIdOnDiskTests`, `RegisteredAvatarBodyTests` (все 7 проверок для `MEF_cyborg_hands_Player` и `MEF_cyborg_hands_Player_Black`) и `GrabPoseCoverageTests` на всём боевом арсенале для обоих новых основных аватаров — **PASS**.
 Контракт: contracts/sdk-hand-pose-contact-editing-v3.md.
 
 **Текущее решение пользователя — 2026-10-15:** площадь отменена как критерий. Нужны автоматически

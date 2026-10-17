@@ -31,7 +31,7 @@ namespace VrBattlegrounds.Editor.Avatars
     internal static class TeamColorVariantBuilder
     {
         private const string Folder = "Assets/Models/Avatars/MEF_Optimized/";
-        private const string SourcePrefab = "Assets/Prefabs/Player/Optimized_MEF_Player.prefab";
+        private const string SourcePrefab = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
         private const string SourceMaterial = Folder + "MEF_Optimized.mat";
         private const string Mask = Folder + "MEF_Optimized_TeamMask.png";
         private const string SourceData = "Assets/Data/Player/Avatars/OptimizedMEF.asset";
@@ -60,7 +60,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </summary>
         public const float Wear = 0.25f;
 
-        private static void BuildBlack()
+        public static void BuildBlack()
         {
             // Одежда чёрная, экипировка Wolf Grey, каска и очки чёрные — голова сразу отличает от песочных (2026-10-01).
             Build("Black", "US Marine (чёрный)", Black, WolfGrey, Black);
@@ -74,7 +74,7 @@ namespace VrBattlegrounds.Editor.Avatars
         public static string Build(string suffix, string displayName, Color main, Color additional, Color helmet)
         {
             string materialPath = Folder + $"MEF_Optimized_{suffix}.mat";
-            string prefabPath = $"Assets/Prefabs/Player/Optimized_MEF_Player_{suffix}.prefab";
+            string prefabPath = $"Assets/Prefabs/Player/MEF_cyborg_hands_Player_{suffix}.prefab";
             string dataPath = $"Assets/Data/Player/Avatars/OptimizedMEF_{suffix}.asset";
 
             SetupSource();
@@ -192,8 +192,10 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 // Цепочка UltimateXR: без неё позы кисти и хвата оружия ищутся не там.
                 var avatar = new SerializedObject(root.GetComponent<UxrAvatar>());
-                avatar.FindProperty("_parentPrefab").objectReferenceValue = sourcePrefab;
-                avatar.FindProperty("_prefabGuid").stringValue = AssetDatabase.AssetPathToGUID(path);
+                var parentProp = avatar.FindProperty("_parentPrefab");
+                if (parentProp != null) parentProp.objectReferenceValue = sourcePrefab;
+                var guidProp = avatar.FindProperty("__prefabGuid") ?? avatar.FindProperty("_prefabGuid");
+                if (guidProp != null) guidProp.stringValue = AssetDatabase.AssetPathToGUID(path);
                 avatar.ApplyModifiedPropertiesWithoutUndo();
 
                 VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, path);
@@ -204,7 +206,20 @@ namespace VrBattlegrounds.Editor.Avatars
                 PrefabUtility.UnloadPrefabContents(root);
             }
 
-            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            var savedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            var savedAvatar = savedPrefab != null ? savedPrefab.GetComponent<UxrAvatar>() : null;
+            if (savedAvatar != null)
+            {
+                var savedSo = new SerializedObject(savedAvatar);
+                var parentProp = savedSo.FindProperty("_parentPrefab");
+                if (parentProp != null) parentProp.objectReferenceValue = sourcePrefab;
+                var guidProp = savedSo.FindProperty("__prefabGuid") ?? savedSo.FindProperty("_prefabGuid");
+                if (guidProp != null) guidProp.stringValue = AssetDatabase.AssetPathToGUID(path);
+                savedSo.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SavePrefabAsset(savedPrefab);
+            }
+
+            return savedPrefab;
         }
 
         private static void CreateData(string path, string displayName, GameObject prefab)

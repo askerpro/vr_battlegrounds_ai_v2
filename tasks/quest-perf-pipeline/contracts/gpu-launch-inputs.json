@@ -1,0 +1,23 @@
+{
+  "summary": "Необязательный immutable RunSpec и source build/runtime evidence существующего E2E для GPU diagnostics",
+  "motivation": "Canonical8600/review8649: точные DTO types/constructors/returns и единый DiagnosticReportResult до первого ACK; прежние ownership и scope сохранены",
+  "transition_cost": "Stage gpu-launch-inputs остаётся planned, planrev32; legacy E2E без RunSpec сохраняется. Performance добавляет scoped adapter после ACK r2 с замороженным DTO appendix",
+  "aspects": ["run-spec", "build-provenance", "runtime-events", "artifact-harvest", "windows-rendered"],
+  "compatibility": "additive",
+  "structural": false,
+  "providing_stage": "gpu-launch-inputs",
+  "document": "tasks/quest-perf-pipeline/contracts/gpu-launch-inputs.md",
+  "document_sha256": "c41b67d66586e19bde043fe2d55f1e85c36c2f7e36b722526ac47d1b45d24445",
+  "dto_document": "tasks/quest-perf-pipeline/contracts/gpu-launch-dto-v2.md",
+  "dto_document_sha256": "a64c9625ee3cf5416f765c493b736334ff9a133f2393fe8872b695f28d490e64",
+  "consumers": ["perf-stress-scenario"],
+  "invariants": [
+    "Существующие Run-E2E и Run-QuestE2E остаются единственными launch routes; новый GPU launcher или broker не вводится",
+    "RunSpec — requested immutable source; actual conditions, package run.json и readiness не подменяются его значениями",
+    "Launch владеет source event writer; performance — phase/sample adapters, workload semantics, capture.ready и нормализацией gpu-package-v1",
+    "MapLoader, E2EViews/E2EHeadPose и SceneDetail/settings owners сохраняют единственных writers",
+    "Readiness/capture bounds требуют generation, actual identity и clock uncertainty; unknown не заменяется нулём или requested",
+    "ACK/agree не принимают код; active только после проверенного принятого вливания; GPU и physical Quest acceptance отдельно",
+    "Все Report/Invalidate возвращают DiagnosticReportResult; DTO/constructors/types и cross-field/replay guards заморожены хешами двух нормативных документов r2"
+  ]
+}

@@ -121,6 +121,9 @@ param(
     # Локальный JSON точек обзора; уходит обеим сторонам как -e2eArg views=<путь от persistentDataPath>.
     [string]   $ViewsFile = '',
 
+    # Immutable bundle проверяется до ADB/build/install и доставляется существующим lifecycle.
+    [string]   $RunSpec = '',
+
     # Симуляция позы головы на шлеме: высота глаз в метрах (-e2eHeadPose eye=<м>), calib (цель из калибровки)
     # или off (реальный трекинг шлема — для замеров с настоящей позой).
     [string]   $HeadPose = '1.6',
@@ -134,7 +137,10 @@ $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-try { Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop }
+try {
+    Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop
+    Import-Module (Join-Path $PSScriptRoot 'E2EDiagnosticInputs.psm1') -Force -ErrorAction Stop
+}
 catch {
     Write-Host ''
     Write-Host ('ОТКАЗ: модуль вердикта по логам не загружен: ' + $_.Exception.Message) -ForegroundColor Red
@@ -811,6 +817,23 @@ function Write-HeadPoseRender($Check) {
 #  1. Проверки до прогона: при отказе ни устройство, ни ПК не тронуты
 # ══════════════════════════════════════════════════════════════════════════
 
+$diagnosticInput = $null
+try {
+    if ($RunSpec) {
+        $diagnosticInput = Read-E2ERunSpec $RunSpec
+        Assert-E2EInputConflicts $diagnosticInput $PSBoundParameters $Scenario $Map $ViewsFile $HeadPose @()
+        if ($Build -or $DryRunBuild) { throw 'RunSpec требует уже собранные immutable artifacts; Build/DryRunBuild несовместимы' }
+        if ([string]::IsNullOrWhiteSpace($Apk)) { throw 'RunSpec требует Apk с matching build provenance; установленный пакет не доказывает artifact hash' }
+        if ($diagnosticInput.viewsPath -and $diagnosticInput.spec.views.path -notmatch $SafeToken) { throw 'RunSpec views path нельзя безопасно передать существующим ADB route' }
+        $Scenario = $diagnosticInput.spec.scenario
+        $Map = $diagnosticInput.routingMap
+        $ViewsFile = $diagnosticInput.viewsPath
+        $HeadPose = 'off'
+        if ($diagnosticInput.spec.headPose.mode -eq 'eye') { $HeadPose = ([double]$diagnosticInput.spec.headPose.eyeMeters).ToString('R', [Globalization.CultureInfo]::InvariantCulture) }
+    }
+}
+catch { Stop-Refused ('RunSpec: ' + $_.Exception.Message) }
+
 if ($Topology -eq 'host') {
     Stop-Refused 'host на шлеме требует шва выбора роли в плеере (зона network), не реализовано.' @(
         'Собранный плеер на шлеме стартует клиентом (роль выбирает GameNetworkDiscovery). Используй -Topology client.')
@@ -840,6 +863,8 @@ foreach ($item in $Arg) {
         $scenarioArgs.Add($pair)
     }
 }
+
+if ($null -ne $diagnosticInput -and $argKeys -icontains 'views') { Stop-Refused 'Arg views конфликтует с RunSpec' }
 
 # ── поза головы (-HeadPose) ──
 $headPoseInfo = Read-HeadPose $HeadPose
@@ -1026,6 +1051,16 @@ elseif (-not $Build) {
     if ($headPoseInfo.mode -ne 'off') { Write-HeadPoseRender $headPoseRender }
 }
 
+# Идентичность артефактов до первого ADB-вызова, установки или запуска.
+if ($null -ne $diagnosticInput) {
+    try {
+        $serverDiagnosticProfile = Assert-E2EBuildArtifact $diagnosticInput 'server' $ServerPlayer -Role server
+        $null = Assert-E2EBuildArtifact $diagnosticInput 'quest' $Apk
+        $ServerDataPath = Get-E2EBuildDataPath $serverDiagnosticProfile
+    }
+    catch { Stop-Refused ('RunSpec build provenance: ' + $_.Exception.Message) }
+}
+
 # ── adb ──
 $AdbPath = ''
 if (-not [string]::IsNullOrEmpty($Adb)) {
@@ -1162,6 +1197,7 @@ if (-not $firewall.Ok) {
 $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
 $runId = $stamp + '-quest-' + $Scenario
 $runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $runId)
+if ($null -ne $diagnosticInput) { $runDir = Join-Path $RepoRoot ('Tools/e2e/results/' + $runId + '-' + [guid]::NewGuid().ToString('N')) }
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 
 $deviceFilesDir = '/sdcard/Android/data/' + $Package + '/files'
@@ -1170,6 +1206,24 @@ $serverResult = Join-Path $runDir 'server.json'
 $serverLog = Join-Path $runDir 'server.log'
 $clientResult = Join-Path $runDir 'client-1.json'
 $deviceToken = 'e2e-quest-' + $Serial
+$diagnosticStages = @{}
+$diagnosticReceipts = New-Object Collections.Generic.List[object]
+$diagnosticProblems = New-Object Collections.Generic.List[string]
+$diagnosticDeviceRoot = $null
+if ($null -ne $diagnosticInput) {
+    try {
+        Copy-E2ESourceBundle $diagnosticInput $runDir
+        $launcherToken = [guid]::NewGuid().ToString('N')
+        $diagnosticStages.server = New-E2EDiagnosticStage $diagnosticInput $ServerDataPath 'server' $launcherToken
+        $diagnosticStages.client = New-E2EDiagnosticStage $diagnosticInput (Join-Path $runDir 'device-input') 'client-1' $launcherToken
+        $diagnosticDeviceRoot = $deviceFilesDir + '/' + $diagnosticStages.client.relative
+    }
+    catch {
+        $stageError = $_.Exception.Message
+        try { Save-E2EDiagnosticHarvest $runDir @() @('staging: ' + $stageError) } catch {}
+        Stop-Refused ('RunSpec staging: ' + $stageError)
+    }
+}
 
 $serverArgs = @(
     '-batchmode', '-nographics',
@@ -1206,6 +1260,15 @@ if ($null -ne $viewsInfo) {
     $serverArgs += @('-e2eArg', ('views=' + $viewsArgPath))
     $clientTokens += @('-e2eArg', ('views=' + $viewsArgPath))
 }
+if ($null -ne $diagnosticInput) {
+    # У каждой роли собственный путь, хотя Windows процессы могут делить persistentDataPath.
+    $serverArgs += @('-e2eRunSpec', $diagnosticStages.server.path, '-e2eRunSpecSha256', $diagnosticInput.sha256)
+    $clientTokens += @('-e2eRunSpec', ($diagnosticDeviceRoot + '/run-spec.json'), '-e2eRunSpecSha256', $diagnosticInput.sha256)
+    if ($null -ne $viewsInfo) {
+        $serverArgs = @($serverArgs | ForEach-Object { if ($_ -ceq ('views=' + $viewsArgPath)) { 'views=' + $diagnosticStages.server.viewsRelative } else { $_ } })
+        $clientTokens = @($clientTokens | ForEach-Object { if ($_ -ceq ('views=' + $viewsArgPath)) { 'views=' + $diagnosticStages.client.viewsRelative } else { $_ } })
+    }
+}
 foreach ($token in $clientTokens) {
     if ($token -notmatch $SafeToken) { Stop-Refused ('аргумент шлема с недопустимыми символами: "' + $token + '"') }
 }
@@ -1219,6 +1282,8 @@ $manifest = [ordered]@{
     scenario = $Scenario
     topology = $Topology
     map = $Map
+    routingMap = $Map
+    requestedSceneId = $(if ($null -ne $diagnosticInput) { $diagnosticInput.spec.requestedSceneId } else { $null })
     timeoutSeconds = $Timeout
     scenarioTimeoutSeconds = $scenarioTimeout
     scenarioArgs = $scenarioArgs.ToArray()
@@ -1271,6 +1336,13 @@ if ($null -ne $viewsInfo) {
         server = (Join-Path $ServerDataPath ($viewsArgPath -replace '/', '\'))
         pushed = $false
         serverCopied = $false
+    }
+    if ($null -ne $diagnosticInput) {
+        $manifest.views.server = Join-Path $ServerDataPath $diagnosticStages.server.viewsRelative
+        $manifest.views.device = $diagnosticDeviceRoot + '/' + $diagnosticInput.spec.views.path
+        $manifest.views.arg = $null
+        $manifest.views.roleArgs = [ordered]@{ server = $diagnosticStages.server.viewsRelative; client = $diagnosticStages.client.viewsRelative }
+        $manifest.views.local = 'source/views.json'
     }
 }
 
@@ -1474,7 +1546,7 @@ try {
     }
 
     # ── точки обзора: папка прогона, persistentDataPath сервера, шлем (после установки APK — каталог уже приложения) ──
-    if ($null -ne $manifest.views) {
+    if ($null -ne $manifest.views -and $null -eq $diagnosticInput) {
         Write-Section 'Кладу файл точек обзора обеим сторонам'
         $viewsLocal = Join-Path $runDir 'views.json'
         Copy-Item -LiteralPath $ViewsFile -Destination $viewsLocal -Force -ErrorAction Stop
@@ -1493,6 +1565,21 @@ try {
         Write-Host ('  шлем:   ' + $manifest.views.device)
     }
 
+    if ($null -ne $diagnosticInput) {
+        Write-Section 'Доставляю immutable RunSpec bundle'
+        foreach ($file in @(Get-E2ERawInventory $diagnosticStages.client.root)) {
+            $local = Join-Path $diagnosticStages.client.root $file.path
+            $remote = $diagnosticDeviceRoot + '/' + $file.path
+            if ($remote -notmatch $SafeToken) { throw ('небезопасный bundle path для ADB: ' + $remote) }
+            $parent = $remote.Substring(0, $remote.LastIndexOf('/'))
+            $mkdir = Invoke-AdbShell @('mkdir', '-p', $parent) 30
+            if ($mkdir.ExitCode -ne 0) { throw ('mkdir diagnostic bundle: ' + $mkdir.Err) }
+            $push = Invoke-Adb @('push', $local, $remote) 60
+            if ($push.ExitCode -ne 0) { throw ('push diagnostic bundle: ' + $push.Err) }
+        }
+        if ($null -ne $manifest.views) { $manifest.views.pushed = $true; $manifest.views.serverCopied = $true }
+    }
+
     # ── сервер ──
     Write-Section 'Запускаю выделенный сервер'
     if (-not ((Test-UdpPortFree $NetworkPort) -and (Test-UdpPortFree $DiscoveryPort))) {
@@ -1500,7 +1587,7 @@ try {
     }
     $quotedServerArgs = @()
     foreach ($a in $serverArgs) { $quotedServerArgs += (ConvertTo-CommandLineArg $a) }
-    $serverProc = Start-Process -FilePath $ServerPlayer -ArgumentList $quotedServerArgs -PassThru
+    $serverProc = Start-Process -FilePath $ServerPlayer -ArgumentList $quotedServerArgs -WindowStyle Hidden -PassThru
     $manifest.launch.server.pid = $serverProc.Id
     Write-Host ('  pid ' + $serverProc.Id)
 
@@ -1646,23 +1733,50 @@ finally {
 
     # ── артефакты ──
     $artifactProblems = New-Object System.Collections.Generic.List[string]
+    if ($null -ne $diagnosticInput) {
+        $receipt = Save-E2ELocalArtifact $diagnosticStages.server.root $ServerDataPath (Join-Path $runDir 'source/roles/server')
+        $diagnosticReceipts.Add($receipt)
+        if (-not $receipt.ok) { $artifactProblems.Add('server diagnostic stage: ' + $receipt.detail) }
+        if ($receipt.ok) { foreach ($problem in @(Get-E2EDiagnosticProblems $receipt.local $diagnosticInput 'server')) { $artifactProblems.Add($problem) } }
+        $dest = Join-Path $runDir 'source/roles/client-1'
+        New-Item -ItemType Directory -Path $dest -Force | Out-Null
+        $deviceReceipt = [ordered]@{ source = $diagnosticDeviceRoot; local = $dest; ok = $false; detail = $null; files = @() }
+        try {
+            $pull = Invoke-Adb @('pull', $diagnosticDeviceRoot, $dest) 600
+            if ($pull.ExitCode -ne 0) { throw (($pull.Out + $pull.Err).Trim()) }
+            $deviceReceipt.files = @(Get-E2ERawInventory $dest)
+            if ($deviceReceipt.files.Count -eq 0) { throw 'пустой diagnostic pull' }
+            $deviceReceipt.ok = $true
+            foreach ($problem in @(Get-E2EDiagnosticProblems $dest $diagnosticInput 'client-1')) { $artifactProblems.Add($problem) }
+        }
+        catch { $deviceReceipt.detail = $_.Exception.Message; $artifactProblems.Add('client-1 diagnostic stage: ' + $_.Exception.Message) }
+        $diagnosticReceipts.Add([pscustomobject]$deviceReceipt)
+    }
     $clientData = Read-ResultJson $clientResult
     $serverData = Read-ResultJson $serverResult
     if ($null -ne $clientData -and $null -ne $clientData.artifacts) {
         $dest = Join-Path $runDir 'artifacts\client-1'
         foreach ($path in @($clientData.artifacts)) {
+            if ($null -ne $diagnosticInput -and [string]$path -ceq $diagnosticDeviceRoot) { continue }
             $entry = [ordered]@{ source = [string] $path; local = $null; ok = $false; detail = $null }
+            try {
             if (-not (Test-DeviceArtifactPath ([string] $path))) {
                 $entry.detail = 'путь вне каталога файлов приложения или с недопустимыми символами'
             }
             else {
                 New-Item -ItemType Directory -Path $dest -Force | Out-Null
-                $local = Get-ArtifactDestination $dest ([string] $path).TrimEnd('/').Split('/')[-1]
+                $local = Get-ArtifactDestination $dest (([string] $path).TrimEnd('/').Split('/')[-1])
                 $r = Invoke-Adb @('pull', [string] $path, $local) 600
                 $entry.local = $local.Substring($runDir.Length + 1)
                 $entry.ok = ($r.ExitCode -eq 0 -and (Test-Path -LiteralPath $local))
+                if ($entry.ok) {
+                    if (Test-Path -LiteralPath $local -PathType Container) { $entry.files = @(Get-E2ERawInventory $local); if ($entry.files.Count -eq 0) { $entry.ok = $false } }
+                    else { $entry.files = @([ordered]@{ path = Split-Path -Leaf $local; bytes = (Get-Item -LiteralPath $local).Length; sha256 = Get-E2EFileSha256 $local }) }
+                }
                 $entry.detail = ($r.Out + $r.Err).Trim()
             }
+            }
+            catch { $entry.ok = $false; $entry.detail = $_.Exception.Message }
             if (-not $entry.ok) { $artifactProblems.Add('client-1: ' + $path + ' — ' + $entry.detail) }
             $manifest.artifacts.client += ,$entry
         }
@@ -1670,14 +1784,13 @@ finally {
     if ($null -ne $serverData -and $null -ne $serverData.artifacts) {
         $dest = Join-Path $runDir 'artifacts\server'
         foreach ($path in @($serverData.artifacts)) {
+            if ($null -ne $diagnosticInput -and [string]$path -ieq $diagnosticStages.server.root) { continue }
             $entry = [ordered]@{ source = [string] $path; local = $null; ok = $false; detail = $null }
             try {
-                if (-not (Test-Path -LiteralPath ([string] $path))) { throw 'нет на диске' }
-                New-Item -ItemType Directory -Path $dest -Force | Out-Null
-                $local = Get-ArtifactDestination $dest (Split-Path -Leaf ([string] $path))
-                Copy-Item -LiteralPath ([string] $path) -Destination $local -Recurse -Force -ErrorAction Stop
-                $entry.local = $local.Substring($runDir.Length + 1)
-                $entry.ok = $true
+                $allowed = $ServerDataPath
+                if (-not $allowed) { $allowed = Get-ServerDataPath }
+                $receipt = Save-E2ELocalArtifact ([string]$path) $allowed $dest
+                $entry.local = $receipt.local; $entry.ok = $receipt.ok; $entry.detail = $receipt.detail; $entry.files = $receipt.files
             } catch { $entry.detail = $_.Exception.Message }
             if (-not $entry.ok) { $artifactProblems.Add('server: ' + $path + ' — ' + $entry.detail) }
             $manifest.artifacts.server += ,$entry
@@ -1802,6 +1915,8 @@ finally {
 
     $summary = [pscustomobject]@{
         scenario = $Scenario; topology = $Topology; map = $Map; clients = 1; serial = $Serial
+        routingMap = $Map
+        requestedSceneId = $(if ($null -ne $diagnosticInput) { $diagnosticInput.spec.requestedSceneId } else { $null })
         networkPort = $NetworkPort; discoveryPort = $DiscoveryPort; serverAddress = $ServerAddress
         startedLocal = $stamp; verdict = $verdict; exitCode = $exitCode; failure = $manifest.failure
         roles = $roleReports
@@ -1817,6 +1932,22 @@ finally {
         $exitCode = 2
     }
     if (-not (Test-Path -LiteralPath (Join-Path $runDir 'run.json'))) { $exitCode = 2 }
+    try {
+        $sourceDir = Join-Path $runDir 'source'
+        New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $runDir 'run.json') -Destination (Join-Path $sourceDir 'launch-run.json') -ErrorAction Stop
+        $allReceipts = @($diagnosticReceipts.ToArray()) + @($manifest.artifacts.server) + @($manifest.artifacts.client)
+        Save-E2EDiagnosticHarvest $runDir $allReceipts $artifactProblems.ToArray()
+    }
+    catch {
+        $harvestError = $_.Exception.Message
+        $exitCode = 2; $verdict = 'INCONCLUSIVE — raw harvest неполон'
+        $manifest.exitCode = 2; $manifest.verdict = $verdict
+        $manifest.failure = [string]$manifest.failure + '; raw harvest: ' + $harvestError
+        $summary.exitCode = 2; $summary.verdict = $verdict; $summary.failure = $manifest.failure
+        try { Write-TextFile (Join-Path $runDir 'run.json') ($manifest | ConvertTo-Json -Depth 16); Write-TextFile (Join-Path $runDir 'summary.json') ($summary | ConvertTo-Json -Depth 8) } catch {}
+        Write-Host ('Raw harvest не записан: ' + $harvestError) -ForegroundColor Red
+    }
 
     $verdictColour = 'Yellow'
     if ($exitCode -eq 1) { $verdictColour = 'Red' }

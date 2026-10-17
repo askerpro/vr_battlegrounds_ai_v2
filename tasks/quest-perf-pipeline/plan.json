@@ -277,6 +277,29 @@
       "needs": []
     },
     {
+      "id": "gpu-launch-inputs",
+      "writes": [
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/e2e/E2EDiagnosticInputs.psm1",
+        "Tools/release/Build-Game.ps1",
+        "Assets/Editor/VR_Battlegrounds/Debug/E2EPlayerBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/GameBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/BuildProvenance.cs",
+        "Assets/Editor/VR_Battlegrounds/Release/BuildProvenance.cs.meta",
+        "Assets/Scripts/Debug/E2E/E2EContext.cs",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/E2EDiagnosticSession.cs",
+        "Assets/Scripts/Debug/E2E/E2EDiagnosticSession.cs.meta",
+        "tasks/quest-perf-pipeline/**",
+        "experts/launch-infra/**"
+      ],
+      "after": [
+        { "task": "quest-perf-pipeline", "stage": "build-checkouts", "state": "merged" }
+      ],
+      "needs": []
+    },
+    {
       "id": "devtools-contract-tests",
       "writes": [
         "Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs",

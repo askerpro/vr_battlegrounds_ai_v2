@@ -150,22 +150,7 @@ namespace VrBattlegrounds.EditorTools
                 if (args[i] == "-serverStatus") statusArg = args[i + 1];
             }
 
-            Result result = revisionArg != null ? Run(revisionArg) : Run();
-            if (!string.IsNullOrEmpty(statusArg))
-            {
-                string statusPath = ResolveStatusPath(statusArg);
-                var status = new PairStatus
-                {
-                    serverPassed = result.Passed,
-                    revision = result.Revision,
-                    serverSummary = result.Summary,
-                    serverPath = result.Path,
-                    error = result.Passed ? string.Empty : result.Message,
-                    durationSeconds = Math.Round(result.Seconds)
-                };
-                WriteStatusFile(statusPath, JsonUtility.ToJson(status, true));
-            }
-
+            Result result = Build(revisionArg, Array.Empty<string>(), statusArg);
             Debug.Log(result.Summary);
             EditorApplication.Exit(result.Passed ? 0 : 1);
         }
@@ -188,7 +173,19 @@ namespace VrBattlegrounds.EditorTools
                 if (args[i] == "-pairStatus" || args[i] == "-questStatus") statusArg = args[i + 1];
             }
 
-            string path = ResolveStatusPath(statusArg);
+            string path;
+            try
+            {
+                path = ResolveStatusPath(statusArg);
+            }
+            catch (Exception e)
+            {
+                RecordFailedQuestProvenance(e.Message);
+                Debug.LogError(ResultMarker + " FAIL — " + e.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
+
             DateTime started = DateTime.UtcNow;
 
             if (!QuestManifestValidator.OculusManifestCompiled())
@@ -198,13 +195,14 @@ namespace VrBattlegrounds.EditorTools
                     error = "editor-скрипты скомпилированы не под Android (нет OculusManifest): Quest вышел бы плоским — " +
                             "запускай Unity с -buildTarget Android"
                 };
-                WriteStatusFile(path, JsonUtility.ToJson(refused, true));
+                RecordFailedQuestProvenance(refused.error);
+                WriteFinalStatusFile(path, refused);
                 LogPair(refused, path);
                 EditorApplication.Exit(1);
                 return;
             }
 
-            WriteStatusFile(path, string.Empty);
+            BeginPendingStatusFile(path);
 
             string revision = revisionArg ?? BuildRevisionStamp.ReadRevision(out _);
             GameBuilder.Result quest = GameBuilder.Build(new[] { BuildProfile.Quest }, BuildConfig.Test, revision);
@@ -217,10 +215,10 @@ namespace VrBattlegrounds.EditorTools
                 error = quest.Passed ? string.Empty : "APK Quest не собран",
                 durationSeconds = Math.Round((DateTime.UtcNow - started).TotalSeconds)
             };
-            WriteStatusFile(path, JsonUtility.ToJson(status, true));
-            if (quest.Passed) Debug.Log(quest.Summary);
+            WriteFinalStatusFile(path, status);
+            if (status.questPassed) Debug.Log(quest.Summary);
             else Debug.LogError(quest.Summary);
-            EditorApplication.Exit(quest.Passed ? 0 : 1);
+            EditorApplication.Exit(status.questPassed ? 0 : 1);
         }
 
         // ── Пара для прогона на шлеме ──────────────────────────────────
@@ -244,18 +242,27 @@ namespace VrBattlegrounds.EditorTools
         /// </summary>
         public static string StartPairBuild(string statusPath)
         {
-            string path = ResolveStatusPath(statusPath);
+            string path;
+            try
+            {
+                path = ResolveStatusPath(statusPath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(ResultMarker + " FAIL — " + e.Message);
+                return ResultMarker + " FAIL — " + e.Message;
+            }
 
             if (_pairBuildQueued || SessionState.GetString(PairJobKey, string.Empty).Length > 0)
                 return ResultMarker + " сборка пары уже идёт — статус не тронут; жди её файл статуса";
 
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                WriteStatusFile(path, JsonUtility.ToJson(new PairStatus { error = "редактор в Play Mode — выйди из него и повтори" }, true));
+                WriteFinalStatusFile(path, new PairStatus { error = "редактор в Play Mode — выйди из него и повтори" });
                 return ResultMarker + " FAIL — редактор в Play Mode; статус: " + path;
             }
 
-            WriteStatusFile(path, string.Empty);
+            BeginPendingStatusFile(path);
             SessionState.SetString(PairJobKey, path);
             SessionState.SetInt(PairJobAttemptsKey, 0);
 
@@ -333,7 +340,18 @@ namespace VrBattlegrounds.EditorTools
                 if (args[i] == "-pairStatus") statusArg = args[i + 1];
             }
 
-            string path = ResolveStatusPath(statusArg);
+            string path;
+            try
+            {
+                path = ResolveStatusPath(statusArg);
+            }
+            catch (Exception e)
+            {
+                RecordFailedPairProvenance(e.Message);
+                Debug.LogError(ResultMarker + " FAIL — " + e.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
 
             if (!QuestManifestValidator.OculusManifestCompiled())
             {
@@ -342,16 +360,17 @@ namespace VrBattlegrounds.EditorTools
                     error = "editor-скрипты скомпилированы не под Android (нет OculusManifest): Quest вышел бы плоским — " +
                             "запускай Unity с -buildTarget Android"
                 };
-                WriteStatusFile(path, JsonUtility.ToJson(refused, true));
+                RecordFailedPairProvenance(refused.error);
+                WriteFinalStatusFile(path, refused);
                 LogPair(refused, path);
                 EditorApplication.Exit(1);
                 return;
             }
 
-            WriteStatusFile(path, string.Empty);
+            BeginPendingStatusFile(path);
 
             PairStatus status = BuildPair();
-            WriteStatusFile(path, JsonUtility.ToJson(status, true));
+            WriteFinalStatusFile(path, status);
             LogPair(status, path);
             EditorApplication.Exit(status.Passed ? 0 : 1);
         }
@@ -402,13 +421,14 @@ namespace VrBattlegrounds.EditorTools
                 ClearPairJob();
                 try
                 {
+                    BuildProvenance.BeginStatusWrite(path);
                     PairStatus status = BuildPair();
-                    WriteStatusFile(path, JsonUtility.ToJson(status, true));
+                    WriteFinalStatusFile(path, status);
                     LogPair(status, path);
                 }
                 catch (Exception error)
                 {
-                    WriteStatusFile(path, JsonUtility.ToJson(new PairStatus { error = error.GetType().Name + ": " + error.Message }, true));
+                    WriteFinalStatusFile(path, new PairStatus { error = error.GetType().Name + ": " + error.Message });
                     Debug.LogError(ResultMarker + " сборка пары упала: " + error);
                 }
                 finally
@@ -424,7 +444,7 @@ namespace VrBattlegrounds.EditorTools
         {
             ClearPairJob();
             var status = new PairStatus { error = error };
-            WriteStatusFile(path, JsonUtility.ToJson(status, true));
+            WriteFinalStatusFile(path, status);
             LogPair(status, path);
         }
 
@@ -489,18 +509,93 @@ namespace VrBattlegrounds.EditorTools
         }
 
         private static string ResolveStatusPath(string statusPath) =>
-            System.IO.Path.GetFullPath(string.IsNullOrEmpty(statusPath) ? DefaultPairStatusPath : statusPath);
+            BuildProvenance.ValidateStatusPath(string.IsNullOrEmpty(statusPath) ? DefaultPairStatusPath : statusPath);
+
+        private static void BeginPendingStatusFile(string path)
+        {
+            BuildProvenance.BeginStatusWrite(path);
+            WriteStatusFile(path, string.Empty);
+        }
+
+        private static void WriteFinalStatusFile(string path, PairStatus status)
+        {
+            try
+            {
+                WriteStatusFile(path, JsonUtility.ToJson(status, true));
+                BuildProvenance.CompleteStatusWrite(path);
+            }
+            catch (Exception e)
+            {
+                BuildProvenance.EndPendingStatusWrite(path);
+                status.questPassed = false;
+                status.serverPassed = false;
+                status.error = (status.error.Length > 0 ? status.error + "; " : string.Empty) +
+                               "не удалось финализировать статус/inventory: " + e.Message;
+                try { WriteStatusFile(path, JsonUtility.ToJson(status, true)); } catch { }
+            }
+        }
+
+        private static void WriteServerStatus(string path, Result result)
+        {
+            var status = new PairStatus
+            {
+                serverPassed = result.Passed,
+                revision = result.Revision,
+                serverSummary = result.Summary,
+                serverPath = result.Path,
+                error = result.Passed ? string.Empty : result.Message,
+                durationSeconds = Math.Round(result.Seconds)
+            };
+            WriteStatusFile(path, JsonUtility.ToJson(status, true));
+        }
+
+        private static void TryWriteServerStatus(string path, Result result)
+        {
+            try { WriteServerStatus(path, result); } catch { }
+        }
+
+        private static void RecordFailedQuestProvenance(string reason)
+        {
+            try
+            {
+                BuildProvenance.Begin("quest", System.IO.Path.GetDirectoryName(GameBuilder.OutputPathFor(BuildProfile.Quest)), "Test")
+                    .Finish(false, reason);
+            }
+            catch { }
+        }
+
+        private static void RecordFailedPairProvenance(string reason)
+        {
+            RecordFailedQuestProvenance(reason);
+            try
+            {
+                BuildProvenance.Begin("e2e", System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(OutputPath)), "Test")
+                    .Finish(false, reason);
+            }
+            catch { }
+        }
 
         /// <summary>Запись через временный файл: читатель не увидит половину JSON.</summary>
         private static void WriteStatusFile(string path, string text)
         {
+            path = BuildProvenance.ValidateStatusPath(path);
             string directory = System.IO.Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
-            string temp = path + ".tmp";
-            File.WriteAllText(temp, text);
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(temp, path);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, text);
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(temp, path);
+            }
+            finally
+            {
+                if (File.Exists(temp))
+                {
+                    try { File.Delete(temp); } catch { }
+                }
+            }
         }
 
         private static void LogPair(PairStatus status, string path)
@@ -516,9 +611,63 @@ namespace VrBattlegrounds.EditorTools
         // ── Сборка плеера ──────────────────────────────────────────────
 
         /// <summary><paramref name="revision" /> null — посчитать ревизию здесь.</summary>
-        private static Result Build(string revision, string[] requiredDebugScenes)
+        private static Result Build(string revision, string[] requiredDebugScenes, string statusArg = null)
         {
             Result result = new Result();
+            BuildProvenance.Attempt provenance = BuildProvenance.Begin("e2e",
+                System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(OutputPath)), "Test");
+            string statusPath = null;
+            try
+            {
+                if (!string.IsNullOrEmpty(statusArg))
+                {
+                    statusPath = BuildProvenance.BeginStatusWrite(ResolveStatusPath(statusArg));
+                    if (File.Exists(statusPath)) File.Delete(statusPath);
+                }
+                return BuildCore(revision, requiredDebugScenes, result, provenance);
+            }
+            catch (Exception e)
+            {
+                result.Passed = false;
+                result.Message = "Сборка прервана: " + e.GetType().Name + ": " + e.Message;
+                return result;
+            }
+            finally
+            {
+                if (statusPath != null)
+                {
+                    try
+                    {
+                        WriteServerStatus(statusPath, result);
+                        BuildProvenance.EndPendingStatusWrite(statusPath);
+                    }
+                    catch (Exception e)
+                    {
+                        BuildProvenance.EndPendingStatusWrite(statusPath);
+                        result.Passed = false;
+                        result.Message = "Не удалось сохранить статус сборки: " + e.Message;
+                    }
+                }
+                try
+                {
+                    if (!provenance.Finish(result.Passed, result.Passed ? null : result.Message) && result.Passed)
+                    {
+                        result.Passed = false;
+                        result.Message = "Provenance не подтверждает успешный текущий artifact";
+                        if (statusPath != null) TryWriteServerStatus(statusPath, result);
+                    }
+                }
+                catch (Exception e)
+                {
+                    result.Passed = false;
+                    result.Message = "Не удалось сохранить build.json: " + e.Message;
+                    if (statusPath != null) TryWriteServerStatus(statusPath, result);
+                }
+            }
+        }
+
+        private static Result BuildCore(string revision, string[] requiredDebugScenes, Result result, BuildProvenance.Attempt provenance)
+        {
 
             string[] scenes = BuildSceneResolver.Resolve(true, requiredDebugScenes);
 
@@ -574,7 +723,9 @@ namespace VrBattlegrounds.EditorTools
                 using (new XrBuildSettingsScope(BuildProfile.Server))
                 {
                     result.Revision = stamp.Revision;
+                    provenance.Capture(options, UnityEditor.Build.NamedBuildTarget.Standalone);
                     report = BuildPipeline.BuildPlayer(options);
+                    provenance.RecordReport(report);
                 }
             }
             catch (Exception e)

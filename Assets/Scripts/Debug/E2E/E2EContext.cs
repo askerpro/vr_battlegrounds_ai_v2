@@ -60,6 +60,13 @@ namespace VrBattlegrounds.DevTools.E2E
     {
         public string Scenario { get; private set; }
         public string Role { get; private set; }
+        /// <summary>Единственный канал diagnostic evidence; null у legacy-прогона.</summary>
+        public E2EDiagnosticSession Diagnostics => _diagnostics;
+        private E2EDiagnosticSession _diagnostics;
+        /// <summary>Ошибка immutable diagnostic inputs; не разрешает запуск сценария или сети.</summary>
+        public string DiagnosticError { get; internal set; }
+        internal E2EDiagnosticInput DiagnosticInput { get; private set; }
+        internal void AttachDiagnostics(E2EDiagnosticSession session) => _diagnostics = session;
         public string ResultPath { get; private set; }
         public float Timeout { get; private set; }
         public string Map { get; private set; }
@@ -159,7 +166,11 @@ namespace VrBattlegrounds.DevTools.E2E
 
             string scenario = Read(args, "-e2eScenario");
             if (string.IsNullOrEmpty(scenario))
-                return null;
+            {
+                if (!Has(args, "-e2eRunSpec") && !Has(args, "-e2eRunSpecSha256")) return null;
+                // Неполный diagnostic CLI обязан отказать до автоматического старта сети.
+                scenario = "<missing-diagnostic-scenario>";
+            }
 
             string role = Read(args, "-e2eRole");
             if (string.IsNullOrEmpty(role))
@@ -188,6 +199,19 @@ namespace VrBattlegrounds.DevTools.E2E
             context.HeadPoseError = ReadHeadPose(args, out bool headPose, out float headPoseEye);
             context.HeadPoseEnabled = headPose;
             context.HeadPoseEye = headPoseEye;
+            context.DiagnosticError = E2EDiagnosticInput.TryRead(args, context, out E2EDiagnosticInput input);
+            context.DiagnosticInput = input;
+            if (input != null)
+            {
+                // Legacy-сценарии маршрутизируют по scene.name; actual identity session сверяет только по scene.path.
+                context.Map = Path.GetFileNameWithoutExtension(input.RequestedSceneId);
+                context.HeadPoseEnabled = input.HeadPoseEnabled;
+                context.HeadPoseEye = input.HeadPoseEye;
+                var merged = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var pair in context.Args) merged.Add(pair.Key, pair.Value);
+                if (input.ViewsPath != null) merged[E2EViews.ArgKey] = input.ViewsPath;
+                context.Args = Snapshot(merged);
+            }
             return context;
         }
 

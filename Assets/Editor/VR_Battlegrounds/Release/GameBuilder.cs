@@ -229,6 +229,45 @@ namespace VrBattlegrounds.EditorTools.Release
             string revision,
             IEnumerable<string> externalBuildRoots)
         {
+            BuildProfile[] selected = profiles.Distinct().ToArray();
+            BuildProvenance.SourceSnapshot source = BuildProvenance.CaptureSource();
+            var attempts = selected.ToDictionary(p => p, p => BuildProvenance.Begin(
+                p.ToString().ToLowerInvariant(), Path.GetDirectoryName(SpecFor(p).Path), config.ToString(), source));
+            Result result = null;
+            try
+            {
+                return result = BuildCore(selected, config, revision, externalBuildRoots, attempts);
+            }
+            catch (Exception e)
+            {
+                return result = new Result().Fail("Сборка прервана: " + e.GetType().Name + ": " + e.Message);
+            }
+            finally
+            {
+                foreach (BuildProfile profile in selected)
+                {
+                    try
+                    {
+                        bool passed = attempts[profile].Finish(result != null && result.Passed,
+                            result == null || result.Passed ? null : string.Join("\n", result.Lines));
+                        if (!passed && result != null && result.Passed)
+                            result.Fail(profile + ": provenance не подтверждает успешный текущий artifact");
+                    }
+                    catch (Exception e)
+                    {
+                        result?.Fail(profile + ": не удалось сохранить build.json: " + e.Message);
+                    }
+                }
+            }
+        }
+
+        private static Result BuildCore(
+            IEnumerable<BuildProfile> profiles,
+            BuildConfig config,
+            string revision,
+            IEnumerable<string> externalBuildRoots,
+            IReadOnlyDictionary<BuildProfile, BuildProvenance.Attempt> provenance)
+        {
             var result = new Result
             {
                 CheckoutPath = Path.GetFullPath(".")
@@ -265,6 +304,9 @@ namespace VrBattlegrounds.EditorTools.Release
             }
 
             UxrIdFingerprint baseline = Preflight(scenes, needsAndroid, result);
+            BuildProvenance.SourceSnapshot effectiveSource = BuildProvenance.CaptureSource();
+            foreach (BuildProvenance.Attempt attempt in provenance.Values)
+                attempt.UpdateSource(effectiveSource);
             if (!result.Passed) return result;
 
             if (needsAndroid) SuppressAndroidInputHandlingDialog(result);
@@ -281,7 +323,7 @@ namespace VrBattlegrounds.EditorTools.Release
                 {
                     foreach (BuildProfile profile in ordered)
                     {
-                        if (!BuildOne(profile, scenes, baseline, config, result)) break;
+                        if (!BuildOne(profile, scenes, baseline, config, result, provenance[profile])) break;
                     }
                 }
                 finally
@@ -470,7 +512,8 @@ namespace VrBattlegrounds.EditorTools.Release
 
         // ── Одна сборка ────────────────────────────────────────────────
 
-        private static bool BuildOne(BuildProfile profile, string[] scenes, UxrIdFingerprint baseline, BuildConfig config, Result result)
+        private static bool BuildOne(BuildProfile profile, string[] scenes, UxrIdFingerprint baseline, BuildConfig config, Result result,
+            BuildProvenance.Attempt provenance)
         {
             Spec spec = SpecFor(profile);
 
@@ -558,7 +601,9 @@ namespace VrBattlegrounds.EditorTools.Release
 
                         try
                         {
+                            provenance.Capture(options, spec.Named);
                             report = BuildPipeline.BuildPlayer(options);
+                            provenance.RecordReport(report);
                         }
                         finally
                         {

@@ -1,5 +1,15 @@
 ## Текущий итог — 2026-10-15
 
+GPU diagnostics по8600: r2 agreed после ACK8729/8735 и provider ACK, planrev32.
+Runtime, transport и build provenance реализованы в собственном scope; независимое review
+и исправления продолжаются. Launcher review выявил пропущенные early role/scene guards
+и full inventory check; build review проверяет source snapshot и terminal inventory.
+Unity/GPU/runtime проверки новой реализации ещё не выполнены. Hub stage planned из-за
+legacy ordering; local source работа разрешена mode off, Unity требует собственной lease.
+Performance observer8797 подготовлен отдельно; bridge ждёт immutable provider и grant/proof,
+чужой WIP не копируется. Правила r2 и границы источников метрик сохраняются.
+Base753 DONE/published ed8b79f17 подтверждён8537/nativewatch; прежнее QUEUED историческое.
+
 quest-perf-pipeline: матрица4checkout завершена,8/8builderPASS,3последнихpipelineexit0;
 исходный Testcoldexit1 сохранён как дефект старогоreader. Testrepeat14мин11с,
 Prodrepeat17мин45с. Все4root clean/free/no-lock, Library/Build сохранены; Testcache hashes

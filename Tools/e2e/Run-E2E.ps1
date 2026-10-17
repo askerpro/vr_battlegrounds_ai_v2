@@ -53,6 +53,7 @@ param(
     # Сколько клиентских процессов поднять. Для dedicated-server-arsenal нужно 2:
     # EliminationMode не выйдет из WaitingForPlayers, пока в каждой из двух команд
     # нет игрока.
+    [ValidateRange(1, 1024)]
     [int]    $Clients = 2,
 
     # Общий таймаут прогона в секундах. По его истечении процессы добиваются
@@ -78,6 +79,11 @@ param(
     # Не проверять свежесть билда относительно исходников.
     [switch] $SkipStaleCheck,
 
+    # Immutable bundle: run-spec JSON, build.json и optional views рядом с ним.
+    [string] $RunSpec = '',
+    [string] $ViewsFile = '',
+    [string] $HeadPose = 'off',
+
     # Вердикт по логам: enforce — неожиданные ошибки в логах делают прогон RED (код 1); report — только отчёт.
     [ValidateSet('enforce', 'report')]
     [string] $LogVerdict = 'enforce'
@@ -87,7 +93,10 @@ $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-try { Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop }
+try {
+    Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop
+    Import-Module (Join-Path $PSScriptRoot 'E2EDiagnosticInputs.psm1') -Force -ErrorAction Stop
+}
 catch {
     Write-Host ''
     Write-Host ('Модуль вердикта по логам не загружен: ' + $_.Exception.Message) -ForegroundColor Red
@@ -208,6 +217,30 @@ foreach ($item in $Arg) {
     }
 }
 
+$diagnosticInput = $null
+$viewsInfo = $null
+$windowWidth = 640; $windowHeight = 480; $windowFullscreen = 0
+try {
+    if ($RunSpec) {
+        $diagnosticInput = Read-E2ERunSpec $RunSpec
+        Assert-E2EInputConflicts $diagnosticInput $PSBoundParameters $Scenario $Map $ViewsFile $HeadPose $argKeys.ToArray()
+        $Scenario = $diagnosticInput.spec.scenario
+        $Map = $diagnosticInput.routingMap
+        $ViewsFile = $diagnosticInput.viewsPath
+        $HeadPose = 'off'
+        if ($diagnosticInput.spec.headPose.mode -eq 'eye') { $HeadPose = ([double]$diagnosticInput.spec.headPose.eyeMeters).ToString('R', [Globalization.CultureInfo]::InvariantCulture) }
+        $windowWidth = $diagnosticInput.spec.windows.width; $windowHeight = $diagnosticInput.spec.windows.height
+        $windowFullscreen = [int](-not $diagnosticInput.spec.windows.windowed)
+    }
+    $headPoseInfo = Get-E2EHeadPose $HeadPose
+    if ($ViewsFile) {
+        if ($argKeys -icontains 'views') { throw 'ViewsFile и Arg views несовместимы' }
+        $ViewsFile = (Resolve-Path -LiteralPath $ViewsFile).Path
+        $viewsInfo = Read-E2EViews $ViewsFile
+    }
+}
+catch { Write-Host ('ОТКАЗ: входы диагностики: ' + $_.Exception.Message) -ForegroundColor Red; exit 2 }
+
 # Поздний клиент — последний, если задана пауза и клиентов больше одного (как и прежде).
 $lateRole = ''
 if ($LateClientDelay -gt 0 -and $Clients -gt 1) { $lateRole = 'client-' + $Clients }
@@ -271,9 +304,49 @@ if (-not $SkipStaleCheck) {
 }
 
 # ── 2. Папка прогона ──────────────────────────────────────────────────────
+$persistentRoot = $null
+try {
+    if ($null -ne $diagnosticInput) {
+        $buildProfile = Assert-E2EBuildArtifact $diagnosticInput 'e2e' $Player -Role server
+        if ($buildProfile.profile -cne 'e2e') { throw 'Windows клиентам требуется profile=e2e того же запускаемого artifact' }
+        $persistentRoot = Get-E2EBuildDataPath $buildProfile
+    }
+    else { $persistentRoot = Get-E2EPersistentDataPath $RepoRoot }
+}
+catch { Write-Host ('ОТКАЗ: build provenance: ' + $_.Exception.Message) -ForegroundColor Red; exit 2 }
 $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
 $runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $stamp + '-' + $Scenario)
+if ($null -ne $diagnosticInput) { $runDir = Join-Path $RepoRoot ('Tools/e2e/results/' + $stamp + '-' + [guid]::NewGuid().ToString('N')) }
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+
+$roleInputs = @{}
+$stages = @{}
+$launcherToken = [guid]::NewGuid().ToString('N')
+try {
+    if ($null -ne $diagnosticInput) { Copy-E2ESourceBundle $diagnosticInput $runDir }
+    foreach ($role in (@('server') + @(1..$Clients | ForEach-Object { 'client-' + $_ }))) {
+        $tokens = @()
+        if ($null -ne $diagnosticInput) {
+            $stage = New-E2EDiagnosticStage $diagnosticInput $persistentRoot $role $launcherToken
+            $stages[$role] = $stage
+            $tokens += @('-e2eRunSpec', $stage.path, '-e2eRunSpecSha256', $stage.sha256)
+            if ($stage.viewsRelative) { $tokens += @('-e2eArg', ('views=' + $stage.viewsRelative)) }
+        }
+        elseif ($ViewsFile) {
+            $relative = 'e2e/' + $launcherToken + '/' + $role + '/views.json'
+            $target = Assert-E2ESafePath $persistentRoot (Join-Path $persistentRoot $relative)
+            Copy-E2EVerifiedFile $ViewsFile $target (Get-E2EFileSha256 $ViewsFile)
+            $tokens += @('-e2eArg', ('views=' + $relative))
+        }
+        if ($role -ne 'server' -and $headPoseInfo.mode -ne 'off') { $tokens += @('-e2eHeadPose', $headPoseInfo.clientArg) }
+        $roleInputs[$role] = $tokens
+    }
+}
+catch {
+    $stageError = $_.Exception.Message
+    try { Save-E2EDiagnosticHarvest $runDir @() @('staging: ' + $stageError) } catch {}
+    Write-Host ('ОТКАЗ: staging: ' + $stageError) -ForegroundColor Red; exit 2
+}
 
 # Сценарию внутри плеера даём таймаут чуть меньше общего: он должен успеть
 # записать вердикт сам, до того как дирижёр начнёт добивать процессы.
@@ -326,10 +399,17 @@ $expected = New-Object System.Collections.ArrayList
 
 function Start-Player([string[]] $ExtraArgs, [string] $LogPath) {
     $arguments = @('-logFile', $LogPath) + $ExtraArgs
-    return Start-Process -FilePath $Player -ArgumentList $arguments -PassThru
+    # Start-Process соединяет массив пробелами; MSVCRT quoting сохраняет пути с пробелами.
+    $quoted = @($arguments | ForEach-Object {
+        if ($_ -notmatch '[\s"]') { $_ }
+        else { '"' + ([regex]::Replace([regex]::Replace($_, '(\\*)"', '$1$1\"'), '(\\+)$', '$1$1')) + '"' }
+    })
+    if ($ExtraArgs -contains '-nographics') { return Start-Process -FilePath $Player -ArgumentList $quoted -WindowStyle Hidden -PassThru }
+    return Start-Process -FilePath $Player -ArgumentList $quoted -PassThru
 }
 
 $exitCode = 2
+$launchFailure = $null
 # Нижняя граница времени создания потомков своих процессов (запас — на точность часов).
 $runStartedAt = (Get-Date).AddSeconds(-1)
 try {
@@ -344,7 +424,7 @@ try {
         '-e2eTimeout', "$scenarioTimeout",
         '-e2eNetworkPort', "$NetworkPort",
         '-e2eDiscoveryPort', "$DiscoveryPort"
-    ) + $commonArgs
+    ) + $commonArgs + $roleInputs['server']
     $serverProc = Start-Player -ExtraArgs $serverArgs -LogPath $serverLog
     [void]$launched.Add($serverProc)
     [void]$expected.Add(@{ role = 'server'; path = $serverResult; log = $serverLog })
@@ -385,9 +465,9 @@ try {
         $clientLog    = Join-Path $runDir ($role + '.log')
 
         $clientArgs = @(
-            '-screen-width', '640',
-            '-screen-height', '480',
-            '-screen-fullscreen', '0',
+            '-screen-width', "$windowWidth",
+            '-screen-height', "$windowHeight",
+            '-screen-fullscreen', "$windowFullscreen",
             '-e2eScenario', $Scenario,
             '-e2eRole', $role,
             '-e2eResult', $clientResult,
@@ -397,7 +477,7 @@ try {
             '-e2eTimeout', "$scenarioTimeout",
             '-e2eNetworkPort', "$NetworkPort",
             '-e2eDiscoveryPort', "$DiscoveryPort"
-        ) + $commonArgs
+        ) + $commonArgs + $roleInputs[$role]
 
         $clientProc = Start-Player -ExtraArgs $clientArgs -LogPath $clientLog
         [void]$launched.Add($clientProc)
@@ -462,6 +542,10 @@ try {
         Write-Host ('  таймаут ' + $Timeout + ' с — вердикта нет') -ForegroundColor Yellow
     }
 }
+catch {
+    $launchFailure = $_.Exception.Message
+    Write-Host ('Прогон прерван: ' + $launchFailure) -ForegroundColor Red
+}
 finally {
     # ── 6. Добить всё, что запускали ──────────────────────────────────────
     # Только свои PID и их потомки (плеер мог породить дочерний процесс).
@@ -495,7 +579,7 @@ finally {
 Write-Section 'Отчёт'
 
 $roleReports = New-Object System.Collections.ArrayList
-$anyMissing = $false
+$anyMissing = -not [string]::IsNullOrEmpty($launchFailure)
 $anyRedCheck = $false
 $anyInconclusive = $false
 # Вход вердикта по логам: результаты процессов (без результата — $null) и логи плееров.
@@ -504,6 +588,16 @@ $logRaw = New-Object System.Collections.ArrayList
 # Сводная лента шагов всех процессов (steps их результатов) и сколько записей процессы не сохранили.
 $stepFeed = New-Object System.Collections.ArrayList
 $stepsDropped = 0
+$harvestReceipts = New-Object Collections.Generic.List[object]
+$harvestProblems = New-Object Collections.Generic.List[string]
+
+# Отсутствующий результат не должен скрывать оставшийся stage/неполный JSONL.
+foreach ($role in $stages.Keys) {
+    $receipt = Save-E2ELocalArtifact $stages[$role].root $persistentRoot (Join-Path $runDir ('source/roles/' + $role))
+    $harvestReceipts.Add($receipt)
+    if (-not $receipt.ok) { $harvestProblems.Add($role + ': ' + $receipt.detail) }
+    if ($receipt.ok) { foreach ($problem in @(Get-E2EDiagnosticProblems $receipt.local $diagnosticInput $role)) { $harvestProblems.Add($problem) } }
+}
 
 # Время шага как строка ISO UTC: Windows PowerShell оставляет строку, PowerShell 7 превращает её в DateTime.
 function ConvertTo-StepUtc($Value) {
@@ -529,6 +623,16 @@ foreach ($item in $expected) {
     $data = $null
     try { $data = ConvertFrom-Json (Get-Content -Path $item.path -Raw) } catch {}
     [void]$logProcesses.Add(@{ process = $role; data = $data })
+
+    if ($null -ne $data) {
+        foreach ($path in @($data.artifacts)) {
+            if ([string]::IsNullOrEmpty([string]$path)) { continue }
+            if ($stages.ContainsKey($role) -and [string]$path -ieq $stages[$role].root) { continue }
+            $receipt = Save-E2ELocalArtifact ([string]$path) $persistentRoot (Join-Path $runDir ('source/roles/' + $role))
+            $harvestReceipts.Add($receipt)
+            if (-not $receipt.ok) { $harvestProblems.Add($role + ': ' + $receipt.detail) }
+        }
+    }
 
     if ($null -eq $data) {
         $anyMissing = $true
@@ -595,6 +699,7 @@ if ($sortedSteps.Count -gt 0) {
     }
 }
 
+if ($harvestProblems.Count -gt 0) { $anyInconclusive = $true }
 if ($anyMissing -or $anyInconclusive) { $exitCode = 2 }
 elseif ($anyRedCheck) { $exitCode = 1 }
 else { $exitCode = 0 }
@@ -624,12 +729,17 @@ if ($exitCode -ne $exitBeforeLogs) {
 $summary = [pscustomobject]@{
     scenario = $Scenario
     map = $Map
+    routingMap = $Map
+    requestedSceneId = $(if ($null -ne $diagnosticInput) { $diagnosticInput.spec.requestedSceneId } else { $null })
     clients = $Clients
     networkPort = $NetworkPort
     discoveryPort = $DiscoveryPort
     startedLocal = $stamp
     verdict = $verdict
     exitCode = $exitCode
+    launchFailure = $launchFailure
+    diagnosticRunSpecSha256 = $(if ($null -ne $diagnosticInput) { $diagnosticInput.sha256 } else { $null })
+    artifactProblems = $harvestProblems.ToArray()
     roles = $roleReports
     lateRole = $lateRole
     scenarioArgs = @($scenarioArgs)
@@ -648,6 +758,18 @@ $summary = [pscustomobject]@{
     }
 }
 $summary | ConvertTo-Json -Depth 8 | Set-Content -Path (Join-Path $runDir 'summary.json') -Encoding UTF8
+try {
+    New-Item -ItemType Directory -Path (Join-Path $runDir 'source') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $runDir 'summary.json') -Destination (Join-Path $runDir 'source/launch-run.json') -ErrorAction Stop
+    Save-E2EDiagnosticHarvest $runDir $harvestReceipts.ToArray() $harvestProblems.ToArray()
+}
+catch {
+    $harvestError = $_.Exception.Message
+    $exitCode = 2; $verdict = 'INCONCLUSIVE — raw harvest неполон'; $verdictColour = 'Yellow'
+    $summary.exitCode = 2; $summary.verdict = $verdict; $summary.artifactProblems = @($summary.artifactProblems) + @($harvestError)
+    try { Write-E2EDiagnosticJson (Join-Path $runDir 'summary.json') $summary } catch {}
+    Write-Host ('Harvest inventory не записан: ' + $harvestError) -ForegroundColor Red
+}
 
 Write-Host ''
 Write-Host ('ИТОГ: ' + $verdict) -ForegroundColor $verdictColour

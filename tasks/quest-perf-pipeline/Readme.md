@@ -1,8 +1,9 @@
 # Автоматический прогон Quest и каркас E2E
 
-Обновлено: 2026-10-15. Владелец: launch-infra; worktree
+Обновлено: 2026-10-17. Владелец: launch-infra; worktree
 `F:/CodexWorktrees/launch-infra/Vr_Battlegrounds_ai`, ветка `codex/vr-test-stand`.
-План хаба rev30. Режим coordination off; интерактивный Unity требует своей RUNNING lease.
+План хаба rev32; exact scope gpu-launch-inputs зарегистрирован по запросу8600.
+Режим coordination off; интерактивный Unity требует своей RUNNING lease.
 
 ## Цель и границы
 
@@ -18,6 +19,7 @@ Launch-infra владеет сборщиками, запуском и карка
 | e2e-smoke-kit | принят14.10 и влит be120d280; Windows selftest19/19, map-startup14/14 GREEN |
 | build-checkouts | принят15.10 и FF влит e83af8413; reader fix,9новых проверок и отчётность, матрица8/8builder PASS |
 | devtools-contract-tests | merged6669db54f, принят15.10,129/129PASS; публикация737DONE; lifecycle закрыт штатно |
+| gpu-launch-inputs | принят17.10 и влит в `origin/dev`; Unity worker770 PASS (`AndroidCompileGate` PASS, EditMode DevTools 146/146 PASS, Pester 20/20 PASS) |
 
 ## Четыре checkout и фактическая матрица
 
@@ -115,7 +117,18 @@ Performance получил DevTools результаты8230 и принятое
 
 ## Осталось
 
-Проверить FIFO-публикацию принятой базы перед следующей worker-заявкой.
+Публикация753 подтверждена canonical8537: DONE/published ed8b79f17; перед новой worker-заявкой
+нужна свежая проверка фактической базы. GPU diagnostics:
+[gpu-launch-inputs r2](contracts/gpu-launch-inputs.md) и [точные DTO](contracts/gpu-launch-dto-v2.md)
+согласованы (contract-agree r2) и реализованы в12 owned файлах. На аренде worker770 (base `ed8b79f17`,
+input `dc49871df`, result `cc4609297`) выполнены генерация `.meta`, `AndroidCompileGate.Run()` PASS
+(0 ошибок) и существующие EditMode `VrBattlegrounds.Tests.DevTools.*` 146/146 PASS (job `6f0a12abc4564a5cbe745e635d62c397`,
+[отчёт](reports/gpu-provider/unity/ticket-770-unity-verification.json)); Pester `E2EDiagnosticInputs` 20/20 PASS.
+Создан неизменяемый checkpoint `1717037f0fc34b9500db66d5c57c8b9ad957e7e7`, подготовлен и проверен
+[grant-gpu-launch-inputs-r2.json](reports/gpu-provider/grant-gpu-launch-inputs-r2.json)
+(`grant_id: gpu-launch-inputs-r2-20261016`) и отправлен `provider_ready` в `perf-stress-scenario` (8876).
+Ожидается совместный runtime/GPU прогон с `performance` и пользовательская приёмка перед вливанием в `origin/dev`.
+Tools/Perf остаются performance.
 Далее отдельный собственный dedicated-server-arsenal на принятом network1e945a996:
 исторический наш24/24functional/enforceRED4teleport не заменяет новый прогон, чужой713GREEN24/24
 не является нашим подтверждением. Frozen74bd старше network-исправления.

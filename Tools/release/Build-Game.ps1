@@ -155,6 +155,96 @@ function Read-UxrIdHash([string] $ProfileBuildDir) {
     return $null
 }
 
+# Собирает raw provenance только из текущих terminal попыток, не из оставшихся outputs прежней сборки.
+function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed) {
+    $profiles = New-Object System.Collections.Generic.List[object]
+    $origins = New-Object System.Collections.Generic.List[object]
+    $dirtyEntries = New-Object System.Collections.Generic.List[object]
+    $dirtyKnown = $true
+    $dirtyValue = $false
+    $passed = $BuildPassed
+    $folders = @{ server = 'Server'; quest = 'Quest'; tablet = 'Tablet' }
+    foreach ($run in $Runs) {
+        $terminal = $TerminalRuns[$run.Name]
+        foreach ($profile in ($run.Profiles -split ',')) {
+            $profile = $profile.Trim().ToLowerInvariant()
+            $root = [IO.Path]::GetFullPath((Join-Path $run.ProjectPath ('Build/' + $folders[$profile])))
+            $manifestPath = Join-Path $root 'build.json'
+            $record = $null
+            $reason = 'Сборка этого профиля не запускалась в текущей попытке'
+            if ($null -ne $terminal) {
+                try {
+                    $manifest = Get-Content -LiteralPath $manifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
+                    if ($manifest.schemaVersion -ne 1 -or $manifest.sourceSha -cne $Heads[$run.ProjectPath]) {
+                        throw 'Версия или полный sourceSha builder manifest не совпали с текущим checkout'
+                    }
+                    $candidates = @($manifest.profiles | Where-Object { $_.profile -ceq $profile })
+                    if ($candidates.Count -ne 1) { throw 'Builder manifest не содержит единственный ожидаемый профиль' }
+                    $record = $candidates[0]
+                    if ([IO.Path]::GetFullPath([string]$record.outputRoot) -ine $root) { throw 'Builder outputRoot не совпал с фактическим путём профиля' }
+                    $start = [DateTimeOffset]::MinValue
+                    $end = [DateTimeOffset]::MinValue
+                    if (-not [DateTimeOffset]::TryParse([string]$record.terminal.startedUtc, [ref]$start) -or
+                        -not [DateTimeOffset]::TryParse([string]$record.terminal.endedUtc, [ref]$end) -or
+                        $start -lt $terminal.startedUtc -or $end -lt $start -or $end -gt [DateTimeOffset]::UtcNow) {
+                        throw 'Builder manifest не принадлежит временному интервалу текущего запуска'
+                    }
+                    if ($record.success -isnot [bool] -or -not $record.success -or $record.terminal.result -cne 'Succeeded' -or
+                        $terminal.exitCode -ne 0 -or @($record.files).Count -eq 0) {
+                        $passed = $false
+                        # Failure evidence сохраняется, но inventory старой/неуспешной сборки не принимается.
+                        $record.success = $false
+                        $record.files = @()
+                        $record.actual.unavailableReasons | Add-Member -NotePropertyName files -NotePropertyValue 'Текущий terminal builder не подтвердил успешный artifact; inventory не принимается' -Force
+                    }
+                    $origins.Add([ordered]@{ path = $manifestPath; sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant() })
+                    if ($manifest.dirty.value -isnot [bool]) { $dirtyKnown = $false }
+                    elseif ($manifest.dirty.value) { $dirtyValue = $true }
+                    foreach ($entry in @($manifest.dirty.entries)) {
+                        $dirtyEntries.Add([ordered]@{ checkout = $run.ProjectPath; evidence = $entry })
+                    }
+                } catch {
+                    $record = $null
+                    $reason = $_.Exception.Message
+                }
+            }
+            if ($null -eq $record) {
+                $passed = $false
+                $dirtyKnown = $false
+                $unknownActual = [ordered]@{}
+                $unknownReasons = [ordered]@{ manifest = $reason }
+                foreach ($field in @('developmentBuild', 'scenePaths', 'buildGuid', 'appVersion', 'unityVersion', 'companyName', 'productName', 'buildTarget', 'subtarget', 'scriptingBackend', 'graphicsApis', 'buildOptions')) {
+                    $unknownActual[$field] = $null
+                    $unknownReasons[$field] = $reason
+                }
+                $unknownActual.unavailableReasons = $unknownReasons
+                $record = [ordered]@{
+                    profile = $profile; outputRoot = $root; files = @(); success = $false
+                    actual = $unknownActual
+                    terminal = @{ startedUtc = $(if ($terminal) { $terminal.startedUtc.ToString('o') } else { $null }); endedUtc = $(if ($terminal) { $terminal.endedUtc } else { $null }); result = $null; reason = $reason }
+                }
+            }
+            $profiles.Add($record)
+        }
+    }
+    $dirty = $null
+    if ($dirtyKnown -or $dirtyValue) { $dirty = $dirtyValue }
+    $pair = [ordered]@{
+        schemaVersion = 1; sourceSha = $Heads[$Runs[0].ProjectPath]; sourceShaReason = $null
+        sourceKind = 'unknown'; sourceKindReason = 'Подтверждённый accepted/checkpoint proof не передан; Git HEAD не доказывает приёмку'
+        dirty = @{ value = $dirty; entries = $dirtyEntries.ToArray(); reason = $(if (-not $dirtyKnown) { 'Часть builder manifests не предоставила dirty evidence' } else { $null }) }
+        profiles = $profiles.ToArray(); sourceManifests = $origins.ToArray(); success = $passed
+        generatedUtc = [DateTimeOffset]::UtcNow.ToString('o')
+    }
+    $id = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ') + '-' + [Guid]::NewGuid().ToString('N')
+    $directory = Join-Path $RepoRoot ('Build/manifests/build-' + $id)
+    $null = New-Item -ItemType Directory -Path $directory -Force
+    $path = Join-Path $directory 'build.json'
+    $json = ($pair | ConvertTo-Json -Depth 40) -replace "`r`n", "`n"
+    [IO.File]::WriteAllText($path, $json + "`n", (New-Object Text.UTF8Encoding($false)))
+    return [pscustomobject]@{ Path = $path; Passed = $passed }
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if ($Development) { $Config = 'Test' }
 
@@ -358,6 +448,9 @@ if ($DryRun) {
     exit 0
 }
 
+$buildTerminal = @{}
+$pairRunSuccess = $false
+try {
 $index = 0
 foreach ($run in $runs) {
     $index++
@@ -384,8 +477,12 @@ foreach ($run in $runs) {
     Write-Host "Запуск $index/$($runs.Count): профили $($run.Profiles), -buildTarget $($run.BuildTarget), worktree $($run.ProjectPath)"
     Write-Host "Лог: $log"
 
+    $terminal = @{ startedUtc = [DateTimeOffset]::UtcNow; endedUtc = $null; exitCode = $null }
+    $buildTerminal[$run.Name] = $terminal
     $process = Start-Process -FilePath $Unity -ArgumentList $arguments -NoNewWindow -PassThru -Wait
     $code = $process.ExitCode
+    $terminal.endedUtc = [DateTimeOffset]::UtcNow.ToString('o')
+    $terminal.exitCode = $code
 
     Show-LogResult $log
 
@@ -423,6 +520,21 @@ if ($uniqueUxrHashes.Count -gt 1) {
         Write-Host ("  {0}: {1}" -f $k, $builtProfileHashes[$k]) -ForegroundColor Red
     }
     exit 1
+}
+
+$pairRunSuccess = $true
+} finally {
+    try {
+        $pairManifest = Write-BuildPairManifest $runs $worktreeHeads $buildTerminal $pairRunSuccess
+        Write-Host ('Build manifest: ' + $pairManifest.Path)
+        if ($pairRunSuccess -and -not $pairManifest.Passed) {
+            Write-Host 'Provenance не подтверждает текущие успешные builder artifacts; смотри pair manifest.' -ForegroundColor Red
+            exit 1
+        }
+    } catch {
+        Write-Host ('Не удалось сохранить pair build manifest: ' + $_.Exception.Message) -ForegroundColor Red
+        if ($pairRunSuccess) { exit 1 }
+    }
 }
 
 Write-Host 'Готово. Собранные профили:' -ForegroundColor Green

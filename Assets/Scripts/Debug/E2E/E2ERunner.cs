@@ -33,6 +33,9 @@ namespace VrBattlegrounds.DevTools.E2E
         private int _writtenStepsVersion;
         private float _nextInterimWrite;
         private static E2ERunner _active;
+        private Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> _diagnosticRefusal;
+        private Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> _previousPlayerPreparation;
+        private UnityEngine.Events.UnityAction<UnityEngine.SceneManagement.Scene, UnityEngine.SceneManagement.LoadSceneMode> _serverStartup;
 
         /// <summary>Проверка, которую ставит abort сервера у клиента.</summary>
         public const string CheckServerAbort = "сервер не прерывал прогон";
@@ -107,6 +110,31 @@ namespace VrBattlegrounds.DevTools.E2E
             };
             // Условия сборки — уже в заглушке: дирижёр сверяет стороны и по оборванному прогону.
             _result.CaptureBuildConditions();
+            _startedRealtime = Time.realtimeSinceStartup;
+            if (_context.DiagnosticError == null && _context.DiagnosticInput != null && !IsRegistered(_context.Scenario))
+                _context.DiagnosticError = "invalid-input: неизвестный diagnostic scenario " + _context.Scenario;
+            if (_context.DiagnosticError == null && _context.DiagnosticInput != null)
+            {
+                _context.DiagnosticError = E2EDiagnosticSession.TryCreate(_context, _result, out E2EDiagnosticSession diagnostics);
+                _context.AttachDiagnostics(diagnostics);
+            }
+            if (_context.DiagnosticError != null)
+            {
+                _result.Status = E2EResult.StatusError;
+                _result.Summary = "diagnostic inputs: " + _context.DiagnosticError;
+                _result.Set("diagnostic inputs приняты", false, _context.DiagnosticError);
+                // Запрещаем автоматический Start сети тем же player-швом, до первой сцены.
+                if (!Application.isEditor)
+                {
+                    _previousPlayerPreparation = DebugBootstrapGate.PlayerBeforeNetworkStart;
+                    _diagnosticRefusal = (manager, discovery, role) => "DiagnosticInputInvalid: " + _context.DiagnosticError;
+                    DebugBootstrapGate.PlayerBeforeNetworkStart = _diagnosticRefusal;
+                }
+                _result.WriteTo(_context.ResultPath);
+                GameLog.Error("[E2E] " + _result.Summary);
+                Finish(2);
+                return;
+            }
 
             // Заглушка пишется немедленно: если процесс упадёт или его убьют
             // по таймауту, дирижёр всё равно увидит файл и отличит падение
@@ -125,25 +153,27 @@ namespace VrBattlegrounds.DevTools.E2E
             if (_context.PortError == null && _context.ArgError == null && _context.IsServerRole &&
                 Resolve(_context.Scenario) is IE2EServerStartup startup)
             {
-                UnityEngine.Events.UnityAction<UnityEngine.SceneManagement.Scene, UnityEngine.SceneManagement.LoadSceneMode> once = null;
-                once = (scene, mode) =>
+                _serverStartup = (scene, mode) =>
                 {
-                    UnityEngine.SceneManagement.SceneManager.sceneLoaded -= once;
+                    UnityEngine.SceneManagement.SceneManager.sceneLoaded -= _serverStartup;
+                    _serverStartup = null;
                     string refusal = startup.BeforeNetworkStart(_context);
                     if (refusal != null) GameLog.Debug.Error($"[E2E] Подготовка сервера отказала: {refusal}");
                 };
-                UnityEngine.SceneManagement.SceneManager.sceneLoaded += once;
+                UnityEngine.SceneManagement.SceneManager.sceneLoaded += _serverStartup;
             }
         }
 
         private void Start()
         {
-            if (_context != null) StartCoroutine(DriveScenario());
+            if (_context != null && !_finished) StartCoroutine(DriveScenario());
         }
 
         private void Update()
         {
             if (_context == null) return;
+            _context.Diagnostics?.Poll();
+            if (_context.DiagnosticError != null) return;
             // Барьер опрашивает сеть и после вердикта: сервер ещё принимает шаги клиентов, клиент досылает свой failed.
             E2EBarrier.Poll();
 
@@ -311,9 +341,11 @@ namespace VrBattlegrounds.DevTools.E2E
 
             _finished = true;
             _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
+            _context.Diagnostics?.End("scenario-finished");
+            ClearServerStartup();
 
             // Провал виден другой стороне барьера: сервер рассылает abort, клиент шлёт шаг failed (до записи — в журнал).
-            if (!_result.Passed)
+            if (!_result.Passed && _context.DiagnosticError == null)
             {
                 string reason = string.IsNullOrEmpty(_result.Summary) ? _result.Status : _result.Summary;
                 if (_context.IsServerSide) E2EBarrier.FailServer(reason);
@@ -338,6 +370,7 @@ namespace VrBattlegrounds.DevTools.E2E
 
         private void OnApplicationQuit()
         {
+            ClearServerStartup();
             _identityScope?.Dispose();
             _identityScope = null;
             if (_finished || _result == null)
@@ -347,23 +380,39 @@ namespace VrBattlegrounds.DevTools.E2E
             _result.Summary = "процесс завершился раньше, чем сценарий вынес вердикт";
             _result.AbortPending("процесс завершился досрочно");
             _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
+            _context?.Diagnostics?.End("application-quit", false);
             _result.WriteTo(_context.ResultPath);
         }
 
         private void OnDestroy()
         {
+            ClearServerStartup();
             if (!_finished && _result != null)
             {
                 _result.Status = E2EResult.StatusError;
                 _result.Summary = "исполнитель уничтожен до завершения сценария";
                 _result.AbortPending(_result.Summary);
                 _result.DurationSeconds = Time.realtimeSinceStartup - _startedRealtime;
+                _context?.Diagnostics?.End("runner-destroyed", false);
                 _result.WriteTo(_context.ResultPath);
             }
+            _context?.Diagnostics?.End("runner-destroyed", false);
             _identityScope?.Dispose();
             _identityScope = null;
             if (_context != null) E2EBarrier.Deactivate(_context);
             if (_active == this) _active = null;
+            if (_diagnosticRefusal != null && DebugBootstrapGate.PlayerBeforeNetworkStart == _diagnosticRefusal)
+                DebugBootstrapGate.PlayerBeforeNetworkStart = _previousPlayerPreparation;
+        }
+
+        private void OnApplicationFocus(bool focused) => _context?.Diagnostics?.FocusChanged(focused);
+        private void OnApplicationPause(bool paused)
+        { if (paused) _context?.Diagnostics?.FocusChanged(false); }
+        private void ClearServerStartup()
+        {
+            if (_serverStartup == null) return;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= _serverStartup;
+            _serverStartup = null;
         }
 
         // ── Реестр сценариев ───────────────────────────────────────────────

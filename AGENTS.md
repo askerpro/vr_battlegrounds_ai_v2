@@ -23,6 +23,26 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 - New/changed managed source/docs/tools use LF; check only owned physical paths plus staged blobs before checkpoint. Untouched legacy files are not batch-normalized. PhaseB: Unity YAML, ProjectSettings and tasks/**/*.md|json are LF too; never re-materialize YAML by hand (Unity saves converge it); binary .asset files are `binary`; pre-push rejects CR in pushed eol=lf blobs. [EOL contract](Docs/agents/text-eol.md).
 - Use native file editing first (Codex apply_patch, Claude Edit/Write). Follow the injected terminal/encoding guidance; use git --no-pager.
 
+## Задачи, эксперты и ревью (решение пользователя 2026-10-17)
+
+- Одна задача — один агент — один worktree — одна ветка `task/<task-id>` от свежей `origin/dev`.
+  Создание: `python Tools/agents/coordination.py task-new --task <task-id> ...` (worktree, ветка, регистрация, бриф).
+  Агент задачи сам работает во всех нужных зонах. Сессии экспертов новых задач не ведут; существующие
+  expert worktree доводят текущие задачи до merge.
+- Новая задача — своя цель, отдельная приёмка пользователем, независимое вливание или указание пользователя
+  «отдельной задачей». Этап — шаг к уже согласованному критерию приёмки. Несвязанные цели этапами не добавлять.
+- Бриф обязателен: `task-brief` (цель, мотивация, план `[ ]`/`[x]`, статус), чтение `task-brief-show`.
+  Статус обновлять при каждом переходе этапа и в конце сессии.
+- Перед правкой путей из `owns` эксперта (`experts/<id>/expert.json`) прочитать его `AGENT.md`. `expert.json` —
+  карта маршрутизации ревью, не запрет на запись. В конце задачи — короткая запись в `experts/<id>/journal/`
+  каждой существенно затронутой зоны.
+- Перед merge — ревью каждой затронутой зоны: `review-request` → `review-prompt` → read-only субагент с этим
+  промптом сам выполняет `review-ack`; ACK действует только для зафиксированного SHA, `changes` — исправить и повторить.
+- Сериализованные ассеты Unity (`.unity`, `.prefab`, `.asset`, `ProjectSettings/**`, `.asmdef`) одновременно правит
+  один выполняющийся этап; `.cs` сливается обычным merge/rebase. Zone-ACK и переговоры о порядке ради writes отменены.
+- Маршрут и команды: [задачи, эксперты и ревью](.agents/rules/agent_coordination.md#задачи-эксперты-и-ревью-решение-2026-10-17);
+  роль экспертов: [experts/COMMON.md](experts/COMMON.md).
+
 ## Delegation and context ownership
 
 Applies to Codex and Claude through this entry point. The principal agent owns the task's
@@ -87,8 +107,8 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
   text at the end of a turn. Before asking, finish everything that does not depend on the answer.
   Give options with the recommended one first; the user can always answer freely via Other.
   A Stop hook returns the turn if the final message looks like a plain-text question.
-- Before AskUserQuestion, process your inbox (contract-ack, zone-ack, replies to other agents):
-  an open dialog freezes the expert's inter-agent coordination until the human answers.
+- Before AskUserQuestion, process your inbox (contract-ack, replies to other agents):
+  an open dialog freezes the task's inter-agent coordination until the human answers.
   Reminders about an earlier unanswered question do not create new dialogs.
 - On a wake-up (background command finished, subagent notification) with nothing to report,
   answer with one short line or nothing.
@@ -152,6 +172,7 @@ Before reading or running a helper, discover its actual path with `rg --files` i
 | Map hierarchy/geometry | [scene hierarchy](Docs/scene-hierarchy.md), asset rules and occlusion/validation steps |
 | Unity automation/tests | [Unity access](.agents/rules/project-workflows.md#unity-access) and [verification](.agents/rules/project-workflows.md#verification-and-acceptance); multi-process probes: [test stand](Docs/test-stand.md); Play — только через PlayLaunch ([test stand](Docs/test-stand.md), «Как агенту включить Play (через Offline)»), прямой `EditorApplication.isPlaying = true` запрещён (выход `= false` — шаг 4 рецепта) |
 | MCP failure | Current sections of [MCP diagnostics](Docs/unity-mcp.md); old 9.x fixes are historical |
+| New task, foreign zone, review | [tasks, experts and review](.agents/rules/agent_coordination.md#задачи-эксперты-и-ревью-решение-2026-10-17); zone knowledge: `experts/<id>/AGENT.md` |
 | Coordination/integration | [integration route](.agents/rules/project-workflows.md#integration-and-coordination); enforced details: [agent_coordination](.agents/rules/agent_coordination.md) |
 | Task docs/delegation/LFS | Matching section of [workflow details](.agents/rules/project-workflows.md); LFS: [worktrees](Docs/agents/lfs-worktrees.md) |
 | UI/fonts/arsenal | [UI design](Docs/ui-design-system.md), [menu](Docs/ui-menu-architecture.md), [fonts](Docs/ui-fonts.md) / [arsenal](Docs/Arsenal/Arsenal_Code_Architecture_RU.md) |

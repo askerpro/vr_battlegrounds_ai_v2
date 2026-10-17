@@ -65,3 +65,13 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - Specs name avatar, item, hand, grip point, pose, Blend; reports add GUIDs.
 - HRQ writes only to `Docs/tasks/report/hand-rig-quality` (gitignored; enforced in `HandRigQualityAnalyzer.cs`).
   HRQ 0.5 scores only M4/M9/M10, PNG lacks sections/weight masks. `PuppetHandProbe` absent; Puppet input by agreement.
+
+### Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; уровень доказательства называть явно (Zone rules).
+- Ревьюер (чеклист diff):
+  - `_eyesBaseHeight` и принятая калибровка MEF не изменены без решения avatar-ik/пользователя;
+  - порядок писателей кисти прежний; нет нового писателя пальцев/IK/Transform/grab state, второго транспорта, покадровой правки визуала;
+  - хват через GUID-цепочку; fallback, нет имени позы, нет hand align — не маскируются (Issue 26);
+  - Native ≠ Sdk; re-rig, смена кисти, масштаб MEF — только с подтверждённой причиной и решением пользователя;
+  - запись хвата в prefab сохраняет identity (NetworkAssetIdNormalizer + проверка на диске);
+  - Fit `ok`, preview и hash не выдаются за приёмку хвата, runtime или Quest.

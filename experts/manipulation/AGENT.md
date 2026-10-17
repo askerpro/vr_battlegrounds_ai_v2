@@ -51,3 +51,13 @@ release, grab networking by network's rules, loose items) plus interaction effec
 - `tasks/haptics-system/handoff.md` (`pocket-removal` plan); `tasks/haptics-system/Details.md` items 0.4, 2, 5, 9 only.
 - `Docs/troubleshooting.md` «Взаимодействие с предметами»; `Docs/UltimateXR/known-issues.md` Issue 6, 7, 13–18, 20, 35, 38.
 - Check facts `tasks/haptics-system/changelog/`; contract `tasks/haptics-system/contracts/haptics-api.md`.
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; решения пользователя — `Docs/manipulation/decisions.md`, полный список — `Docs/manipulation/invariants.md`.
+- Ревьюер (чеклист diff):
+  - состояние хвата в SDK; нет копии grab-state, второго писателя мотора/отклика, своей математики близости, обхода `GrabRules`/`StateEventAuthority`;
+  - мотор пишет только `UnityXRHapticDevice` по команде `HapticMixer` в `HapticService`; вибрация только на руке локального игрока, не по сети;
+  - готовность = ответ SDK (`TryGetGrabCandidate`, патч 67; `AnchorPlacementReadiness`), локально; по сети только события;
+  - патч 26 выключен; вызовы патча 67 в `UxrGrabManager.cs` сохранены;
+  - синхронизируемые вызовы из Update/таймера/физики/RPC — под `IsAuthorOfItem`/`IsWorldAuthority`;
+  - числа вибрации агент не выбирает; выводы `architecture.md` §8 — гипотезы до прогона.

@@ -51,3 +51,13 @@ Consumers: gameplay (MapBootstrap reads zones/stations), bots (navmesh), map E2E
   `level-design-principles.md` (LD-01…55), `map-evaluation.md`, `map-growth.md`, `environment-pack-policy.md`.
 - `Docs/game-manager.md` «Запуск карты»; `tasks/map-runtime-bootstrap/Details.md`
   «Адаптер генерируемых станций». `Docs/troubleshooting.md` «Превью арсенала и материалы».
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; сохранять только сцены и ассеты задачи.
+- Ревьюер (чеклист diff):
+  - parent = owner: Environment неинтерактивен, Gameplay — спавны/станции/цели/триггеры; составной prefab цел; иерархия не задаёт tag/layer/StaticEditorFlags;
+  - PhysicalArenaLayout: один PhysicalArenaDefinition, ноль Collider, Geometry off, CalibrationAnchors on; контент карты не применён к общему prefab;
+  - один MapRoot с identity; в сценах нет MapReferee/ArsenalEquipmentCoordinator;
+  - декор сохраняет игровые коллайдеры, высоту, Hard/Soft/Visual; D/C перемерены после декора;
+  - окклюзия: подвижные не static; «Bake Occlusion (all maps)» не запускается параллельно с другим писателем сцен;
+  - изменение слоёв/коллайдеров Default/Ground передано bots (навигация); нет SaveAssets.

@@ -49,3 +49,13 @@ weapon clips. Facts: KB `Docs/weapons/` (start at README); here — navigation. 
 - `tasks/weapon-system/Details.md` «Этап waves-f»; `tasks/weapon-system/ejection-manual.md`.
 - `Docs/gameplay.md` «Оружие KINEMATION…», «Баланс оружия (T-38)», «Накопленная отдача (T-38)».
 - Task Readme and `Docs/weapons/roadmap.md` in origin/dev lag the owner branch; status — awake.
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; решения пользователя — `Docs/weapons/decisions.md`, полный список — `Docs/weapons/invariants.md`.
+- Ревьюер (чеклист diff):
+  - решения механизма только в `WeaponStateMachine` (строка/сигнал таблицы, не флаг); машина без ссылок на Unity/SDK;
+  - учёт патронов только в SDK, машина читает `LedgerView` без копий; магазин знает только сокет;
+  - один писатель на канал (поза, звук механизма, вибрация, подсказка); исполнители не решают и не читают учёт;
+  - команды учёта — только автор, вне replay, с ожидаемой ревизией; нет новых Mirror Cmd/Rpc, имена Cmd `CartridgeIntake` не изменены;
+  - prefab оружия — только через `WeaponSystemAuthoring` (preflight, readback), не руками;
+  - своя вторая рука не перехватывает огнестрел (`AllowHandTransfer = false`).

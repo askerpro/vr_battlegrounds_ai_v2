@@ -45,3 +45,13 @@ You are the `avatar-ik` expert: the player avatar body — frame, input, IK, cal
 ### Zone rules
 - Body mechanics need human headset acceptance; stand, editor Play and Quest are separate evidence.
 - You review launch-infra's test XR input adapter.
+
+### Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; механику тела принимает человек в шлеме.
+- Ревьюер (чеклист diff):
+  - один писатель на кость (BodyIK, `UxrArmIKSolver`, ноги; пальцы — avatar-grip); предки запястья вне BodyIK — только в `KeepTrackedBones()` (патч 46);
+  - порядок писателей кисти в `UxrManager` прежний, нового писателя нет;
+  - позу ног выбирает один `UxrLegsPoseMixer` от камеры, не солверы (Issue 31);
+  - производное состояние аватара пишет только `AvatarCalibrationApplier`; изменение `_eyesBaseHeight` — с перепроверкой хватов (avatar-grip);
+  - список рендереров явный, не расширен; скрытие только `forceRenderingOff` (Issue 22);
+  - stand, editor Play и Quest — разные доказательства; тестовый XR-ввод launch-infra соответствует правилам ввода.

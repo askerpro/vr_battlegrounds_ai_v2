@@ -70,3 +70,12 @@ before/after measurement or justification; reject a perf PASS without measuremen
 - `Docs/combat-networking.md` «Что измерить на Quest — и как».
 - `Docs/scene-hierarchy.md` «Изменения и проверка»; `.agents/rules/project-workflows.md` «Asset rules».
 - `Docs/troubleshooting.md` «Выделенный сервер»; `Docs/UltimateXR/known-issues.md` «Issue 20».
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; оптимизацию в чужой зоне делает агент задачи по ТЗ/ревью этой зоны.
+- Ревьюер (чеклист diff):
+  - пункты «Perf review of a foreign stage» выше;
+  - у каждого числа есть условия (сборка, устройство, роль, режим, сцена, SHA); бюджет — по Test build на шлеме, Editor — только относительный рост;
+  - стресс-тест только фиксирует FFR/уровни; фазы `StressTestServer.Run` и `StressTestPlan` изменены вместе;
+  - пост-обработка, HDR, render scale != 1, opaque/depth texture, renderer features — с повторным замером;
+  - сценарий замера не задаёт свой порог; неизвестный бюджет не выдуман.

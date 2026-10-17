@@ -47,3 +47,13 @@ settings views. Consumer of gameplay state (mode, series, economy).
 - `Docs/troubleshooting.md` «UI-планшет», «Кракозябры»;
   `Docs/UltimateXR/known-issues.md` «После спавна бота планшет перестаёт принимать касания».
 - `Docs/Arsenal/Arsenal_Code_Architecture_RU.md` «6. Экономика и покупка».
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; прокрутку, читаемость и касание принимает только пользователь в шлеме.
+- Ревьюер (чеклист diff):
+  - экран — вариант `Screen_Base`, меняется только `Content`, собран `MenuKit` из токенов `MenuTheme`; нет литеральных цветов, своих кнопок, 3D-текста, чужих шрифтов;
+  - один `MenuFrame` и один `MenuNavigation`; `Tablet*.prefab` от `MenuKitBuilder`, `Tablet.prefab` руками не правлен, `Screen_Base` не пересоздан;
+  - admin UI — только `MenuPermissions.ShowAdminUi` (видимость), права проверяет сервер;
+  - вкладки — от режима плюс системные, не больше 6;
+  - шрифт — статический Roboto Condensed; один MonoBehaviour на файл с тем же именем;
+  - UI не хранит и не реплицирует состояние матча; уведомления часов — локальный `WatchNotifications.Post`.

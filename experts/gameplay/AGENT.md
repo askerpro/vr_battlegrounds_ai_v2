@@ -56,3 +56,13 @@ Not owned:
   «Режимы игры», «Экономика и покупки (T-45)».
 - `tasks/arsenal-generator/` (Readme.md, Details.md, new-flow.md); `Docs/Arsenal/Arsenal_Code_Architecture_RU.md`.
 - `Docs/troubleshooting.md`: «Матч и раунды».
+
+### Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; E2E-каркас — зона launch-infra (её ревью), как реплицировать — ревью network.
+- Ревьюер (чеклист diff):
+  - смена карты только `MapLoader.Instance.LoadMap`; первая сцена сервера — ServerStartupRoute в `ServerChangeScene`; onlineScene/offlineScene не трогаются;
+  - состояние карты публикует только `MapRunAuthority`; `MapRunConfig` неизменен в пределах загрузки;
+  - режим серии — из `Series.CapturedModeId`, выбор меню — к следующей серии;
+  - сетевые предметы карты — только через `MapRunAdmission`, именованные отказы без fallback;
+  - станция арсенала детерминирована по `MapRunKey`; один писатель вида слота `ArsenalSupportProjection`;
+  - EditMode smoke серии (без аватаров и сети) не выдаётся за сетевую проверку.

@@ -51,3 +51,13 @@ Layers: 1 UXR engine (SDK), 2 glue (yours), 3 direct Mirror (feature code).
 - `Docs/UltimateXR/sdk-patches.md` «Патч 1: UxrMirrorAvatar», «Патч 9», «Патч 13»; `Docs/Mirror/mirror-patches.md` «Патч 1».
 - `Docs/audit/network-audit-2026-08.md`; `Docs/audit/architecture-review-2026-08.md` «Корень 1».
 - `Docs/testing.md` «Как тестировать сетевую логику», «Ярус C · Два процесса…».
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; сетевая часть любой задачи (Cmd/Rpc/SyncVar/NetworkMessage, relay, авторитет) идёт на ревью этой зоны.
+- Ревьюер (чеклист diff):
+  - канал состояния UXR только через `NetworkStateRelay` (один на процесс, без static); `UxrMirrorAvatar` не транспорт;
+  - синхронизируемое действие из Update/таймера/физики/RPC/hook — под `IsAuthorOfItem`/`IsWorldAuthority`;
+  - состояние позднего входа — SyncVar/Sync-коллекция или UXR snapshot, Rpc — только эффекты; вызов не из обработчика события UXR (Issue 38);
+  - события невыровненного аватара ждут `AvatarSpawned`, despawned netId отбрасываются; устаревший ответ снимка (`MapRunKey` + номер запроса) не применяется;
+  - UniqueId runtime-объектов выравнивает только `NetworkUxrIdentity`, аватаров — SDK;
+  - нет ClientRpc на ServerOnly (host маскирует дефекты); проверки: Android compile, сетевые EditMode, tier C при изменении поведения.

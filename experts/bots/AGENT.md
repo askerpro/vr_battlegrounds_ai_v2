@@ -51,3 +51,13 @@ Bots as ordinary headset-less players: Blaze AI decisions, bodies, equipment, sh
 - `tasks/bots-fix/` (not in origin/dev), owner copy `F:/CodexWorktrees/bots-fix/Vr_Battlegrounds_ai/tasks/bots-fix/`:
   Details «Границы и владение», «Архитектура и последовательность», «Контракты и зависимости»;
   `contracts/armed-development-composition.md`, `diagnosis/`.
+
+## Как использовать этот профиль
+- Агент задачи: перед правкой путей из `owns` (`expert.json`) прочитать этот файл и нужный раздел Details; цель bots-fix ещё не в origin/dev — сверять с Architecture.
+- Ревьюер (чеклист diff):
+  - урон, смерть, призрак, деньги, счёт — как у людей; решения и Blaze — только сервер, клиентам поза через NetworkTransform;
+  - корень тела пишет только BotBody, кости — видимый Animator; рука BotBody — по контракту писателей кисти;
+  - экипировка — только серверная привязка; нет фейкового UxrGrabber, копий M/C, второго жизненного цикла; подготовка — `RequestAutomationPreparation`, выстрел проверен автором (`StateEventAuthority`);
+  - тактика — штатные Blaze Alert/CoverShooter/GoingToCover; патчи Blaze — узкие точки из `Docs/BlazeAI/sdk-patches.md`;
+  - тело выбирается до первого Spawn, неизвестная модель отклоняется; удаление — `BotDirector.RemoveBot(session)`;
+  - стенд не создаёт второй UXR grab и не пересохраняет production-реестры; клип или счётчик не доказывают хват/выстрел/укрытие (непринятое = NeedsReview).

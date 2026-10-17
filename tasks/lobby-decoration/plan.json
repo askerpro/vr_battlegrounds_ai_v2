@@ -71,6 +71,11 @@
           "task": "catalog-fingerprint",
           "stage": "env-independent",
           "state": "merged"
+        },
+        {
+          "task": "scene-detail",
+          "stage": "core",
+          "state": "merged"
         }
       ],
       "needs": []

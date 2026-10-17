@@ -4,6 +4,47 @@
 Checkout: `F:/UnityProjects/Vr_Battlegrounds_ai` (основной), ветка `scene-detail`, содержит origin/dev `d3c62ca5e`.
 Проект и этапы — [Details.md](Details.md).
 
+## Текущее решение пользователя: передача performance
+
+Сцена составлена; core74bd42f57 и UI47c010277 опубликованы. Дальнейшие инструменты измерения
+и детального GPU/A/B-анализа ведёт **performance**, разбор результатов и правки сцены — её **автор**.
+Здесь дальнейшие инструменты/оптимизации не запускаются: ждём измерительный пакет perf.
+Полная передача кода, данных, доказательств и требований —
+[handoff](changelog/2026-10-15-performance-handoff.md), комплект — `reports/performance-handoff/`.
+
+Автор должен самостоятельно уметь готовить Test в сборочных checkout: маршрут запрошен у
+launch-infra8290. Новый приоритет пользователя — быстрый Editor/Windows-client цикл до Android,
+после него проверка на Quest; переносимость долей GPU между ПК и мобильным устройством не предполагается.
+Дальнейшие пункты старого плана ниже — история; владение инструментами передано perf.
+Perf подтвердил получение и границы8320, готовит свой scope/план. ZIP8311:154product+53taskfiles,
+SHA25656a1e311a07255d9c9fcf89097d3fc0b21289bdeddc7a5e429d3ede217417be2,207payload проверены.
+Дополнение8323: существующий Windows E2E Player пригоден для окна клиента (обычный Server — headless),
+runner задаёт640×480/XRoff. Рецепт автора получен8313; его ограничения и открытые views/Map стыки
+сохранены в handoff. Новые сборки здесь не запускались; дальнейшая диагностика инструментов — perf/launch.
+
+Ревью спецификации perf по запросу8505: **подходит с условиями**; конкретизированы
+переход к месту правки, ранжирование, эффективные LOD/свет и охват ракурсов.
+[Consumer-review](changelog/2026-10-15-gpu-diagnostics-consumer-review.md) содержит
+четыре сценария приёмки и статический кандидат первого LOD A/B. Это ревью дизайна;
+реализация/замеры не принимались, новых прогонов и изменений сцены нет.
+
+Для запроса perf8625 подготовлены [границы API](contracts/gpu-scene-detail-boundary-v1.md)
+и [контрольная пара LOD](contracts/lod-ab-control-v1.json): только farStart25→20,
+textureBias/cullSize0 в обоих планах/вариантах, полный список40 групп из690.
+Accepted source5/5 сверены с74bd; на момент ответа8625 экспортного runtime API не было. Весь инструментальный
+код остаётся performance; здесь контракт/данные, без реализации или запусков.
+
+Контракт perf `gpu-scene-evidence` r1 и точный stage плана rev11 прочитаны;
+formal contract-ack выполнен, публикация15b3ee9e65bcaf533c239be7bedc2ca252c9fee1.
+[Ревью r1](changelog/2026-10-15-gpu-scene-evidence-r1-review.md): реализация у perf,
+writer/lifecycle остаются прежними. Это согласование API, не приёмка реализации.
+
+Owner-review perf8785 immutable checkpoint016fd8 завершён: статических блокеров
+в accessor/DTO/exporter не найдено. [Результат](changelog/2026-10-15-gpu-scene-code-owner-review.md)
+фиксирует три blob, точность original/effective и границы пригодности индекса.
+Фактический Unity export/Quest/captured mesh ещё не подтверждены этим ревью;
+новые tests/probes и запуски здесь не выполнялись.
+
 ## Цель
 
 Регулируемая детализация среднего и дальнего планов для любой сцены: профиль сцены, применение во
@@ -17,8 +58,9 @@ Checkout: `F:/UnityProjects/Vr_Battlegrounds_ai` (основной), ветка 
   инструмента (limitBias 0 на всех уровнях, globalTextureMipmapLimit не трогать, итоговые лимиты
   дальнего плана — в импорт Android, рантайм-смещение — только по правилу плана с замером tex_mb);
   бюджеты сцен — документ performance. Zone-ack на core: performance (6508), level-design (6509).
-- `core` — пользователь15Oct разрешил «вливай как есть»; готовится принятая публикация WIP
-  `cc485d9bd` с локальными исправлениями. Размещение/порядок UI подтверждены7983. Основной Unity открыт;
+- `core` — принят пользователем15Oct «вливай как есть» и опубликован в origin/dev
+  `74bd42f5760b5e3f04d2e886a5685a2f52ff3d1d` (FF поверх04fc, ls-remote подтверждён).
+  Размещение/порядок UI подтверждены7983, MenuDebug не менялся. Основной Unity открыт;
   итоговая компиляция Editor и AndroidCompileGate — PASS, Android ошибок 0:
   `Assets/Scripts/Maps/Detail/` — `SceneDetailProfile` (ScriptableObject), `SceneDetailApplier`
   (единственный писатель; OnEnable/OnDisable; LOD обрезкой списка с сохранением порога отсечения;
@@ -115,6 +157,16 @@ LOD/дальнего декора/Android-текстур; исторически
   ручной проверки. Ни Quest-замер, ни JSON/controls этим не объявляются проверенными. UI-запрос7979.
 - UI7983 подтвердил Перф-анализ → GPU, единственный Build/Snapshot с полной заменой legacy;
   pending718 отменён до аренды. Сначала scoped accepted core, затем UI-интеграция/свои проверки/release.
+- Публикация core выполнена74bd42f57:154product+13taskfiles, соседние старые task docs исключены,
+  mainHEAD/index сохранены. Свежие AndroidCompileGatePASS0, существующие LobbyLayout/Occlusion8/8;
+  LF physical/staged/rawcommit167/167. Unity-generated trailing spaces в пустых полях новых meta
+  и Lobby YAML сохранены как сериализовал Editor; source/docs diff-check чистый.
+  Локальный dev обновлёнFF без переключения основной ветки. Worker base719 DONE/event8105:
+  broker B74bd42f57 подтверждена по config, blocked/recovery=false. UI уведомлён7993 и результатом719.
+  Ledger core также MERGED74bd42f57 (record a782db4e7f6d49dd96f4ca58783e6434): по маршруту8148
+  добавлен только порядок lobby implementation.after → scene-detail/core merged, lobby register16;
+  core begin/verify/record-merged выполнены штатно. Scope и остальные зависимости Lobby сохранены,
+  его implementation остаётся PLANNED, приёмка других этапов не менялась.
 - Приёмка `core` в Unity/шлеме: подстройка LOD/отсечения мелочи/текстур без появления отсечённых
   объектов, сохранение/импорт JSON, восстановление исходного состояния при выключении/выгрузке.
   UI714 получил7PNG, но detailAvailable=false в EditMode; принятие этих снимков не принимает core.

@@ -6,8 +6,18 @@
 собственной истёкшей аренды без force: `126ba84c11909e5364319e185b2eb24942eea1db`.
 Все 55 изменённых путей доставлены в свой checkout точным Git diff; каждый blob
 сверен с recovery snapshot, расхождений 0, затем выполнен штатный ack807.
-Worker освобождён. Проверки цепочек обновлены после приёмки; текущий шаг —
-прогон EditMode, независимое ревью затронутых зон и штатная интеграция.
+Проверки цепочек обновлены после приёмки. Unity812 на `fa6d3c4d`:
+19/19 AvatarHandPoseChain, 17/17 PrefabComposition, 60/63 AvatarLoadout;
+итого 96/99, три отказа — Default-пол BotCombatStand вне teleport mask8.
+Контроль815 на принятой базе `3a3a7340` воспроизвёл ту же причину у Controllers,
+MEF с кистями киборга и прежних зарегистрированных MEF/Black (два job по два кейса).
+Сцена и тест в нашем diff не меняются; этот отдельный дефект стенда отложен.
+Ожидания тестов не ослаблены. Полные результаты: `test812-full.json` и
+`baseline815-full.json` в `reports/prefab-hierarchy-20261018/`.
+Обе аренды штатно DONE, paths/unexpected пусты. AutoSave восстановлен в исходное true.
+Шесть независимых зональных ревью раунда2 — approve; замечания исправлены.
+Последующие rebase не изменили source/assets diff. Фактические integration SHA
+и состояние этапа ведутся в хабе (`status`, `task-brief-show`); старые этапы не закрыты.
 Ревью выявило ошибку унаследованного TeamColorVariantBuilder: выбор поля
 исправлен на UxrAvatar._prefabGuid (UxrComponent.__prefabGuid — другая metadata).
 Полный scope плана дополнен изменёнными registry/team/архивными путями из WIP

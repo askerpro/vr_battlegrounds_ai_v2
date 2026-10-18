@@ -2,7 +2,7 @@
   "task_id": "bots-fix",
   "owner": "bots",
   "client": "codex",
-  "worktree": "F:/CodexWorktrees/bots/Vr_Battlegrounds_ai",
+  "worktree": "F:/CodexWorktrees/bots",
   "base_sha": "498f284fbd2ecfd4a4e6ab9681766174e5c4af48",
   "doc_path": "tasks/bots-fix/Readme.md",
   "title": "Боты: штатный поток игрока — аватар без владельца + адаптер намерений ИИ (Blaze)",

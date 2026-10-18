@@ -2,7 +2,7 @@
   "task_id": "hand-rig-quality",
   "owner": "avatar-grip",
   "client": "codex",
-  "worktree": "F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai",
+  "worktree": "F:/CodexWorktrees/cyborg-hands",
   "base_sha": "e15feb92bb09638767879d7b1e7b8a3f9df65b29",
   "doc_path": "tasks/hand-rig-quality/Readme.md",
   "title": "Качество кистей и хватов MEF",

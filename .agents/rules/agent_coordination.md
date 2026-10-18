@@ -36,12 +36,15 @@ renew/stop/begin; управляющий Python-скрипт из вложенн
 
 **Задача = агент.** Одна задача — один агент — один worktree — одна ветка `task/<task-id>`
 от свежей `origin/dev`. Агент задачи сам работает во всех зонах, которые нужны задаче.
-Создание (worktree, ветка, регистрация и бриф) — одной командой; сначала прочитай её help:
+Создание (worktree, ветка, регистрация и бриф) — одной командой из продуктового main
+`F:/UnityProjects/Vr_Battlegrounds_ai`; сначала прочитай её help:
 
 ```powershell
 python Tools/agents/coordination.py task-new --help
 python Tools/agents/coordination.py task-new --task <task-id> ...
 ```
+
+После создания агент работает в новом worktree. `task-new` не вызывается из worktree другой задачи.
 
 Постоянные сессии экспертов новых задач не ведут. Существующие expert worktree доводят
 текущие задачи до merge; новые задачи — только через `task-new`.
@@ -72,12 +75,37 @@ python Tools/agents/coordination.py review-request --task <task-id> --stage <sta
 python Tools/agents/coordination.py review-prompt --request <request-id>
 ```
 
-`review-request` фиксирует SHA кандидата. Агент задачи запускает read-only субагента (Claude —
-Agent с read-only типом, например Explore или Plan; Codex — read-only sandbox) с выданным промптом;
-промпт вручную не редактируется. Ревьюер сам выполняет
-`review-ack --request <request-id> --verdict approve|changes --summary-file <файл>` и в хабе не
-регистрируется: никаких register, route-publish, begin. ACK действителен только для зафиксированного
-SHA: новый коммит — новое ревью. Замечания `changes` исправить и запросить ревью заново.
+`review-request` фиксирует base/candidate SHA, `patch_id` diff и снимок промпта с `prompt_hash`.
+Агент задачи запускает read-only субагента с выданным промптом; промпт вручную не редактируется.
+Ревьюер читает diff и профиль зоны, в хабе не регистрируется: никаких register, route-publish, begin,
+Unity или `awake`. Если запись в хаб разрешена, он выполняет единственную выданную команду
+`review-ack` с `--prompt-hash` и сводкой через `--summary` или stdin (`--summary-file -`).
+
+Если запись в хаб недоступна (например, Codex read-only sandbox), ревьюер возвращает выданный
+`review-prompt` блок `ZONE-REVIEW-VERDICT`, заполнив вердикт и сводку. Автор задачи или владелец зоны
+сохраняет его дословный вывод в UTF-8 файле `.md`/`.txt` в ignored `reports/` своей задачи либо подаёт
+через stdin и выполняет из своего продуктового worktree:
+
+```powershell
+python Tools/agents/coordination.py review-ack --request <request-id> --reviewer-output <файл.md>
+```
+
+`request`, `prompt_hash`, `verdict` и сводка берутся из блока; подменять вывод, вердикт или hash нельзя.
+Хаб сохраняет вывод с маскированием секретов и аудит `recorded_by=author|owner`, `prompt_confirmed`,
+вызывающий worktree и `spawned_by_task` (если передан). Запись approve автором или self-review дополнительно
+уведомляет сопровождающего (`zone_review_self_approved`); это не отменяет независимость ревьюера.
+
+Действует последний раунд по задаче/этапу/зоне. ACK привязан к candidate SHA; после rebase без изменения
+diff он сохраняется только при совпадении `git patch-id --stable` относительно базы merge-заявки.
+Изменился diff — новое ревью. `changes` и `revoked` блокируют вливание при любой политике зон, включая off;
+замечания надо исправить новым коммитом. Повторный запрос на тот же SHA и повторный вердикт делегата
+не обходят отказ. Владелец зоны может заменить вердикт делегата своим ревью из worktree своей задачи
+или отозвать approve штатной командой:
+
+```powershell
+python Tools/agents/coordination.py zone-ack-revoke --task <задача владельца зоны> --owner <expert-id> --target-task <task-id> --target-stage <stage> --reason "<причина>"
+```
+
 Approve ревьюера не является приёмкой пользователем и не заменяет проверки в Unity/шлеме.
 Ревьюер проверяет diff по разделу «Как использовать этот профиль» в `AGENT.md` зоны и общим пунктам:
 нет второго писателя состояния, копии факта, обхода инварианта или существующего владельца; сериализованные
@@ -96,6 +124,17 @@ writes; контракт между живыми экспертными сесс
 добавление task-id в `expert.json` ради допуска.
 **Без изменений:** очередь Unity worker/editor-broker (FIFO, аренды), merge-request/merge-execute,
 вопросы пользователю (AskUserQuestion), inbox/wait-inbox, запрет на чужие ACK/контракты, SDK-патчи.
+
+**Закрытие задачи.** После завершения приёмки и запланированных вливаний owner обновляет бриф и журнал,
+затем из своего worktree закрывает задачу с ревизией задачи из `status` (это не ревизия брифа):
+
+```powershell
+python Tools/agents/coordination.py task-close --task <task-id> --owner <owner> --expected-revision <N> --reason "<итог>"
+```
+
+Команда допускает закрытие, когда все этапы merged/accepted либо ещё не начинались. Закрытая задача
+не принимает register/begin; новая цель оформляется через `task-new`. Закрытие не удаляет старые
+worktree, WIP, результаты или историю и не заменяет требуемое вливание.
 
 ## Один документ задачи
 
@@ -416,8 +455,9 @@ Clear сохраняет tombstone с новым epoch, старый epoch не 
 
 ## Вливание
 
-Перед заявкой на вливание нужен `review-ack --verdict approve` по каждой затронутой зоне
-для того же SHA (раздел «Задачи, эксперты и ревью»); после нового коммита или rebase — новое ревью.
+Перед заявкой на вливание нужен approve последнего раунда по каждой затронутой зоне для того же SHA
+или сохранённого `patch_id` после rebase без изменения diff (раздел «Задачи, эксперты и ревью»).
+Изменённый diff требует нового ревью; `changes`, `revoked` и approve другого diff блокируют вливание.
 В строгом режиме прямой push заменяется `merge-request --task ... --stage ... --owner ...
 --base <полный SHA origin/dev> --sha <принятый SHA>`, затем `merge-execute --request ... --owner ...`.
 Брокер сверяет конкретный SHA, контракты, области и реальную ancestry предшественников в

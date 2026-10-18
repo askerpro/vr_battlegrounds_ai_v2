@@ -26,7 +26,8 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 ## Задачи, эксперты и ревью (решение пользователя 2026-10-17)
 
 - Одна задача — один агент — один worktree — одна ветка `task/<task-id>` от свежей `origin/dev`.
-  Создание: `python Tools/agents/coordination.py task-new --task <task-id> ...` (worktree, ветка, регистрация, бриф).
+  Создание из продуктового main: `python Tools/agents/coordination.py task-new --task <task-id> ...`
+  (worktree, ветка, регистрация, бриф); дальше работать в созданном worktree.
   Агент задачи сам работает во всех нужных зонах. Сессии экспертов новых задач не ведут; существующие
   expert worktree доводят текущие задачи до merge.
 - Новая задача — своя цель, отдельная приёмка пользователем, независимое вливание или указание пользователя
@@ -37,7 +38,13 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
   карта маршрутизации ревью, не запрет на запись. В конце задачи — короткая запись в `experts/<id>/journal/`
   каждой существенно затронутой зоны.
 - Перед merge — ревью каждой затронутой зоны: `review-request` → `review-prompt` → read-only субагент с этим
-  промптом сам выполняет `review-ack`; ACK действует только для зафиксированного SHA, `changes` — исправить и повторить.
+  промптом. При доступной записи он выполняет выданную `review-ack`; при read-only sandbox возвращает блок
+  вердикта, а автор/владелец зоны записывает дословный вывод через `review-ack --reviewer-output <файл|->`.
+  Хаб сохраняет аудит автора записи и hash промпта. ACK привязан к SHA или тому же `git patch-id --stable`
+  после rebase без изменения diff; изменённый diff требует нового ревью. `changes`/`revoked` нельзя обойти
+  повторным ревью того же SHA; отзыв — только владельцем зоны через `zone-ack-revoke`.
+- Завершённую задачу закрывает её owner командой `task-close` с актуальной ревизией из `status`;
+  новая цель после закрытия — новая задача через `task-new`.
 - Сериализованные ассеты Unity (`.unity`, `.prefab`, `.asset`, `ProjectSettings/**`, `.asmdef`) одновременно правит
   один выполняющийся этап; `.cs` сливается обычным merge/rebase. Zone-ACK и переговоры о порядке ради writes отменены.
 - Маршрут и команды: [задачи, эксперты и ревью](.agents/rules/agent_coordination.md#задачи-эксперты-и-ревью-решение-2026-10-17);

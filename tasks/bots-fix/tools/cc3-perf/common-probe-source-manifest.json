@@ -1,23 +1,55 @@
 {
   "schema": "cc3-common-perf-probe-source@2",
   "date": "2026-10-16",
-  "status": "AWAITING_COMMON36_CANDIDATE_CHECKPOINT",
+  "status": "TECHNICAL_COMMON36_PACKAGING_AUDIT_WITH_LATER_ACCEPTANCE",
+  "auditUpdate": {
+    "date": "2026-10-18",
+    "scope": "Только метаданные аудита. Поля accepted/compilation/runtime внутри technicalCommon36Inputs описывают момент упаковки; technicalCommon36Inputs — схема привязки результата, не новый runtime-код. Frozen H/C tool/docs blobs не меняются.",
+    "acceptedSourceCommit": "044888e1b247f3257771c52a97dcd2a21bd40673",
+    "acceptedSourceScope": "Пользователь принял текущие стрельбу и удержание оружия в локальном Editor на production5489; физический Quest, внешняя сеть и N8/perf не приняты.",
+    "mergeStatus": "MERGED_SOURCE_044888e1b",
+    "common36Compilation": "После упаковки exact H/C: каждый 12 assemblies + 5 C#6 payloads, 13 compiler rows exit0/errors0.",
+    "preparedPayloadCompatibility": "После упаковки по 35 payloads против каждого exact H/C: exit0/errors0.",
+    "common36Runtime": "H800: 0 shots, невалидный combat control. C801: 129 shots/76 hits/24 kills, четыре raw scored раунда, cap600/completed=false. Исходный N8 незавершён; H′804 остаётся отдельной диагностикой.",
+    "evidence": [
+      "tasks/bots-fix/changelog/2026-10-18-user-acceptance.md",
+      "tasks/bots-fix/reports/mirror6-compile/stand-team-hc-H-r1/summary.md",
+      "tasks/bots-fix/reports/mirror6-compile/stand-team-hc-C-r1/summary.md",
+      "tasks/bots-fix/reports/cc3-common36-playerinput-prepared/compiler-compatibility.json",
+      "tasks/bots-fix/reports/native801/analysis.md",
+      "tasks/bots-fix/reports/native804/analysis.md"
+    ]
+  },
+  "historicalVerificationScope": "Разделы historicalReference, verification и pending сохранены как исторические записи своих inputs, а не текущий общий статус source acceptance или common36 runtime.",
   "currentCompositionPlan": "tasks/bots-fix/completion-plan.md",
   "owner": "bots-fix",
   "acceptedBase": "50c27ae71da47d43245cbd4eb1ba6747a2a7e44c",
-  "candidateReference": null,
-  "candidateSourceTree": null,
-  "plannedCommon36": {
+  "candidateReference": "5489395093f9f36c89b79df95e1b3c2de561583b",
+  "candidateSourceTree": "1d0d59e88472c0aeb2d89b0f84451a32375c47ad",
+  "technicalCommon36Inputs": {
     "counts": { "assetsDiff": 87, "common": 36, "cutover": 48, "probe": 2, "excludedTests": 1, "tools": 12 },
     "addedCommonPaths": [
       "Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs",
       "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs"
     ],
-    "input": null,
-    "hybrid": null,
-    "candidate": null,
-    "inventory": null,
-    "scope": "Только подготовка следующего пакета. Companion stand общ для H/C; perf expectations не меняются."
+    "input": "5489395093f9f36c89b79df95e1b3c2de561583b",
+    "hybrid": "4d9f8d4e229788de43f6d9fe9817c761faa756f9",
+    "hybridTree": "834fe10e1cf69a4ac08c7dd9a3f0447924d992fa",
+    "candidate": "1152421fcd958d15036c669b284b7e3db0e5f9ae",
+    "candidateTree": "7754fe7c6a4d0d1b212089af4cfde706aab0d2c6",
+    "inventory": "tasks/bots-fix/reports/cc3-perf-inputs/common36-attempt-1.json",
+    "inventorySha256": "c84e3033b2ca20db7abe70b198dcbaa37ebd8fa2f5045076b3642e5cca101c21",
+    "operations": { "A": 18, "M": 55, "D": 14 },
+    "lfBlobs": 84,
+    "containsCR": false,
+    "exactStandCommonOverrides": true,
+    "exactCutover48": true,
+    "testsFromBase": true,
+    "headAndIndexUnchanged": true,
+    "accepted": false,
+    "compilation": null,
+    "runtime": null,
+    "scope": "Снимок аудита на момент упаковки common36: accepted=false и compilation/runtime=null относятся к этому моменту; последующие результаты и source acceptance записаны в auditUpdate. Companion stand общ для H/C, perf expectations не меняются. Result bindings дописаны после упаковки; snapshots включают tool/docs blobs из C*54893950, а не последующие записи."
   },
   "historicalCommon34Reference": {
     "sourceCandidate": "53e3a85fd6c2f88d7593ffe2a9aa94bd5e9eb1a2",
@@ -71,10 +103,10 @@
     "identicalBytesRequiredForHybridAndCandidate": true,
     "singleDeclarationRequired": true,
     "sdkCopiesAllowed": true,
-    "sharedSdkPolicy": "Только точные собственные frozen C* blobs SDK81/82/84/86/87/88, Mirror6/7 и companion stand, одинаковые для H и C. Текущий common36 C* PENDING. Не чтение чужого checkout и не исторический whole-tree overlay.",
+    "sharedSdkPolicy": "Только точные собственные frozen C*5489395093f9f36c89b79df95e1b3c2de561583b blobs SDK81/82/84/86/87/88, Mirror6/7 и companion stand, одинаковые для H и C. Не чтение чужого checkout и не исторический whole-tree overlay.",
     "borrowedComponents": [],
     "wholeHistoricalCommitImportAllowed": false,
-    "overlayScope": "common36 + probe2 + одинаковые cc3 tools; C дополнительно cutover48. Legacy frozen77 закреплён на 48b27cf2bb0c9eb2dc646cc8f058bdd9d0eaf5a0; прежние восемь явных common M плюс Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs и Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs расширяют Assets scope до frozen87. BotAuthorityTests оставлен из B в обоих perf inputs; исходный worktree не меняется. Точный состав будущего input фиксирует generated inventory после нового checkpoint."
+    "overlayScope": "common36 + probe2 + одинаковые cc3 tools; C дополнительно cutover48. Legacy frozen77 закреплён на 48b27cf2bb0c9eb2dc646cc8f058bdd9d0eaf5a0; прежние восемь явных common M плюс Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs и Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs расширяют Assets scope до frozen87. BotAuthorityTests оставлен из B в обоих perf inputs; исходный worktree не меняется. Точный состав input54893950 фиксирует immutable inventory common36-attempt-1.json."
   },
   "assembly": {
     "name": "VrBattlegrounds.BotCombatStand",

@@ -5,6 +5,17 @@
 вся необходимая межзонная реализация передана этой сессии и её субагентам.
 Машинные этапы и области записи — только в `plan.json`. Эксперты дают знания и ревью.
 
+Текущая итерация принята пользователем после ручного Editor Play и влита в
+`origin/dev`: `044888e1b247f3257771c52a97dcd2a21bd40673`, tree
+`1d0d59e88472c0aeb2d89b0f84451a32375c47ad`, идентичный проверенному5489.
+Штатный merge-request `a0289441a93e454faecb80e9a5af6615` завершён, удалённый SHA
+подтверждён. [Решение и область приёмки](changelog/2026-10-18-user-acceptance.md).
+Незавершённые N8, Quest, внешние клиенты, тестовые инструменты и остальные
+недоработки пользователь перенёс в [следующую итерацию](next-iteration.md).
+Ниже сохранена историческая последовательность консолидации: её `pending`,
+`accepted=false`, статусы этапов и незакрытые checklist описывают соответствующий
+момент, а не отменяют последующую приёмку текущего локального поведения.
+
 ## Исходное состояние
 
 - После fetch `origin/dev=50c27ae71da47d43245cbd4eb1ba6747a2a7e44c`.
@@ -51,6 +62,11 @@ Details не зарегистрирован в hub и не вводится ка
 и игрового тела. В S8 два таких клиента наблюдают восемь ботов. Ни смерть, ни отсутствие
 команды сами по себе не меняют Role на Spectator.
 
+Входящие чужие состояния у внешних Player и Spectator проходят общий Mirror/UXR receive:
+snapshot и события NetworkStateRelay не фильтруются по роли, чужие аватары UpdateExternally.
+Различия собственного avatar/ownership и origin-self-skip не покрываются Spectator;
+observer/AOI/owner-only ограничения действуют для обеих ролей. Сверено по source 2026-10-18.
+
 - [x] Восстановить WIP, ветки без checkout, dirty, контракты и canonical события.
 - [x] Собрать Spectator gameplay+network, сохранив existing guards и общий Player lifecycle (source, без runtime-приёмки).
 - [x] Перенести девять runtime source SDK82 и WeaponSystemAuthoring побайтно из WIP `88c664f09` (компиляция впереди).
@@ -61,6 +77,11 @@ Details не зарегистрирован в hub и не вводится ка
 - [x] Пересобраны H36d3f350/Caa0956c5 после registry/SDK87: общие29 assets, diff48, exact manifests и semantic compile каждого11+5 errors0. Это техническая упаковка без runtime/приёмки.
 - [x] После Mirror6/Host guard/explicit MinPlayers: common30 H=d5933476e/C=e1d95e8c2, frozen81/diff48/probe2. Exact offline каждого12сборок+5payloads errors0, свежий Mirror первым, foreign0; прежние common29 результаты исторические.
 - [x] Unity795 inputf8: actual Host LocalAvatar/session/ClientReady и завершённый precache; обычный remote rejoin epoch1→2, Host сохранён. Два post-rejoin снимка через63.956с без роста transforms/copies/fades. Next-map/abort/Quest/полный registry не проверены; mono вырос150626304Б. DONE/receive180463621, SHA25621/21.
+- [x] SDK88/Mirror7 source53; Unity798:48existingpassed/0failed/2ignored из50, Host/precache/rejoin и registry6767→6518→6767→6767/gettererrors0. Result011af75d/central23SHA23. Рост памяти не принят за leak-free.
+- [x] Quest/server53 GameBuilderPASS/errors0/UXRсовпал; aggregateexit1provenanceиз-заразбораUTCвpwsh7/ru-RU. UPMоднойlockзаписификсируется, infra9318передан. ФизическийQuest этим не проверен.
+- [x] Common36/frozen87 из5489: H4d9f8d4e229788de43f6d9fe9817c761faa756f9/C1152421fcd958d15036c669b284b7e3db0e5f9ae; exactinventoryc84e3033…/common36/cutover48/probe2/TestsB/tools12. ОбаEditorsourceадресноговводаобщие; Unity800 подтвердил штатный Hostteaminput. H8 невалиден как combatcontrol: два90сdraw/0shots; exactH legacyReadinessProfile null уR08/Viper. Recover800R d93f4c558e tree=H/sourcepaths0, raw15+log1SHA сохранены, ackиногополучения. C8в801begin; валидныйHконтроль наperformance-review1dc667194e0a433d.
+- [x] H8Unity799 сохранёнкакFAIL/incomplete/CombatNOT_MEASURED: Hostteam0 удержалштатныйPlayerChoice, round0Setup/0shots. Result514f060d/central14SHA14; новыйвводчерезсуществующийCmdRequestTeamChange готовитсябезforcedReady/телепорта/прямыхписателей.
+- [x] C8/common36 Unity801: actualHost8bots/normalteaminput, final129botshots/76hits/24kills, consoleerrors0/warnings84. Watchcap600/completedfalse/maxRound4/scored1..3, raw4Scoreboard; полныйсценарийнеPASS. CleanupIdle/Passed/requestClear, DONE/receive15ae5ee9/31centralSHA31. Все7sourcezonesapprove5489, performanceadvisoryapprove; Hcontrol/N8BLOCKED.
 - [x] Офлайн-компиляция11 сборок и обоих пакетов по5 C#6 payloads; visual также с текущей пробой матча, errors0.
 - [x] Unity788: неизменённые применимые EditMode49/49, полный job result сохранён вне Git; это не runtime/Quest-приёмка.
 - [x] Unity792: неизменённые EditMode40/40 для registry/initial snapshot/late join/pocket; полный job08a29c3b сохранён. Повтор Spectator не достиг полной готовности двух клиентов; runtime приёмка открыта.

@@ -343,6 +343,34 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "acceptance-closeout",
+      "writes": [
+        "tasks/bots-fix/Readme.md",
+        "tasks/bots-fix/Details.md",
+        "tasks/bots-fix/completion-plan.md",
+        "tasks/bots-fix/plan.json",
+        "tasks/bots-fix/next-iteration.md",
+        "tasks/bots-fix/changelog/2026-10-18-user-acceptance.md",
+        "tasks/bots-fix/tools/cc3-perf/acceptance.md",
+        "tasks/bots-fix/tools/cc3-perf/build-inputs.md",
+        "tasks/bots-fix/tools/cc3-perf/build-inputs.py",
+        "tasks/bots-fix/tools/cc3-perf/common-probe-source-manifest.json",
+        "experts/avatar-grip/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/avatar-ik/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/bots/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/gameplay/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/launch-infra/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/manipulation/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/network/journal/2026-10-18-bots-fix-accepted.md",
+        "experts/weapon-system/journal/2026-10-18-bots-fix-accepted.md"
+      ],
+      "after": [
+        { "task": "bots-fix", "stage": "clip-cutover", "state": "merged" },
+        { "task": "bots-fix", "stage": "binding-player-flow-contract", "state": "merged" }
+      ],
+      "needs": []
     }
   ]
 }

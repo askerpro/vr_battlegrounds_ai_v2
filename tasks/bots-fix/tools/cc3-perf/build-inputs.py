@@ -13,13 +13,22 @@ import tempfile
 import uuid
 
 
-# Текущий common36 C*: PENDING; до нового checkpoint упаковку не запускать.
+# Техническая упаковка common36 из C* 5489395093f9f36c89b79df95e1b3c2de561583b.
+# Source tree 1d0d59e88472c0aeb2d89b0f84451a32375c47ad; на момент упаковки accepted=false, компиляция/runtime ещё не выполнялись.
+# Последующая приёмка source: 044888e1b247f3257771c52a97dcd2a21bd40673; merge ожидает подтверждения.
+# Затем exact H/C скомпилированы: каждый 13 rows/errors0; runtime H800 без выстрелов, C801 incomplete.
+# Это не N8/perf PASS; подробности и evidence — build-inputs.md. H′804 остаётся отдельной диагностикой.
+# H 4d9f8d4e229788de43f6d9fe9817c761faa756f9; tree 834fe10e1cf69a4ac08c7dd9a3f0447924d992fa.
+# C 1152421fcd958d15036c669b284b7e3db0e5f9ae; tree 7754fe7c6a4d0d1b212089af4cfde706aab0d2c6.
+# Inventory tasks/bots-fix/reports/cc3-perf-inputs/common36-attempt-1.json;
+# SHA256 c84e3033b2ca20db7abe70b198dcbaa37ebd8fa2f5045076b3642e5cca101c21.
+# Эти ссылки дописаны после упаковки и не входят в tool/docs blobs исходного C* 54893950.
 # Историческая техническая упаковка common34, не актуальный source common36:
 # C* 53e3a85fd6c2f88d7593ffe2a9aa94bd5e9eb1a2; source tree ac321d34695ffe76c7ae269bae994670d4adec22.
 # H 1a20c093aca8075b0ff772685510f46ccf119883; tree a6991b2ff5b38b00649ccd85afc7d9fd9d166dc3.
 # C 1b8497e673cfc4397a6c03412067e436f9a7e0bd; tree 403351049f3c1ff5766fe543779420106ee39f49.
 # Inventory: tasks/bots-fix/reports/cc3-perf-inputs/sdk88-mirror7-attempt-1.json.
-# SHA256 8e7cadd4ed425d3b97a30c64d632d48a6bb8ccdd71ad71d6caffded970b13afc; только упаковка, без компиляции/runtime.
+# SHA256 8e7cadd4ed425d3b97a30c64d632d48a6bb8ccdd71ad71d6caffded970b13afc; отчёт только упаковки, не запись последующих компиляции/runtime.
 BASE = "50c27ae71da47d43245cbd4eb1ba6747a2a7e44c"
 SCOPE_SOURCE = "48b27cf2bb0c9eb2dc646cc8f058bdd9d0eaf5a0"
 PROBE = "2fa11b2767f23d4c709f739deb629fd378307c97"

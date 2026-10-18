@@ -1,0 +1,34 @@
+{
+  "task_id": "player-body-avatar-separation",
+  "owner": "player-body-avatar-separation",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/player-body-avatar-separation",
+  "base_sha": "48d38b9b2885b771f9cc961b4b640eaa7f74ca9e",
+  "doc_path": "tasks/player-body-avatar-separation/Readme.md",
+  "title": "Разделение PlayerBody и куклы аватара: припаркованное исследование",
+  "branch": "task/player-body-avatar-separation",
+  "research": {
+    "completed_at": "2026-10-19",
+    "evidence_scope": "static-audit",
+    "document": "tasks/player-body-avatar-separation/Details.md",
+    "architecture_selected": false,
+    "prototype_started": false,
+    "implementation_started": false
+  },
+  "parking": {
+    "state": "PARKED",
+    "decision_date": "2026-10-19",
+    "reason": "Решение пользователя: сохранить исследование в Git и отложить разделение PlayerBody/UxrAvatar.",
+    "resume_condition": "Отдельное решение пользователя возобновить задачу; сначала согласовать архитектуру."
+  },
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/player-body-avatar-separation/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

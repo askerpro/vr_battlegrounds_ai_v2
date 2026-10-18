@@ -35,6 +35,15 @@
     {
       "id": "prefab-hierarchy",
       "writes": [
+        "Assets/Data/Player/Avatars/**",
+        "Assets/Data/Teams/Terrorists_Team.asset",
+        "experts/avatar-grip/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/avatar-ik/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/network/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/weapon-system/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/ui/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/manipulation/journal/2026-10-18-cyborg-prefab-hierarchy.md",
+        "experts/gameplay/journal/2026-10-18-cyborg-prefab-hierarchy.md",
         "Assets/Tests/EditMode/Prefabs/AvatarHandPoseChainTests.cs",
         "Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality/HandRigQualityWindow.cs",
         "Assets/Editor/VR_Battlegrounds/Avatars/TeamColorVariantBuilder.cs",

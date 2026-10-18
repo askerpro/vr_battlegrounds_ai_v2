@@ -194,7 +194,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 var avatar = new SerializedObject(root.GetComponent<UxrAvatar>());
                 var parentProp = avatar.FindProperty("_parentPrefab");
                 if (parentProp != null) parentProp.objectReferenceValue = sourcePrefab;
-                var guidProp = avatar.FindProperty("__prefabGuid") ?? avatar.FindProperty("_prefabGuid");
+                var guidProp = avatar.FindProperty("_prefabGuid");
                 if (guidProp != null) guidProp.stringValue = AssetDatabase.AssetPathToGUID(path);
                 avatar.ApplyModifiedPropertiesWithoutUndo();
 
@@ -213,7 +213,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 var savedSo = new SerializedObject(savedAvatar);
                 var parentProp = savedSo.FindProperty("_parentPrefab");
                 if (parentProp != null) parentProp.objectReferenceValue = sourcePrefab;
-                var guidProp = savedSo.FindProperty("__prefabGuid") ?? savedSo.FindProperty("_prefabGuid");
+                var guidProp = savedSo.FindProperty("_prefabGuid");
                 if (guidProp != null) guidProp.stringValue = AssetDatabase.AssetPathToGUID(path);
                 savedSo.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SavePrefabAsset(savedPrefab);

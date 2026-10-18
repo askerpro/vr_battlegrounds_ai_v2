@@ -11,8 +11,8 @@ namespace VrBattlegrounds.Editor.Avatars
     /// <summary>
     /// Две базы игровых аватаров по типу кисти — варианты <c>PlayerBase</c>:
     /// <list type="bullet">
-    ///   <item><see cref="SdkHands" /> — скелет кисти SDK (BigHands/Cyborg, 4 кости на палец). Позы, сделанные
-    ///   на этом скелете (<c>Controller*</c>, <c>Demo*</c>), живут здесь.</item>
+    ///   <item><see cref="SdkHands" /> — общая база поз кистей Cyborg без собственного рига и геометрии.
+    ///   Конкретный риг принадлежит дочернему аватару.</item>
     ///   <item><see cref="NonSdkHands" /> — чужой скелет (3 фаланги, как у MEF). Позы — только нейтральные к
     ///   скелету, из пака (<see cref="HandsPackPoseImporter" />).</item>
     /// </list>
@@ -21,34 +21,46 @@ namespace VrBattlegrounds.Editor.Avatars
     public static class AvatarHandBases
     {
         public const string PlayerBase  = "Assets/Prefabs/Player/PlayerBase.prefab";
-        public const string SdkHands    = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
+        public const string SdkHands    = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
         public const string NonSdkHands = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
 
         private const string HandPoses = "_handPoses";
 
         /// <summary>
-        /// Создаёт базы, если их нет, и копирует позы SDK с <c>PlayerBase</c> на <see cref="SdkHands" />.
-        /// Повторный запуск ничего не ломает: скопированное уже лежит на базе SDK.
-        /// Порядок: базы → <see cref="Rebase" /> аватаров → <see cref="ClearPlayerBasePoses" />.
+        /// Проверяет подготовленную миграцией базу Cyborg и создаёт базу Non-SDK при необходимости.
+        /// Позы Cyborg остаются в канонической базе; пустая замена этой базы здесь не создаётся.
         /// </summary>
         public static void CreateBases()
         {
             GameObject playerBase = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase);
-            List<UxrHandPoseAsset> sdkPoses = OwnPoses(playerBase).Where(p => !AssetDatabase.GetAssetPath(p).StartsWith(HandsPackPoseImporter.PoseFolder)).ToList();
+            RequireCyborgBase(playerBase);
 
-            CreateVariant(SdkHands, playerBase);
             CreateVariant(NonSdkHands, playerBase);
-
-            if (sdkPoses.Count > 0)
-            {
-                SetPoses(SdkHands, OwnPoses(AssetDatabase.LoadAssetAtPath<GameObject>(SdkHands)).Union(sdkPoses));
-            }
 
             // Позы пака на NonSdkHands регистрирует импортёр.
             SetPoses(NonSdkHands, OwnPoses(AssetDatabase.LoadAssetAtPath<GameObject>(NonSdkHands)).Where(p => AssetDatabase.GetAssetPath(p).StartsWith(HandsPackPoseImporter.PoseFolder)));
 
             AssetDatabase.SaveAssets();
-            GameLog.Debug.Info($"[AvatarHandBases] Базы кисти: {sdkPoses.Count} поз SDK скопировано с PlayerBase");
+            GameLog.Debug.Info("[AvatarHandBases] База Cyborg проверена, база Non-SDK обновлена.");
+        }
+
+        private static void RequireCyborgBase(GameObject playerBase)
+        {
+            GameObject cyborgBase = AssetDatabase.LoadAssetAtPath<GameObject>(SdkHands);
+            UxrAvatar avatar = cyborgBase != null ? cyborgBase.GetComponent<UxrAvatar>() : null;
+            if (playerBase == null || avatar == null ||
+                AssetDatabase.AssetPathToGUID(SdkHands) != GripTargetProfile.CyborgBaseGuid ||
+                PrefabUtility.GetCorrespondingObjectFromSource(cyborgBase) != playerBase ||
+                avatar.ParentPrefab != playerBase || avatar.AvatarRig.Transforms.Any() ||
+                cyborgBase.transform.Find("Cyborg") != null ||
+                cyborgBase.transform.Find("MEF_Rig") != null ||
+                cyborgBase.transform.Find("CyborgGeo") != null ||
+                !avatar.GetHandPoses().Any())
+            {
+                throw new System.InvalidOperationException(
+                    "[AvatarHandBases] Нужна существующая CyborgHandsBase с сохранёнными позами, без рига и геометрии тела, " +
+                    "прямой вариант PlayerBase. Сначала выполните CyborgHandsPrefabTree.RebuildTree().");
+            }
         }
 
         /// <summary>
@@ -57,6 +69,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </summary>
         public static void ClearPlayerBasePoses()
         {
+            RequireCyborgBase(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase));
             // Элемент списка варианта, равный элементу родителя, Unity не хранит как переопределение — он пропал бы
             // вместе с родительским. Поэтому списки баз снимаются до очистки и записываются заново после.
             var bases = new[] { SdkHands, NonSdkHands }.ToDictionary(p => p, p => OwnPoses(AssetDatabase.LoadAssetAtPath<GameObject>(p)));
@@ -87,41 +100,12 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>
-        /// Делает вариант <paramref name="variantPath" /> наследником <paramref name="basePath" /> — варианта
-        /// того же родителя. GUID префаба не меняется: записи хвата на оружии и сетевой assetId остаются.
-        /// Из своего списка поз убираются те, что новая база уже даёт по наследству.
-        ///
-        /// <para>
-        /// Unity не меняет родителя варианта через API (<c>ReplacePrefabAssetOfPrefabInstance</c> бросает
-        /// «Replacing the Variant parent is not supported»), поэтому переписывается YAML: см. <see cref="RebaseYaml" />.
-        /// </para>
+        /// Переподчиняет существующий аватар через Unity API. Общий конвейер сохраняет
+        /// разрешённые позы, проверяет внешние ссылки и возвращает исходник при отказе.
         /// </summary>
         public static void Rebase(string variantPath, string basePath)
         {
-            GameObject newBase = AssetDatabase.LoadAssetAtPath<GameObject>(basePath);
-            string oldGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(newBase)));
-            string newGuid = AssetDatabase.AssetPathToGUID(basePath);
-            List<UxrHandPoseAsset> ownPoses = OwnPoses(AssetDatabase.LoadAssetAtPath<GameObject>(variantPath));
-
-            string yaml = System.IO.File.ReadAllText(variantPath);
-            System.IO.File.WriteAllText(variantPath, RebaseYaml(yaml, oldGuid, newGuid, SourceInstanceId(System.IO.File.ReadAllText(basePath), oldGuid)));
-            AssetDatabase.ImportAsset(variantPath, ImportAssetOptions.ForceUpdate);
-
-            GameObject root = PrefabUtility.LoadPrefabContents(variantPath);
-            try
-            {
-                HashSet<UxrHandPoseAsset> inherited = new HashSet<UxrHandPoseAsset>(newBase.GetComponent<UxrAvatar>().GetAllHandPoses());
-                var avatar = new SerializedObject(root.GetComponent<UxrAvatar>());
-                avatar.FindProperty("_parentPrefab").objectReferenceValue = newBase;
-                WritePoses(avatar.FindProperty(HandPoses), ownPoses.Where(p => !inherited.Contains(p)));
-                avatar.ApplyModifiedPropertiesWithoutUndo();
-                VrBattlegrounds.Editor.Avatars.Workbench.AvatarMaintenanceTools.SavePrefab(root, variantPath);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-
+            CyborgHandsPrefabMigration.ReparentVariant(variantPath, basePath);
             GameLog.Debug.Info($"[AvatarHandBases] {variantPath} → наследник {basePath}");
         }
 
@@ -140,6 +124,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// целыми. Формула сначала проверяется на всех stripped-объектах файла — при расхождении ничего не пишется.
         /// </para>
         /// </summary>
+        [System.Obsolete("Исторический helper для совместимости. Для миграции используйте CyborgHandsPrefabMigration.ReparentVariant().")]
         public static string RebaseYaml(string yaml, string oldGuid, string newGuid, long newBaseInstanceId)
         {
             long instanceId    = SourceInstanceId(yaml, oldGuid);

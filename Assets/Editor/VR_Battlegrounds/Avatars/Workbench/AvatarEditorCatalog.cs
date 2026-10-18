@@ -18,9 +18,9 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
         {
             new CatalogEntry("ApplyEyeMapping.cs", "Map Eyes To FBX", 1, "Map Eyes для выбранного FBX"),
             new CatalogEntry("AvatarFingertipSetup.cs", "Setup Avatar UI Fingertips", 4, "Настроить UI fingertips"),
-            new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Create Hand Bases", 5, "Создать / обновить Hand Bases"),
+            new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Create Hand Bases", 5, "Проверить Cyborg / обновить Non-SDK базу"),
             new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Clear PlayerBase Hand Poses", 5, "Очистить позы на PlayerBase"),
-            new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Rebase Selected Avatar → SDK Hands", 5, "Перенести выбранный вариант на PlayerBase_SdkHands"),
+            new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Rebase Selected Avatar → SDK Hands", 5, "Перенести выбранный вариант на CyborgHandsBase"),
             new CatalogEntry("AvatarHandBases.cs", "Hand Bases/Rebase Selected Avatar → Non-SDK Hands", 5, "Перенести выбранный вариант на PlayerBase_NonSdkHands"),
             new CatalogEntry("AvatarIconRenderer.cs", "Render Icon For Selected AvatarData", 4, "Создать иконку скина"),
             new CatalogEntry("AvatarLegsSetup.cs", "Setup Legs", 3, "Настроить ноги владельца"),

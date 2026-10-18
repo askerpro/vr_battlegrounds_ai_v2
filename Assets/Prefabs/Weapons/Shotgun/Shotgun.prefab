@@ -851,7 +851,7 @@ PrefabInstance:
     - target: {fileID: 29752396331829033, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _selectedAvatarForGrips
       value: 
-      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+      objectReference: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
     - target: {fileID: 29752396331829033, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 
@@ -1319,7 +1319,7 @@ PrefabInstance:
     - target: {fileID: 7110602504988052185, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _selectedAvatarForGrips
       value: 
-      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+      objectReference: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
     - target: {fileID: 7110602504988052185, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 
@@ -1375,7 +1375,7 @@ PrefabInstance:
     - target: {fileID: 7404533856067268288, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _selectedAvatarForGrips
       value: 
-      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+      objectReference: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
     - target: {fileID: 7404533856067268288, guid: 474579dc37907944095102affef733f1, type: 3}
       propertyPath: _grabPoint._avatarGripPoseEntries.Array.size
       value: 4

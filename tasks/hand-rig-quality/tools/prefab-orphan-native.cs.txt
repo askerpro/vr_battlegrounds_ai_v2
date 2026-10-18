@@ -1,0 +1,16 @@
+// Только диагностика. Никакой миграции и разрешения пропуска guard.
+var folder = "tasks/hand-rig-quality/reports/prefab-orphan-native-r4";
+System.IO.Directory.CreateDirectory(folder);
+string result = null;
+string error = null;
+try {
+    var type = typeof(VrBattlegrounds.Editor.Avatars.CyborgHandsPrefabMigration).Assembly.GetType(
+        "VrBattlegrounds.Editor.Avatars.CyborgPrefabReferenceRemap", true);
+    var method = type.GetMethod("DescribeBrokenRegistryProof", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+    result = (string)method.Invoke(null, null);
+} catch (System.Exception exception) { error = exception.ToString(); }
+var payload = new { diagnostic = result, error = error, guardExceptionEnabled = false,
+    projectRoot = System.IO.Directory.GetCurrentDirectory(), nativeUtc = System.DateTime.UtcNow.ToString("o") };
+var json = Newtonsoft.Json.JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.Indented);
+System.IO.File.WriteAllText(folder + "/result.json", json + "\n", new System.Text.UTF8Encoding(false));
+return payload;

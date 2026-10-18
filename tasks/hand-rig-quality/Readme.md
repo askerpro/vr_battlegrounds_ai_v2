@@ -1,5 +1,163 @@
 # Качество кистей и хватов MEF
 
+**Сейчас 2026-10-18 16:29:** пользователь принял ручную проверку иерархии/поз
+и Play Mode и разрешил commit и вливание в origin/dev. Мелкие недочёты отложены
+на следующую итерацию. Результат native807 сохранён через штатный recovery
+собственной истёкшей аренды без force: `126ba84c11909e5364319e185b2eb24942eea1db`.
+Все 55 изменённых путей доставлены в свой checkout точным Git diff; каждый blob
+сверен с recovery snapshot, расхождений 0, затем выполнен штатный ack807.
+Worker освобождён. Проверки цепочек обновлены после приёмки; текущий шаг —
+прогон EditMode, независимое ревью затронутых зон и штатная интеграция.
+Прежние записи ниже — история выполнения, а не актуальные блокировки.
+
+**Сейчас 2026-10-18 15:45:** native807 r9 успешно сохранил целевую иерархию;
+внешние44consumer/87полей/43override-набора прошли strict readback/rawguard.
+Сохранены65поз, калибровка MEF1.72025037; bodySMR29/8/8,0missing bones.
+Обе базы rig0; CyBase directPlayerBase, Controllers/MEF directCyBase, Black→MEF,
+Ghost→Controllers. Orphan удалён nativeпослеproof, SDKHands перемещён в Unused.
+Receipt `reports/prefab-hierarchy-20261018/ticket807-result.json`, SHA256
+`82805c88930fae31dc30bb5f2d5c79679c196ec70478d7dac29137fa0b7df735`.
+Visual3/3PNG без ошибок (`visual-r9/`), статический осмотр моделей проведён.
+После delayed UxrUniqueIdPersister:53asset paths,0вне57outputs. Editor готов.
+807 остаётся RUNNING по явному разрешению пользователя: открыты Avatar Workbench
+и SDK Hand Pose Editor с рабочим Controllers,65поз, autoSave=false. Ручная проверка
+пользователя идёт; accepted commit/новые tests пока не разрешены. Finish/receive
+после её завершения и cleanup; source assets ещё находятся на worker.
+Независимое статическое ревью:35weapon/tablet/SDK prefab;571authored grip строка
+неизменна.31собственный prefab изменён только selectedAvatarPPtr;4SDK samples
+дополнительно native-сериализовали defaults/physics schema (подробности SDK85).
+Body inventory45/45 записей полностью совпадает до/после; это не runtime/Quest proof.
+16:11 пользователь сообщил, что Play уже запущен; guard807 подтвердил is_playing=true,
+responsive=true, tests=false. Агент Play не запускал/не перезапускал и не останавливает.
+Ручная runtime-проверка пользователя продолжается; cleanup/finish только после неё.
+
+**Продолжение 2026-10-18 15:30:** пользователь разрешил удалить orphan и запросил
+ручную проверку иерархии/поз на worker после миграции. Native806 r8 завершён/получен,
+delta[], result `7318fe838ee05ac8ee2faee62bbe1c2120a0509c`. Отказ ДО записи prefab:
+postcondition DeleteAsset проверял исторический GUID cache. R9 проверяет live native
+AssetPathToGUID(OnlyExistingAssets) и отсутствие обоих файлов, выводит все значения.
+Ticket807 input `1581500ed27933a8941d6d53ea9bc9e756a50991`,57outputs. Guards внешних
+PPtr/overrides и полный rollback сохраняются. Receipt806 `ticket806-result.json`,
+SHA256 `bc1d43c1653469ce2bd8b96aa64736bdb01ae90fd742671aa1dfd3d5024bf8ec`.
+Пользователь явно разрешил удерживать собственную аренду для императивной работы
+и анализа при затруднениях пакета (параллельно работает один другой агент).
+RUNNING lease/guard, собственные outputs, сохранность чужой работы остаются обязательны.
+
+**Текущий шаг 2026-10-18:** native789 r6 завершён/получен, delta[], result
+`5458c18ed41ae0576ac630292d483a5dd8e70b36`. PlayerBase LoadPrefabContents сохранил
+IDs общих объектов: прежний отказ IndexThumbProximity пройден. Verify остановил
+пакет позже, на несовпадении override-набора NonSDK `$/GameObject`; всё откатилось.
+Receipt `reports/prefab-hierarchy-20261018/ticket789-result.json`, SHA256
+`b55983cba4ff206296619702ae54ae1b6377377278be4953846878c912f06155`.
+Подробности remap — `ticket789-outcome.txt`; требуется точный missing/extra diff
+override-записей. Дополнительно проверяется сохранение Controllers root fileID:
+он изменился, поэтому последующий строгий rawguard orphan пока не пройдёт.
+Сборка r6 на свежих metadata собственной аренды:334sources/405refs,0errors/36warnings,
+`reports/prefab-hierarchy-20261018/compile-playerbase-contents-r6-current/compile-result.json`.
+Visual не запускался, пользовательская проверка открыта.
+R7 ticket791 завершён/получен, delta[], result `f3b39da40809934a1e4ff0cf7ff1c8fff580dd04`.
+Receipt `ticket791-result.json`, SHA256 `cae169fc39225745a482ae36ad9032bd63a76c4184ff36103ed1f4858a38cb46`.
+Точная разница:727expected/727actual,406missing/406extra — только203пары служебных
+UltimateXR `__isInPrefab` (1→0) и `__prefabGuid` (NonSDK→PlayerBase). Других отличий нет.
+Ищется штатный владелец metadata/порядок native authoring; сравнение не ослабляется.
+Актуальная сборка r7 в собственной аренде:334/405,0errors/37warnings.
+R8 подготовлен: штатный SDK auto-ID scope с точным finally restore; UID/provenance
+общих компонентов новой базы копируются из прежней CyborgHandsBase через owner API.
+UID записываются как variant overrides и строго перечитываются после native save.
+Транзакция завершается только после диагностики и cleanup preview сцены.
+Offline compile334/405:0errors/36warnings (`compile-identity-r8-final/compile-result.json`).
+Пользователь 2026-10-18 явно разрешил удаление DevicePrefabRegistry.asset/meta.
+R8 включает native DeleteAsset после свежего proof и backup, затем новый снимок
+активных потребителей. Raw guards не ослабляются, outputs57. До запуска assets исходные.
+Смешанная offline-сборка до аренды снова показала только7bot API errors: metadata
+от чужого checkpoint; это не результат компиляции r7 в Unity.
+
+**Предыдущий отказ:** native787 r5 завершён/получен, delta[]. Он дошёл до
+native save потребителей; итоговый Verify остановил пакет на изменившемся fileID
+`PlayerBase_NonSdkHands: BigHandsIntegration/LeftHand/GrabberLeft/IndexThumbProximity`.
+Полный rollback подтверждён, result `e1657f231f5b84edb31b38f97e9805395fe0baee`.
+Receipt `reports/prefab-hierarchy-20261018/ticket787-result.json`,
+SHA256 `cb0771adbef3435fda52288ea568b6d57355263499c35fc5a0a1974379dea90b`;
+native plan `ticket787-reference-plan.json`.
+Подтверждено: NonSDK не имеет added GameObjects; IndexThumbProximity inherited.
+Следующий R6 проверяет корневое исправление: редактирование standalone PlayerBase
+через LoadPrefabContents/Save в тот же путь; снимки всех потомков по-прежнему заранее.
+Условный допуск drift не вводится, guards сохраняются. Альтернатива с inbound-index
+отложена отдельным черновым artifact. Сохранение IDs пока не подтверждено native.
+R6 ticket789 input `24c95d53f5b221c67b127a3de490c7958f1f944c`. Remapper
+побайтово равен r5 (`21f613623e8aeb375c0de5546d8d52079857c3f83bcf825d5c23897cb1b0d01a`).
+Первичная offline r6 была отложена из-за чужих metadata788; актуальная сборка
+в собственной аренде789 приведена выше.
+SavePrefab проверен: только canonical Mirror ID и native SaveAsPrefabAsset, без
+переавторинга proximity. Visual r5 не запускался из-за отказа. Assets не приняты.
+
+**Native-продолжение 2026-10-18:** MCP подключён. После rebase на `50c27ae71`
+native781/782 завершены и получены; prefab delta обоих отказов пуст (781 добавил
+только Unity-generated meta). 781 выявил preview-root ограничение Convert, исправлено
+временным контейнером. 782 создал требуемые родители и остановлен guard изменившихся
+внешних fileID. SourceBackup вернул исходники; никаких принятых изменений assets нет.
+Реальные исходные показатели:65поз CyBase/MEF/Black; MEF/Black eyesBaseHeight1.72025037,
+8 body renderers и0missing bones; Controllers1.83981407,29body renderers,0missing bones.
+Архивы: `reports/prefab-hierarchy-20261018/ticket781-result.json` и `ticket782-result.json`.
+Подготовлен native remap существующих полей/override-наборов и заранее снятый Ghost
+Variant; exact broker outputs — `tools/cyborg-reference-outputs.json`. SDK reserve85.
+Пакет r3: ticket784, input `bfe90b96ae62245e5fd8962179287dffa978f325`,
+завершён и получен (`2e4516b73601b995467a415676f3cd52c0d0222d`). Native preflight
+остановился ДО записи prefab: DevicePrefabRegistry.asset не предоставляет поля.
+Его m_Script удалён в42aa82aec вместе с RolePrefabRegistry; выясняется статус orphan.
+Delta784 — только meta remapper. Receipt `reports/prefab-hierarchy-20261018/ticket784-result.json`.
+Native begin/guard: ready, не компилируется, compile errors отсутствуют. Повторная
+offline-сборка после восстановления базовых metadata:334/405,0errors/36warnings,
+`reports/prefab-hierarchy-20261018/compile-post784/compile-result.json`.
+Пользовательская проверка открыта.
+Read-only786 завершён и получен: input `7cb28c37853c17249fcd0644dbc806a14eb738f8`,
+result `712a87234e0bfc513b396f9632dfe46a47428998`, delta[]. Native proof: script missing,
+main=null,0valid objects,10225imported Assets/0inbound; asset/meta byte-identical.
+Receipt `reports/prefab-hierarchy-20261018/ticket786-result.json`,
+SHA256 `fe1cb98c532cc5d7ff6c47688157735c28ed5620318770006935b3129424826a`.
+Попытка добавить исключение guard отклонена автоматической проверкой из-за отсутствия
+реализации/фактического доказательства в предложенном действии. Исключение отключено;
+миграция по-прежнему блокирует этот asset. Никакого YAML rewrite/удаления orphan нет.
+Следующий безопасный вариант сохраняет orphan bytes без SerialObject remap при строгом
+proof, но сохраняет исходный итоговый rawguard. Обе ссылки orphan обязаны сохранить
+исходный Controllers root fileID/смысл; иначе rollback остаётся обязательным.
+Повторная offline-сборка с обновлёнными чужим checkpoint runtime metadata дала
+7 ошибок только в bot Editor-коде (BotCombatAssets/PoseAnimator); это смешанный
+набор metadata, не результат сборки нашего checkpoint. Unity compilation проверяется
+после штатного begin784. Предыдущий compile334/405 был без ошибок; тесты не менялись.
+
+**Продолжение реструктуризации — 2026-10-18, Codex:** существующий WIP перенесён поверх
+`origin/dev` `8dfccb580`; HEAD после rebase `ea76f68fa`. Worktree
+`F:/CodexWorktrees/cyborg-hands`, владелец `avatar-grip`, задача `hand-rig-quality`.
+Пользователь передал решение Antigravity: чистый `PlayerBase` → чистый
+`CyborgHandsBase` (GUID `71b74b0d` и полный набор поз сохраняются) → две параллельные
+ветки Controllers Cyborg и MEF cyborg player → Black. SDKHands архивируется.
+Контракт: [cyborg-prefab-hierarchy-v2](contracts/cyborg-prefab-hierarchy-v2.md).
+План: [продолжение](tools/cyborg-prefab-hierarchy-plan.md).
+
+Статически обнаружены два незавершённых переноса: `CyborgHandsBase` всё ещё владеет
+`MEF_Rig`, а `PlayerBase` сам содержит тело `Cyborg`. Общие `Camera Controller` и
+`BigHandsIntegration` сохраняются, body bindings из общего каркаса выносятся.
+Подготовлен native Unity writer с snapshots конечных аватаров, резервной копией,
+проверкой внешних fileID и возвратом собственных outputs при отказе. Старые writers,
+собиравшие MEF в общей базе, удалены. Canonical SDK alias теперь CyborgHandsBase.
+Префабы в этом продолжении ещё не изменялись; новые/переписанные тесты не создавались.
+Unity MCP tools отсутствуют; infra_issue `8986` передан сопровождающему через inbox,
+его native route очищен. Самостоятельного ремонта/обхода и Unity-заявок нет.
+Уточнение 2026-10-18: Desktop log текущего чата фиксирует в 04:44:26 МСК
+`unityMCP status=failed`, `timed out awaiting tools/list after 30s`.
+Rebase не менял `.codex/config.toml`, `.mcp.json` и proxy launcher; текущий
+`codex mcp list` видит unityMCP enabled, elevated proxy `--help` exit0.
+Конфигурация была обнаружена; причина отсутствующих tools — отказ startup discovery.
+Один restart клиента допустим как повторная попытка подключения; tools/list и native
+Unity readiness после него требуют отдельного подтверждения.
+Offline-компиляция Editor assembly: **333 sources / 405 references, 0 errors / 36 warnings**.
+Отчёт: `reports/prefab-hierarchy-20261018/compile-final/compile-result.json` и `compile.log`.
+Статическое ревью обнаружило и подтвердило исправление root-Variant unpack; native
+сохранение/ссылки/визуальное качество этим не проверены. Физические owned text files LF,
+`git diff --check` без замечаний. Принятого commit/push нет.
+Прежние PASS ниже относятся к старой иерархии и не принимают новую миграцию.
+
 **Последний native — 757 DONE/received, 2026-10-15:** обе эталонные кисти15/15 материальных точек.
 Viper v2 default priority0: контакт8/15→9/15, полная численная цель не достигнута; качество не принято.
 1240 source hashes без изменений,17 artifacts SHA-проверены, worker освобождён.

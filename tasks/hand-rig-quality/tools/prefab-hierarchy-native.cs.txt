@@ -1,0 +1,65 @@
+// Тело execute_code: один вызов в собственной аренде; неизвестный исход не повторять.
+var folder = "tasks/hand-rig-quality/reports/prefab-hierarchy-native-r9";
+System.IO.Directory.CreateDirectory(folder);
+string before = null;
+string after = null;
+string referencePlan = null;
+object bodiesBefore = null;
+object bodiesAfter = null;
+string result = null;
+string error = null;
+System.Func<object> inventory = () => {
+    var rows = new System.Collections.Generic.List<object>();
+    foreach (string path in new[] { "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab", "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab" }) {
+        var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+        var renderers = new System.Collections.Generic.List<object>();
+        foreach (var smr in root.GetComponentsInChildren<UnityEngine.SkinnedMeshRenderer>(true)) {
+            string relative = UnityEditor.AnimationUtility.CalculateTransformPath(smr.transform, root.transform);
+            if (!relative.StartsWith("MEF_Rig/") && !relative.StartsWith("Cyborg/")) continue;
+            int missing = 0;
+            foreach (var bone in smr.bones) if (!bone) missing++;
+            renderers.Add(new { path = relative, enabled = smr.enabled, active = smr.gameObject.activeSelf,
+                mesh = UnityEditor.AssetDatabase.GetAssetPath(smr.sharedMesh), boneCount = smr.bones.Length, missingBones = missing,
+                rootBone = smr.rootBone ? UnityEditor.AnimationUtility.CalculateTransformPath(smr.rootBone, root.transform) : null });
+        }
+        var controller = root.GetComponent<UltimateXR.Avatar.Controllers.UxrStandardAvatarController>();
+        var serialized = new UnityEditor.SerializedObject(controller);
+        var height = serialized.FindProperty("_bodyIKSettings._eyesBaseHeight");
+        rows.Add(new { path = path, eyesBaseHeight = height == null ? (float?)null : height.floatValue, renderers = renderers });
+    }
+    return rows;
+};
+try {
+    before = VrBattlegrounds.Editor.Avatars.CyborgHandsPrefabMigration.Describe();
+    bodiesBefore = inventory();
+    referencePlan = VrBattlegrounds.Editor.Avatars.CyborgHandsPrefabMigration.DescribeReferencePlan();
+    System.IO.File.WriteAllText(folder + "/reference-plan.json", referencePlan, new System.Text.UTF8Encoding(false));
+    var plan = Newtonsoft.Json.Linq.JObject.Parse(referencePlan);
+    var scope = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/hand-rig-quality/tools/cyborg-reference-outputs.json"));
+    var allowed = new System.Collections.Generic.HashSet<string>();
+    foreach (var value in scope["outputs"]) allowed.Add((string)value);
+    foreach (var value in plan["consumerPaths"])
+        if (!allowed.Contains((string)value)) throw new System.InvalidOperationException("Потребитель вне broker outputs: " + value);
+    result = VrBattlegrounds.Editor.Avatars.CyborgHandsPrefabTree.RebuildTree();
+}
+catch (System.Exception exception) { error = exception.ToString(); }
+try {
+    after = VrBattlegrounds.Editor.Avatars.CyborgHandsPrefabMigration.Describe();
+    bodiesAfter = inventory();
+} catch (System.Exception exception) { error = (error ?? "") + "\nДиагностика после: " + exception; }
+var payload = new {
+    operationReturned = error == null,
+    diagnosticBefore = before,
+    diagnosticAfter = after,
+    bodiesBefore = bodiesBefore,
+    bodiesAfter = bodiesAfter,
+    referencePlan = referencePlan,
+    result = result,
+    error = error,
+    userAcceptance = "pending",
+    nativeUtc = System.DateTime.UtcNow.ToString("o")
+};
+string json = Newtonsoft.Json.JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.Indented);
+System.IO.File.WriteAllText(folder + "/result.json", json + "\n", new System.Text.UTF8Encoding(false));
+return new { operationReturned = error == null, artifact = folder + "/result.json", error = error };

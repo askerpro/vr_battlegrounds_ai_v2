@@ -562,7 +562,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+  _selectedAvatarForGrips: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1

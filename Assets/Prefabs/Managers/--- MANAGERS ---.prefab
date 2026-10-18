@@ -221,7 +221,7 @@ MonoBehaviour:
   - {fileID: 7322410552265810670, guid: 1f7c1a457f11c3a4a9d7e3d08a60d561, type: 3}
   - {fileID: 5773889775595434469, guid: 3f3a1dce26dc979469b9eee4a5667e3b, type: 3}
   - {fileID: 7006129303043550839, guid: eee4c6960159a24459810d9c0851279c, type: 3}
-  - {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  - {fileID: 2232204837902353264, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
   - {fileID: 1269608344034781215, guid: 3374152f61b37254f951d6b35b3fac95, type: 3}
   - {fileID: 338657906523908372, guid: f1b60699e720e0a4783daac156f0262b, type: 3}
   - {fileID: 7659987172694362790, guid: c1053b4395a92db499991404aa9ad731, type: 3}
@@ -238,7 +238,7 @@ MonoBehaviour:
   - {fileID: 5477909585992476314, guid: 816f8eac4e724214daab0a41412869ae, type: 3}
   - {fileID: 6455569017325164971, guid: d586c5e550bf0ee4a9619d4bd368ca54, type: 3}
   - {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
-  - {fileID: 3485271990733946735, guid: f3401ffe5a644d647a14eff0c476b4d2, type: 3}
+  - {fileID: 7972394295592992913, guid: f3401ffe5a644d647a14eff0c476b4d2, type: 3}
   - {fileID: 99182336922691436, guid: 29b19734d45bd464c8faff6700ec8624, type: 3}
   - {fileID: 3324518201893827815, guid: ea4c4f7c1f3bec74bbfa0160ec3fb922, type: 3}
   - {fileID: 1151490975763823724, guid: 997df2bcc8be41c41980b1edb216fd5d, type: 3}
@@ -274,8 +274,8 @@ MonoBehaviour:
   - {fileID: 6785962869348119002, guid: 5ee47b0123f863844a48bb32ceca9047, type: 3}
   - {fileID: 7216203593504186662, guid: ccc6dfdf9762a7c4899e851730650ff3, type: 3}
   - {fileID: 8859971145314977072, guid: f23541848a356704c91ef319b42d5a00, type: 3}
-  - {fileID: 3977005126615661593, guid: 2aa0ab6714e2413f9d829637b62df0c0, type: 3}
-  - {fileID: 8775218587802417147, guid: 60604d8891226f64592f880c9b2da883, type: 3}
+  - {fileID: 3772529753676875921, guid: 2aa0ab6714e2413f9d829637b62df0c0, type: 3}
+  - {fileID: 8839519426623292275, guid: 60604d8891226f64592f880c9b2da883, type: 3}
   exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
@@ -734,7 +734,7 @@ MonoBehaviour:
   _registerAutomatically: 1
   _includeFrameworkPrefabs: 0
   _automaticPrefabs:
-  - {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  - {fileID: 2232204837902353264, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
   - {fileID: 6778648547769103625, guid: a03a6b1c0ba45034fb1b6ee336f85ddc, type: 3}
   - {fileID: 6800616272644675311, guid: af480974a3e0c9a438abc245d0558ac5, type: 3}
   - {fileID: 5499949148939508857, guid: d2a03441be1dbd3409d744de71a44b9f, type: 3}
@@ -797,7 +797,7 @@ MonoBehaviour:
   _createdGlobalVoiceGameObjectPaths: []
   _createdGlobalVoiceComponentPaths: []
   _registeredAvatars:
-  - _avatarPrefab: {fileID: 7011009731086812467, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  - _avatarPrefab: {fileID: 4589610041099156173, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
   _grabbablePhysicsAddProjectScenes: 0
   _grabbablePhysicsAddPathPrefabs: 0
   _grabbablePhysicsPathRoot: 

@@ -119,7 +119,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 3
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+  _selectedAvatarForGrips: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -2393,7 +2393,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+  _selectedAvatarForGrips: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -3522,7 +3522,7 @@ PrefabInstance:
     - target: {fileID: 4784470809893769418, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
       propertyPath: _selectedAvatarForGrips
       value: 
-      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+      objectReference: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
     - target: {fileID: 4784470809893769418, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 

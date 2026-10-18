@@ -657,7 +657,7 @@ PrefabInstance:
     - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: _selectedAvatarForGrips
       value: 
-      objectReference: {fileID: 2331924161539022085, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
+      objectReference: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
     - target: {fileID: 6689286693593040899, guid: d1ca4c0cf8767324ba12d5315fc6918f, type: 3}
       propertyPath: _previewPosesRegenerationType
       value: 0

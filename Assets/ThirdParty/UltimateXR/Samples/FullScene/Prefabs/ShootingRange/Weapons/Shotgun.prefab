@@ -193,7 +193,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  _selectedAvatarForGrips: {fileID: 2232204837902353264, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -274,6 +274,7 @@ MonoBehaviour:
   _triggers:
   - _projectileShotIndex: 0
     _cycleType: 0
+    _useHasReloadedForSemiAndFullAuto: 0
     _maxShotFrequency: 10
     _shotAudio:
       _clip: {fileID: 8300000, guid: 201b9c43c2d6764408c634a397542997, type: 3}
@@ -288,6 +289,12 @@ MonoBehaviour:
       _fallbackClipType: 8
       _fallbackAmplitude: 1
       _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
     _triggerGrabbable: {fileID: 29752396331829033}
     _grabbableGrabPointIndex: 0
     _triggerTransform: {fileID: 5422448564469423883}
@@ -339,6 +346,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipSlideBack:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -346,6 +359,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipSlideAlreadyLoaded:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -353,6 +372,12 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 0.15
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipSlideBackAlreadyLoaded:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -360,6 +385,12 @@ MonoBehaviour:
     _fallbackClipType: 10
     _fallbackAmplitude: 0.15
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
 --- !u!114 &29658238657962241
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -421,6 +452,7 @@ MonoBehaviour:
     _createDecalLayerMask:
       serializedVersion: 2
       m_Bits: 1
+    _penetrationPower: 1
 --- !u!114 &29085328925954327
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -473,6 +505,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 0.6
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnPlace:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -480,6 +518,12 @@ MonoBehaviour:
     _fallbackClipType: 0
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnRelease:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -487,6 +531,12 @@ MonoBehaviour:
     _fallbackClipType: 0
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
 --- !u!54 &4088581767290762260
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -494,10 +544,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 142960080207654231}
-  serializedVersion: 4
+  serializedVersion: 5
   m_Mass: 4
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -603,6 +653,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -1711,7 +1762,7 @@ MonoBehaviour:
   _previewGrabPosesMode: 1
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 4613916165338528910, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
+  _selectedAvatarForGrips: {fileID: 2232204837902353264, guid: 8e0e06323e4754f479a9f19788554652, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -1807,6 +1858,12 @@ MonoBehaviour:
     _fallbackClipType: 6
     _fallbackAmplitude: 0.6
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnPlace:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -1814,6 +1871,12 @@ MonoBehaviour:
     _fallbackClipType: 0
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
   _hapticClipOnRelease:
     _clip: {fileID: 0}
     _clipAmplitude: 1
@@ -1821,6 +1884,12 @@ MonoBehaviour:
     _fallbackClipType: 0
     _fallbackAmplitude: 1
     _fallbackDurationSeconds: -1
+    _waveform: {fileID: 0}
+    _waveformGain: 1
+    _priority: 2
+    _repeatGapMs: 0
+    _cooldownSeconds: 0
+    _secondaryHandGain: 1
 --- !u!1 &3511276112450838861 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -1948377950191774536, guid: 6a37a53958fc2ec4194357ab19ff6fe7, type: 3}

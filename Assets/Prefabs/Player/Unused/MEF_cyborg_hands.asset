@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Core.AvatarData
   displayName: MEF_cyborg_hands
   icon: {fileID: 21300000, guid: 5b9304ba0156348448a6a05ed5c16278, type: 3}
-  prefab: {fileID: 3977005126615661593, guid: 2aa0ab6714e2413f9d829637b62df0c0, type: 3}
+  prefab: {fileID: 3772529753676875921, guid: 2aa0ab6714e2413f9d829637b62df0c0, type: 3}

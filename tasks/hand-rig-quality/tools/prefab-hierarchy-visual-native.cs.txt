@@ -1,0 +1,44 @@
+// Экспорт реальных моделей для визуального ревью; исходные prefab не сохраняются.
+var folder = "tasks/hand-rig-quality/reports/prefab-hierarchy-visual-r9";
+System.IO.Directory.CreateDirectory(folder);
+var images = new System.Collections.Generic.List<string>();
+var errors = new System.Collections.Generic.List<string>();
+foreach (string path in new[] { "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab", "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab" }) {
+    var preview = new UnityEditor.PreviewRenderUtility();
+    UnityEngine.Texture2D texture = null;
+    try {
+        var root = preview.InstantiatePrefabInScene(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path));
+        root.transform.SetPositionAndRotation(UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
+        root.SetActive(true);
+        foreach (var behaviour in root.GetComponentsInChildren<UnityEngine.Behaviour>(true)) behaviour.enabled = false;
+        foreach (var group in root.GetComponentsInChildren<UnityEngine.LODGroup>(true)) group.ForceLOD(0);
+        var body = new UnityEngine.Bounds(UnityEngine.Vector3.up, UnityEngine.Vector3.zero);
+        bool hasBody = false;
+        foreach (var renderer in root.GetComponentsInChildren<UnityEngine.Renderer>(true)) {
+            string relative = UnityEditor.AnimationUtility.CalculateTransformPath(renderer.transform, root.transform);
+            if (!relative.StartsWith("Cyborg/") && !relative.StartsWith("MEF_Rig/")) { renderer.enabled = false; continue; }
+            if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+            if (!hasBody) { body = renderer.bounds; hasBody = true; } else body.Encapsulate(renderer.bounds);
+        }
+        var camera = preview.camera;
+        camera.fieldOfView = 30f; camera.nearClipPlane = 0.02f; camera.farClipPlane = 30f;
+        camera.clearFlags = UnityEngine.CameraClearFlags.SolidColor;
+        camera.backgroundColor = new UnityEngine.Color(0.13f, 0.16f, 0.20f);
+        float halfFrame = UnityEngine.Mathf.Max(body.extents.y, body.extents.x * 1.5f) * 1.15f;
+        float distance = halfFrame / UnityEngine.Mathf.Tan(15f * UnityEngine.Mathf.Deg2Rad);
+        camera.transform.position = body.center + new UnityEngine.Vector3(0.15f, 0.05f, 1f).normalized * distance;
+        camera.transform.LookAt(body.center);
+        preview.lights[0].transform.rotation = UnityEngine.Quaternion.Euler(35f, 150f, 0f); preview.lights[0].intensity = 1.2f;
+        preview.lights[1].transform.rotation = UnityEngine.Quaternion.Euler(20f, -140f, 0f); preview.lights[1].intensity = 0.5f;
+        preview.ambientColor = new UnityEngine.Color(0.35f, 0.35f, 0.38f);
+        preview.BeginStaticPreview(new UnityEngine.Rect(0, 0, 768, 1024)); preview.Render(true);
+        texture = preview.EndStaticPreview();
+        string output = folder + "/" + System.IO.Path.GetFileNameWithoutExtension(path) + ".png";
+        System.IO.File.WriteAllBytes(output, UnityEngine.ImageConversion.EncodeToPNG(texture)); images.Add(output);
+    } catch (System.Exception exception) { errors.Add(path + ": " + exception); }
+    finally { preview.Cleanup(); if (texture) UnityEngine.Object.DestroyImmediate(texture); }
+}
+var payload = new { images = images, errors = errors, scope = "native isolated preview; no Play/Quest acceptance" };
+System.IO.File.WriteAllText(folder + "/result.json", Newtonsoft.Json.JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.Indented), new System.Text.UTF8Encoding(false));
+return payload;

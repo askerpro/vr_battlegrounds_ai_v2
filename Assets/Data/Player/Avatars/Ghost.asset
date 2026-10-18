@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Core.AvatarData
   displayName: "\u041F\u0440\u0438\u0437\u0440\u0430\u043A"
   icon: {fileID: 21300000, guid: 344aa7777f38b104e88ea695408d47f0, type: 3}
-  prefab: {fileID: 3485271990733946735, guid: f3401ffe5a644d647a14eff0c476b4d2, type: 3}
+  prefab: {fileID: 7972394295592992913, guid: f3401ffe5a644d647a14eff0c476b4d2, type: 3}

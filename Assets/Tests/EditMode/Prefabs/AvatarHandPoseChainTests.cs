@@ -8,12 +8,13 @@ using UnityEngine;
 namespace VrBattlegrounds.Tests.Prefabs
 {
     /// <summary>
-    /// Ветки игровых аватаров по происхождению кисти.
+    /// Принятая иерархия игровых аватаров и баз поз кисти.
     ///
     /// <para>
-    /// <c>PlayerBase_SdkHands</c> — кисть со скелетом SDK (BigHands/Cyborg: 4 кости на палец с пястной).
-    /// Позы, сделанные на этом скелете (<c>Controller*</c>, <c>Demo*</c>), живут здесь.
-    /// <c>PlayerBase_NonSdkHands</c> — чужой скелет кисти (3 фаланги, как у MEF). Позы здесь — только
+    /// <c>CyborgHandsBase</c> хранит полный набор поз кисти киборга и наследует общий каркас
+    /// <c>PlayerBase</c>. Обе базы не содержат тела или привязок аватарных костей; модели
+    /// устройств под <c>UxrHandIntegration</c> остаются допустимы.
+    /// <c>PlayerBase_NonSdkHands</c> — родной скелет кисти модели с тремя фалангами. Позы здесь — только
     /// нейтральные к скелету, снятые с пака (<c>HandsPackPoseImporter</c>): позы SDK на таком скелете
     /// выглядят плохо. Сам <c>PlayerBase</c> — сетевой каркас без поз кисти.
     /// </para>
@@ -21,21 +22,23 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// <para>
     /// Поза наследуется по цепочке <c>UxrAvatar._parentPrefab</c>; она должна совпадать с настоящей
     /// цепочкой вариантов Unity, иначе SDK ищет позы и записи хвата не там.
-    /// Исходный Cyborg остаётся вариантом SDK CyborgAvatar_URP: PlayerBasePrefabBuilder
-    /// создаёт из него отдельный независимый каркас, а не переносит исходный аватар.
+    /// Controllers и MEF наследуют CyborgHandsBase, Black — MEF, Ghost — Controllers.
+    /// Старая SDK-база хранится только в Unused и не участвует в активных цепочках.
     /// </para>
     /// </summary>
     public class AvatarHandPoseChainTests
     {
         private const string PlayerBase     = "Assets/Prefabs/Player/PlayerBase.prefab";
-        private const string SdkHands       = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
+        private const string CyborgHands    = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
         private const string NonSdkHands    = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
-        // Явный SDK-origin из CyborgLegsBuilder/PlayerBasePrefabBuilder; произвольный
-        // ThirdParty-префаб не считается допустимой базой зарегистрированного аватара.
-        private static readonly string[] SdkRoots =
-        {
-            "Assets/ThirdParty/UltimateXR/Runtime/Prefabs/Avatars/CyborgAvatar_URP.prefab"
-        };
+        private const string Controllers    = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        private const string MefPlayer      = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
+        private const string MefPlayerBlack = "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab";
+        private const string Ghost          = "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab";
+        private const string LegacySdkHands = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
+        private const string ArchivedSdkHands = "Assets/Prefabs/Player/Unused/PlayerBase_SdkHands.prefab";
+        private const string CyborgHandsGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+        private const string LegacySdkHandsGuid = "a58abb6b878ca5b40b79c14fae6f5645";
         // Позы, снятые с паков оружия (Hands — HandsPackPoseImporter, KINEMATION — KinemationWeaponBuilder): нейтральны к скелету.
         private static readonly string[] PackPoses = { "Assets/Art/HandPoses/HandsPack/", "Assets/Art/HandPoses/Kinemation/" };
 
@@ -51,16 +54,28 @@ namespace VrBattlegrounds.Tests.Prefabs
         {
             List<string> chain = UnityChain(Load(path));
 
-            if (SdkRoots.Contains(chain.Last()))
-            {
-                Assert.That(chain.Any(p => p == PlayerBase || p == SdkHands || p == NonSdkHands), Is.False,
-                    $"{path}: SDK-origin смешан с веткой игрового каркаса — {Describe(chain)}");
-                return;
-            }
-
             Assert.That(chain.Last(), Is.EqualTo(PlayerBase), $"{path}: цепочка вариантов не доходит до PlayerBase — {Describe(chain)}");
-            Assert.That(chain.Contains(SdkHands) ^ chain.Contains(NonSdkHands), Is.True,
+            Assert.That(chain.Contains(CyborgHands) ^ chain.Contains(NonSdkHands), Is.True,
                         $"{path}: цепочка обязана идти ровно через одну базу кисти — {Describe(chain)}");
+        }
+
+        [TestCase(CyborgHands, PlayerBase)]
+        [TestCase(Controllers, CyborgHands)]
+        [TestCase(MefPlayer, CyborgHands)]
+        [TestCase(MefPlayerBlack, MefPlayer)]
+        [TestCase(Ghost, Controllers)]
+        [TestCase(NonSdkHands, PlayerBase)]
+        public void Непосредственный_родитель_соответствует_контракту(string path, string parentPath)
+        {
+            GameObject prefab = Load(path);
+            Assert.That(PrefabUtility.GetPrefabAssetType(prefab), Is.EqualTo(PrefabAssetType.Variant),
+                $"{path}: требуется настоящий Unity Variant");
+            Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(prefab)),
+                Is.EqualTo(parentPath), $"{path}: неверный непосредственный Unity parent");
+            UxrAvatar avatar = prefab.GetComponent<UxrAvatar>();
+            Assert.That(avatar, Is.Not.Null, $"{path}: нет UxrAvatar");
+            Assert.That(AssetDatabase.GetAssetPath(avatar.ParentPrefab), Is.EqualTo(parentPath),
+                $"{path}: неверный непосредственный UXR parent");
         }
 
         [TestCaseSource(nameof(Variants))]
@@ -101,7 +116,39 @@ namespace VrBattlegrounds.Tests.Prefabs
         [Test]
         public void PlayerBase_без_поз_кисти()
         {
-            Assert.That(Load(PlayerBase).GetComponent<UxrAvatar>().GetHandPoses().Select(p => p.name), Is.Empty);
+            UxrAvatar avatar = Load(PlayerBase).GetComponent<UxrAvatar>();
+            Assert.That(avatar.GetHandPoses(), Is.Empty);
+            Assert.That(avatar.GetAllHandPoses(), Is.Empty);
+            Assert.That(avatar.DefaultHandPose, Is.Null);
+        }
+
+        [TestCase(PlayerBase)]
+        [TestCase(CyborgHands)]
+        public void Общая_база_не_содержит_тела_или_аватарного_рига(string path)
+        {
+            UxrAvatar avatar = Load(path).GetComponent<UxrAvatar>();
+            Assert.That(avatar, Is.Not.Null, $"{path}: нет UxrAvatar");
+            Assert.That(avatar.AvatarRig.Transforms, Is.Empty, $"{path}: в общей базе остались привязки костей тела");
+            // SDK исключает device visuals под UxrHandIntegration из мешей тела аватара.
+            Assert.That(avatar.GetAllAvatarRendererComponents(), Is.Empty,
+                $"{path}: в общей базе остался skinned mesh тела; device visuals допустимы");
+        }
+
+        [Test]
+        public void GUID_базы_киборга_сохраняет_ключ_записей_хвата()
+        {
+            Load(CyborgHands);
+            Assert.That(AssetDatabase.AssetPathToGUID(CyborgHands), Is.EqualTo(CyborgHandsGuid));
+        }
+
+        [Test]
+        public void Прежняя_SDK_база_сохранена_только_в_архиве()
+        {
+            Assert.That(System.IO.File.Exists(LegacySdkHands), Is.False, "Активный путь прежней SDK-базы должен отсутствовать");
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(LegacySdkHands), Is.Null);
+            Load(ArchivedSdkHands);
+            Assert.That(AssetDatabase.AssetPathToGUID(ArchivedSdkHands), Is.EqualTo(LegacySdkHandsGuid),
+                "Перемещение в Unused должно сохранять GUID прежней SDK-базы");
         }
 
         [Test]
@@ -115,12 +162,21 @@ namespace VrBattlegrounds.Tests.Prefabs
         }
 
         [Test]
-        public void Позы_под_скелет_SDK_живут_в_ветке_SDK()
+        public void Полный_набор_поз_киборга_принадлежит_чистой_базе()
         {
-            string[] poses = Load(SdkHands).GetComponent<UxrAvatar>().GetAllHandPoses().Select(p => p.name).ToArray();
-
-            Assert.That(poses, Has.Some.StartsWith("Controller"));
-            Assert.That(poses, Has.Some.StartsWith("Demo"));
+            UxrAvatar avatar = Load(CyborgHands).GetComponent<UxrAvatar>();
+            var poses = avatar.GetHandPoses().ToArray();
+            // Принятый набор содержит 65 поз; последующее добавление поз допустимо.
+            Assert.That(poses.Length, Is.GreaterThanOrEqualTo(65));
+            Assert.That(poses.All(p => p != null), Is.True, "В наборе поз есть потерянный asset");
+            string[] names = poses.Select(p => p.name).ToArray();
+            Assert.That(names.Distinct().Count(), Is.EqualTo(names.Length), "Имена поз в базе должны быть однозначны");
+            Assert.That(names, Has.Some.StartsWith("Controller"));
+            Assert.That(names, Has.Some.StartsWith("Demo"));
+            Assert.That(avatar.DefaultHandPose, Is.Not.Null, "У базы киборга должна быть поза по умолчанию");
+            Assert.That(poses, Does.Contain(avatar.DefaultHandPose), "Поза по умолчанию должна входить в собственный набор базы");
+            Assert.That(avatar.GetAllHandPoses().Count(), Is.EqualTo(poses.Length),
+                "Полный набор киборга должен принадлежать CyborgHandsBase, а не предкам");
         }
 
         private static GameObject Load(string path)

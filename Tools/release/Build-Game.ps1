@@ -19,6 +19,7 @@
 #   powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1
 #   powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 -Targets quest,tablet -Config Prod
 #   powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 -Targets all -Config Test -DryRun
+#   powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 -ReaggregateInput input.json -ReaggregateOutputDirectory reports\new-pair
 
 [CmdletBinding()]
 param(
@@ -49,7 +50,11 @@ param(
     [string] $Ref = '',
 
     # Проверить сборочные worktree, ревизии, LFS и вывести команды запуска Unity без старта сборки.
-    [switch] $DryRun
+    [switch] $DryRun,
+
+    # Повторная проверка сохранённых artifacts; Unity и сборочные checkout не затрагиваются.
+    [string] $ReaggregateInput = '',
+    [string] $ReaggregateOutputDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -156,7 +161,99 @@ function Read-UxrIdHash([string] $ProfileBuildDir) {
 }
 
 # Собирает raw provenance только из текущих terminal попыток, не из оставшихся outputs прежней сборки.
-function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed) {
+function ConvertTo-BuildTimestamp($Value) {
+    if ($Value -is [DateTimeOffset]) { return $Value }
+    if ($Value -is [DateTime]) {
+        if ($Value.Kind -eq [DateTimeKind]::Unspecified) { throw 'Дата без часового пояса не принимается' }
+        return [DateTimeOffset]$Value
+    }
+    if ($Value -isnot [string] -or $Value -notmatch '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,7})?(Z|[+-]\d{2}:\d{2})$') {
+        throw 'Ожидалась ISO 8601 дата с часовым поясом'
+    }
+    return [DateTimeOffset]::Parse($Value, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None)
+}
+
+function Assert-FileHash([string] $Path, [string] $Expected) {
+    if ($Expected -cnotmatch '^[0-9a-f]{64}$' -or -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Expected) {
+        throw "Не совпал SHA256 файла: $Path"
+    }
+}
+
+function Get-ContainedArtifactPath([string] $Root, [string] $Relative) {
+    if ([string]::IsNullOrWhiteSpace($Relative) -or [IO.Path]::IsPathRooted($Relative) -or $Relative.Contains(':') -or
+        @($Relative -split '[\\/]' | Where-Object { $_ -eq '..' -or $_ -eq '.' -or $_ -eq '' }).Count -gt 0) {
+        throw "Недопустимый относительный путь artifact: $Relative"
+    }
+    $base = [IO.Path]::GetFullPath($Root).TrimEnd([char[]]'\/')
+    $full = [IO.Path]::GetFullPath((Join-Path $base $Relative))
+    if (-not $full.StartsWith($base + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Artifact вне outputRoot' }
+    $cursor = Get-Item -LiteralPath $full -Force
+    while ($null -ne $cursor -and $cursor.FullName.Length -ge $base.Length) {
+        if (($cursor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "ReparsePoint в artifact path: $full" }
+        if ($cursor -is [IO.DirectoryInfo]) { $cursor = $cursor.Parent }
+        else { $cursor = $cursor.Directory }
+        if ($null -eq $cursor) { break }
+    }
+    return $full
+}
+
+# Как OutputFiles сборщика: полный набор, без перехода через reparse point.
+# Pending status paths не сериализуются schema1; terminal inventory после CompleteStatusWrite обновлён.
+function Get-BuildArtifactFiles([string] $Root) {
+    $base = [IO.Path]::GetFullPath($Root).TrimEnd([char[]]'\/')
+    $manifestPath = Join-Path $base 'build.json'
+    $directories = New-Object 'System.Collections.Generic.Stack[string]'
+    $directories.Push($base)
+    while ($directories.Count -gt 0) {
+        $directory = $directories.Pop()
+        $attributes = [IO.File]::GetAttributes($directory)
+        if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "ReparsePoint в artifact tree: $directory" }
+        foreach ($entry in [IO.Directory]::GetFileSystemEntries($directory)) {
+            $attributes = [IO.File]::GetAttributes($entry)
+            if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "ReparsePoint в artifact tree: $entry" }
+            if (($attributes -band [IO.FileAttributes]::Directory) -ne 0) { $directories.Push($entry) }
+            elseif (-not [string]::Equals($entry, $manifestPath, [StringComparison]::OrdinalIgnoreCase)) { $entry }
+        }
+    }
+}
+
+# Единый validator для текущего запуска и повторной агрегации архивов.
+function Read-ValidatedBuildProfile([string] $ManifestPath, [string] $ArtifactRoot, [string] $RecordedRoot,
+    [string] $Profile, [string] $SourceSha, [string] $Configuration, $Attempt, [bool] $OutcomeConfirmed) {
+    $manifest = Get-Content -LiteralPath $ManifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
+    if ($manifest.schemaVersion -ne 1 -or $manifest.sourceSha -cne $SourceSha) { throw 'Версия или полный sourceSha builder manifest не совпали' }
+    $records = @($manifest.profiles | Where-Object { $_.profile -ceq $Profile })
+    if ($records.Count -ne 1) { throw 'Builder manifest не содержит единственный ожидаемый профиль' }
+    $record = $records[0]
+    if ([IO.Path]::GetFullPath([string]$record.outputRoot) -ine [IO.Path]::GetFullPath($RecordedRoot)) { throw 'Builder outputRoot не совпал с исходным путём профиля' }
+    if ($record.actual.configuration -cne $Configuration) { throw 'Builder configuration не совпала' }
+    $start = ConvertTo-BuildTimestamp $record.terminal.startedUtc
+    $end = ConvertTo-BuildTimestamp $record.terminal.endedUtc
+    $attemptStart = ConvertTo-BuildTimestamp $Attempt.startedUtc
+    $attemptEnd = ConvertTo-BuildTimestamp $Attempt.endedUtc
+    if ($start -lt $attemptStart -or $end -lt $start -or $end -gt $attemptEnd -or $attemptEnd -gt [DateTimeOffset]::UtcNow) {
+        throw 'Builder manifest не принадлежит временному интервалу текущего запуска'
+    }
+    if (-not $OutcomeConfirmed -or $record.success -isnot [bool] -or -not $record.success -or
+        $record.terminal.result -cne 'Succeeded' -or @($record.files).Count -eq 0) { throw 'Успешный terminal builder и его процесс не подтверждены' }
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($file in @($record.files)) {
+        $full = Get-ContainedArtifactPath $ArtifactRoot $file.path
+        if (-not $seen.Add($full)) { throw 'Повторный нормализованный путь в inventory' }
+        if ($null -eq $file.bytes -or $file.bytes -lt 0 -or (Get-Item -LiteralPath $full).Length -ne $file.bytes) { throw "Не совпал размер artifact: $full" }
+        Assert-FileHash $full $file.sha256
+    }
+    $actualFiles = @(Get-BuildArtifactFiles $ArtifactRoot)
+    if ($actualFiles.Count -ne $seen.Count) { throw 'Фактический набор artifact файлов отличается от inventory' }
+    foreach ($actualFile in $actualFiles) {
+        if (-not $seen.Contains($actualFile)) { throw "В artifact tree найден файл вне inventory: $actualFile" }
+    }
+    if (-not $seen.Contains((Get-ContainedArtifactPath $ArtifactRoot 'uxr-ids.txt')) -or [string]::IsNullOrWhiteSpace((Read-UxrIdHash $ArtifactRoot))) { throw 'Нет проверенного UXR fingerprint в inventory' }
+    return [pscustomobject]@{ Manifest = $manifest; Record = $record }
+}
+
+function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed, $Recovery = $null) {
     $profiles = New-Object System.Collections.Generic.List[object]
     $origins = New-Object System.Collections.Generic.List[object]
     $dirtyEntries = New-Object System.Collections.Generic.List[object]
@@ -169,34 +266,19 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
         foreach ($profile in ($run.Profiles -split ',')) {
             $profile = $profile.Trim().ToLowerInvariant()
             $root = [IO.Path]::GetFullPath((Join-Path $run.ProjectPath ('Build/' + $folders[$profile])))
-            $manifestPath = Join-Path $root 'build.json'
+            $artifactRoot = $root
+            if ($null -ne $Recovery) { $artifactRoot = $Recovery.Roots[$profile] }
+            $manifestPath = Join-Path $artifactRoot 'build.json'
             $record = $null
             $reason = 'Сборка этого профиля не запускалась в текущей попытке'
             if ($null -ne $terminal) {
                 try {
-                    $manifest = Get-Content -LiteralPath $manifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
-                    if ($manifest.schemaVersion -ne 1 -or $manifest.sourceSha -cne $Heads[$run.ProjectPath]) {
-                        throw 'Версия или полный sourceSha builder manifest не совпали с текущим checkout'
-                    }
-                    $candidates = @($manifest.profiles | Where-Object { $_.profile -ceq $profile })
-                    if ($candidates.Count -ne 1) { throw 'Builder manifest не содержит единственный ожидаемый профиль' }
-                    $record = $candidates[0]
-                    if ([IO.Path]::GetFullPath([string]$record.outputRoot) -ine $root) { throw 'Builder outputRoot не совпал с фактическим путём профиля' }
-                    $start = [DateTimeOffset]::MinValue
-                    $end = [DateTimeOffset]::MinValue
-                    if (-not [DateTimeOffset]::TryParse([string]$record.terminal.startedUtc, [ref]$start) -or
-                        -not [DateTimeOffset]::TryParse([string]$record.terminal.endedUtc, [ref]$end) -or
-                        $start -lt $terminal.startedUtc -or $end -lt $start -or $end -gt [DateTimeOffset]::UtcNow) {
-                        throw 'Builder manifest не принадлежит временному интервалу текущего запуска'
-                    }
-                    if ($record.success -isnot [bool] -or -not $record.success -or $record.terminal.result -cne 'Succeeded' -or
-                        $terminal.exitCode -ne 0 -or @($record.files).Count -eq 0) {
-                        $passed = $false
-                        # Failure evidence сохраняется, но inventory старой/неуспешной сборки не принимается.
-                        $record.success = $false
-                        $record.files = @()
-                        $record.actual.unavailableReasons | Add-Member -NotePropertyName files -NotePropertyValue 'Текущий terminal builder не подтвердил успешный artifact; inventory не принимается' -Force
-                    }
+                    $confirmed = $null -ne $terminal.exitCode -and $terminal.exitCode -eq 0
+                    if ($null -ne $Recovery) { $confirmed = $Recovery.OutcomeConfirmed }
+                    $validated = Read-ValidatedBuildProfile $manifestPath $artifactRoot $root $profile $Heads[$run.ProjectPath] $Config $terminal $confirmed
+                    $manifest = $validated.Manifest
+                    $record = $validated.Record
+                    if ($null -ne $Recovery) { $record.outputRoot = $artifactRoot }
                     $origins.Add([ordered]@{ path = $manifestPath; sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant() })
                     if ($manifest.dirty.value -isnot [bool]) { $dirtyKnown = $false }
                     elseif ($manifest.dirty.value) { $dirtyValue = $true }
@@ -219,9 +301,9 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
                 }
                 $unknownActual.unavailableReasons = $unknownReasons
                 $record = [ordered]@{
-                    profile = $profile; outputRoot = $root; files = @(); success = $false
+                    profile = $profile; outputRoot = $artifactRoot; files = @(); success = $false
                     actual = $unknownActual
-                    terminal = @{ startedUtc = $(if ($terminal) { $terminal.startedUtc.ToString('o') } else { $null }); endedUtc = $(if ($terminal) { $terminal.endedUtc } else { $null }); result = $null; reason = $reason }
+                    terminal = @{ startedUtc = $(if ($terminal) { (ConvertTo-BuildTimestamp $terminal.startedUtc).ToString('o') } else { $null }); endedUtc = $(if ($terminal) { $terminal.endedUtc } else { $null }); result = $null; reason = $reason }
                 }
             }
             $profiles.Add($record)
@@ -236,8 +318,10 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
         profiles = $profiles.ToArray(); sourceManifests = $origins.ToArray(); success = $passed
         generatedUtc = [DateTimeOffset]::UtcNow.ToString('o')
     }
+    if ($null -ne $Recovery) { $pair.reaggregation = $Recovery.Evidence }
     $id = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ') + '-' + [Guid]::NewGuid().ToString('N')
     $directory = Join-Path $RepoRoot ('Build/manifests/build-' + $id)
+    if ($null -ne $Recovery) { $directory = $Recovery.OutputDirectory }
     $null = New-Item -ItemType Directory -Path $directory -Force
     $path = Join-Path $directory 'build.json'
     $json = ($pair | ConvertTo-Json -Depth 40) -replace "`r`n", "`n"
@@ -245,7 +329,134 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
     return [pscustomobject]@{ Path = $path; Passed = $passed }
 }
 
+function Invoke-BuildReaggregation([string] $InputPath, [string] $OutputDirectory) {
+    if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { throw 'Укажи новый -ReaggregateOutputDirectory' }
+    $output = [IO.Path]::GetFullPath($OutputDirectory)
+    if (Test-Path -LiteralPath $output) { throw 'Каталог повторной агрегации уже существует; перезапись запрещена' }
+    $null = New-Item -ItemType Directory -Path $output
+    try {
+        $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
+        $inputHash = (Get-FileHash -LiteralPath $inputFull -Algorithm SHA256).Hash.ToLowerInvariant()
+        $spec = Get-Content -LiteralPath $inputFull -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($spec.schemaVersion -ne 1 -or $spec.sourceSha -cnotmatch '^[0-9a-f]{40}$' -or @('Test', 'Prod') -cnotcontains $spec.configuration) { throw 'Некорректный recovery input schema/source/configuration' }
+        Assert-FileHash $spec.originalPair.path $spec.originalPair.sha256
+        Assert-FileHash $spec.originalPair.recordedPath $spec.originalPair.sha256
+        Assert-FileHash $spec.console.path $spec.console.sha256
+        $original = Get-Content -LiteralPath $spec.originalPair.path -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($original.schemaVersion -ne 1 -or $original.sourceSha -cne $spec.sourceSha -or $original.success -isnot [bool] -or $original.success) { throw 'Ожидался исходный failed pair той же ревизии' }
+
+        # Единственный поддержанный legacy control flow: проверен при диагностике этого helper.
+        # Другой helper требует отдельного доказательства; raw success не заменяет process outcome.
+        $supportedHash = 'b7986f5fc30f599b60532bfec04abd95e17264753dab897dd75caadc3c94e2be'
+        if ($spec.helper.sha256 -cne $supportedHash -or $spec.helper.commit -cne $spec.sourceSha -or $spec.helper.gitBlob -cnotmatch '^[0-9a-f]{40}$') { throw 'Нет поддержанного control-flow evidence исходного helper' }
+        $blob = & git --no-pager -C $RepoRoot rev-parse ($spec.helper.commit + ':Tools/release/Build-Game.ps1')
+        if ($LASTEXITCODE -ne 0 -or "$blob".Trim() -cne $spec.helper.gitBlob) { throw 'Helper blob не принадлежит исходному commit' }
+        $startInfo = New-Object Diagnostics.ProcessStartInfo
+        $startInfo.FileName = 'git'
+        $startInfo.Arguments = 'cat-file blob ' + $spec.helper.gitBlob
+        $startInfo.WorkingDirectory = $RepoRoot
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardOutput = $true
+        $process = [Diagnostics.Process]::Start($startInfo)
+        $buffer = New-Object IO.MemoryStream
+        try {
+            $process.StandardOutput.BaseStream.CopyTo($buffer)
+            $process.WaitForExit()
+            $sha = [Security.Cryptography.SHA256]::Create()
+            try { $helperHash = ([BitConverter]::ToString($sha.ComputeHash($buffer.ToArray()))).Replace('-', '').ToLowerInvariant() } finally { $sha.Dispose() }
+            if ($process.ExitCode -ne 0 -or $helperHash -cne $supportedHash) { throw 'Не совпали исходные байты helper' }
+        } finally { $buffer.Dispose(); $process.Dispose() }
+
+        $console = @(Get-Content -LiteralPath $spec.console.path -Encoding UTF8)
+        $manifestMarker = 'Build manifest: ' + $spec.originalPair.recordedPath
+        $failureMarker = 'Provenance не подтверждает текущие успешные builder artifacts; смотри pair manifest.'
+        if ($console.Count -lt 2 -or $console[-2] -cne $manifestMarker -or $console[-1] -cne $failureMarker) { throw 'Console не подтверждает terminal pairRunSuccess исходного failed pair' }
+        $profiles = @($original.profiles)
+        if ($profiles.Count -eq 0 -or @($spec.profiles).Count -ne $profiles.Count) { throw 'Неполное соответствие профилей recovery input и исходного pair' }
+        $originalGenerated = ConvertTo-BuildTimestamp $original.generatedUtc
+        $expectedRuns = @(Get-BuildRuns (($profiles | ForEach-Object { $_.profile }) -join ','))
+        $header = 'Профили: ' + (($profiles | ForEach-Object { $_.profile }) -join ',') + ', конфигурация: ' + $spec.configuration + ', ревизия: ' + $spec.sourceSha.Substring(0, 12) + ', запусков Unity: ' + $expectedRuns.Count
+        if (@($console | Where-Object { $_ -ceq $header }).Count -ne 1) { throw 'Console configuration/source/profiles не совпали' }
+        $consoleRunIndex = 0
+        $previousLine = [Array]::IndexOf($console, $header)
+        foreach ($expectedRun in $expectedRuns) {
+            $consoleRunIndex++
+            $group = @($profiles | Where-Object { ($expectedRun.Profiles -split ',') -ccontains $_.profile })
+            $checkouts = @($group | ForEach-Object { [IO.Path]::GetDirectoryName([IO.Path]::GetDirectoryName([string]$_.outputRoot)) } | Select-Object -Unique)
+            if ($checkouts.Count -ne 1) { throw 'Несогласованное соответствие профилей и исходного checkout' }
+            $line = 'Запуск ' + $consoleRunIndex + '/' + $expectedRuns.Count + ': профили ' + $expectedRun.Profiles + ', -buildTarget ' + $expectedRun.BuildTarget + ', worktree ' + $checkouts[0]
+            $lineIndex = [Array]::IndexOf($console, $line)
+            if ($lineIndex -le $previousLine -or @($console | Where-Object { $_ -ceq $line }).Count -ne 1) { throw 'Console не подтверждает порядок и mapping исходных запусков' }
+            $previousLine = $lineIndex
+        }
+        $runs = New-Object System.Collections.Generic.List[object]
+        $heads = @{}
+        $terminals = @{}
+        $roots = @{}
+        $attempts = New-Object System.Collections.Generic.List[object]
+        $uxr = @()
+        $index = 0
+        foreach ($profile in $profiles) {
+            $name = [string]$profile.profile
+            if (@('quest', 'tablet', 'server') -cnotcontains $name -or $roots.ContainsKey($name)) { throw 'Неизвестный или повторный профиль исходного pair' }
+            $mapping = @($spec.profiles | Where-Object { $_.profile -ceq $name })
+            if ($mapping.Count -ne 1) { throw 'Неоднозначное соответствие профиля архиву' }
+            $map = $mapping[0]
+            $archive = (Resolve-Path -LiteralPath $map.archiveRoot).Path
+            $rawPath = Get-ContainedArtifactPath $archive 'build.json'
+            Assert-FileHash $rawPath $map.manifestSha256
+            $checkout = [IO.Path]::GetDirectoryName([IO.Path]::GetDirectoryName([string]$profile.outputRoot))
+            $folder = @{ quest = 'Quest'; tablet = 'Tablet'; server = 'Server' }[$name]
+            if ([IO.Path]::GetFullPath($profile.outputRoot) -ine [IO.Path]::GetFullPath((Join-Path $checkout ('Build/' + $folder)))) { throw 'Неподдержанный исходный outputRoot' }
+            $target = 'Android'
+            if ($name -eq 'server') { $target = 'Win64' }
+            $index++
+            $runName = 'reaggregate-' + $index
+            $runs.Add([pscustomobject]@{ Name = $runName; BuildTarget = $target; Profiles = $name; ProjectPath = $checkout })
+            $heads[$checkout] = $spec.sourceSha
+            $terminal = @{ startedUtc = (ConvertTo-BuildTimestamp $profile.terminal.startedUtc); endedUtc = (ConvertTo-BuildTimestamp $profile.terminal.endedUtc); exitCode = $null }
+            if ($terminal.endedUtc -gt $originalGenerated) { throw 'Исходный pair предшествует окончанию попытки' }
+            $terminals[$runName] = $terminal
+            $validated = Read-ValidatedBuildProfile $rawPath $archive $profile.outputRoot $name $spec.sourceSha $spec.configuration $terminal $true
+            $toolBinding = @($validated.Record.actual.tools.files | Where-Object { $_.path -ceq 'Tools/release/Build-Game.ps1' -and $_.sha256 -ceq $helperHash })
+            if ($toolBinding.Count -ne 1) { throw 'Raw manifest не связан с исходным helper' }
+            $roots[$name] = $archive
+            $uxr += Read-UxrIdHash $archive
+            $attempts.Add([ordered]@{ profile = $name; startedUtc = $terminal.startedUtc.ToString('o'); endedUtc = $terminal.endedUtc.ToString('o'); exitCode = $null; outcome = 'success'; outcomeSource = 'control-flow-derived'; originalOutputRoot = $profile.outputRoot; archiveRoot = $archive; manifestSha256 = $map.manifestSha256; verifiedFiles = @($validated.Record.files).Count })
+        }
+        if (@($uxr | Select-Object -Unique).Count -ne 1) { throw 'Кросс-сверка UXR архивов не сошлась' }
+        $evidence = [ordered]@{
+            kind = 'saved-artifacts-reaggregation'; generatedUtc = [DateTimeOffset]::UtcNow.ToString('o')
+            input = @{ path = $inputFull; sha256 = $inputHash }
+            originalPair = $spec.originalPair; console = $spec.console; helper = $spec.helper
+            outcomeEvidence = 'control-flow-derived; original per-process Process.ExitCode was not preserved; terminal console marker in the byte-identified helper requires pairRunSuccess after process exit and UXR checks'
+            attempts = $attempts.ToArray(); uxrHash = $uxr[0]
+        }
+        $script:Config = $spec.configuration
+        $result = Write-BuildPairManifest $runs.ToArray() $heads $terminals $true @{ Roots = $roots; OutcomeConfirmed = $true; Evidence = $evidence; OutputDirectory = $output }
+        Write-Host ('Reaggregated build manifest: ' + $result.Path)
+        return $result
+    } catch {
+        $failure = @{ schemaVersion = 1; success = $false; kind = 'reaggregation-rejected'; reason = $_.Exception.Message; input = $InputPath; generatedUtc = [DateTimeOffset]::UtcNow.ToString('o') }
+        $json = ($failure | ConvertTo-Json -Depth 10) -replace "`r`n", "`n"
+        [IO.File]::WriteAllText((Join-Path $output 'reaggregation-failure.json'), $json + "`n", (New-Object Text.UTF8Encoding($false)))
+        throw
+    }
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+if (-not [string]::IsNullOrWhiteSpace($ReaggregateInput)) {
+    try {
+        $result = Invoke-BuildReaggregation $ReaggregateInput $ReaggregateOutputDirectory
+        if ($result.Passed) { exit 0 }
+        exit 1
+    } catch {
+        Write-Host ('Повторная агрегация отклонена: ' + $_.Exception.Message) -ForegroundColor Red
+        exit 1
+    }
+}
+if (-not [string]::IsNullOrWhiteSpace($ReaggregateOutputDirectory)) { throw '-ReaggregateOutputDirectory требует -ReaggregateInput' }
 if ($Development) { $Config = 'Test' }
 
 try {

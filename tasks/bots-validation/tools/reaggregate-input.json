@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "3d24f53080fe853cbfc8a1de82170c70cedc5b7a",
+  "configuration": "Test",
+  "originalPair": {
+    "path": "F:/CodexWorktrees/bots-validation/tasks/bots-validation/reports/build3d24/pair-build.json",
+    "recordedPath": "F:\\CodexWorktrees\\bots-validation\\Build\\manifests\\build-20261018T1724516135641Z-aacb9e022da2486a8d2e3c57cdb801d0\\build.json",
+    "sha256": "9eba8678d991ab14605134fbcfac1575ae761c88f9d6d1b53436c06fdc942e55"
+  },
+  "console": {
+    "path": "F:/CodexWorktrees/bots-validation/tasks/bots-validation/reports/build3d24-console.log",
+    "sha256": "fa6776adec4df9784a167ac8794aadb93f48d89769b55812d7e6d4f33d441613"
+  },
+  "helper": {
+    "commit": "3d24f53080fe853cbfc8a1de82170c70cedc5b7a",
+    "gitBlob": "8bac24bec685055cf65edc9a89081b586bef5c78",
+    "sha256": "b7986f5fc30f599b60532bfec04abd95e17264753dab897dd75caadc3c94e2be"
+  },
+  "profiles": [
+    {
+      "profile": "quest",
+      "archiveRoot": "F:/CodexWorktrees/bots-validation/tasks/bots-validation/reports/build3d24/Quest",
+      "manifestSha256": "5f5e45a54e489f00956c52f597fbf6d7349def60b9837a009263170eb5563d23"
+    },
+    {
+      "profile": "server",
+      "archiveRoot": "F:/CodexWorktrees/bots-validation/tasks/bots-validation/reports/build3d24/Server",
+      "manifestSha256": "16c27ba1be904e324858d12abf67369de7c9f5a3dec0e0d880e0cf70932f048c"
+    }
+  ]
+}

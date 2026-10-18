@@ -1,0 +1,25 @@
+{
+  "task_id": "flat-task-worktrees",
+  "owner": "coordination-maintenance",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/flat-task-worktrees",
+  "base_sha": "8dfccb580f649092f605bef8adf7f7104708e989",
+  "doc_path": "tasks/flat-task-worktrees/Readme.md",
+  "title": "Единый плоский формат агентских worktree",
+  "branch": "task/flat-task-worktrees",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "AGENTS.md",
+        ".agents/rules/agent_coordination.md",
+        "experts/COMMON.md",
+        "Tools/experts/session_handoff.py",
+        "tasks/flat-task-worktrees/**",
+        "Tools/experts/tests/test_session_handoff.py"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

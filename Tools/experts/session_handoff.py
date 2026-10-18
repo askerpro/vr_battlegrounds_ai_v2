@@ -1,9 +1,10 @@
 """session_handoff: что делали агенты (Codex и Claude Code) в этом worktree — для эксперта, принимающего работу.
 
-Читает журналы `~/.codex/sessions/**/*.jsonl` и `~/.claude/projects/*/*.jsonl`, выбирает сессии, чей cwd —
-сам worktree или его родительский каталог, и выдаёт ограниченную выжимку: реплики пользователя, сообщения
-агента, итог последнего хода. Только чтение; это история переписки, не факт состояния: сверяй с git,
-хабом и документами задачи.
+Читает журналы `~/.codex/sessions/**/*.jsonl` и `~/.claude/projects/*/*.jsonl`, выбирает сессии текущего
+worktree и его прежнего вложенного cwd `<worktree>/Vr_Battlegrounds_ai`. Родительский каталог не
+учитывается, даже при явном вызове из старого вложенного корня. Выдаёт ограниченную выжимку: реплики
+пользователя, сообщения агента, итог последнего хода. Только чтение; это история переписки, не факт
+состояния: сверяй с git, хабом и документами задачи.
 """
 
 import sys
@@ -73,11 +74,17 @@ def last_stamp(path):
     return ""
 
 
+def cwd_aliases(worktree):
+    """Текущий корень и прежний вложенный cwd; родитель никогда не является алиасом."""
+    path = Path(worktree)
+    return path, path / "Vr_Battlegrounds_ai"
+
+
 def matches(cwd, target):
     if not cwd:
         return False
     cwd = norm(cwd)
-    return cwd == target or cwd == norm(Path(target).parent)
+    return any(cwd == norm(path) for path in cwd_aliases(target))
 
 
 def clip(text, limit):
@@ -140,8 +147,10 @@ def extract(path, client):
 
 def cwd_needles(worktree):
     """Байтовые формы `"cwd":"<путь>"` в JSON: сессия могла начаться в другом каталоге и перейти сюда позже."""
-    raw = str(Path(worktree).resolve())
-    forms = {raw, raw[:1].lower() + raw[1:], raw[:1].upper() + raw[1:]}
+    forms = set()
+    for path in cwd_aliases(Path(worktree).resolve()):
+        raw = str(path)
+        forms.update((raw, raw[:1].lower() + raw[1:], raw[:1].upper() + raw[1:]))
     return [('"cwd":' + json.dumps(form)).encode("utf-8") for form in forms]
 
 
@@ -183,7 +192,7 @@ def main(argv=None):
     out = [f"# Агенты в `{args.worktree}`: сессий показано {len(found)}",
            "> История переписки, не факт состояния: сверь с `git status`/diff, хабом и Readme задачи.", ""]
     if not found:
-        out.append("Сессий Codex/Claude с этим cwd (или родительским) нет.")
+        out.append("Сессий Codex/Claude с текущим или прежним cwd этого worktree нет.")
     for stamp, client, path in reversed(found):
         data = extract(path, client)
         out.append(f"## {client}: {path.name} (последняя запись {stamp[:16].replace('T', ' ')} UTC)")

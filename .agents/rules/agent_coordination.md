@@ -36,6 +36,8 @@ renew/stop/begin; управляющий Python-скрипт из вложенн
 
 **Задача = агент.** Одна задача — один агент — один worktree — одна ветка `task/<task-id>`
 от свежей `origin/dev`. Агент задачи сам работает во всех зонах, которые нужны задаче.
+Корень worktree — `F:/CodexWorktrees/<task-id>`: `AGENTS.md`, `Assets/`, `Tools/` и `tasks/`
+лежат непосредственно в нём, без вложенной папки `Vr_Battlegrounds_ai`.
 Создание (worktree, ветка, регистрация и бриф) — одной командой из продуктового main
 `F:/UnityProjects/Vr_Battlegrounds_ai`; сначала прочитай её help:
 

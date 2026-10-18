@@ -21,4 +21,5 @@
 - Прежняя сессия `<id>-expert` доводит задачи из `tasks` до merge, затем убирает task-id и пишет журнал;
   новых задач не берёт. Inbox: `inbox --owner <id> --unread --as "<адрес>"`, ожидание — фоновый `wait-inbox`.
 - `task-new` запускается из продуктового main; новую цель ведёт отдельный агент в созданном worktree.
+  Корень — `F:/CodexWorktrees/<task-id>` без вложенной папки `Vr_Battlegrounds_ai`, ветка — `task/<task-id>`.
   После завершения owner закрывает задачу через `task-close` с актуальной ревизией из `status`.

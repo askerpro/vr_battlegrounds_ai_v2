@@ -26,6 +26,8 @@ This is the canonical entry point. `CLAUDE.md` imports it; `.codex/AGENTS.md` li
 ## Задачи, эксперты и ревью (решение пользователя 2026-10-17)
 
 - Одна задача — один агент — один worktree — одна ветка `task/<task-id>` от свежей `origin/dev`.
+  Корень агентского worktree — `F:/CodexWorktrees/<task-id>`; файлы проекта лежат прямо в нём,
+  без дополнительной папки `Vr_Battlegrounds_ai`.
   Создание из продуктового main: `python Tools/agents/coordination.py task-new --task <task-id> ...`
   (worktree, ветка, регистрация, бриф); дальше работать в созданном worktree.
   Агент задачи сам работает во всех нужных зонах. Сессии экспертов новых задач не ведут; существующие

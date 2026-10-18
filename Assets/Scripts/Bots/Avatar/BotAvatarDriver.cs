@@ -1,6 +1,7 @@
 using Mirror;
 using Unity.Profiling;
 using UltimateXR.Avatar;
+using UltimateXR.Avatar.Controllers;
 using UltimateXR.Core;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -21,7 +22,8 @@ namespace VrBattlegrounds.Bots
     /// относительно Manipulation не зависит от DefaultExecutionOrder Blaze/UxrManager и режима PostUpdate;
     /// (2) запись идёт после проходов Animator/NavMesh этого кадра — между ней и Manipulation никто эти трансформы
     /// не трогает. Это запись трансформов, а не действие SDK: хват/выстрел/automation отсюда не вызываются.
-    /// После Manipulation драйвер ничего не пишет и кости кистей обратно не читает.
+    /// После Manipulation драйвер не пишет трансформы и не читает кости кистей обратно; только выбирает
+    /// штатную SDK-позу пальцев до Animation по уже выровненному фактическому хвату.
     /// </para>
     ///
     /// <para>
@@ -37,11 +39,14 @@ namespace VrBattlegrounds.Bots
         private static readonly ProfilerMarker ApplyMarker = new ProfilerMarker("BotAvatarDriver.Apply");
 
         private UxrAvatar _avatar;
+        private UxrStandardAvatarController _controller;
         private NetworkIdentity _identity;
         private PlayerController _player;
         private Transform _camera;
         private BotInputFrame _frame;
         private bool _hasFrame;
+        private bool _leftHandPoseWarning;
+        private bool _rightHandPoseWarning;
 
         /// <summary>Последние записанные мировые позы кистей (для замера стенда; управление их не читает).</summary>
         public Pose AppliedLeftHand { get; private set; }
@@ -51,6 +56,11 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>Кадр Unity последней записи.</summary>
         public int AppliedFrame { get; private set; } = -1;
+
+        /// <summary>Кадр последней попытки выбора SDK-поз после Manipulation; это не проверка контакта пальцев.</summary>
+        public int HandPoseSelectionFrame { get; private set; } = -1;
+        public bool LeftHandPoseSelected { get; private set; }
+        public bool RightHandPoseSelected { get; private set; }
 
         /// <summary>
         /// Тело — призрак бота (тело выбывшего): драйвер ведёт его и мёртвым (корень, камера, кисти в позе покоя).
@@ -72,6 +82,7 @@ namespace VrBattlegrounds.Bots
         private void Awake()
         {
             _avatar = GetComponent<UxrAvatar>();
+            _controller = GetComponent<UxrStandardAvatarController>();
             _identity = GetComponent<NetworkIdentity>();
             _player = GetComponent<PlayerController>();
         }
@@ -93,11 +104,14 @@ namespace VrBattlegrounds.Bots
         {
             UxrManager.StageUpdated -= OnStageUpdated;
             _hasFrame = false;
+            _leftHandPoseWarning = false;
+            _rightHandPoseWarning = false;
         }
 
         private void OnStageUpdated(UxrUpdateStage stage)
         {
-            if (stage != UxrUpdateStage.AvatarUsingTracking || !_hasFrame || !CanDrive) return;
+            if ((stage != UxrUpdateStage.AvatarUsingTracking && stage != UxrUpdateStage.Manipulation) ||
+                !_hasFrame || !CanDrive || (UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync)) return;
             // Погибшее тело драйвер не ведёт (этап pf-equipment): после !IsAlive ни корня, ни камеры, ни кистей —
             // тело до смены на призрака (AvatarManager, deferred-body) остаётся в последней позе, отпускает сервер.
             // Призрак (DrivesDeadBody) — ведётся: он ходит туда, куда велит директор.
@@ -107,10 +121,39 @@ namespace VrBattlegrounds.Bots
                 return;
             }
 
-            using (ApplyMarker.Auto())
+            if (stage == UxrUpdateStage.AvatarUsingTracking)
             {
-                Apply();
+                using (ApplyMarker.Auto())
+                {
+                    Apply();
+                }
             }
+            else
+            {
+                // SDK patch 84: после выравнивания хвата выбираем позу; пальцы пишет только штатная Animation.
+                LeftHandPoseSelected = SelectHandPose(UxrHandSide.Left, ref _leftHandPoseWarning);
+                RightHandPoseSelected = SelectHandPose(UxrHandSide.Right, ref _rightHandPoseWarning);
+                HandPoseSelectionFrame = Time.frameCount;
+            }
+        }
+
+        private bool SelectHandPose(UxrHandSide handSide, ref bool warningReported)
+        {
+            bool selected = _controller != null && _controller.UpdateExternalHandPoseFromGrabState(handSide);
+            if (selected)
+            {
+                warningReported = false;
+            }
+            else if (!warningReported)
+            {
+                warningReported = true;
+                var grabber = _avatar.GetGrabber(handSide);
+                string heldName = grabber != null && grabber.GrabbedObject != null ? grabber.GrabbedObject.name : "нет";
+                GameLog.Player.Warning($"[BotAvatarDriver] {name}: SDK не выбрал позу {handSide}, предмет={heldName}, " +
+                                       $"controller={(_controller != null)}, mode={_avatar.AvatarMode}. Проверьте authored pose и default/grab fallback аватара.", this);
+            }
+
+            return selected;
         }
 
         private void Apply()

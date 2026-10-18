@@ -582,13 +582,15 @@ namespace Mirror
                     AssignAssetID(path);
                 }
             }
-            // VR Battlegrounds patch 5: contents префаба не являются объектами игровой сцены.
+            // VR Battlegrounds patch 5/7: preview не назначает канонические ID.
             else if (UnityEditor.SceneManagement.EditorSceneManager.IsPreviewSceneObject(gameObject))
             {
                 // LoadPrefabContents сохраняет уже загруженный ID своего prefab/variant.
                 // Source варианта указывает на базу, а путь preview может ещё отсутствовать в OnValidate.
                 // Канонический assetId назначают persistent asset и конкретный PrefabStage выше.
-                sceneId = 0;
+                // VR Battlegrounds patch 7: OpenPreviewScene читает и настоящие карты.
+                // Сохраняем их сериализованный sceneId; prefab contents уже имеют свой sceneId=0.
+                return;
             }
             // is this a scene object with prefab parent?
             else if (Utils.IsSceneObjectWithPrefabParent(gameObject, out GameObject prefab))

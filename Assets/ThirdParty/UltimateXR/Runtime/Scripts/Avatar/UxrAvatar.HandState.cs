@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrAvatar.HandState.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -47,12 +47,23 @@ namespace UltimateXR.Avatar
             /// <returns>Whether the event would change the current state</returns>
             public bool IsChange(UxrAvatarHandPoseChangeEventArgs e)
             {
-                if (CurrentHandPose == null || e.PoseName != CurrentHandPoseName)
+                return CurrentHandPose == null || IsChange(e.PoseName, e.BlendValue);
+            }
+
+            /// <summary>
+            ///     VR Battlegrounds patch 84: проверяет изменение до создания аргументов события.
+            /// </summary>
+            /// <param name="poseName">Запрошенное имя позы</param>
+            /// <param name="blendValue">Запрошенное значение смешивания</param>
+            /// <returns>Изменятся ли имя позы или значимое значение смешивания</returns>
+            public bool IsChange(string poseName, float blendValue)
+            {
+                if (CurrentHandPose == null || poseName != CurrentHandPoseName)
                 {
                     return true;
                 }
 
-                if (CurrentHandPose.PoseType == UxrHandPoseType.Blend && Mathf.Abs(e.BlendValue - CurrentBlendValue) > BlendEpsilon)
+                if (CurrentHandPose.PoseType == UxrHandPoseType.Blend && Mathf.Abs(blendValue - CurrentBlendValue) > BlendEpsilon)
                 {
                     return true;
                 }

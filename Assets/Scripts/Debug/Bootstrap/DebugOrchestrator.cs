@@ -194,20 +194,22 @@ namespace VrBattlegrounds.DevTools
                 return;
             }
 
-            int minPlayers = 1;
-            var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
-            if (sessionManager != null && sessionManager.SelectedGameModeData != null)
+            // Явный порог frozen launch config действует и без выбранного режима меню:
+            // прямой запуск карты получает режим из MatchIntent, а не SessionManager.
+            int minPlayers = DebugBootstrapSettings.MinPlayersOverride;
+            if (minPlayers <= 0)
             {
-                int minPlayersOverride = DebugBootstrapSettings.MinPlayersOverride;
-                minPlayers = minPlayersOverride > 0
-                    ? minPlayersOverride
-                    : sessionManager.SelectedGameModeData.minPlayersToStart;
+                minPlayers = 1;
+                var sessionManager = VrBattlegrounds.Managers.SessionManager.Instance;
+                var selectedMode = sessionManager != null ? sessionManager.SelectedGameModeData : null;
+                if (selectedMode != null) minPlayers = selectedMode.minPlayersToStart;
             }
 
-            if (playersManager.Sessions.Count < minPlayers)
+            int currentPlayers = playersManager.Sessions.Count(s => s != null && s.Role == GameRole.Player);
+            if (currentPlayers < minPlayers)
             {
                 GameLog.Debug.Info(
-                    $"[DebugOrchestrator] TryGoLive: недостаточно игроков ({playersManager.Sessions.Count}/{minPlayers}). Ждем остальных.");
+                    $"[DebugOrchestrator] TryGoLive: недостаточно игроков ({currentPlayers}/{minPlayers}). Ждем остальных.");
                 return;
             }
 

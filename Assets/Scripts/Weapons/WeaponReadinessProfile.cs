@@ -5,7 +5,7 @@ namespace VrBattlegrounds.Weapons
 {
     public enum WeaponChamberPolicy { ManualReturn, AutoOnMagazineInsert, TriggerAssistPrepareOnly }
     public enum WeaponEmptyPose { HoldOpen, ReturnToRest }
-    public enum WeaponAmmoCapability { LegacyAmmo, DetachableMagazineChamber, FixedStoreChamber }
+    public enum WeaponAmmoCapability { LegacyAmmo = 0, DetachableMagazineChamber = 1, FixedStoreChamber = 2, MagazineOnly = 3 }
     public enum WeaponPhysicalCapability { NoAction, ActionTravel }
 
     /// <summary>Только данные готовности; FireMode, ёмкость и темп принадлежат SDK trigger.</summary>
@@ -30,6 +30,10 @@ namespace VrBattlegrounds.Weapons
                 !Enum.IsDefined(typeof(WeaponChamberPolicy), _chamberPolicy) ||
                 !Enum.IsDefined(typeof(WeaponEmptyPose), _emptyPose))
                 error = "Профиль содержит неизвестное значение enum.";
+            else if (_ammoCapability == WeaponAmmoCapability.MagazineOnly &&
+                     (_physicalCapability != WeaponPhysicalCapability.NoAction ||
+                      _chamberPolicy != WeaponChamberPolicy.AutoOnMagazineInsert || _emptyPose != WeaponEmptyPose.ReturnToRest))
+                error = "MagazineOnly требует NoAction, AutoOnMagazineInsert и ReturnToRest.";
             else if (_ammoCapability != WeaponAmmoCapability.LegacyAmmo &&
                      _physicalCapability == WeaponPhysicalCapability.NoAction &&
                      (_chamberPolicy == WeaponChamberPolicy.ManualReturn || _emptyPose == WeaponEmptyPose.HoldOpen))

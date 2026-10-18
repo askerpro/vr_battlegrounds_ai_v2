@@ -18,6 +18,8 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public int TimeBudgetMs = 5000;
         public int ExpectedConnectionEpoch;
         public uint ExpectedAvatarNetId;
+        public int NewTeamId;
+        public int NewAvatarId;
         public string Scenario;
         public int ScenarioTimeoutSeconds = 240;
     }
@@ -93,7 +95,8 @@ namespace VrBattlegrounds.EditorTools.TestStand
         {
             string error = Validate(request);
             if (error != null) return Address(StandReply.Error(error), request);
-            string fingerprint = request.Action + "|" + request.MarkerName + "|" + request.TimeBudgetMs.ToString(CultureInfo.InvariantCulture) + "|" + request.ExpectedConnectionEpoch + "|" + request.ExpectedAvatarNetId + "|" + request.Scenario + "|" + request.ScenarioTimeoutSeconds;
+            string fingerprint = request.Action + "|" + request.MarkerName + "|" + request.TimeBudgetMs.ToString(CultureInfo.InvariantCulture) + "|" + request.ExpectedConnectionEpoch + "|" + request.ExpectedAvatarNetId + "|" + request.Scenario + "|" + request.ScenarioTimeoutSeconds
+                + "|" + request.NewTeamId.ToString(CultureInfo.InvariantCulture) + "|" + request.NewAvatarId.ToString(CultureInfo.InvariantCulture);
             if (_completed.TryGetValue(request.RequestId, out Entry old))
             {
                 if (old.Fingerprint != fingerprint) return Address(StandReply.Error("request-conflict"), request);
@@ -128,11 +131,15 @@ namespace VrBattlegrounds.EditorTools.TestStand
             if (request.TimeBudgetMs < 1 || request.TimeBudgetMs > 30000) return "invalid-budget";
             bool network = request.Action == "disconnect" || request.Action == "reconnect";
             bool e2e = request.Action == "run-e2e";
-            if (request.Action != "create-marker" && request.Action != "read-marker" && request.Action != "remove-marker" && request.Action != "state" && !network && !e2e) return "invalid-action";
+            bool teamChange = request.Action == "request-team-change";
+            if (request.Action != "create-marker" && request.Action != "read-marker" && request.Action != "remove-marker" && request.Action != "state" && !network && !e2e && !teamChange) return "invalid-action";
             if (e2e && (!ValidMarker(request.Scenario) || request.ScenarioTimeoutSeconds < 1 || request.ScenarioTimeoutSeconds > 3600)) return "scenario-invalid";
-            if (network && request.ExpectedConnectionEpoch < 1) return "connection-epoch-required";
-            if (!network && !e2e && request.Action != "state" && !ValidMarker(request.MarkerName)) return "invalid-marker";
-            if ((network || e2e || request.Action == "state") && !string.IsNullOrEmpty(request.MarkerName)) return "invalid-marker";
+            if ((network || teamChange) && request.ExpectedConnectionEpoch < 1) return "connection-epoch-required";
+            if (teamChange && request.ExpectedAvatarNetId == 0) return "avatar-net-id-required";
+            if (teamChange && request.NewTeamId < 1) return "invalid-team-id";
+            if (teamChange && request.NewAvatarId < 0) return "invalid-avatar-id";
+            if (!network && !e2e && !teamChange && request.Action != "state" && !ValidMarker(request.MarkerName)) return "invalid-marker";
+            if ((network || e2e || teamChange || request.Action == "state") && !string.IsNullOrEmpty(request.MarkerName)) return "invalid-marker";
             return null;
         }
 

@@ -33,6 +33,7 @@ namespace VrBattlegrounds.Weapons
         private readonly WeaponSystem _host;
         private readonly UxrFirearmWeapon _weapon;
         private readonly int _trigger;
+        private readonly UxrFirearmReadinessMode _mode;
         private readonly WeaponMechanismRig _rig;
         private readonly WeaponLedgerReader _reader;
         private Func<int, UxrGrabber, UxrFirearmTriggerDecision> _defaultEvaluate;
@@ -41,8 +42,14 @@ namespace VrBattlegrounds.Weapons
         private uint _inFlightRevision;
 
         public UxrReadinessLedgerPort(WeaponSystem host, UxrFirearmWeapon weapon, int trigger, WeaponMechanismRig rig, WeaponLedgerReader reader)
+            : this(host, weapon, trigger, rig, reader, UxrFirearmReadinessMode.Chambered)
         {
-            _host = host; _weapon = weapon; _trigger = trigger; _rig = rig; _reader = reader;
+        }
+
+        public UxrReadinessLedgerPort(WeaponSystem host, UxrFirearmWeapon weapon, int trigger, WeaponMechanismRig rig, WeaponLedgerReader reader,
+            UxrFirearmReadinessMode mode)
+        {
+            _host = host; _weapon = weapon; _trigger = trigger; _rig = rig; _reader = reader; _mode = mode;
         }
 
         /// <summary>Выключение хоста: Cancel незавершённого цикла ещё разрешён (как прежний <c>_tearingDown</c>).</summary>
@@ -80,7 +87,7 @@ namespace VrBattlegrounds.Weapons
             _weapon.LocalTriggerAttemptDecided -= OnAttemptDecided;
             _weapon.LocalTriggerAttemptDecided += OnAttemptDecided;
             _installed = true;
-            if (!_weapon.TryEnableReadiness(_trigger)) { error = "Спуск или гнездо магазина SDK ещё не готовы."; return false; }
+            if (!_weapon.TryEnableReadiness(_trigger, _mode)) { error = "Спуск, гнездо магазина или режим учёта SDK не готовы либо несовместимы."; return false; }
             return true;
         }
 
@@ -218,8 +225,8 @@ namespace VrBattlegrounds.Weapons
             trigger == _trigger && StateEventAuthority.IsWorldAuthority && Evidence(LedgerCommandKind.RefillForAutomation, _inFlightRevision);
 
         // Поправку учёта из сети принимает только клиент: сервер — арбитр порядка и сам её публикует (п. 3a, В-Л6).
-        // Достаточно подключённого учёта (OnEnable): поправка в кадре спавна до Start тоже применяется.
-        private bool CanAcceptCorrection(int trigger) => trigger == _trigger && _host != null && _host.IsLedgerAttached && !Mirror.NetworkServer.active;
+        // Та же политика действует до Awake/OnEnable через provider SDK и после установки порта.
+        private bool CanAcceptCorrection(int trigger) => trigger == _trigger && _host != null && _host.CanAcceptReadinessCorrection(trigger);
 
         private bool Evidence(LedgerCommandKind kind, uint revision) => _inFlight && _inFlightKind == kind && _inFlightRevision == revision;
 

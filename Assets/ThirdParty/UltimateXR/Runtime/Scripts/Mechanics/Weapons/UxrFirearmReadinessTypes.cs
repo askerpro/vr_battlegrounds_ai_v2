@@ -6,6 +6,23 @@ using UnityEngine.Scripting;
 
 namespace UltimateXR.Mechanics.Weapons
 {
+    // VR Battlegrounds patch 82: режим — immutable конфигурация, не отдельный учёт боезапаса.
+    public enum UxrFirearmReadinessMode { Chambered = 0, MagazineOnly = 1 }
+    public enum UxrFirearmReadinessModeSourceResult { NotHandled, Configured, Invalid }
+
+    /// <summary>Авторский профиль того же GameObject доступен и до Awake; отказ не разрешает legacy-путь.</summary>
+    /// <remarks>
+    /// VR Battlegrounds patch 86: конфигурация неизменна в течение жизни принятого учёта; обычные запросы кешируют
+    /// и отсутствие provider. После явного изменения конфигурации или состава компонентов вызывающая сторона обязана
+    /// вызвать <see cref="UxrFirearmWeapon.RevalidateReadinessConfiguration"/> для каждого затронутого спуска.
+    /// Произвольный AddComponent без уведомления не обнаруживается автоматически; revalidation не сбрасывает отказ.
+    /// </remarks>
+    public interface IUxrFirearmReadinessModeProvider
+    {
+        UxrFirearmReadinessModeSourceResult GetReadinessMode(int triggerIndex, out UxrFirearmReadinessMode mode);
+        bool CanAcceptReadinessCorrection(int triggerIndex);
+    }
+
     public enum UxrFirearmNotReadyReason { NoMagazine, EmptyMagazine, ChamberingRequired }
     public enum UxrFirearmTriggerDecisionKind { FireAllowed, NotReady, PrepareOnlyConsumed, OtherDenied }
     public enum UxrFirearmShotEmissionOutcome { NotEmitted, Emitted, Indeterminate }

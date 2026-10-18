@@ -47,6 +47,7 @@ return new {
     executionCompleted = true, readOnly = true, cell = Cell,
     editor = new { playing = EditorApplication.isPlaying, willChange = EditorApplication.isPlayingOrWillChangePlaymode, compiling = EditorApplication.isCompiling },
     launch = new { status.RunId, status.Owner, status.State, status.Ready, status.Playing, status.CleanupPassed, status.Error, status.LogArchiveDirectory },
+    seed = new { status.RandomSeedApplied, status.AppliedRandomSeed, status.RandomSeedAppliedBeforeBots, status.RandomSeedAppliedScene },
     watchPath, watch, watcherPresent = AppDomain.CurrentDomain.GetData(Owner + ".watch." + Attempt + "." + Cell) != null,
     probeRoot, probes, probeActive = VrBattlegrounds.DevTools.BotCombatStand.BotStandMatchProbeGate.Active != null,
     probeRequest = System.IO.File.Exists(VrBattlegrounds.DevTools.BotCombatStand.BotStandMatchProbeGate.RequestPath),

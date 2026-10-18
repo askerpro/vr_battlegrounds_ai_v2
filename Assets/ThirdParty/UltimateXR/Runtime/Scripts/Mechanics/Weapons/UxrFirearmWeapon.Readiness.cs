@@ -25,7 +25,22 @@ namespace UltimateXR.Mechanics.Weapons
         // VR Battlegrounds patch 76 (ledger-spawn-ready): отказ replay фиксации не по ревизии (учёт не включён, магазин
         // не разрешён, фиксация противоречива, состояние «до» не допускает операцию) — ReadinessReplayDiverged с
         // ReplayRejected и причиной. Формат фиксации и снимка не менялся.
-        private readonly HashSet<int> _readinessEnabled = new HashSet<int>();
+        // VR Battlegrounds patch 82: cold-классификация не даёт автору права писать без установленных портов.
+        private sealed class ReadinessConfiguration
+        {
+            public readonly UxrFirearmReadinessMode Mode;
+            public readonly bool AuthoredClaim;
+            public readonly IUxrFirearmReadinessModeProvider Provider;
+            public bool Invalid, AuthorPortsReady;
+            public ReadinessConfiguration(UxrFirearmReadinessMode mode, bool authoredClaim,
+                IUxrFirearmReadinessModeProvider provider, bool invalid = false)
+            { Mode = mode; AuthoredClaim = authoredClaim; Provider = provider; Invalid = invalid; }
+        }
+        private readonly Dictionary<int, ReadinessConfiguration> _readinessConfigurations = new Dictionary<int, ReadinessConfiguration>();
+        // VR Battlegrounds patch 86: legacy-спуск без provider не повторяет discovery в каждом кадре.
+        private readonly HashSet<int> _readinessWithoutProvider = new HashSet<int>();
+        private readonly List<MonoBehaviour> _readinessProviders = new List<MonoBehaviour>();
+        private bool _readinessProviderReading;
         public Func<int, bool> CanAuthorReadinessAction { get; set; }
         public Action<int> RefreshPhysicalActionState { get; set; }
         public Func<int, uint, UxrGrabbableObject, bool> ValidateChamberCompletion { get; set; }
@@ -46,14 +61,125 @@ namespace UltimateXR.Mechanics.Weapons
         private readonly HashSet<int> _readinessCommitting = new HashSet<int>();
         private bool IsReadinessReplay => UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync;
 
-        public bool UsesReadinessLedger(int triggerIndex) => _readinessEnabled.Contains(triggerIndex);
-        public bool TryEnableReadiness(int triggerIndex)
+        public bool UsesReadinessLedger(int triggerIndex)
+        {
+            ResolveReadinessConfiguration(triggerIndex, out _, out bool claimed);
+            return claimed;
+        }
+        public bool TryGetReadinessMode(int triggerIndex, out UxrFirearmReadinessMode mode)
+        {
+            bool valid = ResolveReadinessConfiguration(triggerIndex, out var configuration, out _);
+            mode = valid ? configuration.Mode : default;
+            return valid;
+        }
+        /// <summary>
+        /// Повторно обнаружить provider после явного изменения его состава или конфигурации.
+        /// Меняет только классификацию: учёт и боезапас не записывает, принятую конфигурацию и её отказ не сбрасывает.
+        /// Добавление компонента без этого уведомления не обнаруживается обычными запросами из legacy-кеша.
+        /// </summary>
+        public void RevalidateReadinessConfiguration(int triggerIndex)
+        {
+            ResolveReadinessConfiguration(triggerIndex, out _, out _, forceProviderValidation: true);
+        }
+        private bool ResolveReadinessConfiguration(int triggerIndex, out ReadinessConfiguration configuration, out bool claimed,
+            bool forceProviderValidation = false)
+        {
+            _readinessConfigurations.TryGetValue(triggerIndex, out configuration);
+            claimed = configuration != null;
+            if (triggerIndex < 0 || triggerIndex >= TriggerCount) return false;
+            if (_readinessProviderReading) { claimed = true; return false; }
+            // Immutable профиль повторно проверяется на install/ingress, а не при каждом query кадра.
+            if (configuration != null && !forceProviderValidation) return !configuration.Invalid;
+            if (!forceProviderValidation && _readinessWithoutProvider.Contains(triggerIndex)) return false;
+            IUxrFirearmReadinessModeProvider selected = null;
+            UxrFirearmReadinessMode authoredMode = default;
+            bool invalid = false;
+            _readinessProviderReading = true;
+            try
+            {
+                GetComponents(_readinessProviders);
+                foreach (var component in _readinessProviders)
+                {
+                    if (component == null || !(component is IUxrFirearmReadinessModeProvider provider)) continue;
+                    var result = provider.GetReadinessMode(triggerIndex, out var candidate);
+                    if (result == UxrFirearmReadinessModeSourceResult.NotHandled) continue;
+                    claimed = true;
+                    if (selected != null || result != UxrFirearmReadinessModeSourceResult.Configured || !IsKnownReadinessMode(candidate)) invalid = true;
+                    selected = provider; authoredMode = candidate;
+                }
+            }
+            catch { claimed = true; invalid = true; }
+            finally { _readinessProviderReading = false; }
+            if (claimed) _readinessWithoutProvider.Remove(triggerIndex);
+            if (selected != null && authoredMode == UxrFirearmReadinessMode.MagazineOnly && HasFixedAmmoBinding(triggerIndex)) invalid = true;
+            if (configuration != null)
+            {
+                if (invalid || configuration.AuthoredClaim != (selected != null) ||
+                    selected != null && (!ReferenceEquals(configuration.Provider, selected) || configuration.Mode != authoredMode))
+                    configuration.Invalid = true;
+                return !configuration.Invalid;
+            }
+            if (!claimed)
+            {
+                _readinessWithoutProvider.Add(triggerIndex);
+                return false;
+            }
+            configuration = new ReadinessConfiguration(authoredMode, true, selected, invalid);
+            _readinessConfigurations.Add(triggerIndex, configuration);
+            return !configuration.Invalid;
+        }
+        private static bool IsKnownReadinessMode(UxrFirearmReadinessMode mode) =>
+            mode == UxrFirearmReadinessMode.Chambered || mode == UxrFirearmReadinessMode.MagazineOnly;
+        private bool IsMagazineOnly(int triggerIndex) =>
+            TryGetReadinessMode(triggerIndex, out var mode) && mode == UxrFirearmReadinessMode.MagazineOnly;
+        private static bool IsReadinessStateCompatibleWithMode(UxrFirearmReadinessMode mode, UxrFirearmReadinessState state) =>
+            mode == UxrFirearmReadinessMode.Chambered || state == null ||
+            !state.ChamberRound && !state.ActionOpen && !state.ChamberCyclePending && state.CycleMagazineIdentity == Guid.Empty &&
+            state.CycleSequence == 0 && state.ExtractedCycleSequence == 0 &&
+            (!state.PostShotEmptyAction || state.ReadinessInitialized && state.ShotSequence > 0);
+        private bool IsReadinessStateCompatibleWithMode(int triggerIndex, UxrFirearmReadinessState state) =>
+            TryGetReadinessMode(triggerIndex, out var mode) && IsReadinessStateCompatibleWithMode(mode, state);
+        private RuntimeTriggerInfo CreateReadinessRuntimeInfo(int triggerIndex) => new RuntimeTriggerInfo
+        {
+            LastShotTimer = -1f,
+            TriggerInitialLocalRotation = _triggers[triggerIndex].TriggerTransform != null
+                ? _triggers[triggerIndex].TriggerTransform.localRotation : Quaternion.identity
+        };
+        private bool ValidateReadinessSnapshot(Dictionary<int, RuntimeTriggerInfo> prospective)
+        {
+            if (prospective == null) return false;
+            // Снимок не может забыть принятый ledger и снова открыть Initialize с revision 0.
+            foreach (var pair in _runtimeTriggers)
+                if (pair.Value?.Readiness?.ReadinessInitialized == true &&
+                    (!prospective.TryGetValue(pair.Key, out var restored) || restored?.Readiness?.ReadinessInitialized != true)) return false;
+            for (int trigger = 0; trigger < TriggerCount; trigger++)
+                if (!ResolveReadinessConfiguration(trigger, out _, out bool claimed, forceProviderValidation: true) && claimed) return false;
+            foreach (var pair in prospective)
+            {
+                if (pair.Key < 0 || pair.Key >= TriggerCount || pair.Value == null) return false;
+                bool configured = ResolveReadinessConfiguration(pair.Key, out var configuration, out bool claimed);
+                if (claimed ? !configured || !IsReadinessStateCompatibleWithMode(configuration.Mode, pair.Value.Readiness)
+                    : pair.Value.Readiness?.ReadinessInitialized == true) return false;
+            }
+            return true;
+        }
+        public bool TryEnableReadiness(int triggerIndex) => TryEnableReadiness(triggerIndex, UxrFirearmReadinessMode.Chambered);
+        public bool TryEnableReadiness(int triggerIndex, UxrFirearmReadinessMode mode)
         {
             if (triggerIndex < 0 || triggerIndex >= TriggerCount || !_runtimeTriggers.ContainsKey(triggerIndex) ||
                 CanAuthorReadinessAction == null || RefreshPhysicalActionState == null ||
                 ValidateChamberCompletion == null || EvaluateLocalTriggerAttempt == null ||
-                _triggers[triggerIndex].AmmunitionMagAnchor == null) return false;
-            _readinessEnabled.Add(triggerIndex);
+                _triggers[triggerIndex].AmmunitionMagAnchor == null || !IsKnownReadinessMode(mode) ||
+                mode == UxrFirearmReadinessMode.MagazineOnly && HasFixedAmmoBinding(triggerIndex)) return false;
+            bool configured = ResolveReadinessConfiguration(triggerIndex, out var configuration, out bool claimed, forceProviderValidation: true);
+            if (claimed && (!configured || configuration.Mode != mode) ||
+                !IsReadinessStateCompatibleWithMode(mode, _runtimeTriggers[triggerIndex].Readiness)) return false;
+            if (configuration == null)
+            {
+                configuration = new ReadinessConfiguration(mode, false, null);
+                _readinessConfigurations.Add(triggerIndex, configuration);
+            }
+            configuration.AuthorPortsReady = true;
             MarkLedgerStore(_triggers[triggerIndex].AmmunitionMagAnchor.CurrentPlacedObject);
             return true;
         }
@@ -61,7 +187,8 @@ namespace UltimateXR.Mechanics.Weapons
             _runtimeTriggers.TryGetValue(triggerIndex, out RuntimeTriggerInfo runtime) && runtime.Readiness != null
                 ? (UxrFirearmReadinessState)runtime.Readiness.Clone() : null;
         public int GetMagazineRounds(int triggerIndex) => GetCurrentReadinessMagazine(triggerIndex)?.GetComponent<UxrFirearmMag>().Rounds ?? 0;
-        public bool HasChamberRound(int triggerIndex) => UsesReadinessLedger(triggerIndex) && GetReadinessState(triggerIndex)?.ChamberRound == true;
+        public bool HasChamberRound(int triggerIndex) => TryGetReadinessMode(triggerIndex, out var mode) &&
+            mode == UxrFirearmReadinessMode.Chambered && GetReadinessState(triggerIndex)?.ChamberRound == true;
         public int GetTotalAmmoLeft(int triggerIndex) => UsesReadinessLedger(triggerIndex)
             ? GetMagazineRounds(triggerIndex) + (HasChamberRound(triggerIndex) ? 1 : 0) : GetAmmoLeft(triggerIndex);
 
@@ -94,19 +221,31 @@ namespace UltimateXR.Mechanics.Weapons
         public bool IsReadyToFire(int triggerIndex)
         {
             if (!UsesReadinessLedger(triggerIndex)) return IsLoaded(triggerIndex);
+            if (!TryGetReadinessMode(triggerIndex, out var mode)) return false;
             if (IsAmmoAdmissionPending(triggerIndex) || _fixedAmmoSnapshotReading) return false;
             if (HasFixedAmmoBinding(triggerIndex) && GetFixedAmmoStore(triggerIndex) == null) return false;
             var state = GetReadinessState(triggerIndex);
+            if (!IsReadinessStateCompatibleWithMode(mode, state)) return false;
+            if (mode == UxrFirearmReadinessMode.MagazineOnly)
+                return state?.ReadinessInitialized == true && GetCurrentReadinessMagazine(triggerIndex) != null && GetMagazineRounds(triggerIndex) > 0;
             return state != null && state.ReadinessInitialized && state.ChamberRound &&
                    !IsReadinessCyclePending(triggerIndex) && !state.ActionOpen;
         }
         public UxrFirearmTriggerDecision QueryReadinessDecision(int triggerIndex)
         {
             var state = GetReadinessState(triggerIndex);
-            if (!UsesReadinessLedger(triggerIndex) || state == null || !state.ReadinessInitialized ||
+            if (!TryGetReadinessMode(triggerIndex, out var mode) || !IsReadinessStateCompatibleWithMode(mode, state) || state == null || !state.ReadinessInitialized ||
                 (HasFixedAmmoBinding(triggerIndex) && GetFixedAmmoStore(triggerIndex) == null) ||
                 !CanUse || _fixedAmmoSnapshotReading || IsAmmoAdmissionPending(triggerIndex) || state.ActionOpen || IsReadinessCyclePending(triggerIndex))
                 return new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.OtherDenied);
+            if (mode == UxrFirearmReadinessMode.MagazineOnly)
+            {
+                var magazine = GetCurrentReadinessMagazine(triggerIndex);
+                return magazine != null && GetMagazineRounds(triggerIndex) > 0
+                    ? new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.FireAllowed)
+                    : new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.NotReady, magazine == null
+                        ? UxrFirearmNotReadyReason.NoMagazine : UxrFirearmNotReadyReason.EmptyMagazine);
+            }
             if (state.ChamberRound) return new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.FireAllowed);
             var mag = GetCurrentReadinessMagazine(triggerIndex);
             return new UxrFirearmTriggerDecision(UxrFirearmTriggerDecisionKind.NotReady, mag == null
@@ -120,7 +259,8 @@ namespace UltimateXR.Mechanics.Weapons
             return mag != null && mag.CurrentAnchor == anchor && anchor.IsCompatibleObject(mag) &&
                    mag.GetComponent<UxrFirearmMag>() != null ? mag : null;
         }
-        private bool CanOwnReadiness(int triggerIndex) => UsesReadinessLedger(triggerIndex) && !IsReadinessReplay &&
+        private bool CanOwnReadiness(int triggerIndex) => ResolveReadinessConfiguration(triggerIndex, out var configuration, out _) &&
+            configuration.AuthorPortsReady && _runtimeTriggers.TryGetValue(triggerIndex, out var runtime) && runtime != null && !IsReadinessReplay &&
             !_fixedAmmoSnapshotReading && !IsAmmoAdmissionPending(triggerIndex) && !_readinessCommitting.Contains(triggerIndex) && CanAuthorReadinessAction?.Invoke(triggerIndex) == true;
         private bool CanWriteReadiness(int triggerIndex) => CanOwnReadiness(triggerIndex) &&
             (!HasFixedAmmoBinding(triggerIndex) || GetFixedAmmoStore(triggerIndex) != null) &&
@@ -190,8 +330,8 @@ namespace UltimateXR.Mechanics.Weapons
         {
             if (!CanWriteReadiness(triggerIndex)) return false;
             var capture = new PhysicalValidationCapture(this, triggerIndex);
-            if (capture.State?.ReadinessInitialized == true) return false;
-            bool prepared = capture.Rounds > 0 && capture.HasReloaded &&
+            if (capture.State?.ReadinessInitialized == true || !IsReadinessStateCompatibleWithMode(triggerIndex, capture.State)) return false;
+            bool prepared = !IsMagazineOnly(triggerIndex) && capture.Rounds > 0 && capture.HasReloaded &&
                             ValidateChamberCompletion(triggerIndex, capture.State?.Revision ?? 0, capture.Magazine);
             if (!IsPhysicalValidationCurrent(triggerIndex, capture)) return false;
             var state = new UxrFirearmReadinessState { ReadinessInitialized = true, ChamberRound = prepared };
@@ -200,6 +340,7 @@ namespace UltimateXR.Mechanics.Weapons
         }
         public bool TryBeginManualAction(int triggerIndex, uint expectedRevision, uint cycleSequence)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             if (!TryGetWritableState(triggerIndex, expectedRevision, out var state) || cycleSequence <= state.CycleSequence) return false;
             var mag = GetCurrentReadinessMagazine(triggerIndex);
             state.ActionOpen = true; state.ChamberCyclePending = true; state.CycleSequence = cycleSequence;
@@ -209,6 +350,7 @@ namespace UltimateXR.Mechanics.Weapons
         }
         public bool TryExtractChamberRound(int triggerIndex, uint expectedRevision, uint cycleSequence)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             if (!TryGetWritableState(triggerIndex, expectedRevision, out var state) || !state.ActionOpen || !state.ChamberCyclePending ||
                 state.CycleSequence != cycleSequence || state.ExtractedCycleSequence == cycleSequence) return false;
             state.ChamberRound = false; state.ExtractedCycleSequence = cycleSequence;
@@ -219,6 +361,7 @@ namespace UltimateXR.Mechanics.Weapons
 
         public bool TryCompleteChamber(int triggerIndex, uint expectedRevision, UxrGrabbableObject expectedMagazine)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             // Действительный Pending уже означает «цикл начат с магазином, который сейчас в гнезде».
             if (!TryGetWritableState(triggerIndex, expectedRevision, out var state) || !state.ChamberCyclePending ||
                 GetCurrentReadinessMagazine(triggerIndex) != expectedMagazine) return false;
@@ -232,6 +375,7 @@ namespace UltimateXR.Mechanics.Weapons
         }
         public bool TryConfirmPhysicalActionClosed(int triggerIndex, uint expectedRevision, UxrGrabbableObject expectedMagazine)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             if (!TryGetWritableState(triggerIndex, expectedRevision, out var state) || !state.ActionOpen || state.ChamberCyclePending ||
                 GetCurrentReadinessMagazine(triggerIndex) != expectedMagazine || ValidatePhysicalActionClosed == null) return false;
             var capture = new PhysicalValidationCapture(this, triggerIndex);
@@ -243,6 +387,7 @@ namespace UltimateXR.Mechanics.Weapons
         // Обслуженный post-shot rest не создаёт chamber cycle и не переносит M→C.
         public bool TryAcknowledgePostShotEmptyActionRest(int triggerIndex, uint expectedRevision, UxrGrabbableObject expectedMagazine)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             if (!TryGetWritableState(triggerIndex, expectedRevision, out var state) || !state.PostShotEmptyAction ||
                 state.ChamberRound || state.ActionOpen || state.ChamberCyclePending ||
                 GetCurrentReadinessMagazine(triggerIndex) != expectedMagazine || ValidatePostShotEmptyActionRest == null) return false;
@@ -255,6 +400,7 @@ namespace UltimateXR.Mechanics.Weapons
         }
         public bool TryCancelReadinessCycle(int triggerIndex, uint expectedRevision)
         {
+            if (IsMagazineOnly(triggerIndex)) return false;
             var state = GetAuthorState(triggerIndex);
             if (!CanOwnReadiness(triggerIndex) || state?.ReadinessInitialized != true || state.Revision != expectedRevision) return false;
             state.ChamberCyclePending = false; // ActionOpen не лжёт о физическом закрытии.
@@ -267,16 +413,20 @@ namespace UltimateXR.Mechanics.Weapons
             if (!CanWriteReadiness(triggerIndex) || CanPrepareReadinessForAutomation?.Invoke(triggerIndex) != true) return false;
             var state = GetAuthorState(triggerIndex);
             var mag = GetCurrentReadinessMagazine(triggerIndex);
-            if (state?.ReadinessInitialized != true || mag == null || state.ActionOpen || state.ChamberCyclePending) return false;
+            if (state?.ReadinessInitialized != true || mag == null || state.ActionOpen || state.ChamberCyclePending ||
+                !IsReadinessStateCompatibleWithMode(triggerIndex, state)) return false;
             var capture = new PhysicalValidationCapture(this, triggerIndex);
+            bool magazineOnly = IsMagazineOnly(triggerIndex);
+            if (magazineOnly && capture.Rounds > 0) return true;
+            // VR Battlegrounds patch 82: прежний callback проверяет магазин/rest и одноразовое evidence, не создаёт C.
             if (!ValidateChamberCompletion(triggerIndex, state.Revision, mag) ||
                 !IsPhysicalValidationCurrent(triggerIndex, capture)) return false;
             int rounds = capture.Rounds;
             if (state.ChamberRound) return false;
             if (rounds == 0) rounds = capture.Capacity;
             if (rounds == 0) return false;
-            state.ChamberRound = true; state.PostShotEmptyAction = false;
-            return ApplyReadinessCommit(CreateReadinessCommit(triggerIndex, state, mag, rounds - 1, UxrFirearmReadinessOperation.Automation));
+            state.ChamberRound = !magazineOnly; state.PostShotEmptyAction = false;
+            return ApplyReadinessCommit(CreateReadinessCommit(triggerIndex, state, mag, magazineOnly ? rounds : rounds - 1, UxrFirearmReadinessOperation.Automation));
         }
 
         // Класс Б: команда внутри чужого BeginSync не поднимет ComponentStateChanged (только верхний уровень)
@@ -299,7 +449,8 @@ namespace UltimateXR.Mechanics.Weapons
                 commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission || IsNestedLedgerCommand(nameof(ApplyReadinessCommit))) return false;
             if (!ValidateReadinessCommit(commit, out var divergence)) { RaiseReplayDivergence(divergence); return false; }
             bool endAttempted = false;
-            bool extractedRound = commit.Operation == UxrFirearmReadinessOperation.Extract && _runtimeTriggers[commit.TriggerIndex].Readiness?.ChamberRound == true;
+            bool extractedRound = commit.Operation == UxrFirearmReadinessOperation.Extract &&
+                _runtimeTriggers.TryGetValue(commit.TriggerIndex, out var previousRuntime) && previousRuntime.Readiness?.ChamberRound == true;
             bool written = false;
             Exception failure = null;
             _readinessCommitting.Add(commit.TriggerIndex);
@@ -338,13 +489,21 @@ namespace UltimateXR.Mechanics.Weapons
                 commit.Operation == UxrFirearmReadinessOperation.MagazineChanged || commit.Operation == UxrFirearmReadinessOperation.Reconcile)
                 return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MalformedCommit, out divergence);
 #pragma warning restore 0618
-            if (!UsesReadinessLedger(commit.TriggerIndex)) return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.LedgerDisabled, out divergence);
-            if (!_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime))
-                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.NoRuntimeTrigger, out divergence);
+            if (!ResolveReadinessConfiguration(commit.TriggerIndex, out var configuration, out _, forceProviderValidation: true))
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.LedgerDisabled, out divergence);
+            var mode = configuration.Mode;
+            // VR Battlegrounds patch 82: cold-кандидат не публикуется при отказе ingress.
+            if (!_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime)) runtime = CreateReadinessRuntimeInfo(commit.TriggerIndex);
+            if (runtime == null) return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.NoRuntimeTrigger, out divergence);
             if (_readinessCommitting.Contains(commit.TriggerIndex)) return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.Reentrant, out divergence);
             if (!replay && !(commit.Operation == UxrFirearmReadinessOperation.AmmoAdmission ? CanCommitAmmoAdmission(commit.TriggerIndex) :
                     commit.Operation == UxrFirearmReadinessOperation.Cancel ? CanOwnReadiness(commit.TriggerIndex) : CanWriteReadiness(commit.TriggerIndex))) return false;
             var after = commit.StateAfter;
+            bool magazineOnly = mode == UxrFirearmReadinessMode.MagazineOnly;
+            if (!IsReadinessStateCompatibleWithMode(mode, runtime.Readiness) || !IsReadinessStateCompatibleWithMode(mode, after) ||
+                magazineOnly && commit.Operation != UxrFirearmReadinessOperation.Initialize &&
+                commit.Operation != UxrFirearmReadinessOperation.Shot && commit.Operation != UxrFirearmReadinessOperation.Automation)
+                return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MalformedCommit, out divergence);
             if (commit.ExpectedRevision == uint.MaxValue || commit.NextRevision != commit.ExpectedRevision + 1 ||
                 after.Revision != commit.NextRevision || !after.ReadinessInitialized || commit.MagazineRoundsAfter < 0 ||
                 // Pending после фиксации принадлежит магазину фиксации; без Pending identity цикла пуста.
@@ -362,7 +521,7 @@ namespace UltimateXR.Mechanics.Weapons
             else
             {
                 ammo = mag.GetComponent<UxrFirearmMag>();
-                if (mag.UniqueId == Guid.Empty || ammo == null || !ammo.IsFixedStoreBindingValid(this, commit.TriggerIndex) ||
+                if (mag.UniqueId == Guid.Empty || ammo == null || magazineOnly && ammo.IsFixedAmmoStore || !ammo.IsFixedStoreBindingValid(this, commit.TriggerIndex) ||
                     commit.MagazineRoundsAfter > ammo.Capacity ||
                     (ammo.IsFixedAmmoStore && commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) > ammo.Capacity))
                     return RejectReplay(commit, replay, UxrFirearmReplayRejectReason.MagazineNotAllowed, out divergence);
@@ -377,14 +536,30 @@ namespace UltimateXR.Mechanics.Weapons
             }
             var before = WithValidPending(runtime.Readiness, commit.ReferencedMagazineIdentity);
             bool stateAllows = ValidatePostShotEmptyActionCommit(commit, before);
+            if (magazineOnly)
+            {
+                if (commit.Operation == UxrFirearmReadinessOperation.Initialize)
+                    stateAllows = stateAllows && before?.ReadinessInitialized != true &&
+                        after.Equals(new UxrFirearmReadinessState { ReadinessInitialized = true, Revision = commit.NextRevision });
+                else if (commit.Operation == UxrFirearmReadinessOperation.Automation)
+                {
+                    var expected = before != null ? (UxrFirearmReadinessState)before.Clone() : null;
+                    if (expected != null) { expected.Revision = commit.NextRevision; expected.PostShotEmptyAction = false; }
+                    stateAllows = stateAllows && before?.ReadinessInitialized == true && ammo != null && ammo.Capacity > 0 &&
+                        commit.MagazineRoundsAfter == ammo.Capacity && (replay || receiverRounds == 0) && after.Equals(expected);
+                }
+            }
             switch (commit.Operation)
             {
                 case UxrFirearmReadinessOperation.EmptyRestAcknowledged: stateAllows = stateAllows && ValidateEmptyRestCommit(commit, before); break;
                 case UxrFirearmReadinessOperation.CloseOnly: stateAllows = stateAllows && ValidateCloseOnlyCommit(commit, before); break;
                 case UxrFirearmReadinessOperation.Shot:
                     // Автор — фактический M; replay — M до выстрела, объявленный автором (расхождение ловит дельта ниже).
+                    int authorRoundsBefore = replay
+                        ? commit.MagazineRoundsAfter + (magazineOnly || after.ChamberRound ? 1 : 0) : receiverRounds;
                     stateAllows = stateAllows &&
-                        ValidateShotCommit(commit, before, replay ? commit.MagazineRoundsAfter + (after.ChamberRound ? 1 : 0) : receiverRounds);
+                        (!magazineOnly || ammo != null && authorRoundsBefore > 0 && authorRoundsBefore <= ammo.Capacity) &&
+                        ValidateShotCommit(commit, before, authorRoundsBefore);
                     break;
                 case UxrFirearmReadinessOperation.AmmoAdmission:
                     if (!stateAllows || before?.ReadinessInitialized != true || ammo == null || !ammo.IsFixedAmmoStore) { stateAllows = false; break; }
@@ -398,7 +573,8 @@ namespace UltimateXR.Mechanics.Weapons
                 return false;
             }
             int expectedRounds = ExpectedRoundsAfter(commit, before, receiverRounds, ammo != null ? ammo.Capacity : 0);
-            if (expectedRounds != commit.MagazineRoundsAfter)
+            if (expectedRounds != commit.MagazineRoundsAfter ||
+                magazineOnly && commit.Operation == UxrFirearmReadinessOperation.Automation && receiverRounds != 0)
             {
                 if (!replay) return false; // у автора дельта точна по построению; иначе — ошибка самой команды.
                 divergence = CreateDivergence(UxrFirearmReplayDivergenceKind.DeltaMismatch, commit, revision, receiverRounds, expectedRounds);
@@ -407,8 +583,17 @@ namespace UltimateXR.Mechanics.Weapons
         }
 
         /// <summary>Точная дельта M каждой операции: M после по M до и объявленному состоянию после.</summary>
-        private static int ExpectedRoundsAfter(UxrFirearmReadinessCommit commit, UxrFirearmReadinessState before, int roundsBefore, int capacity)
+        private int ExpectedRoundsAfter(UxrFirearmReadinessCommit commit, UxrFirearmReadinessState before, int roundsBefore, int capacity)
         {
+            if (IsMagazineOnly(commit.TriggerIndex))
+            {
+                switch (commit.Operation)
+                {
+                    case UxrFirearmReadinessOperation.Shot: return roundsBefore - 1;
+                    case UxrFirearmReadinessOperation.Automation: return roundsBefore == 0 ? capacity : roundsBefore;
+                    default: return roundsBefore;
+                }
+            }
             bool chamberAfter = commit.StateAfter.ChamberRound;
             switch (commit.Operation)
             {
@@ -494,14 +679,16 @@ namespace UltimateXR.Mechanics.Weapons
                 foreach (var shot in commit.AdditionalShots)
                     if (shot == null || !ValidateShotDescriptor(shot.ShotIndex, shot.Position, shot.Orientation) ||
                         (int)shot.Outcome < 0 || (int)shot.Outcome > (int)UxrFirearmShotEmissionOutcome.Indeterminate) return false;
-            if (before?.ReadinessInitialized != true || !before.ChamberRound || before.ActionOpen ||
+            bool magazineOnly = IsMagazineOnly(commit.TriggerIndex);
+            if (before?.ReadinessInitialized != true || (!magazineOnly && !before.ChamberRound) || before.ActionOpen ||
                 before.ChamberCyclePending || before.ShotSequence == uint.MaxValue ||
                 (int)commit.EmissionOutcome < (int)UxrFirearmShotEmissionOutcome.NotEmitted ||
                 (int)commit.EmissionOutcome > (int)UxrFirearmShotEmissionOutcome.Indeterminate) return false;
             var expected = (UxrFirearmReadinessState)before.Clone();
             int rounds = roundsBefore;
             expected.ChamberRound = false; expected.ShotSequence++; expected.Revision = commit.NextRevision;
-            if (_triggers[commit.TriggerIndex].CycleType != UxrShotCycle.ManualReload && rounds > 0)
+            if (magazineOnly) rounds--;
+            else if (_triggers[commit.TriggerIndex].CycleType != UxrShotCycle.ManualReload && rounds > 0)
             { rounds--; expected.ChamberRound = true; }
             expected.PostShotEmptyAction = !expected.ChamberRound && rounds == 0;
             return commit.StateAfter.Equals(expected);
@@ -516,7 +703,11 @@ namespace UltimateXR.Mechanics.Weapons
         // О7: всё проверено до записи; учёт и M пишутся, бросать может только уведомление после записи.
         private Exception WriteReadinessCommit(UxrFirearmReadinessCommit commit)
         {
-            var runtime = _runtimeTriggers[commit.TriggerIndex];
+            if (!_runtimeTriggers.TryGetValue(commit.TriggerIndex, out var runtime))
+            {
+                runtime = CreateReadinessRuntimeInfo(commit.TriggerIndex);
+                _runtimeTriggers.Add(commit.TriggerIndex, runtime);
+            }
             var ammo = commit.ReferencedMagazine != null ? commit.ReferencedMagazine.GetComponent<UxrFirearmMag>() : null;
             runtime.Readiness = (UxrFirearmReadinessState)commit.StateAfter.Clone();
             runtime.HasReloaded = runtime.Readiness.ChamberRound && !runtime.Readiness.ChamberCyclePending && !runtime.Readiness.ActionOpen;
@@ -540,7 +731,8 @@ namespace UltimateXR.Mechanics.Weapons
             if (state.ShotSequence == uint.MaxValue) return false;
             state.ShotSequence++; state.ChamberRound = false;
             int rounds = GetMagazineRounds(triggerIndex);
-            if (trigger.CycleType != UxrShotCycle.ManualReload && rounds > 0) { rounds--; state.ChamberRound = true; }
+            if (IsMagazineOnly(triggerIndex)) rounds--;
+            else if (trigger.CycleType != UxrShotCycle.ManualReload && rounds > 0) { rounds--; state.ChamberRound = true; }
             // Атомарный marker consumption: Source outcome не меняет его после публикации.
             state.PostShotEmptyAction = !state.ChamberRound && rounds == 0;
             var commit = CreateReadinessCommit(triggerIndex, state, GetCurrentReadinessMagazine(triggerIndex), rounds, UxrFirearmReadinessOperation.Shot);
@@ -576,6 +768,8 @@ namespace UltimateXR.Mechanics.Weapons
         public Func<int, UxrAdditionalShotPlan[]> AdditionalShotPlan { get; set; }
         private bool ValidateShotDescriptor(int index, Vector3 position, Quaternion orientation)
         {
+            // VR Battlegrounds patch 82: тот же источник доступен cold replay до Start.
+            if (_weaponSource == null) _weaponSource = GetCachedComponent<UxrProjectileSource>();
             if (_weaponSource == null || index < 0 || index >= _weaponSource.ShotTypes.Count ||
                 _weaponSource.ShotTypes[index].ShotSource == null || _weaponSource.ShotTypes[index].ProjectilePrefab == null) return false;
             if (!Finite(position.x) || !Finite(position.y) || !Finite(position.z) ||
@@ -589,7 +783,6 @@ namespace UltimateXR.Mechanics.Weapons
         {
             if (commit?.Operation != UxrFirearmReadinessOperation.Shot || IsNestedLedgerCommand(nameof(CommitShotSynced))) return false;
             if (!ValidateReadinessCommit(commit, out var divergence)) { RaiseReplayDivergence(divergence); return false; }
-            var runtime = _runtimeTriggers[commit.TriggerIndex];
             bool replay = IsReadinessReplay, endAttempted = false;
             Exception failure = null; bool success = false;
             _readinessCommitting.Add(commit.TriggerIndex);
@@ -597,6 +790,7 @@ namespace UltimateXR.Mechanics.Weapons
             try
             {
                 failure = WriteReadinessCommit(commit);
+                var runtime = _runtimeTriggers[commit.TriggerIndex];
                 if (failure != null && !replay) commit.EmissionOutcome = UxrFirearmShotEmissionOutcome.NotEmitted;
                 var trigger = _triggers[commit.TriggerIndex];
                 runtime.LastShotTimer = trigger.MaxShotFrequency > 0 ? 1f / trigger.MaxShotFrequency : -1f;
@@ -664,7 +858,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// </summary>
         public bool TryPublishLedgerCorrection(int triggerIndex, IEnumerable<UxrGrabbableObject> magazines)
         {
-            if (!UsesReadinessLedger(triggerIndex) || IsReadinessReplay || _readinessCommitting.Contains(triggerIndex) ||
+            if (!ResolveReadinessConfiguration(triggerIndex, out var configuration, out _) || !configuration.AuthorPortsReady ||
+                IsReadinessReplay || _readinessCommitting.Contains(triggerIndex) ||
                 IsNestedLedgerCommand(nameof(TryPublishLedgerCorrection))) return false;
             var state = GetReadinessState(triggerIndex);
             if (state?.ReadinessInitialized != true) return false;
@@ -683,28 +878,37 @@ namespace UltimateXR.Mechanics.Weapons
         [Preserve]
         private bool ApplyLedgerCorrection(UxrFirearmLedgerCorrection correction)
         {
-            if (correction?.State == null || !correction.State.ReadinessInitialized || !UsesReadinessLedger(correction.TriggerIndex) ||
-                !_runtimeTriggers.TryGetValue(correction.TriggerIndex, out var runtime) || _readinessCommitting.Contains(correction.TriggerIndex)) return false;
+            if (correction?.State == null || !correction.State.ReadinessInitialized ||
+                !ResolveReadinessConfiguration(correction.TriggerIndex, out var configuration, out _, forceProviderValidation: true) ||
+                _readinessCommitting.Contains(correction.TriggerIndex)) return false;
             int trigger = correction.TriggerIndex;
+            if (_runtimeTriggers.TryGetValue(trigger, out var runtime) && runtime == null) return false;
+            if (runtime != null && !IsReadinessStateCompatibleWithMode(configuration.Mode, runtime.Readiness) ||
+                !IsReadinessStateCompatibleWithMode(configuration.Mode, correction.State)) return false;
             var entries = correction.Magazines ?? Array.Empty<UxrFirearmMagazineRounds>();
             foreach (var entry in entries)
             {
                 var ammo = entry?.Magazine != null ? entry.Magazine.GetComponent<UxrFirearmMag>() : null;
-                if (ammo == null || entry.Identity == Guid.Empty || entry.Magazine.UniqueId != entry.Identity ||
+                if (ammo == null || configuration.Mode == UxrFirearmReadinessMode.MagazineOnly && ammo.IsFixedAmmoStore ||
+                    entry.Identity == Guid.Empty || entry.Magazine.UniqueId != entry.Identity ||
                     !ammo.IsFixedStoreBindingValid(this, trigger) || entry.Rounds < 0 || entry.Rounds > ammo.Capacity ||
                     (ammo.IsFixedAmmoStore && entry.Rounds + (correction.State.ChamberRound ? 1 : 0) > ammo.Capacity)) return false;
             }
             if (!IsReadinessReplay)
             {
                 // Публикация: только то, что уже есть у этой машины.
-                if (!correction.State.Equals(runtime.Readiness)) return false;
+                if (runtime == null || !correction.State.Equals(runtime.Readiness)) return false;
                 foreach (var entry in entries) if (entry.Magazine.GetComponent<UxrFirearmMag>().Rounds != entry.Rounds) return false;
                 BeginSync();
                 EndSyncMethod(new object[] { correction });
                 return true;
             }
-            if (CanAcceptLedgerCorrection?.Invoke(trigger) != true) return false;
-            uint localRevision = runtime.Readiness?.Revision ?? 0;
+            // Установленный callback имеет последнее слово; cold policy не обходит его отказ.
+            bool accepts = CanAcceptLedgerCorrection != null ? CanAcceptLedgerCorrection(trigger) :
+                configuration.AuthoredClaim && configuration.Provider != null && configuration.Provider.CanAcceptReadinessCorrection(trigger);
+            if (!accepts) return false;
+            uint localRevision = runtime?.Readiness?.Revision ?? 0;
+            var candidate = runtime ?? CreateReadinessRuntimeInfo(trigger);
             int roundsBefore = entries.Length > 0 ? entries[0].Magazine.GetComponent<UxrFirearmMag>().Rounds : -1;
             Exception failure = null;
             bool endAttempted = false;
@@ -712,8 +916,9 @@ namespace UltimateXR.Mechanics.Weapons
             BeginSync();
             try
             {
-                runtime.Readiness = (UxrFirearmReadinessState)correction.State.Clone();
-                runtime.HasReloaded = runtime.Readiness.ChamberRound && !runtime.Readiness.ChamberCyclePending && !runtime.Readiness.ActionOpen;
+                candidate.Readiness = (UxrFirearmReadinessState)correction.State.Clone();
+                candidate.HasReloaded = candidate.Readiness.ChamberRound && !candidate.Readiness.ChamberCyclePending && !candidate.Readiness.ActionOpen;
+                if (runtime == null) _runtimeTriggers.Add(trigger, candidate);
                 foreach (var entry in entries) entry.Magazine.GetComponent<UxrFirearmMag>().WriteLedgerRounds(this, trigger, entry.Rounds, false);
                 foreach (var entry in entries)
                 {

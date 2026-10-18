@@ -1,5 +1,5 @@
 // Новый visual input: не запускает Play и не меняет assets.
-const string Root = "tasks/bots-fix/reports/cc1-visual-candidate1";
+const string Root = "tasks/bots-fix/reports/cc1-visual-consolidated-20261018-r1";
 var blockers = new List<string>();
 if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating) blockers.Add("Нужен idle EditMode.");
 for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
@@ -17,6 +17,8 @@ foreach (var path in new[] {
     "Assets/Resources/" + VrBattlegrounds.Bots.BotCombatDriver.ProxyControllerResource + ".controller",
     "Assets/Editor/VR_Battlegrounds/Bots/BotStandVisualCapture.cs", "Assets/Editor/VR_Battlegrounds/Bots/BotStandRecorder.cs",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeaponManager.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/UxrManager.cs",
+    "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/Controllers/UxrStandardAvatarController.cs",
     "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.cs" }) {
     paths.Add(path);
     foreach (var dependency in AssetDatabase.GetDependencies(path, true)) paths.Add(dependency);

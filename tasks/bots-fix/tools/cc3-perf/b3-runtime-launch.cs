@@ -3,6 +3,7 @@ const string Root = "tasks/bots-fix/reports/cc3-perf";
 const string Attempt = "attempt-1";
 const string Cell = "C8"; // H8 | C8 | H10 | C10 | RH | S8
 const string Owner = "bots-fix.cc3-perf";
+const int RandomSeed = 20261018; // Совпадает с B0 и всеми ячейками сравнения.
 const string ScenePath = "Assets/Scenes/Maps/TestMap1.unity";
 const bool AllowSpectatorCell = false;
 string runRoot = Root + "/runtime/" + Attempt + "/" + Cell;
@@ -40,7 +41,8 @@ var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
     Enabled = true, Role = role, ClientCount = clients, SceneSource = "scene", ScenePath = ScenePath,
     ModeId = "elimination", AutoGoLive = true, MinPlayers = humans + bots, BotCount = bots,
     PauseOnFocusLoss = false, HostIsAdmin = false, Readiness = spectators ? "connected" : "map-playable",
-    GameRole = spectators ? "Spectator" : "Player", NetworkPortPolicy = "auto", TimeoutSeconds = 180
+    GameRole = spectators ? "Spectator" : "Player", NetworkPortPolicy = "auto", TimeoutSeconds = 180,
+    UseRandomSeed = true, RandomSeed = RandomSeed
 };
 string configJson = JsonUtility.ToJson(config);
 var plan = JsonUtility.FromJson<VrBattlegrounds.EditorTools.TestStand.ResolvedPlayPlan>(VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Plan(configJson));
@@ -70,7 +72,7 @@ durable(runRoot + "/launch.json", new {
     requestedUtc = DateTime.UtcNow.ToString("o"), owner = Owner, cell = Cell, attempt = Attempt,
     role, clients, bots, humans, spectators, configuration = config, planHash = plan.PlanHash,
     reportsDirectory = reports, requestPath, request, additionalTrace = "OFF",
-    seed = "PENDING_8548_OR_NOT_CONTROLLED"
+    seed = new { enabled = config.UseRandomSeed, value = config.RandomSeed, runtimeReceipt = "B5 после запуска" }
 });
 VrBattlegrounds.DevTools.BotCombatStand.BotStandMatchProbeGate.WriteRequest(request);
 durable(runRoot + "/probe-request-evidence.json", request);

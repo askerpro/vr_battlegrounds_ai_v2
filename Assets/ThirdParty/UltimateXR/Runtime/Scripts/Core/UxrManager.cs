@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrManager.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -1287,6 +1287,25 @@ namespace UltimateXR.Core
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 81: прерванный прогрев освобождает копии и затемнение камеры.
+        /// </summary>
+        protected override void OnDisable()
+        {
+            try
+            {
+                if (_precacheCoroutine != null)
+                {
+                    StopCoroutine(_precacheCoroutine);
+                    FinishPrecaching(false);
+                }
+            }
+            finally
+            {
+                base.OnDisable();
+            }
+        }
+
+        /// <summary>
         ///     Unsubscribes from global events.
         /// </summary>
         protected override void OnDestroy()
@@ -1673,66 +1692,83 @@ namespace UltimateXR.Core
         /// <returns>Coroutine enumerator</returns>
         private IEnumerator PrecacheCoroutine(Action onStarting = null, Action onFinished = null)
         {
-            UxrAvatar avatar = UxrAvatar.LocalAvatar;
-
-            while (avatar == null)
+            bool completed = false;
+            try
             {
+                // VR Battlegrounds patch 81: режим сетевого тела меняется после Instantiate в том же сообщении спавна.
+                // Ждём кадр и настоящий Local: прогрев должен идти перед камерой этой машины.
                 yield return null;
 
-                avatar = UxrAvatar.LocalAvatar;
-            }
+                UxrAvatar avatar = UxrAvatar.LocalAvatar;
 
-            onStarting?.Invoke();
-
-            DestroyPrecachedInstances();
-
-            _dynamicInstances = new Dictionary<int, GameObject>();
-
-            for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; ++sceneIndex)
-            {
-                Scene scene = SceneManager.GetSceneAt(sceneIndex);
-                AddScenePrecachedInstances(_dynamicInstances, scene, avatar);
-            }
-
-            AddScenePrecachedInstances(_dynamicInstances, Instance.gameObject.scene, avatar);
-
-            for (int frame = 0; frame < _precacheFrameCount; ++frame)
-            {
-                if (avatar == null)
+                while (avatar == null)
                 {
-                    // Another scene loaded
-                    break;
+                    yield return null;
+
+                    avatar = UxrAvatar.LocalAvatar;
                 }
 
-                avatar.CameraFade.EnableFadeColor(Color.black, 1.0f);
-                yield return null;
-            }
+                _precacheAvatar = avatar;
 
-            DestroyPrecachedInstances();
+                // VR Battlegrounds patch 81: один прогрев на набор загруженных сцен.
+                _precachedForCurrentScenes = true;
 
-            onFinished?.Invoke();
+                onStarting?.Invoke();
 
-            float startFadeTime = Time.time;
-            float fadeDuration  = 0.5f;
+                DestroyPrecachedInstances();
 
-            while (Time.time - startFadeTime < fadeDuration)
-            {
-                if (avatar == null)
+                _dynamicInstances = new Dictionary<int, GameObject>();
+
+                for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; ++sceneIndex)
                 {
-                    // Another scene loaded
-                    break;
+                    Scene scene = SceneManager.GetSceneAt(sceneIndex);
+                    AddScenePrecachedInstances(_dynamicInstances, scene, avatar);
                 }
 
-                avatar.CameraFade.EnableFadeColor(Color.black, 1.0f - (Time.time - startFadeTime) / fadeDuration);
-                yield return null;
-            }
+                AddScenePrecachedInstances(_dynamicInstances, Instance.gameObject.scene, avatar);
 
-            if (avatar)
+                for (int frame = 0; frame < _precacheFrameCount; ++frame)
+                {
+                    if (avatar == null)
+                    {
+                        // VR Battlegrounds patch 81: тело может исчезнуть и без смены сцены — это прерванный прогрев.
+                        yield break;
+                    }
+
+                    avatar.CameraFade.EnableFadeColor(Color.black, 1.0f);
+                    yield return null;
+                }
+
+                DestroyPrecachedInstances();
+
+                onFinished?.Invoke();
+
+                float startFadeTime = Time.time;
+                float fadeDuration  = 0.5f;
+
+                while (Time.time - startFadeTime < fadeDuration)
+                {
+                    if (avatar == null)
+                    {
+                        // VR Battlegrounds patch 81: finally сбросит признак завершения и очистит запуск.
+                        yield break;
+                    }
+
+                    avatar.CameraFade.EnableFadeColor(Color.black, 1.0f - (Time.time - startFadeTime) / fadeDuration);
+                    yield return null;
+                }
+
+                if (avatar)
+                {
+                    avatar.CameraFade.DisableFadeColor();
+                    completed = true;
+                }
+            }
+            finally
             {
-                avatar.CameraFade.DisableFadeColor();
+                // VR Battlegrounds patch 81: исключение не оставляет вечный IsPrecaching и чёрный экран.
+                FinishPrecaching(completed);
             }
-
-            _precacheCoroutine = null;
         }
 
         #endregion
@@ -1783,6 +1819,8 @@ namespace UltimateXR.Core
         /// <param name="loadSceneMode">The mode used to load the scene.</param>
         private void SceneManager_SceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
         {
+            // VR Battlegrounds patch 81: новый набор сцен — прогрев снова разрешён (один раз, см. TryPrecaching).
+            _precachedForCurrentScenes = false;
             SetupCanvases();
         }
 
@@ -1793,6 +1831,8 @@ namespace UltimateXR.Core
         /// <param name="scene">Scene that was unloaded.</param>
         private void SceneManager_SceneUnloaded(Scene scene)
         {
+            // VR Battlegrounds patch 81: набор сцен изменился — прогрев снова разрешён.
+            _precachedForCurrentScenes = false;
             SetupCanvases();
         }
 
@@ -2085,6 +2125,13 @@ namespace UltimateXR.Core
 
                 for (int behaviourIndex = 0; behaviourIndex < behaviours.Length; ++behaviourIndex)
                 {
+                    // VR Battlegrounds patch 81: копии прошлого прогрева (в т.ч. уничтоженные, но живые до конца кадра)
+                    // не становятся шаблонами и не регистрируют UniqueId — иначе каждый прогрев удваивал их число.
+                    if (IsPrecachedInstance(behaviours[behaviourIndex]))
+                    {
+                        continue;
+                    }
+
                     if (behaviours[behaviourIndex] is IUxrPrecacheable precacheable)
                     {
                         foreach (GameObject precachedInstance in precacheable.PrecachedInstances)
@@ -2092,10 +2139,11 @@ namespace UltimateXR.Core
                             if (precachedInstance != null && dynamicInstances.ContainsKey(precachedInstance.GetInstanceID()) == false)
                             {
                                 // Instantiate
+                                // VR Battlegrounds patch 81: копии — в отдельном контейнере, его обход пропускает.
                                 GameObject dynamicInstance = Instantiate(precachedInstance,
                                                                          avatar.CameraTransform.position + avatar.CameraTransform.forward * 5.0f,
                                                                          avatar.CameraTransform.rotation,
-                                                                         Instance.transform);
+                                                                         PrecachedInstancesRoot);
 
                                 dynamicInstances.Add(precachedInstance.GetInstanceID(), dynamicInstance);
 
@@ -2148,20 +2196,73 @@ namespace UltimateXR.Core
         }
 
         /// <summary>
-        ///     Starts the pre-caching process. If a pre-caching process is currently running, it will be stopped before starting
-        ///     again.
+        ///     VR Battlegrounds patch 81: общая очистка завершённого и прерванного прогрева.
+        /// </summary>
+        private void FinishPrecaching(bool completed)
+        {
+            _precacheCoroutine = null;
+            UxrAvatar avatar = _precacheAvatar;
+            _precacheAvatar = null;
+
+            if (!completed)
+            {
+                _precachedForCurrentScenes = false;
+                try
+                {
+                    DestroyPrecachedInstances();
+                }
+                finally
+                {
+                    if (avatar != null && avatar.CameraFade != null)
+                    {
+                        avatar.CameraFade.DisableFadeColor();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Starts the pre-caching process.
+        ///     VR Battlegrounds patch 81: a running pre-caching process is no longer restarted, and pre-caching runs at most
+        ///     once per set of loaded scenes (reset on scene load/unload). Previously every avatar enabled in Local mode while
+        ///     there was no other Local avatar (bodies spawn Local and switch to UpdateExternally later) restarted it, and the
+        ///     restart cloned the previous, not yet destroyed copies — exponential growth (tasks/uxr-precache-once).
         /// </summary>
         private void TryPrecaching()
         {
-            if (_precacheCoroutine != null)
+            if (!isActiveAndEnabled || _precacheCoroutine != null || _precachedForCurrentScenes || !UsePrecaching)
             {
-                StopCoroutine(_precacheCoroutine);
+                return;
             }
 
-            if (UsePrecaching)
+            _precacheCoroutine = StartCoroutine(PrecacheCoroutine(OnPrecachingStarting, OnPrecachingFinished));
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 81: container for the pre-cached copies, child of the manager. Created on first use.
+        /// </summary>
+        private Transform PrecachedInstancesRoot
+        {
+            get
             {
-                _precacheCoroutine = StartCoroutine(PrecacheCoroutine(OnPrecachingStarting, OnPrecachingFinished));
+                if (_precachedInstancesRoot == null)
+                {
+                    _precachedInstancesRoot = new GameObject(PrecachedInstancesRootName).transform;
+                    _precachedInstancesRoot.SetParent(transform, false);
+                }
+
+                return _precachedInstancesRoot;
             }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 81: whether the component belongs to a pre-cached copy (current or pending destruction).
+        /// </summary>
+        /// <param name="behaviour">Component to check</param>
+        /// <returns>Whether it is inside the pre-cached copies container</returns>
+        private bool IsPrecachedInstance(MonoBehaviour behaviour)
+        {
+            return behaviour != null && _precachedInstancesRoot != null && behaviour.transform.IsChildOf(_precachedInstancesRoot);
         }
 
         /// <summary>
@@ -2387,6 +2488,12 @@ namespace UltimateXR.Core
 
         private Coroutine                   _precacheCoroutine;
         private Dictionary<int, GameObject> _dynamicInstances;
+
+        // VR Battlegrounds patch 81: прогрев не чаще раза на набор сцен; копии — в отдельном контейнере.
+        private const string PrecachedInstancesRootName = "UxrPrecachedInstances";
+        private bool      _precachedForCurrentScenes;
+        private Transform _precachedInstancesRoot;
+        private UxrAvatar _precacheAvatar;
         private Coroutine                   _teleportCoroutine;
         private Camera                      _canvasEventCamera;
         private bool                        _canvasEventCameraInitialized;

@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrGrabPointInfo.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -347,20 +347,31 @@ namespace UltimateXR.Manipulation
         /// </returns>
         public UxrGripPoseInfo GetGripPoseInfo(UxrAvatar avatar, bool usePrefabInheritance = true)
         {
-            foreach (string avatarPrefabGuid in avatar.GetPrefabGuidChain())
+            // VR Battlegrounds patch 84: тот же порядок GUID без iterator и без кэша изменяемых grip-записей.
+            // Как и GetPrefabGuidChain, пустой GUID исходного аватара не начинает обход родителей.
+            if (!string.IsNullOrEmpty(avatar.PrefabGuid))
             {
-                foreach (UxrGripPoseInfo gripPoseInfo in _avatarGripPoseEntries)
+                UxrAvatar currentAvatar = avatar;
+                do
                 {
-                    if (gripPoseInfo.AvatarPrefabGuid == avatarPrefabGuid)
+                    string avatarPrefabGuid = currentAvatar.PrefabGuid;
+                    for (int i = 0; i < _avatarGripPoseEntries.Count; ++i)
                     {
-                        return gripPoseInfo;
+                        UxrGripPoseInfo gripPoseInfo = _avatarGripPoseEntries[i];
+                        if (gripPoseInfo.AvatarPrefabGuid == avatarPrefabGuid)
+                        {
+                            return gripPoseInfo;
+                        }
                     }
-                }
 
-                if (!usePrefabInheritance)
-                {
-                    return null;
+                    if (!usePrefabInheritance)
+                    {
+                        return null;
+                    }
+
+                    currentAvatar = currentAvatar.ParentAvatarPrefab;
                 }
+                while (currentAvatar != null && currentAvatar != avatar);
             }
 
             return DefaultGripPoseInfo;

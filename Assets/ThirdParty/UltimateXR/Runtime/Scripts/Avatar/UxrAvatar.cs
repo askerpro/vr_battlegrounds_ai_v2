@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrAvatar.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -357,7 +357,30 @@ namespace UltimateXR.Avatar
         /// <summary>
         ///     Gets the <see cref="ParentPrefab" />'s <see cref="UxrAvatar" /> component.
         /// </summary>
-        public UxrAvatar ParentAvatarPrefab => ParentPrefab != null ? ParentPrefab.GetComponent<UxrAvatar>() : null;
+        public UxrAvatar ParentAvatarPrefab
+        {
+            get
+            {
+                // VR Battlegrounds patch 84: кэшируем только живую связь, а не GUID/default/grip данные.
+                GameObject parentPrefab = ParentPrefab;
+                if (parentPrefab == null)
+                {
+                    _cachedParentPrefab = null;
+                    _cachedParentAvatarPrefab = null;
+                    return null;
+                }
+
+                // Unity-null обнаруживает уничтоженный компонент. Отрицательный результат не является попаданием:
+                // следующий вызов повторит поиск и увидит компонент, добавленный позднее на тот же GameObject.
+                if (_cachedParentPrefab != parentPrefab || _cachedParentAvatarPrefab == null)
+                {
+                    _cachedParentPrefab = parentPrefab;
+                    _cachedParentAvatarPrefab = parentPrefab.GetComponent<UxrAvatar>();
+                }
+
+                return _cachedParentAvatarPrefab;
+            }
+        }
 
         /// <summary>
         ///     Gets whether the avatar's prefab has a parent avatar prefab.
@@ -1150,13 +1173,15 @@ namespace UltimateXR.Avatar
                 return false;
             }
 
-            HandState                        handState                = handSide == UxrHandSide.Left ? _leftHandState : _rightHandState;
-            UxrAvatarHandPoseChangeEventArgs avatarHandPoseChangeArgs = new UxrAvatarHandPoseChangeEventArgs(handSide, poseName, blendValue);
+            HandState handState = handSide == UxrHandSide.Left ? _leftHandState : _rightHandState;
 
-            if (!handState.IsChange(avatarHandPoseChangeArgs))
+            // VR Battlegrounds patch 84: неизменная поза не создаёт EventArgs при покадровом выборе.
+            if (!handState.IsChange(poseName, blendValue))
             {
                 return true;
             }
+
+            UxrAvatarHandPoseChangeEventArgs avatarHandPoseChangeArgs = new UxrAvatarHandPoseChangeEventArgs(handSide, poseName, blendValue);
 
             // This method will be synchronized through network
             BeginSync();
@@ -1653,13 +1678,18 @@ namespace UltimateXR.Avatar
         /// <returns>Default hand pose asset or null if not found</returns>
         private UxrHandPoseAsset GetDefaultPoseInHierarchy()
         {
-            foreach (UxrAvatar avatar in GetAvatarChain())
+            // VR Battlegrounds patch 84: читаем живые defaults без выделения iterator на каждый выбор позы.
+            UxrAvatar avatar = this;
+            do
             {
                 if (avatar._defaultHandPose != null)
                 {
                     return avatar._defaultHandPose;
                 }
+
+                avatar = avatar.ParentAvatarPrefab;
             }
+            while (avatar != null && avatar != this);
 
             return null;
         }
@@ -1769,6 +1799,10 @@ namespace UltimateXR.Avatar
 
         private static UxrAvatar s_localAvatar;
         private static bool      s_localAvatarReferenceInitialized;
+
+        // VR Battlegrounds patch 84: положительный кэш ParentPrefab → UxrAvatar с проверкой ключа и Unity-null.
+        private GameObject _cachedParentPrefab;
+        private UxrAvatar _cachedParentAvatarPrefab;
 
         // VR Battlegrounds patch 21: кэш захватчиков аватара для LeftGrabber/RightGrabber.
         private static int                 s_grabberRegistryVersion;

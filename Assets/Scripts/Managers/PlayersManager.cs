@@ -129,6 +129,16 @@ namespace VrBattlegrounds.Managers
             }
         }
 
+        public void HandleSpectatorConnect(NetworkConnectionToClient conn, SpectatorConnectMessage msg)
+        {
+            GameLog.Network.Info($"[PlayersManager] Получен SpectatorConnectMessage. Device: {msg.deviceType}, Admin: {msg.isAdmin}");
+            if (conn.identity != null) return;
+
+            // Клиентский флаг не выдаёт права: хост и серверная политика проверяются общим путём сессии.
+            CreatePlayerSession(conn, GameRole.Spectator, msg.deviceToken, msg.deviceType, false,
+                                snapshot: null, initialTeamId: 0, initialAvatarId: 0);
+        }
+
         /// <summary>
         /// Первичная калибровка новой сессии (T-50): что принёс клиент, а без его данных
         /// (перезапуск приложения) — снимок отключённой сессии. Клиент без данных ничего не
@@ -180,8 +190,8 @@ namespace VrBattlegrounds.Managers
         {
             if (_sessionsByConn.TryGetValue(conn, out PlayerSession session))
             {
-                // Сохраняем стейт в память перед отключением
-                if (SessionRecoveryManager.Instance != null && !string.IsNullOrEmpty(session.DeviceToken))
+                // Сохраняем стейт в память перед отключением только для боевых игроков
+                if (SessionRecoveryManager.Instance != null && session.Role == GameRole.Player && !string.IsNullOrEmpty(session.DeviceToken))
                 {
                     // conn.identity — это PlayerSession (она назначена объектом игрока в
                     // AddPlayerForConnection), а не аватар. Раньше здесь был
@@ -269,25 +279,27 @@ namespace VrBattlegrounds.Managers
             _playerNames = _sessions.Select(s => s != null ? s.PlayerName : "null").ToArray();
         }
 
-        /// <summary>Только живые сессии указанной команды (у которых заспавнен аватар и он жив).</summary>
+        /// <summary>Только живые сессии игроков указанной команды (у которых заспавнен аватар и он жив).</summary>
         public IEnumerable<PlayerSession> GetAlivePlayers(TeamData team)
         {
             if (team == null)
                 return Enumerable.Empty<PlayerSession>();
 
             return _sessions.Where(s =>
+                s != null &&
+                s.Role == GameRole.Player &&
                 s.TeamIndex == team.teamIndex &&
                 s.ActiveAvatar != null &&
                 s.ActiveAvatar.IsAlive);
         }
 
-        /// <summary>Все сессии указанной команды.</summary>
+        /// <summary>Все сессии игроков указанной команды.</summary>
         public IEnumerable<PlayerSession> GetPlayers(TeamData team)
         {
             if (team == null)
                 return Enumerable.Empty<PlayerSession>();
 
-            return _sessions.Where(s => s.TeamIndex == team.teamIndex);
+            return _sessions.Where(s => s != null && s.Role == GameRole.Player && s.TeamIndex == team.teamIndex);
         }
     }
 }

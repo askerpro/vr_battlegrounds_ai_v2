@@ -47,7 +47,7 @@ namespace UltimateXR.Mechanics.Weapons
 
         public bool TryBeginAmmoAdmissionBarrier(int triggerIndex, ulong requestToken)
         {
-            if (requestToken == 0 || !CanOwnReadiness(triggerIndex) || IsAmmoAdmissionPending(triggerIndex)) return false;
+            if (requestToken == 0 || IsMagazineOnly(triggerIndex) || !CanOwnReadiness(triggerIndex) || IsAmmoAdmissionPending(triggerIndex)) return false;
             _ammoAdmissionPending.Add(triggerIndex, requestToken);
             return true;
         }

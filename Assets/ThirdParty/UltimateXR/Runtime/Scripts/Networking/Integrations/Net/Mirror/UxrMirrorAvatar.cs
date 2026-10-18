@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using UltimateXR.Avatar;
 using UltimateXR.Core;
+// VR Battlegrounds patch 88: локальная квитанция регистраций authored-компонентов аватара.
+using UltimateXR.Core.Components;
 using UltimateXR.Core.Settings;
 using UltimateXR.Core.StateSave;
 using UltimateXR.Core.StateSync;
@@ -109,7 +111,8 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
                 LocalDisabledGameObjects.ForEach(o => o.SetActive(false));
             }
 
-            avatar.CombineUniqueId(uniqueId.GetGuid(), true);
+            // VR Battlegrounds patch 88: не очищать квитанцию при повторной или частичной инициализации.
+            avatar.CombineUniqueId(uniqueId.GetGuid(), true, _registrationReceipt);
 
             // Вызываем событие спавна аватара
             AvatarSpawned?.Invoke();
@@ -202,18 +205,46 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         {
             _avatarInitialized = false;
 
-            if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+            // VR Battlegrounds patch 88: ошибки уведомления не должны пропускать terminal cleanup.
+            var failures = new List<Exception>();
+            try
             {
-                Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnDestroy)}: Is Local? {IsLocal}, Name: {AvatarName}, NetId: {(netIdentity ? netId.ToString() : "null")}");
+                if (UxrGlobalSettings.Instance.LogLevelNetworking >= UxrLogLevel.Relevant)
+                {
+                    Debug.Log($"{UxrConstants.NetworkingModule} {nameof(UxrMirrorAvatar)}.{nameof(OnDestroy)}: Is Local? {IsLocal}, Name: {AvatarName}, NetId: {(netIdentity ? netId.ToString() : "null")}");
+                }
+
+                // VR Battlegrounds (патч 9): только снять аватар с учёта, без рассылки. Объект
+                // уничтожает Mirror на каждой машине сам; DestroyGameObject слал DestroyGameObjectInternal
+                // другой стороне, где аватара уже нет, — UxrComponentNotFoundException на каждой смене скина.
+                if (UxrInstanceManager.HasInstance && Avatar != null)
+                {
+                    UxrInstanceManager.Instance.NotifyNetworkDespawn(Avatar.gameObject);
+                }
+            }
+            catch (Exception error)
+            {
+                failures.Add(error);
+            }
+            finally
+            {
+                // VR Battlegrounds patch 88: managed-ссылки действуют и после Unity Destroy, без Unity-null фильтра.
+                for (int i = 0; i < _registrationReceipt.Count; ++i)
+                {
+                    try
+                    {
+                        _registrationReceipt[i].Unregister();
+                    }
+                    catch (Exception error)
+                    {
+                        failures.Add(error);
+                    }
+                }
+
+                _registrationReceipt.Clear();
             }
 
-            // VR Battlegrounds (патч 9): только снять аватар с учёта, без рассылки. Объект
-            // уничтожает Mirror на каждой машине сам; DestroyGameObject слал DestroyGameObjectInternal
-            // другой стороне, где аватара уже нет, — UxrComponentNotFoundException на каждой смене скина.
-            if (UxrInstanceManager.HasInstance && Avatar != null)
-            {
-                UxrInstanceManager.Instance.NotifyNetworkDespawn(Avatar.gameObject);
-            }
+            if (failures.Count != 0) throw new AggregateException("UxrMirrorAvatar.OnDestroyFailed", failures);
         }
 
         #endregion
@@ -243,6 +274,9 @@ namespace UltimateXR.Networking.Integrations.Net.Mirror
         private bool _avatarInitialized = false;
 
         private string _avatarName;
+
+        // VR Battlegrounds patch 88: принадлежность authored-набора живёт до фактического OnDestroy адаптера.
+        private readonly List<UxrComponent> _registrationReceipt = new List<UxrComponent>();
 
         #endregion
     }

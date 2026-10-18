@@ -38,6 +38,11 @@ namespace VrBattlegrounds.GameModes
         public static bool ServerPlayerRequest(GameMode mode, PlayerSession session, int newTeamId, int newAvatarId)
         {
             if (session == null) return false;
+            if (session.Role != GameRole.Player)
+            {
+                GameLog.Match.Warning($"[TeamChangeRequests] Смена отклонена ({session.PlayerName}): наблюдатель (Spectator) не может выбирать боевую команду.");
+                return false;
+            }
 
             GameLog.Match.Info(
                 $"[TeamChangeRequests] Игрок {session.PlayerName} запросил смену: Команда {newTeamId}, Скин {newAvatarId}");
@@ -76,6 +81,11 @@ namespace VrBattlegrounds.GameModes
             if (target == null || team == null)
             {
                 GameLog.Match.Warning($"[TeamChangeRequests] Выдача команды отклонена: нет игрока или команды {teamId}.");
+                return false;
+            }
+            if (target.Role != GameRole.Player)
+            {
+                GameLog.Match.Warning($"[TeamChangeRequests] Выдача команды отклонена: наблюдателю {target.PlayerName} нельзя назначить боевую команду.");
                 return false;
             }
 

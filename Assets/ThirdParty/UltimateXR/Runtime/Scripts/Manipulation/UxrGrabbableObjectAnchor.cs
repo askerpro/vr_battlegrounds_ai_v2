@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UltimateXR.Core.Components;
+using UltimateXR.Core.StateSync;
 using UnityEngine;
 
 namespace UltimateXR.Manipulation
@@ -526,7 +527,9 @@ namespace UltimateXR.Manipulation
                     isGrabbable = e.IsGrabbable;
                 }
 
-                _grabProxy.IsGrabbable = isGrabbable;
+                // VR Battlegrounds patch 87: placement и Query уже проецируются на каждой машине.
+                // Производная доступность proxy не становится сетевым вводом чужого аватара.
+                _grabProxy.SetIsGrabbable(isGrabbable, UxrStateSyncOptions.Replay);
             }
         }
 

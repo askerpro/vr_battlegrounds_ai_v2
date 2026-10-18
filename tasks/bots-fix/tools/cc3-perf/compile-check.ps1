@@ -5,6 +5,7 @@ param(
     [string]$Work = (Join-Path $env:TEMP 'bots-cc3-perf-compile'),
     [string]$LangVersion = '6',
     [string]$PayloadDirectory = $PSScriptRoot,
+    [string]$ProjectDirectory = 'F:/UnityProjects/Vr_Battlegrounds_ai',
     [string]$ProbeCommit = '2fa11b2767f23d4c709f739deb629fd378307c97',
     [string]$ExpectedProbeSha256 = '5a0611c9aa311f9ae9b4eed7258041defac5bf43a7193cd2435b4df5a3e130cc',
     [string[]]$Own = @(
@@ -17,6 +18,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path
 $payloadRoot = (Resolve-Path -LiteralPath $PayloadDirectory).Path
+$botsProjectRoot = (Resolve-Path -LiteralPath $ProjectDirectory).Path
 $botsMetadataRoot = 'F:/UnityProjects/Vr_Battlegrounds_ai'
 $csc = 'C:/Program Files/dotnet/sdk/9.0.311/Roslyn/bincore/csc.dll'
 if (Test-Path -LiteralPath $Work) { $Work = $Work + '-' + [DateTime]::UtcNow.Ticks }
@@ -65,7 +67,7 @@ try {
         return $refs
     }
     function Compile-Slice([string]$assembly, [string]$sourceDirectory, [bool]$excludeNested = $false, [bool]$allowForeign = $false) {
-        [xml]$project = Get-Content -Encoding utf8 -LiteralPath (Join-Path $botsMetadataRoot "$assembly.csproj")
+        [xml]$project = Get-Content -Encoding utf8 -LiteralPath (Join-Path $botsProjectRoot "$assembly.csproj")
         $refs = @(Get-ProjectRefs $project)
         $asmdef = @(rg --files $sourceDirectory --glob "$assembly.asmdef") | Select-Object -First 1
         if ($asmdef) {
@@ -126,16 +128,23 @@ try {
         $botsBuiltAssemblies[$assembly] = $output
         if ($assembly -eq 'VrBattlegrounds') { $botsBuiltAssemblies['Game'] = $output }
     }
+    # Mirror собирается первым: все последующие ссылки получают свежую DLL из этого input.
+    Compile-Slice 'Mirror' 'Assets/ThirdParty/Mirror/Core' $true
     Compile-Slice 'UltimateXR' 'Assets/ThirdParty/UltimateXR/Runtime'
     Compile-Slice 'BlazeAI.Runtime' 'Assets/ThirdParty/Blaze AI/Scripts' $true
     Compile-Slice 'VrBattlegrounds.Weapons.Core' 'Assets/Scripts/Weapons/Core'
     Compile-Slice 'VrBattlegrounds' 'Assets/Scripts' $true
     Compile-Slice 'VrBattlegrounds.BotCombatStand' 'Assets/Scripts/Debug/BotCombatStand'
     Compile-Slice 'VrBattlegrounds.DebugBootstrap' 'Assets/Scripts/Debug/Bootstrap'
+    # Editor-зависимости тоже берём из этого input: DLL основного checkout могут отставать от source.
+    Compile-Slice 'UltimateXR.Editor' 'Assets/ThirdParty/UltimateXR/Editor' $true
+    Compile-Slice 'VrBattlegrounds.HandGeometry.Editor' 'Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/Core' $true
+    Compile-Slice 'VrBattlegrounds.HandPoseReview.Editor' 'Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview' $true
+    Compile-Slice 'VrBattlegrounds.HandRigQuality.Editor' 'Assets/Editor/VR_Battlegrounds/Avatars/HandRigQuality' $true
     Compile-Slice 'Assembly-CSharp-Editor' 'Assets/Editor' $true $true
-    'RESULT: all slices compiled'
+    'RESULT: compilation rows recorded; any FOREIGN-ONLY fallback remains a failed Editor slice'
 
-    [xml]$editorProject = Get-Content -Encoding utf8 -LiteralPath (Join-Path $botsMetadataRoot 'Assembly-CSharp-Editor.csproj')
+    [xml]$editorProject = Get-Content -Encoding utf8 -LiteralPath (Join-Path $botsProjectRoot 'Assembly-CSharp-Editor.csproj')
     $refs = @(Get-ProjectRefs $editorProject)
     $refs += $botsBuiltAssemblies.Values | Select-Object -Unique | ForEach-Object { '/reference:"' + $_ + '"' }
     if (-not $botsBuiltAssemblies.ContainsKey('Assembly-CSharp-Editor')) {

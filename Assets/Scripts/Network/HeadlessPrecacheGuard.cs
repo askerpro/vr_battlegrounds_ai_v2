@@ -37,6 +37,11 @@ namespace VrBattlegrounds.Network
     /// решение принимается при загрузке каждой сцены: сервер после старта всегда грузит сцену карты, до первого
     /// спавна тела.
     /// </para>
+    /// <para>
+    /// Регистрация выключенных компонентов сцены не зависит от прогрева и локальной камеры.
+    /// Например, Spectator получает начальный снимок без своего аватара: ожидание LocalAvatar
+    /// в SDK не должно оставлять адресатов снимка незарегистрированными.
+    /// </para>
     /// </summary>
     public static class HeadlessPrecacheGuard
     {
@@ -58,7 +63,11 @@ namespace VrBattlegrounds.Network
         /// <summary>Решение для этой машины сейчас: рендер и текущая сетевая роль.</summary>
         private static bool ShouldPrecacheNow()
         {
-            bool isServerOnly = NetworkServer.active && !NetworkClient.active;
+            // StartHost задаёт mode до загрузки карты, а ConnectHost включает local client позже.
+            // В этом окне configured-прогрев Host должен сохраниться до настоящего LocalAvatar.
+            var manager = NetworkManager.singleton;
+            bool isServerOnly = NetworkServer.active && !NetworkClient.active &&
+                                (manager == null || manager.mode != NetworkManagerMode.Host);
             return ShouldPrecache(Application.isBatchMode, SystemInfo.graphicsDeviceType, isServerOnly);
         }
 
@@ -75,9 +84,9 @@ namespace VrBattlegrounds.Network
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (ShouldPrecacheNow()) return;
-
             int registered = RegisterDisabledUniqueIds(scene);
+
+            if (ShouldPrecacheNow()) return;
 
             if (!UxrManager.HasInstance || !UxrManager.Instance.UsePrecaching) return;
 
@@ -90,14 +99,14 @@ namespace VrBattlegrounds.Network
         }
 
         /// <summary>
-        /// Машина без графики, состав карты собран (<c>MapBootstrap</c>): зарегистрировать выключенные компоненты с
-        /// id ещё раз (то же условие: машина без графики или сервер без своего игрока). <see cref="OnSceneLoaded"/> видел сцену до сборки — службы, созданные и перенесённые в неё
-        /// позже, он не застал. Повтор безопасен: <c>RegisterIfNecessary</c> идемпотентна. На машине, которая прогревает,
-        /// ничего не делает — там регистрацию выполняет прогрев SDK.
+        /// Состав карты собран (<c>MapBootstrap</c>): зарегистрировать выключенные компоненты с id на всех машинах.
+        /// <see cref="OnSceneLoaded"/> видел сцену до сборки — службы, созданные и перенесённые в неё позже, он не застал.
+        /// Вызов остаётся после подготовки и регистрации generated identities сборщиком, до готовности карты.
+        /// SDK сохраняет владение ID; обычный <c>RegisterIfNecessary</c> также обновляет исходные transform-данные,
+        /// поэтому этот проход не переносится в Update либо после применения сетевого состояния.
         /// </summary>
         public static int RegisterAfterComposition(Scene scene)
         {
-            if (ShouldPrecacheNow()) return 0;
             return RegisterDisabledUniqueIds(scene);
         }
 
@@ -105,7 +114,7 @@ namespace VrBattlegrounds.Network
         /// Побочная работа прогрева, которую нельзя терять: <c>UxrManager.AddScenePrecachedInstances</c>
         /// регистрирует выключенные компоненты с <see cref="IUxrUniqueId"/> (в том числе на неактивных
         /// объектах, где <c>Awake</c> не вызывался), чтобы события синхронизации находили адресата. Без
-        /// прогрева делаем это сами — то же условие, та же сцена.
+        /// ожидания прогрева выполняем тот же проход для загруженной сцены, включая неактивные иерархии.
         /// </summary>
         public static int RegisterDisabledUniqueIds(Scene scene)
         {

@@ -49,6 +49,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string DetachableReturnToRestProfile = ProfilesFolder + "/DetachableReturnToRestReadiness.asset";
         /// <summary>Съёмный магазин + патронник без ручного хода, досылание при вставке магазина (F4).</summary>
         public const string DetachableNoActionProfile = ProfilesFolder + "/DetachableNoActionReadiness.asset";
+        /// <summary>Съёмный барабан без отдельного патронника и ручного хода (R08, F5).</summary>
+        public const string MagazineOnlyProfile = ProfilesFolder + "/MagazineOnlyReadiness.asset";
 
         /// <summary>Звук отказа до конца паузы между выстрелами (решение S2) — дефолт всех категорий.</summary>
         public const string RefusalClip = "Assets/Audio/SFX/Weapons/UI_Error_Subtle_Deep_stereo.wav";
@@ -72,7 +74,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Все стволы арсенала (план п. 5): волна, профиль и категория отклика — одна таблица. Новый ствол без строки
-        /// writer не настроит. F5 (MagazineOnly, legacy-помпа) — ждёт порта учёта без патронника.
+        /// writer не настроит. Из F5 поддержаны револьверы Revolver и R08 с явным профилем MagazineOnly.
         /// </summary>
         public static readonly Entry[] Weapons =
         {
@@ -98,19 +100,19 @@ namespace VrBattlegrounds.Editor.Gameplay
             Review("MKR9", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             Review("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
             Review("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
-            E("Revolver", "F5", null, WeaponFeedbackCategory.Pistol),
-            E("R08", "F5", null, WeaponFeedbackCategory.Pistol),
+            E("Revolver", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
+            E("R08", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
             E("Shotgun", "F5", null, WeaponFeedbackCategory.Shotgun),
         };
 
         /// <summary>Строка таблицы по имени корня/рецепта; null — ствола в таблице нет.</summary>
         public static Entry EntryFor(string weaponName) => Array.Find(Weapons, entry => entry.Name == weaponName);
 
-        /// <summary>Профиль волны для сборщиков (рецепт без явного профиля); null — ствол не на волне F1–F4.</summary>
+        /// <summary>Явный профиль таблицы для сборщиков; null — собственного поддержанного профиля нет.</summary>
         public static string ProfilePathFor(string weaponName)
         {
             Entry entry = EntryFor(weaponName);
-            return entry != null && entry.Wave != "F5" ? entry.Profile : null;
+            return entry?.Profile;
         }
 
         // ── Дефолты категорий и профили волн ───────────────────────────────────────────────
@@ -164,50 +166,59 @@ namespace VrBattlegrounds.Editor.Gameplay
                 ["SRM12_SightReview"] = Srm12Action,
             };
 
-        private static readonly (string Path, WeaponPhysicalCapability Physical, WeaponChamberPolicy Policy, WeaponEmptyPose Pose)[] ProfileSpecs =
+        private static readonly (string Path, WeaponAmmoCapability Ammo, WeaponPhysicalCapability Physical, WeaponChamberPolicy Policy, WeaponEmptyPose Pose)[] ProfileSpecs =
         {
-            (DetachableHoldOpenProfile, WeaponPhysicalCapability.ActionTravel, WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.HoldOpen),
-            (DetachableReturnToRestProfile, WeaponPhysicalCapability.ActionTravel, WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.ReturnToRest),
-            (DetachableNoActionProfile, WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.ReturnToRest),
+            (DetachableHoldOpenProfile, WeaponAmmoCapability.DetachableMagazineChamber, WeaponPhysicalCapability.ActionTravel, WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.HoldOpen),
+            (DetachableReturnToRestProfile, WeaponAmmoCapability.DetachableMagazineChamber, WeaponPhysicalCapability.ActionTravel, WeaponChamberPolicy.ManualReturn, WeaponEmptyPose.ReturnToRest),
+            (DetachableNoActionProfile, WeaponAmmoCapability.DetachableMagazineChamber, WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.ReturnToRest),
+            (MagazineOnlyProfile, WeaponAmmoCapability.MagazineOnly, WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.ReturnToRest),
         };
 
         /// <summary>Ассет дефолтов категории с диска (null — ещё не создан).</summary>
         public static WeaponFeedbackDefaults LoadDefaults(WeaponFeedbackCategory category) =>
             AssetDatabase.LoadAssetAtPath<WeaponFeedbackDefaults>(Array.Find(DefaultsSpecs, spec => spec.Category == category).Path);
 
+        private static bool IsMagazineOnlyScope(Entry[] entries) =>
+            entries.Length > 0 && entries.All(entry => entry.Profile == MagazineOnlyProfile);
+
         /// <summary>
         /// Ассеты дефолтов и профилей: существующие — с диска (не перезаписываются), отсутствующие — новые с начальными
         /// значениями. <paramref name="create"/>=false — временные копии для preflight (их уничтожает <see cref="DestroyTransient"/>).
         /// </summary>
-        private static Dictionary<string, Object> EnsureData(bool create, List<string> created, List<Object> transient)
+        private static Dictionary<string, Object> EnsureData(bool create, List<string> created, List<Object> transient, Entry[] entries)
         {
             var result = new Dictionary<string, Object>();
-            if (create) { EnsureFolder("Assets/Data", "WeaponSystem"); EnsureFolder(DataFolder, "Profiles"); }
+            bool magazineOnlyScope = IsMagazineOnlyScope(entries);
+            if (create && !magazineOnlyScope) { EnsureFolder("Assets/Data", "WeaponSystem"); EnsureFolder(DataFolder, "Profiles"); }
             foreach (var spec in ProfileSpecs)
             {
+                if (magazineOnlyScope ? spec.Path != MagazineOnlyProfile :
+                    spec.Path == MagazineOnlyProfile && !entries.Any(entry => entry.Profile == MagazineOnlyProfile)) continue;
                 var profile = AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(spec.Path);
                 if (profile == null)
                 {
                     CheckAbsent(spec.Path);
                     profile = ScriptableObject.CreateInstance<WeaponReadinessProfile>();
                     var data = new SerializedObject(profile);
-                    data.FindProperty("_ammoCapability").intValue = (int)WeaponAmmoCapability.DetachableMagazineChamber;
+                    data.FindProperty("_ammoCapability").intValue = (int)spec.Ammo;
                     data.FindProperty("_physicalCapability").intValue = (int)spec.Physical;
                     data.FindProperty("_chamberPolicy").intValue = (int)spec.Policy;
                     data.FindProperty("_emptyPose").intValue = (int)spec.Pose;
                     data.ApplyModifiedPropertiesWithoutUndo();
                     Keep(profile, spec.Path, create, created, transient);
                 }
-                if (!profile.TryValidate(out string error) || profile.AmmoCapability != WeaponAmmoCapability.DetachableMagazineChamber ||
+                if (!profile.TryValidate(out string error) || profile.AmmoCapability != spec.Ammo ||
                     profile.PhysicalCapability != spec.Physical || profile.ChamberPolicy != spec.Policy || profile.EmptyPose != spec.Pose)
                     throw new InvalidOperationException($"Профиль {spec.Path} не совпадает с волной: {error}");
                 result[spec.Path] = profile;
             }
             foreach (DefaultsSpec spec in DefaultsSpecs)
             {
+                if (magazineOnlyScope && !entries.Any(entry => entry.Category == spec.Category)) continue;
                 var defaults = AssetDatabase.LoadAssetAtPath<WeaponFeedbackDefaults>(spec.Path);
                 if (defaults == null)
                 {
+                    if (magazineOnlyScope) throw new InvalidOperationException($"{spec.Path}: для отдельной миграции MagazineOnly нужны существующие дефолты категории.");
                     CheckAbsent(spec.Path);
                     defaults = ScriptableObject.CreateInstance<WeaponFeedbackDefaults>();
                     var data = new SerializedObject(defaults);
@@ -231,6 +242,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (defaults.Category != spec.Category) throw new InvalidOperationException($"{spec.Path}: категория {defaults.Category}, нужна {spec.Category}");
                 result[spec.Category.ToString()] = defaults;
             }
+            // Отдельная миграция MagazineOnly пишет только свой профиль и префабы, не создаёт вылет и не дополняет дефолты.
+            if (magazineOnlyScope) return result;
             // Этап ejection: префабы вылета и пустые записи вылета категорий. Preflight ничего не создаёт и не пишет.
             Dictionary<string, GameObject> ejecta = EnsureEjecta(create, created);
             if (create)
@@ -359,7 +372,14 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (ClipOverrides.TryGetValue(root.name, out var overrides))
                 foreach (var (field, clip) in overrides) SetClip(settings.FindProperty("_audio"), field, clip);
             DropCopiesOfDefaults(settings, defaults);
-            WritePort(settings, root);
+            if (EjectionCuesOf(host, profile).Any()) WritePort(settings, root);
+            else
+            {
+                SerializedProperty port = settings.FindProperty("_ejectionPort");
+                port.FindPropertyRelative("_anchor").objectReferenceValue = null;
+                port.FindPropertyRelative("_localPosition").vector3Value = Vector3.zero;
+                port.FindPropertyRelative("_localRotation").quaternionValue = Quaternion.identity;
+            }
             WriteEjectionOverrides(settings, root);
             settings.FindProperty("_hintVisual").objectReferenceValue = source.HintVisual;
             settings.FindProperty("_hintProximity").objectReferenceValue = source.HintProximity;
@@ -1228,9 +1248,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Сигналы вылета, которые машина может выдать стволу: патрон — у ручного хода, гильза — у самозарядного.</summary>
-        private static IEnumerable<WS.WeaponCue> EjectionCuesOf(WeaponSystem host)
+        private static IEnumerable<WS.WeaponCue> EjectionCuesOf(WeaponSystem host, WeaponReadinessProfile profile = null)
         {
-            WeaponReadinessProfile profile = host.Profile;
+            profile = profile != null ? profile : host.Profile;
+            if (profile != null && profile.AmmoCapability == WeaponAmmoCapability.MagazineOnly) yield break;
             if (profile != null && profile.PhysicalCapability == WeaponPhysicalCapability.ActionTravel) yield return WS.WeaponCue.ChamberEjected;
             var weapon = host.GetComponent<UxrFirearmWeapon>();
             SerializedProperty cycle = weapon != null ? new SerializedObject(weapon).FindProperty("_triggers.Array.data[0]._cycleType") : null;
@@ -1376,8 +1397,13 @@ namespace VrBattlegrounds.Editor.Gameplay
                 lines.Add($"вылет {cue}: {(ejectile == null ? "нет (заполнит миграция)" : Describe(source, ejectile.Prefab.name, false))}");
             }
             WeaponEjectionPort port = host.EjectionPort;
-            lines.Add(port.IsValid ? $"окно выброса: {port.Anchor.name} {port.LocalPosition.ToString("F3")}" : "окно выброса: НЕТ");
-            if (!port.IsValid) errors.Add(host.name + ": нет окна выброса");
+            bool hasEjection = EjectionCuesOf(host).Any();
+            if (hasEjection)
+            {
+                lines.Add(port.IsValid ? $"окно выброса: {port.Anchor.name} {port.LocalPosition.ToString("F3")}" : "окно выброса: НЕТ");
+                if (!port.IsValid) errors.Add(host.name + ": нет окна выброса");
+            }
+            else lines.Add("вылет не предусмотрен" + (profile != null && profile.AmmoCapability == WeaponAmmoCapability.MagazineOnly ? " MagazineOnly" : ""));
             var haptics = new List<WS.WeaponHapticCue>(TriggerHaptics);
             if (travel) haptics.Insert(0, WS.WeaponHapticCue.ActionRear);
             foreach (WS.WeaponHapticCue cue in haptics)
@@ -1436,15 +1462,15 @@ namespace VrBattlegrounds.Editor.Gameplay
             var failures = new List<string>(); var warnings = new List<string>(); var rows = new List<object>(); var transient = new List<Object>();
             try
             {
-                Dictionary<string, Object> data = EnsureData(false, new List<string>(), transient);
+                Dictionary<string, Object> data = EnsureData(false, new List<string>(), transient, entries);
                 foreach (Entry entry in entries)
                 {
                     GameObject root = null;
                     try
                     {
                         CheckCategory(entry);
-                        if (entry.Wave == "F5")
-                            throw new InvalidOperationException("F5 не переводится: нужен порт учёта без патронника (MagazineOnly) и перенос legacy-помпы — развилка в Details.md.");
+                        if (entry.Wave == "F5" && entry.Profile != MagazineOnlyProfile)
+                            throw new InvalidOperationException("F5 не переводится без явного поддержанного профиля MagazineOnly; legacy-помпа переводится отдельно.");
                         root = PrefabUtility.LoadPrefabContents(entry.Prefab);
                         var errors = new List<string>();
                         Configure(root, ProfileOf(entry, root, data), (WeaponFeedbackDefaults)data[entry.Category.ToString()]);
@@ -1481,12 +1507,12 @@ namespace VrBattlegrounds.Editor.Gameplay
                 foreach (string path in new[] { entry.Prefab, entry.Prefab + ".meta" })
                     backups[path] = File.ReadAllBytes(DiskPath(path));
             // Существующие дефолты категорий: миграция дописывает в них пустой вылет (этап ejection) — откат побайтно.
-            foreach (DefaultsSpec spec in DefaultsSpecs)
+            foreach (DefaultsSpec spec in IsMagazineOnlyScope(entries) ? Array.Empty<DefaultsSpec>() : DefaultsSpecs)
                 if (File.Exists(DiskPath(spec.Path))) backups[spec.Path] = File.ReadAllBytes(DiskPath(spec.Path));
             var created = new List<string>(); var failures = new List<string>(); var warnings = new List<string>(); var rows = new List<object>();
             try
             {
-                Dictionary<string, Object> data = EnsureData(true, created, new List<Object>());
+                Dictionary<string, Object> data = EnsureData(true, created, new List<Object>(), entries);
                 foreach (Entry entry in entries)
                 {
                     Snapshot before = Capture(entry.Prefab, AssetDatabase.LoadAssetAtPath<GameObject>(entry.Prefab));
@@ -1517,7 +1543,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
                 return new Dictionary<string, object> { ["passed"] = false, ["failures"] = new List<string> { exception.Message }, ["rows"] = rows };
             }
-            AssetDatabase.SaveAssets();
+            if (!IsMagazineOnlyScope(entries)) AssetDatabase.SaveAssets();
             return new Dictionary<string, object> { ["passed"] = true, ["failures"] = failures, ["warnings"] = warnings, ["rows"] = rows, ["created"] = created };
         }
 
@@ -1565,9 +1591,13 @@ namespace VrBattlegrounds.Editor.Gameplay
                 asset.GetComponent<WeaponChamberingReminder>() != null || asset.GetComponent<UxrShotgunPump>() != null)
                 yield return entry.Prefab + ": остались прежние компоненты";
             if (!host.TryValidateConfiguration(out string error)) yield return entry.Prefab + ": " + error;
-            if (!host.EjectionPort.IsValid || !host.EjectionPort.Anchor.IsChildOf(asset.transform)) yield return entry.Prefab + ": окно выброса вне ствола";
+            bool hasEjection = EjectionCuesOf(host).Any();
+            if (hasEjection && (!host.EjectionPort.IsValid || !host.EjectionPort.Anchor.IsChildOf(asset.transform)))
+                yield return entry.Prefab + ": окно выброса вне ствола";
+            if (!hasEjection && (host.EjectionPort.Anchor != null || host.EjectionPort.LocalPosition != Vector3.zero ||
+                host.EjectionPort.LocalRotation != Quaternion.identity)) yield return entry.Prefab + ": лишнее окно выброса";
             var defaults = (WeaponFeedbackDefaults)data[entry.Category.ToString()];
-            foreach (WS.WeaponCue cue in new[] { WS.WeaponCue.ChamberEjected, WS.WeaponCue.CasingEjected })
+            foreach (WS.WeaponCue cue in EjectionCuesOf(host))
             {
                 string wanted = EjectionOverrideOf(asset.name, cue);
                 WeaponEjectile own = host.Ejection.For(cue);

@@ -1,6 +1,6 @@
 // Каждый Cancel/Stop/Restore имеет CreateNew+Flush intent. Существующий intent не разрешает replay.
-const string Root = "tasks/bots-fix/reports/cc1-visual-candidate1";
-const string Marker = "bots-fix.cc1-visual-candidate1";
+const string Root = "tasks/bots-fix/reports/cc1-visual-consolidated-20261018-r1";
+const string Marker = "bots-fix.cc1-visual-consolidated-20261018-r1";
 if (!System.IO.File.Exists(Root + "/launch-identity.json"))
     return new { executionCompleted = true, inspectOnly = true, reason = "Нет exact launch receipt; ownership не выводится из stand. Нужен durable inspect." };
 var receipt = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(Root + "/launch-identity.json"));

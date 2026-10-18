@@ -21,6 +21,9 @@ if (!expectHost && Mirror.NetworkClient.active)
     throw new InvalidOperationException("Для Server-ячейки (RH/S8) главный процесс должен быть Dedicated Server без локального клиента.");
 var launch = JsonUtility.FromJson<VrBattlegrounds.EditorTools.TestStand.PlayLaunchStatus>(VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Status());
 if (!launch.Ready || launch.Owner != Owner) throw new InvalidOperationException("Нужен собственный Ready launch.");
+// Сохраняем фактическую квитанцию сервера до cleanup; конфигурация сама по себе её не доказывает.
+var seedReceipt = new { launch.RandomSeedApplied, launch.AppliedRandomSeed,
+    launch.RandomSeedAppliedBeforeBots, launch.RandomSeedAppliedScene };
 var launchEvidence = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(runRoot + "/launch-status.json"));
 if ((string)launchEvidence["RunId"] != launch.RunId) throw new InvalidOperationException("RunId не совпадает с B3.");
 var probe = VrBattlegrounds.DevTools.BotCombatStand.BotStandMatchProbeGate.Active;
@@ -72,6 +75,7 @@ Action<string> write = note => {
     var mode = referee != null ? referee.ActiveGameMode as VrBattlegrounds.GameModes.EliminationMode : null;
     var result = new {
         schema = "cc3-perf-watch@1", state, completed, finishReason, completionKind, owner = Owner, attempt = Attempt, cell = Cell, runId,
+        seed = seedReceipt,
         elapsed = Math.Round(EditorApplication.timeSinceStartup - installed, 3), capSeconds = CapSeconds, noLiveSeconds = NoLiveSeconds,
         expectedBots, botSessionIds, botSessionInstances, firstKey, firstEpoch, refereeId, firstModeId,
         maxRound, observedBeganRounds, scoredRounds, fourRoundsScored, naturalEndProof, naturalEndEvidence,

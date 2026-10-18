@@ -1,4 +1,4 @@
-﻿using Mirror;
+using Mirror;
 using System;
 using VrBattlegrounds.Managers;
 using VrBattlegrounds.GameModes;
@@ -637,6 +637,12 @@ namespace VrBattlegrounds.Player
         [Command]
         public void CmdRequestTeamChange(int newTeamId, int newAvatarId)
         {
+            if (Role != GameRole.Player)
+            {
+                GameLog.Player.Warning($"[PlayerSession] {PlayerName}: запрос смены команды/скина отклонён для роли {Role}.");
+                return;
+            }
+
             if (MapReferee.Instance != null)
             {
                 GameLog.Player.Info($"[PlayerSession] {PlayerName}: Клиент запросил смену команды на {newTeamId} и скина на {newAvatarId}");

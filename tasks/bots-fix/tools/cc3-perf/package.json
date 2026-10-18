@@ -1,6 +1,7 @@
 {
   "package": "bots-fix cc-3: guarded-пакет общей пробы производительности и сети (H8/C8, H10/C10, S8, RH)",
-  "date": "2026-10-16",
+  "date": "2026-10-18",
+  "randomSeed": 20261018,
   "basedOn": "tasks/bots-fix/tools/cc2-director + tasks/bots-fix/tools/cc0-match",
   "spec": "tasks/bots-fix/tools/cc3-perf/acceptance.md",
   "manifest": "tasks/bots-fix/tools/cc3-perf/common-probe-source-manifest.json",
@@ -20,9 +21,9 @@
     "additionalTraceCollectors": "OFF (B7, Blaze/public trace subscribers, shot-tail, NetObserver/NetReceiveTrace не устанавливаются)"
   },
   "cells": [
-    { "cell": "H8", "tree": "Hybrid (accepted origin/dev + pinned common probe)", "role": "host", "clients": 0, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "H8", "tree": "Accepted Hybrid gameplay + own shared technical dependencies + pinned common probe", "role": "host", "clients": 0, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
     { "cell": "C8", "tree": "Candidate (bots-fix cutover + pinned common probe)", "role": "host", "clients": 0, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
-    { "cell": "H10", "tree": "Hybrid (accepted origin/dev + pinned common probe)", "role": "host", "clients": 0, "bots": 10, "humans": 1, "minPlayers": 11, "gameRole": "Player", "readiness": "map-playable" },
+    { "cell": "H10", "tree": "Accepted Hybrid gameplay + own shared technical dependencies + pinned common probe", "role": "host", "clients": 0, "bots": 10, "humans": 1, "minPlayers": 11, "gameRole": "Player", "readiness": "map-playable" },
     { "cell": "C10", "tree": "Candidate (bots-fix cutover + pinned common probe)", "role": "host", "clients": 0, "bots": 10, "humans": 1, "minPlayers": 11, "gameRole": "Player", "readiness": "map-playable" },
     { "cell": "RH", "tree": "Candidate remote-human team control (network 8657/8834)", "role": "server", "clients": 1, "bots": 8, "humans": 1, "minPlayers": 9, "gameRole": "Player", "readiness": "map-playable" },
     { "cell": "S8", "tree": "Candidate passive observer (pending gameplay/network 8657/8836)", "role": "server", "clients": 2, "bots": 8, "humans": 0, "minPlayers": 8, "gameRole": "Spectator", "readiness": "connected", "blockedUntil": "gameplay/network 8657/8836" }
@@ -48,11 +49,11 @@
     { "id": "B4", "payload": "b4-runtime-watch.cs", "repeatable": false, "pass": "installed=true; ждёт 4 scored раунда либо naturalEnd, затем FinishActive(reason) и Cancel" },
     { "id": "B5", "payload": "b5-runtime-status.cs", "repeatable": true, "kind": "read-only compact" },
     { "id": "B6", "payload": "b6-runtime-stop.cs", "repeatable": "только cleanup; неизвестный Cancel не повторяется", "pass": "Idle, editor not playing, CleanupPassed=true, own request удалена, probe final=true, архивы логов скопированы" },
-    { "id": "analyze", "action": "python -I tasks/bots-fix/tools/cc3-perf/analyze.py --attempt attempt-1" }
+    { "id": "manual-evidence-review", "action": "До пользовательской приёмки читать полные raw lifecycle/identity/participant/console/log artifacts вручную; passedGates старого analyze.py не принимать", "legacyAnalyzerForAcceptance": false, "expectationRepair": "После проверки качества пользователем в этой же задаче" }
   ],
   "openDependencies": {
-    "seedBeforeAddBots": "launch-infra/performance 8491/8548 (публичного Seed в PlayLaunchConfiguration пока нет)",
-    "r08Authoring": "weapon-system 8758 (R08.prefab F5 MagazineOnly Unity authoring)",
-    "s8Spectator": "gameplay/network 8657/8836 (режим пассивного наблюдателя S8 в EliminationMode)"
+    "seedBeforeAddBots": "backend merged192eb34f8; B0/B3 configured; actual receipt and fresh equal H/C pending",
+    "r08Authoring": "Unity768/776 historical authoring imported from WIP88c664f09; combined runtime acceptance pending",
+    "s8Spectator": "gameplay WIP2453262ed + network7b67ce051 integrated locally; functional validation pending, S8 remains disabled"
   }
 }

@@ -33,7 +33,7 @@ namespace VrBattlegrounds.GameModes
         {
             // Ожидаем, пока на сервере появится хотя бы 1 игрок, чтобы запустить таймер,
             // и пока у каждого не будет команды режима (этап Б: выбор на карте).
-            return PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Count > 0
+            return PlayersManager.Instance != null && PlayersManager.Instance.Sessions.Any(s => s != null && s.Role == GameRole.Player)
                    && AllPlayersHaveModeTeam();
         }
 

@@ -37,7 +37,7 @@ namespace VrBattlegrounds.Weapons
     /// </para>
     /// </summary>
     [DisallowMultipleComponent, RequireComponent(typeof(UxrFirearmWeapon)), DefaultExecutionOrder(210)]
-    public sealed class WeaponSystem : WeaponReadinessController
+    public sealed class WeaponSystem : WeaponReadinessController, IUxrFirearmReadinessModeProvider
     {
         private const int DrainLimit = 64;
         private const float LedgerRefreshSeconds = 1f;
@@ -142,6 +142,23 @@ namespace VrBattlegrounds.Weapons
         public GameObject HintVisual => _hintVisual;
         public GameObject HintProximity => _hintProximity;
 
+        /// <summary>Конфигурация учёта доступна SDK до Awake, в том числе у выключенного хоста.</summary>
+        public UxrFirearmReadinessModeSourceResult GetReadinessMode(int triggerIndex, out UxrFirearmReadinessMode mode)
+        {
+            mode = default;
+            if (triggerIndex != _triggerIndex) return UxrFirearmReadinessModeSourceResult.NotHandled;
+            if (_triggerIndex < 0 || _profile == null || !_profile.TryValidate(out _) ||
+                _profile.AmmoCapability == WeaponAmmoCapability.LegacyAmmo)
+                return UxrFirearmReadinessModeSourceResult.Invalid;
+            mode = _profile.AmmoCapability == WeaponAmmoCapability.MagazineOnly
+                ? UxrFirearmReadinessMode.MagazineOnly : UxrFirearmReadinessMode.Chambered;
+            return UxrFirearmReadinessModeSourceResult.Configured;
+        }
+
+        /// <summary>Поправку принимает только клиент с валидной авторской конфигурацией спуска.</summary>
+        public bool CanAcceptReadinessCorrection(int triggerIndex) =>
+            GetReadinessMode(triggerIndex, out _) == UxrFirearmReadinessModeSourceResult.Configured && !Mirror.NetworkServer.active;
+
         // ── Диагностика (панель, пробы) ─────────────────────────────────────────────────────
 
         /// <summary>Механическое состояние по учёту (план п. 3.3).</summary>
@@ -220,6 +237,8 @@ namespace VrBattlegrounds.Weapons
         {
             if (_prepared) Teardown();
             _weapon = GetComponent<UxrFirearmWeapon>();
+            // SDK patch 86: даже невалидный новый хост закрывает прежний кеш legacy до отказа установки порта.
+            if (_weapon != null) _weapon.RevalidateReadinessConfiguration(_triggerIndex);
             if (!TryValidate(out error))
             {
                 if (log) GameLog.WeaponSystem.Error($"[WeaponSystem] {name}: не настроен — {error}", this);
@@ -228,7 +247,9 @@ namespace VrBattlegrounds.Weapons
             if (_port == null)
             {
                 _ledger = new WeaponLedgerReader(_weapon, _triggerIndex);
-                _port = new UxrReadinessLedgerPort(this, _weapon, _triggerIndex, _rig, _ledger);
+                UxrFirearmReadinessMode mode = _profile.AmmoCapability == WeaponAmmoCapability.MagazineOnly
+                    ? UxrFirearmReadinessMode.MagazineOnly : UxrFirearmReadinessMode.Chambered;
+                _port = new UxrReadinessLedgerPort(this, _weapon, _triggerIndex, _rig, _ledger, mode);
                 _context = new WeaponContextSensor(_weapon, this, _triggerIndex);
                 _trigger = new WeaponTriggerSensor(_triggerIndex);
                 _magazine = new WeaponMagazineSensor(_ledger);
@@ -330,7 +351,8 @@ namespace VrBattlegrounds.Weapons
                 fireMode = cycle == UxrShotCycle.ManualReload ? WS.WeaponFireMode.Manual :
                     cycle == UxrShotCycle.FullyAutomatic ? WS.WeaponFireMode.Auto : WS.WeaponFireMode.Semi;
             else GameLog.WeaponSystem.Warning($"[WeaponSystem] {name}: режим огня SDK не прочитан — считаю Semi.", this);
-            WS.WeaponAmmoCapability ammo = fixedStore ? WS.WeaponAmmoCapability.FixedStoreChamber : WS.WeaponAmmoCapability.DetachableMagazineChamber;
+            WS.WeaponAmmoCapability ammo = _profile.AmmoCapability == WeaponAmmoCapability.MagazineOnly ? WS.WeaponAmmoCapability.MagazineOnly :
+                fixedStore ? WS.WeaponAmmoCapability.FixedStoreChamber : WS.WeaponAmmoCapability.DetachableMagazineChamber;
             WS.WeaponChamberPolicy policy = _profile.ChamberPolicy == WeaponChamberPolicy.ManualReturn ? WS.WeaponChamberPolicy.ManualReturn :
                 _profile.ChamberPolicy == WeaponChamberPolicy.AutoOnMagazineInsert ? WS.WeaponChamberPolicy.AutoOnMagazineInsert :
                 WS.WeaponChamberPolicy.TriggerAssistPrepareOnly;

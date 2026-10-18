@@ -196,6 +196,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 return StandReply.Ok("e2e-started");
 #endif
             }
+            if (request.Action == "request-team-change") return RequestTeamChange(request);
             if (request.Action == "disconnect" || request.Action == "reconnect")
             {
                 if (!EditorApplication.isPlaying) return StandReply.Error("not-playing");
@@ -231,6 +232,32 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 exists = false;
             }
             return StandReply.Ok(request.Action, request.MarkerName, MarkerCount(), exists);
+        }
+
+        private static StandReply RequestTeamChange(StandRequest request)
+        {
+            if (!EditorApplication.isPlaying || !DebugBootstrapGate.ManagedLaunchActive || _run == null || _run.Phase != "running")
+                return StandReply.Error("managed-launch-required");
+            if (NetworkServer.active && !NetworkClient.active) return StandReply.Error("server-only-unsupported");
+            if (!NetworkClient.active || !NetworkClient.isConnected || NetworkClient.connection == null)
+                return StandReply.Error("client-not-connected");
+            if (!NetworkClient.ready) return StandReply.Error("client-not-ready");
+            if (request.ExpectedConnectionEpoch != _connectionEpoch) return StandReply.Error("wrong-connection-epoch");
+            var session = PlayerSession.LocalSession;
+            if (session == null) return StandReply.Error("local-session-unavailable");
+            if (NetworkClient.localPlayer != session.netIdentity || !session.isClient || !session.isLocalPlayer || !session.isOwned ||
+                session.netId == 0 || session.connectionToServer != NetworkClient.connection)
+                return StandReply.Error("local-session-not-owned");
+            if (session.Role != GameRole.Player) return StandReply.Error("player-role-required");
+            if (session.ActiveAvatarNetId != request.ExpectedAvatarNetId) return StandReply.Error("wrong-avatar");
+            var avatar = session.ActiveAvatar;
+            if (avatar == null || avatar.netId != request.ExpectedAvatarNetId) return StandReply.Error("avatar-unavailable");
+
+            // Тот же клиентский Command, что у планшета; принятие запроса решают серверные игровые правила.
+            session.CmdRequestTeamChange(request.NewTeamId, request.NewAvatarId);
+            var reply = StandReply.Ok("team-change-requested");
+            reply.Message = "Запрос смены команды/скина отправлен; принятие сервером не подтверждено.";
+            return reply;
         }
 
         private static int MarkerCount()

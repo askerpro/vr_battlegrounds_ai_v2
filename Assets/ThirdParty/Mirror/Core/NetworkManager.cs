@@ -1218,8 +1218,15 @@ namespace Mirror
             // set connection to authenticated
             NetworkClient.connection.isAuthenticated = true;
 
+            // VR Battlegrounds patch 6: прямой запуск карты Host может загрузить networkSceneName
+            // вместо настроенной onlineScene. Эта сцена уже общая для сервера и local client;
+            // новой клиентской загрузки и OnClientSceneChanged при первом StartHost не будет.
+            bool localHostAlreadyLoaded = mode == NetworkManagerMode.Host && NetworkClient.activeHost &&
+                                          !NetworkServer.isLoadingScene && !NetworkClient.isLoadingScene &&
+                                          !string.IsNullOrWhiteSpace(networkSceneName) && Utils.IsSceneActive(networkSceneName);
+
             // Set flag to wait for scene change?
-            if (string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene))
+            if (string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene) || localHostAlreadyLoaded)
             {
                 clientLoadedScene = false;
             }

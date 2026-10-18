@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mirror;
@@ -340,7 +340,7 @@ namespace VrBattlegrounds.GameModes
         private bool IsPlayersReady()
         {
             // Минимум — из данных этого режима, а не из выбора матча в SessionManager.
-            int currentPlayers = PlayerRoster.GetAllPlayers().Count();
+            int currentPlayers = PlayerRoster.GetAllPlayers().Count(s => s != null && s.Role == GameRole.Player);
             if (currentPlayers < MinPlayersToStart) return false;
 
             // Этап Б: команду матча игрок выбирает сам на карте (или её выдаёт админ).
@@ -372,7 +372,7 @@ namespace VrBattlegrounds.GameModes
             // новые в матче: до старта раунда игрок либо выбывший, либо в своей зоне.
             foreach (PlayerSession session in PlayerRoster.GetAllPlayers().ToList())
             {
-                if (session != null) ServerAdmitAvatar(session.ActiveAvatar, continuesPrevious: false);
+                if (session != null && session.Role == GameRole.Player) ServerAdmitAvatar(session.ActiveAvatar, continuesPrevious: false);
             }
         }
 

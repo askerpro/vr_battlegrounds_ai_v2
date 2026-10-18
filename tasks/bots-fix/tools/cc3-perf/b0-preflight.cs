@@ -3,6 +3,7 @@ const string Root = "tasks/bots-fix/reports/cc3-perf";
 const string Attempt = "attempt-1";
 const string Cell = "C8"; // H8 | C8 | H10 | C10 | RH | S8
 const string Owner = "bots-fix.cc3-perf";
+const int RandomSeed = 20261018; // Одно зерно для всех сравниваемых H/C/RH/S8 ячеек.
 const string ScenePath = "Assets/Scenes/Maps/TestMap1.unity";
 const bool AllowSpectatorCell = false; // До закрытия gameplay/network 8657/8836 ячейка S8 заблокирована.
 string runRoot = Root + "/runtime/" + Attempt + "/" + Cell;
@@ -42,7 +43,8 @@ var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
     Enabled = true, Role = role, ClientCount = clients, SceneSource = "scene", ScenePath = ScenePath,
     ModeId = "elimination", AutoGoLive = true, MinPlayers = humans + bots, BotCount = bots,
     PauseOnFocusLoss = false, HostIsAdmin = false, Readiness = spectators ? "connected" : "map-playable",
-    GameRole = spectators ? "Spectator" : "Player", NetworkPortPolicy = "auto", TimeoutSeconds = 180
+    GameRole = spectators ? "Spectator" : "Player", NetworkPortPolicy = "auto", TimeoutSeconds = 180,
+    UseRandomSeed = true, RandomSeed = RandomSeed
 };
 object planEvidence = null;
 string planHash = null;
@@ -71,6 +73,6 @@ System.IO.File.WriteAllText(reportPath, Newtonsoft.Json.JsonConvert.SerializeObj
     role, clients, bots, humans, spectators, configuration = config, planHash, plan = planEvidence, launchState,
     blockers, dirtyScenes, probeType = probeType.FullName, writeSeconds = probeShape.WriteSeconds,
     finishMethod = finishSignature.Method.Name, finishParameters = finishSignature.Method.GetParameters().Length, requestPath,
-    additionalTrace = "OFF", seed = "PENDING_8548_OR_NOT_CONTROLLED"
+    additionalTrace = "OFF", seed = new { enabled = config.UseRandomSeed, value = config.RandomSeed, runtimeReceipt = "B5 после запуска" }
 }, Newtonsoft.Json.Formatting.Indented).Replace("\r\n", "\n"), new System.Text.UTF8Encoding(false));
 return new { executionCompleted = true, passed = blockers.Count == 0, cell = Cell, blockers = blockers.Take(10).ToArray(), plan = planEvidence, reportPath };

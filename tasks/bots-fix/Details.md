@@ -1,6 +1,11 @@
 # Боты: полный анализ и архитектурные решения
 
-Владелец: `bots`, задача `bots-fix`, Codex. Текущий worktree: `F:/CodexWorktrees/bots/Vr_Battlegrounds_ai`.
+> Сверка 2026-10-18: текущие состояние, WIP-зависимости и порядок завершения —
+> в [completion-plan.md](completion-plan.md) и [Readme.md](Readme.md).
+> Этот разбор сохраняет историю проекта: ожидания вливания seed/арсенала/PlayLaunch
+> и названия прежних BotAvatarSource/IsBotControlled не описывают текущие blockers/API.
+
+Владелец: `bots`, задача `bots-fix`, Codex. Текущий worktree: `F:/CodexWorktrees/bots`.
 Исторический анализ зафиксирован 2026-10-08. Текущий статус — [Readme.md](Readme.md), машинный план — [plan.json](plan.json).
 Возобновление и свежие проверки 2026-10-14 — [changelog](changelog/2026-10-14-codex-resume.md);
 текущая архитектура — [player-flow-plan.md](player-flow-plan.md), реализация — [cc1-plan.md](cc1-plan.md).

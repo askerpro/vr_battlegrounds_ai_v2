@@ -243,7 +243,22 @@ namespace UltimateXR.Core.Unique
                                     Action<T>                       onRegistered,
                                     bool                            recursive)
         {
-            T[] components = recursive ? _targetComponent.GetComponentsInChildren<T>(true) : new[] { _targetComponent };
+            // VR Battlegrounds patch 88: публичный API сохраняет прежний выбор участников.
+            CombineUniqueId(guid, getImplementer, assignId, onChanging, onChanged, onRegistering, onRegistered, recursive, null);
+        }
+
+        // VR Battlegrounds patch 88: tracked-путь передаёт набор, сохранённый владельцем до callbacks.
+        internal void CombineUniqueId(Guid                            guid,
+                                      Func<T, UxrUniqueIdImplementer> getImplementer,
+                                      Action<T, Guid>                 assignId,
+                                      Action<T, Guid, Guid>           onChanging,
+                                      Action<T, Guid, Guid>           onChanged,
+                                      Action<T>                       onRegistering,
+                                      Action<T>                       onRegistered,
+                                      bool                            recursive,
+                                      T[]                             registrationComponents)
+        {
+            T[] components = registrationComponents ?? (recursive ? _targetComponent.GetComponentsInChildren<T>(true) : new[] { _targetComponent });
 
             foreach (T unique in components)
             {

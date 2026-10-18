@@ -293,7 +293,8 @@ namespace VrBattlegrounds.Weapons.Core
                 // (помпа, болт) гильза вылетает при оттяжке после выстрела — учёт SDK стреляную гильзу в патроннике не
                 // хранит (ManualReload снимает C), поэтому здесь сигнала нет; см. tasks/weapon-system/changelog/2026-10-09-ejection.md.
                 case LedgerOp.Shot:
-                    if (_axes.FireMode != WeaponFireMode.Manual) _out.Cue(WeaponCue.CasingEjected, WeaponNotReadyReason.None);
+                    if (_axes.Ammo != WeaponAmmoCapability.MagazineOnly && _axes.FireMode != WeaponFireMode.Manual)
+                        _out.Cue(WeaponCue.CasingEjected, WeaponNotReadyReason.None);
                     break;
             }
         }

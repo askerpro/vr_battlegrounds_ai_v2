@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrFirearmWeapon.StateSave.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -39,7 +39,14 @@ namespace UltimateXR.Mechanics.Weapons
                 bool hasLedger = false;
                 foreach (var runtime in _runtimeTriggers.Values) if (runtime.Readiness?.ReadinessInitialized == true) { hasLedger = true; break; }
                 // Prospective values читаются локально. Неполный fixed snapshot не публикует C без M.
+                // VR Battlegrounds patch 82: даже частичное чтение не меняет живые runtime entries до проверки.
                 var prospective = _runtimeTriggers;
+                if (isReading)
+                {
+                    prospective = new System.Collections.Generic.Dictionary<int, RuntimeTriggerInfo>();
+                    foreach (var pair in _runtimeTriggers)
+                        prospective.Add(pair.Key, pair.Value != null ? (RuntimeTriggerInfo)pair.Value.Clone() : null);
+                }
                 SerializeStateValue(level, hasLedger ? options | UxrStateSaveOptions.DontCheckCache : options, nameof(_runtimeTriggers), ref prospective);
                 var fixedSnapshots = CaptureFixedAmmoSnapshots();
                 if (stateSerializationVersion >= 1)
@@ -48,11 +55,15 @@ namespace UltimateXR.Mechanics.Weapons
                     throw new System.InvalidOperationException("Fixed ammo store requires an atomic snapshot.");
                 if (isReading)
                 {
-                    if (!ValidateFixedAmmoSnapshots(prospective, fixedSnapshots))
+                    if (!ValidateReadinessSnapshot(prospective) || !ValidateFixedAmmoSnapshots(prospective, fixedSnapshots))
                         throw new System.InvalidOperationException("Invalid/partial fixed ammo snapshot.");
                     _runtimeTriggers = prospective;
                     foreach (var snapshot in fixedSnapshots)
                         snapshot.Store.WriteLedgerRounds(this, snapshot.TriggerIndex, snapshot.Rounds, false);
+                    // Sticky-защита detachable магазина появляется только после принятого снимка, без M write/событий.
+                    for (int trigger = 0; trigger < TriggerCount; trigger++)
+                        if (TryGetReadinessMode(trigger, out _) && TryGetTriggerMagazineAnchor(trigger, out var anchor))
+                            MarkLedgerStore(anchor.CurrentPlacedObject);
                 }
             }
             }

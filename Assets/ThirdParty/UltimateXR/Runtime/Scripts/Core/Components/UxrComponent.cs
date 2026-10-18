@@ -408,7 +408,22 @@ namespace UltimateXR.Core.Components
         /// <inheritdoc />
         public void CombineUniqueId(Guid guid, bool recursive = true)
         {
+            // VR Battlegrounds patch 88: публичный путь сохраняет прежний обход и API.
+            CombineUniqueId(guid, recursive, null);
+        }
+
+        // VR Battlegrounds patch 88: квитанция сохраняет весь набор до регистрационных callbacks.
+        internal void CombineUniqueId(Guid guid, bool recursive, List<UxrComponent> registrationReceipt)
+        {
             if (_runtimeIdentityPrepared || _runtimeIdentityRetired) throw new InvalidOperationException("UniqueId.ImmutablePreparedOrRetired");
+            UxrComponent[] registrationComponents = null;
+            if (registrationReceipt != null)
+            {
+                EnsureRegistrationAlive();
+                registrationComponents = recursive ? GetComponentsInChildren<UxrComponent>(true) : new[] { this };
+                registrationReceipt.AddRange(registrationComponents);
+            }
+
             UniqueIdImplementer.CombineUniqueId(guid,
                                                 c => c.UniqueIdImplementer,
                                                 (c, id) => c.UniqueId = id,
@@ -416,11 +431,13 @@ namespace UltimateXR.Core.Components
                                                 (c, oldId, newId) => c.OnUniqueIdChanged(oldId, newId),
                                                 c => c.OnRegistering(),
                                                 c => c.OnRegistered(),
-                                                recursive);
+                                                recursive,
+                                                registrationComponents);
 
             if (recursive)
             {
-                UxrComponent[] childComponents = GetComponentsInChildren<UxrComponent>(true);
+                // VR Battlegrounds patch 88: StateSave/StateSync используют тот же фиксированный набор, что и UID.
+                UxrComponent[] childComponents = registrationComponents ?? GetComponentsInChildren<UxrComponent>(true);
 
                 foreach (UxrComponent c in childComponents)
                 {

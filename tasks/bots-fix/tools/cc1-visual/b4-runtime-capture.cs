@@ -1,6 +1,6 @@
 // Новый G-кандидат: максимум 2 exact-frame пары. Не восстанавливает snapshot738.
-const string Root = "tasks/bots-fix/reports/cc1-visual-candidate1";
-const string Marker = "bots-fix.cc1-visual-candidate1";
+const string Root = "tasks/bots-fix/reports/cc1-visual-consolidated-20261018-r1";
+const string Marker = "bots-fix.cc1-visual-consolidated-20261018-r1";
 if (AppDomain.CurrentDomain.GetData(Marker) != null || System.IO.File.Exists(Root + "/visual-state.json") || System.IO.File.Exists(Root + "/visual-start-intent.json"))
     return new { executionCompleted = true, refused = true, reason = "Попытка существует: только B5, не replay." };
 if (!EditorApplication.isPlaying || !Mirror.NetworkServer.active) throw new InvalidOperationException("Нужен свой Play стенда.");
@@ -30,6 +30,11 @@ using (var sha = System.Security.Cryptography.SHA256.Create())
 var records = new List<Dictionary<string, object>>();
 var jobs = new Queue<Dictionary<string, object>>();
 var seen = new HashSet<int>();
+// Сохраняем фактическую пару создания до RunCases; runtime-клон не обязан иметь Editor prefab source.
+var weaponSources = new Dictionary<int, Tuple<GameObject, GameObject>>();
+Action<GameObject, GameObject> onInstanceCreated = (prefab, instance) => {
+    if (instance != null) weaponSources[instance.GetInstanceID()] = Tuple.Create(prefab, instance);
+};
 var state = new Dictionary<string, object> { { "state", "starting" }, { "root", Root }, { "ownerDecision", "UNKNOWN" },
     { "sourceManifestSha256", manifestHash }, { "captures", records }, { "runId", null }, { "detached", false },
     { "launchRunId", launchRunId }, { "warmupRunId", warmup["runId"] },
@@ -81,11 +86,26 @@ Action sample = () => {
     string epoch = player.GetInstanceID() == firstBody ? "old" : "new";
     string folder = Root + "/pairs/" + epoch + "-frame-" + frame;
     System.IO.Directory.CreateDirectory(folder);
+    Tuple<GameObject, GameObject> creation;
+    bool observedCreation = weaponSources.TryGetValue(gunner.Firearm.gameObject.GetInstanceID(), out creation) &&
+        object.ReferenceEquals(creation.Item2, gunner.Firearm.gameObject);
+    var weaponComponent = gunner.Firearm.GetComponent<VrBattlegrounds.Arsenal.WeaponComponent>();
+    var weaponInfo = weaponComponent != null ? weaponComponent.WeaponData : null;
+    var driver = player.GetComponent<VrBattlegrounds.Bots.BotAvatarDriver>();
     var entry = new Dictionary<string, object> { { "epoch", epoch }, { "frame", frame }, { "gameTime", Time.time },
         { "t", Time.time - caseStart }, { "bodyId", player.GetInstanceID() }, { "bodyNetId", player.netId },
         { "sessionNetId", player.SessionNetId }, { "avatarSource", identity(player.SourcePrefab) }, { "avatarPrefabGuid", avatar.PrefabGuid },
         { "weaponId", gunner.Firearm.GetInstanceID() }, { "weaponUniqueId", gunner.Firearm.UniqueId.ToString() },
-        { "weaponSource", identity(PrefabUtility.GetCorrespondingObjectFromSource(gunner.Firearm.gameObject)) },
+        { "weaponSource", identity(observedCreation ? creation.Item1 : null) },
+        { "weaponSourceEvidence", observedCreation ? "NetworkUxrIdentity.InstanceCreated/exact-instance" : "UNKNOWN: creation not observed" },
+        { "weaponSourceInstanceId", observedCreation && creation.Item1 != null ? (int?)creation.Item1.GetInstanceID() : null },
+        { "weaponPrefabId", ((UltimateXR.Core.Unique.IUxrUniqueId)gunner.Firearm).UnityPrefabId },
+        { "weaponCard", identity(weaponInfo) },
+        { "weaponRegistrySource", identity(weaponInfo != null ? weaponInfo.WeaponPrefab : null) },
+        { "weaponSourceMatchesRegistry", observedCreation && weaponInfo != null ?
+            (bool?)object.ReferenceEquals(creation.Item1, weaponInfo.WeaponPrefab) : null },
+        { "handPoseSelection", driver != null ? (object)new { driver.HandPoseSelectionFrame,
+            driver.LeftHandPoseSelected, driver.RightHandPoseSelected } : null },
         { "grabbableId", grip.GetInstanceID() }, { "grabbableUniqueId", grip.UniqueId.ToString() },
         { "sourceManifestSha256", manifestHash }, { "hands", new List<object>() }, { "ownerDecision", "UNKNOWN" }, { "folder", folder },
         { "distancePolicy", "priority-only/not-equivalent-to-owner-reference-points" } };
@@ -143,6 +163,8 @@ Action detach = null;
 AssemblyReloadEvents.AssemblyReloadCallback onReload = null;
 Action<PlayModeStateChange> onPlay = null;
 detach = () => {
+    VrBattlegrounds.Network.NetworkUxrIdentity.InstanceCreated -= onInstanceCreated;
+    weaponSources.Clear();
     UltimateXR.Core.UxrManager.AvatarsUpdated -= sample;
     VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseStarted -= onStarted;
     VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseFinished -= onFinished;
@@ -213,6 +235,7 @@ Action cleanup = () => {
     detach(); write();
 };
 AppDomain.CurrentDomain.SetData(Marker + ".detach", cleanup);
+VrBattlegrounds.Network.NetworkUxrIdentity.InstanceCreated += onInstanceCreated;
 UltimateXR.Core.UxrManager.AvatarsUpdated += sample;
 VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseStarted += onStarted;
 VrBattlegrounds.DevTools.BotCombatStand.BotCombatStand.CaseFinished += onFinished;

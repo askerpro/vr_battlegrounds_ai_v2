@@ -1,10 +1,54 @@
 {
   "schema": "cc3-common-perf-probe-source@2",
   "date": "2026-10-16",
-  "status": "PREPARED_OFFLINE_VERIFIED_AWAITING_EXTERNAL_GRANTS",
+  "status": "AWAITING_COMMON36_CANDIDATE_CHECKPOINT",
+  "currentCompositionPlan": "tasks/bots-fix/completion-plan.md",
   "owner": "bots-fix",
-  "acceptedBase": "1b2f88612f563172db6c57249feae2f9d46d0491",
-  "candidateReference": "4210b8ed644a2ecbdddad9af38f4b1ee2298c403",
+  "acceptedBase": "50c27ae71da47d43245cbd4eb1ba6747a2a7e44c",
+  "candidateReference": null,
+  "candidateSourceTree": null,
+  "plannedCommon36": {
+    "counts": { "assetsDiff": 87, "common": 36, "cutover": 48, "probe": 2, "excludedTests": 1, "tools": 12 },
+    "addedCommonPaths": [
+      "Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs",
+      "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs"
+    ],
+    "input": null,
+    "hybrid": null,
+    "candidate": null,
+    "inventory": null,
+    "scope": "Только подготовка следующего пакета. Companion stand общ для H/C; perf expectations не меняются."
+  },
+  "historicalCommon34Reference": {
+    "sourceCandidate": "53e3a85fd6c2f88d7593ffe2a9aa94bd5e9eb1a2",
+    "sourceTree": "ac321d34695ffe76c7ae269bae994670d4adec22",
+    "hybrid": "1a20c093aca8075b0ff772685510f46ccf119883",
+    "hybridTree": "a6991b2ff5b38b00649ccd85afc7d9fd9d166dc3",
+    "candidate": "1b8497e673cfc4397a6c03412067e436f9a7e0bd",
+    "candidateTree": "403351049f3c1ff5766fe543779420106ee39f49",
+    "inventory": "tasks/bots-fix/reports/cc3-perf-inputs/sdk88-mirror7-attempt-1.json",
+    "inventorySha256": "8e7cadd4ed425d3b97a30c64d632d48a6bb8ccdd71ad71d6caffded970b13afc",
+    "counts": { "assetsDiff": 85, "common": 34, "cutover": 48, "probe": 2, "excludedTests": 1, "tools": 12 },
+    "operations": { "A": 18, "M": 53, "D": 14 },
+    "lfBlobs": 82,
+    "containsCR": false,
+    "exactCutover48": true,
+    "testsFromBase": true,
+    "headAndIndexUnchanged": true,
+    "compilation": null,
+    "runtime": null,
+    "scope": "Историческая техническая упаковка common34, не current common36 source и не perf acceptance. Ссылки дописаны после checkpoint; frozen inputs содержат tool/docs blobs из прежнего C*."
+  },
+  "historicalCommon30Reference": {
+    "hybrid": "d5933476e3982262e6941b6f0b9aad699b8206bd",
+    "candidate": "e1d95e8c2ffa00da3e3df2d6c1f68d27dc512308",
+    "scope": "Только офлайн-компиляция; runtime не выполнялся. Не доказательство для common36 inputs."
+  },
+  "historicalReference": {
+    "acceptedBase": "1b2f88612f563172db6c57249feae2f9d46d0491",
+    "candidate": "4210b8ed644a2ecbdddad9af38f4b1ee2298c403"
+  },
+  "composition": "build-inputs.py фиксирует C* и точный inventory; H = accepted Hybrid gameplay + общие собственные technical dependencies, C = H + cutover. Целое H не считается принятым.",
   "sourceCommit": "2fa11b2767f23d4c709f739deb629fd378307c97",
   "files": [
     {
@@ -26,10 +70,11 @@
     "materializedInTaskFolder": false,
     "identicalBytesRequiredForHybridAndCandidate": true,
     "singleDeclarationRequired": true,
-    "sdkCopiesAllowed": false,
+    "sdkCopiesAllowed": true,
+    "sharedSdkPolicy": "Только точные собственные frozen C* blobs SDK81/82/84/86/87/88, Mirror6/7 и companion stand, одинаковые для H и C. Текущий common36 C* PENDING. Не чтение чужого checkout и не исторический whole-tree overlay.",
     "borrowedComponents": [],
     "wholeHistoricalCommitImportAllowed": false,
-    "overlayScope": "Только эти own probe paths и own tools/cc3-perf; gameplay C задаётся отдельным manifest, H остаётся accepted Hybrid из origin/dev"
+    "overlayScope": "common36 + probe2 + одинаковые cc3 tools; C дополнительно cutover48. Legacy frozen77 закреплён на 48b27cf2bb0c9eb2dc646cc8f058bdd9d0eaf5a0; прежние восемь явных common M плюс Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs и Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs расширяют Assets scope до frozen87. BotAuthorityTests оставлен из B в обоих perf inputs; исходный worktree не меняется. Точный состав будущего input фиксирует generated inventory после нового checkpoint."
   },
   "assembly": {
     "name": "VrBattlegrounds.BotCombatStand",
@@ -98,9 +143,9 @@
   "pending": {
     "exactHybridSemanticBuild": "DONE_OFFLINE_PASS",
     "guardedCc3Payload": "DONE_OFFLINE_PASS (b0/b3/b4/b5/b6 C#6 + compile-check.ps1 + analyze.py)",
-    "seedBeforeAddBots8548": "PENDING_OWNER_ROUTE; no Seed field in PlayLaunchConfiguration",
-    "r08Authoring8758": "PENDING_WEAPON_SYSTEM_UNITY_AUTHORING (R08.prefab F5 MagazineOnly SDK82)",
-    "s8Spectator8657_8836": "PENDING_GAMEPLAY_NETWORK_CONTRACT (Role.Spectator vs passive observer in EliminationMode)",
+    "seedBeforeAddBots8548": "BACKEND_MERGED_192eb34f8; configured20261018; actual equal H/C receipt pending",
+    "r08Authoring8758": "IMPORTED_WIP_88c664f09_UNITY768_776; combined runtime acceptance pending",
+    "s8Spectator8657_8836": "LOCAL_SOURCE_INTEGRATED; functional runtime pending; AllowSpectatorCell=false",
     "performance8367": "PENDING",
     "hardwareQualityUrpNavmesh": null,
     "runtimeRecorderAndMarkerValidity": null,

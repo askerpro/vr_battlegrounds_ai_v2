@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="UxrStandardAvatarController.cs" company="VRMADA">
 //   Copyright (c) VRMADA, All rights reserved.
 // </copyright>
@@ -313,6 +313,70 @@ namespace UltimateXR.Avatar.Controllers
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        ///     VR Battlegrounds patch 84: выбирает позу внешнего аватара по фактическому хвату без обработки ввода.
+        ///     Вызывается автором аватара после Manipulation; кости затем обновляет штатная стадия Animation.
+        /// </summary>
+        /// <param name="handSide">Сторона кисти</param>
+        /// <returns>Удалось выбрать существующую runtime-позу; пустая или отсутствующая поза даёт false</returns>
+        public bool UpdateExternalHandPoseFromGrabState(UxrHandSide handSide)
+        {
+            if (Avatar == null || Avatar.AvatarMode != UxrAvatarMode.UpdateExternally ||
+                (handSide != UxrHandSide.Left && handSide != UxrHandSide.Right) ||
+                (UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync))
+            {
+                return false;
+            }
+
+            HandInfo handInfo = GetHandInfo(handSide);
+            UxrGrabber grabber = Avatar.GetGrabber(handSide);
+            UxrGrabbableObject grabbedObject = grabber != null ? grabber.GrabbedObject : null;
+            string poseName;
+            float blendValue = 0.0f;
+
+            if (grabbedObject != null)
+            {
+                // Берём запись реальной точки хвата через SDK, включая GUID-цепочку аватара.
+                // Event override не годится: при отсутствии grab-event его setter ничего не сохраняет.
+                string authoredPoseName = UxrGrabManager.Instance.GetOverrideGrabPoseName(grabber, grabbedObject);
+                poseName = string.IsNullOrEmpty(authoredPoseName) ? handInfo.InitialHandGrabPoseName : authoredPoseName;
+                UxrRuntimeHandPose grabPose = !string.IsNullOrEmpty(poseName) ? Avatar.GetRuntimeHandPose(poseName) : null;
+
+                if (grabPose == null)
+                {
+                    // Невалидный authored override не маскируем другой позой; caller сообщает отказ один раз.
+                    return false;
+                }
+
+                blendValue = !string.IsNullOrEmpty(authoredPoseName) && grabPose.PoseType == UxrHandPoseType.Blend
+                                 ? UxrGrabManager.Instance.GetOverrideGrabPoseBlendValue(grabber, grabbedObject)
+                                 : -1.0f;
+            }
+            else
+            {
+                // Release мог прийти до подписки контроллера: удаляем оставшиеся данные предыдущего хвата.
+                handInfo.GrabBlendValue = -1.0f;
+                if (handSide == UxrHandSide.Left)
+                {
+                    LeftHandGrabPoseNameOverride = null;
+                    poseName = LeftHandDefaultPoseNameOverride ?? Avatar.DefaultHandPoseName;
+                }
+                else
+                {
+                    RightHandGrabPoseNameOverride = null;
+                    poseName = RightHandDefaultPoseNameOverride ?? Avatar.DefaultHandPoseName;
+                }
+
+                if (string.IsNullOrEmpty(poseName) || Avatar.GetRuntimeHandPose(poseName) == null)
+                {
+                    return false;
+                }
+            }
+
+            // Единственный штатный setter сам синхронизирует смену имени/blend через BeginSync/EndSync.
+            return Avatar.SetCurrentHandPose(handSide, poseName, blendValue);
+        }
 
         /// <summary>
         ///     Solves the body IK using the current headset and controller positions.

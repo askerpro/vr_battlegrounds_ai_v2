@@ -132,7 +132,7 @@ namespace VrBattlegrounds.Network
             if (PlayersManager.Instance != null && AvatarManager.Instance != null)
             {
                 var session = PlayersManager.Instance.GetSession(conn);
-                if (session != null && session.ActiveAvatar == null)
+                if (session != null && session.Role == GameRole.Player && session.ActiveAvatar == null)
                 {
                     // Спавним новый физический аватар на основе существующих данных (TeamIndex / AvatarIndex)
                     AvatarManager.Instance.ChangeAvatar(conn, session, session.TeamIndex, session.AvatarIndex);
@@ -223,7 +223,14 @@ namespace VrBattlegrounds.Network
 
         private void OnSpectatorConnect(NetworkConnectionToClient conn, SpectatorConnectMessage msg)
         {
-            GameLog.Network.Warning($"[GameNetworkManager] Подключение Spectator (Device: {msg.deviceType}, Admin: {msg.isAdmin}) пока не реализовано.");
+            if (PlayersManager.Instance != null)
+            {
+                PlayersManager.Instance.HandleSpectatorConnect(conn, msg);
+            }
+            else
+            {
+                GameLog.Error("[GameNetworkManager] PlayersManager is missing! Cannot handle spectator connection.");
+            }
         }
 
     }

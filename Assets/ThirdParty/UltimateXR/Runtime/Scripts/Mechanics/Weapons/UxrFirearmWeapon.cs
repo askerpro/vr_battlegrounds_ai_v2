@@ -307,7 +307,8 @@ namespace UltimateXR.Mechanics.Weapons
             {
                 if (!_runtimeTriggers.ContainsKey(i))
                 {
-                    _runtimeTriggers.Add(i, new RuntimeTriggerInfo());
+                    // VR Battlegrounds patch 82: тот же начальный runtime используется cold ingress до Awake.
+                    _runtimeTriggers.Add(i, CreateReadinessRuntimeInfo(i));
                 }
             }
         }
@@ -395,12 +396,13 @@ namespace UltimateXR.Mechanics.Weapons
 
                 if (_runtimeTriggers.TryGetValue(i, out RuntimeTriggerInfo info))
                 {
-                    info.LastShotTimer = -1.0f;
-                    if (info.Readiness?.ReadinessInitialized != true) info.HasReloaded = true;
-
-                    if (trigger.TriggerTransform)
+                    // VR Battlegrounds patch 82: Start не стирает timer/позу/флаги принятого cold ledger.
+                    bool restoredLedger = UsesReadinessLedger(i) && info.Readiness?.ReadinessInitialized == true;
+                    if (!restoredLedger)
                     {
-                        info.TriggerInitialLocalRotation = trigger.TriggerTransform.localRotation;
+                        info.LastShotTimer = -1.0f;
+                        if (info.Readiness?.ReadinessInitialized != true) info.HasReloaded = true;
+                        if (trigger.TriggerTransform) info.TriggerInitialLocalRotation = trigger.TriggerTransform.localRotation;
                     }
                 }
 

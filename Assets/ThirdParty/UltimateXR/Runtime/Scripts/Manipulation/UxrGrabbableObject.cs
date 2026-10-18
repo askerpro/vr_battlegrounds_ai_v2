@@ -886,17 +886,7 @@ namespace UltimateXR.Manipulation
         public bool IsGrabbable
         {
             get => _isGrabbable;
-            set
-            {
-                if (value == _isGrabbable)
-                {
-                    return;
-                }
-                
-                BeginSync();
-                _isGrabbable = value;
-                EndSyncProperty(value);
-            }
+            set => SetIsGrabbable(value, UxrStateSyncOptions.Default);
         }
 
         /// <inheritdoc />
@@ -1421,6 +1411,22 @@ namespace UltimateXR.Manipulation
         #endregion
 
         #region Internal Methods
+
+        /// <summary>
+        /// VR Battlegrounds patch 87: один SDK-писатель доступности с явным каналом синхронизации.
+        /// Производная доступность proxy пересчитывается локально; публичное свойство сохраняет Default.
+        /// </summary>
+        internal void SetIsGrabbable(bool value, UxrStateSyncOptions syncOptions)
+        {
+            if (value == _isGrabbable)
+            {
+                return;
+            }
+
+            BeginSync(syncOptions);
+            _isGrabbable = value;
+            EndSyncProperty(value, nameof(IsGrabbable));
+        }
 
         /// <summary>
         ///     Checks whether the given snap mode affects the object position. This only references if the object position is

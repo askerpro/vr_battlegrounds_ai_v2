@@ -1,5 +1,5 @@
 // Под своей RUNNING арендой: штатный Prepare -> PlayLaunch -> warmup, с domain reload.
-const string Root = "tasks/bots-fix/reports/cc1-visual-candidate1";
+const string Root = "tasks/bots-fix/reports/cc1-visual-consolidated-20261018-r1";
 if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating) throw new InvalidOperationException("Нужен idle EditMode.");
 if (!System.IO.File.Exists(Root + "/preflight.json")) throw new InvalidOperationException("Сначала B0.");
 if (System.IO.File.Exists(Root + "/launch.json")) return new { executionCompleted = true, refused = true, reason = "Попытка уже записана: сначала B5." };

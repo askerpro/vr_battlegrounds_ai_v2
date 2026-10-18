@@ -2022,8 +2022,8 @@ GameObject:
   - component: {fileID: 6358686646736042875}
   - component: {fileID: 2859184925180781300}
   - component: {fileID: 6350633624337379518}
-  - component: {fileID: 240294596241006954}
   - component: {fileID: 3511589907400484980}
+  - component: {fileID: 3535859280852796144}
   m_Layer: 0
   m_Name: R08
   m_TagString: Weapon
@@ -2410,97 +2410,6 @@ MonoBehaviour:
   _fullSpeed: 5
   _cooldown: 0.2
   _maxVolume: 0.9
---- !u!114 &240294596241006954
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8504929066865201802}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5cc52afc9b19d7d40850eba0563bad71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponMechanismVisuals
-  _motion: {fileID: 11400000, guid: 76877f8e5f039d44c9d9ac2ca4d6d263, type: 2}
-  _body: {fileID: 6651388267158173588}
-  _slide: {fileID: 0}
-  _contactPart: {fileID: 0}
-  _magazineAnchor: {fileID: 8492275733050182012}
-  _bindings:
-  - Part: Hammer
-    Target: {fileID: 2953529422101435590}
-    RestPosition: {x: 0.0000000039208854, y: 0.02822181, z: -0.042581674}
-    RestRotation: {x: 2.6171709e-14, y: 1, z: -0.0000004321338, w: -0.00000007549794}
-    Rotate: 1
-    InMagazine: 0
-  - Part: Trigger
-    Target: {fileID: 8673656262293733467}
-    RestPosition: {x: 0.000000002567363, y: -1.988103e-10, z: 1.988103e-10}
-    RestRotation: {x: -0.0000000754979, y: 0.0000002831221, z: 1, w: 4.736549e-16}
-    Rotate: 0
-    InMagazine: 0
-  - Part: Cylinder
-    Target: {fileID: 4271778379293986700}
-    RestPosition: {x: 0, y: 0, z: 0}
-    RestRotation: {x: 0, y: 0, z: 0, w: 1}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_01
-    Target: {fileID: 1257926904796892104}
-    RestPosition: {x: -0.000000005423175, y: 0.015025188, z: -0.019656377}
-    RestRotation: {x: -0.00000011520227, y: 0.7071066, z: 0.70710707, w: 0.00000011520235}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_02
-    Target: {fileID: 1409767636947651405}
-    RestPosition: {x: -0.010560191, y: 0.010642862, z: -0.019656368}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_03
-    Target: {fileID: 6504278840110370888}
-    RestPosition: {x: -0.015052956, y: -0.000028681143, z: -0.01965637}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_04
-    Target: {fileID: 3626997503469300757}
-    RestPosition: {x: -0.010668357, y: -0.010560603, z: -0.019656371}
-    RestRotation: {x: -0.000000030817297, y: 0.7071066, z: 0.70710707, w: 0.00000003083902}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_05
-    Target: {fileID: 3303352028975396840}
-    RestPosition: {x: -0.000000014969237, y: -0.015198673, z: -0.019656375}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_06
-    Target: {fileID: 5029557541229275670}
-    RestPosition: {x: 0.010654754, y: -0.010560754, z: -0.019656371}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_07
-    Target: {fileID: 214954548567706423}
-    RestPosition: {x: 0.014993452, y: -0.000028375669, z: -0.019656375}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ammo_08
-    Target: {fileID: 6627736103963568946}
-    RestPosition: {x: 0.01065485, y: 0.010643015, z: -0.019656371}
-    RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
-    Rotate: 1
-    InMagazine: 1
-  - Part: Ejector
-    Target: {fileID: 8123974188856698847}
-    RestPosition: {x: -0.000000028706255, y: 0.00000024387293, z: 0.030044276}
-    RestRotation: {x: -0.000000011238232, y: 0.70710665, z: 0.707107, w: 0.000000011238221}
-    Rotate: 1
-    InMagazine: 1
-  _originalSlideLength: 0
 --- !u!114 &3511589907400484980
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2520,6 +2429,201 @@ MonoBehaviour:
     _recoveryTime: 0.45
     _oneHandMultiplier: 2
   _axes: {fileID: 422592067524660210}
+--- !u!114 &3535859280852796144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8504929066865201802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a26a7cf7c39a2346b3e418ed895b0a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponSystem
+  _triggerIndex: 0
+  _profile: {fileID: 11400000, guid: 385b9018624991f44a28d52cc49e5a67, type: 2}
+  _rig:
+    _body: {fileID: 6651388267158173588}
+    _handle: {fileID: 0}
+    _contactPart: {fileID: 0}
+    _actionBindings: []
+    _actionLocalRest: []
+    _extractionGate: 0.7
+    _springReturnSpeed: 1.5
+    _autoReturnSpeed: 1.5
+    _releasedAction: 0
+    _emptyRearTime: -1
+    _motion: {fileID: 11400000, guid: 76877f8e5f039d44c9d9ac2ca4d6d263, type: 2}
+    _parts:
+    - Name: Hammer
+      Target: {fileID: 2953529422101435590}
+      RestPosition: {x: 0.0000000039208854, y: 0.02822181, z: -0.042581674}
+      RestRotation: {x: 2.6171709e-14, y: 1, z: -0.0000004321338, w: -0.00000007549794}
+      Rotate: 1
+      InMagazine: 0
+    - Name: Trigger
+      Target: {fileID: 8673656262293733467}
+      RestPosition: {x: 0.000000002567363, y: -1.988103e-10, z: 1.988103e-10}
+      RestRotation: {x: -0.0000000754979, y: 0.0000002831221, z: 1, w: 4.736549e-16}
+      Rotate: 0
+      InMagazine: 0
+    - Name: Cylinder
+      Target: {fileID: 4271778379293986700}
+      RestPosition: {x: 0, y: 0, z: 0}
+      RestRotation: {x: 0, y: 0, z: 0, w: 1}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_01
+      Target: {fileID: 1257926904796892104}
+      RestPosition: {x: -0.000000005423175, y: 0.015025188, z: -0.019656377}
+      RestRotation: {x: -0.00000011520227, y: 0.7071066, z: 0.70710707, w: 0.00000011520235}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_02
+      Target: {fileID: 1409767636947651405}
+      RestPosition: {x: -0.010560191, y: 0.010642862, z: -0.019656368}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_03
+      Target: {fileID: 6504278840110370888}
+      RestPosition: {x: -0.015052956, y: -0.000028681143, z: -0.01965637}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_04
+      Target: {fileID: 3626997503469300757}
+      RestPosition: {x: -0.010668357, y: -0.010560603, z: -0.019656371}
+      RestRotation: {x: -0.000000030817297, y: 0.7071066, z: 0.70710707, w: 0.00000003083902}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_05
+      Target: {fileID: 3303352028975396840}
+      RestPosition: {x: -0.000000014969237, y: -0.015198673, z: -0.019656375}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_06
+      Target: {fileID: 5029557541229275670}
+      RestPosition: {x: 0.010654754, y: -0.010560754, z: -0.019656371}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_07
+      Target: {fileID: 214954548567706423}
+      RestPosition: {x: 0.014993452, y: -0.000028375669, z: -0.019656375}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ammo_08
+      Target: {fileID: 6627736103963568946}
+      RestPosition: {x: 0.01065485, y: 0.010643015, z: -0.019656371}
+      RestRotation: {x: -0.000000030908613, y: 0.7071066, z: 0.70710707, w: 0.00000003090863}
+      Rotate: 1
+      InMagazine: 1
+    - Name: Ejector
+      Target: {fileID: 8123974188856698847}
+      RestPosition: {x: -0.000000028706255, y: 0.00000024387293, z: 0.030044276}
+      RestRotation: {x: -0.000000011238232, y: 0.70710665, z: 0.707107, w: 0.000000011238221}
+      Rotate: 1
+      InMagazine: 1
+    _magazineAnchor: {fileID: 8492275733050182012}
+  _audio:
+    _actionBack:
+      _clip: {fileID: 0}
+      _volume: 1
+    _actionForwardChambered:
+      _clip: {fileID: 0}
+      _volume: 1
+    _actionForwardEmpty:
+      _clip: {fileID: 0}
+      _volume: 1
+    _chamberEjected:
+      _clip: {fileID: 0}
+      _volume: 1
+    _slideLockCatch:
+      _clip: {fileID: 0}
+      _volume: 1
+    _dryFire:
+      _clip: {fileID: 0}
+      _volume: 1
+    _refusal:
+      _clip: {fileID: 0}
+      _volume: 1
+  _haptics:
+    _actionRear:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _notReady:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _faulted:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+    _rateOfFire:
+      _clip: {fileID: 0}
+      _clipAmplitude: 1
+      _hapticMode: 1
+      _fallbackClipType: 0
+      _fallbackAmplitude: 1
+      _fallbackDurationSeconds: -1
+      _waveform: {fileID: 0}
+      _waveformGain: 1
+      _priority: 2
+      _repeatGapMs: 0
+      _cooldownSeconds: 0
+      _secondaryHandGain: 1
+  _ejection:
+    _liveRound:
+      _prefab: {fileID: 0}
+      _velocity: {x: 1.8, y: 1.2, z: -0.3}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 12, z: 20}
+      _lifetime: 10
+    _spentCasing:
+      _prefab: {fileID: 0}
+      _velocity: {x: 1.8, y: 1.2, z: -0.3}
+      _velocityJitter: 0.2
+      _spin: {x: 0, y: 12, z: 20}
+      _lifetime: 10
+  _ejectionPort:
+    _anchor: {fileID: 0}
+    _localPosition: {x: 0, y: 0, z: 0}
+    _localRotation: {x: 0, y: 0, z: 0, w: 1}
+  _feedbackDefaults: {fileID: 11400000, guid: 7728aae824ef1674c923b83433240af0, type: 2}
+  _hintVisual: {fileID: 0}
+  _hintProximity: {fileID: 0}
 --- !u!1 &9042559328222679667
 GameObject:
   m_ObjectHideFlags: 0

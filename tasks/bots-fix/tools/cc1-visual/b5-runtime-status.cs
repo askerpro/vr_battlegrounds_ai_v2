@@ -1,6 +1,6 @@
 // Read-only: после неизвестного исхода B3/B4/B6 — inspect, не replay.
-const string Root = "tasks/bots-fix/reports/cc1-visual-candidate1";
-const string Marker = "bots-fix.cc1-visual-candidate1";
+const string Root = "tasks/bots-fix/reports/cc1-visual-consolidated-20261018-r1";
+const string Marker = "bots-fix.cc1-visual-consolidated-20261018-r1";
 var stand = VrBattlegrounds.EditorTools.BotCombatStandEditor.Status();
 var launch = JsonUtility.FromJson<VrBattlegrounds.EditorTools.TestStand.PlayLaunchStatus>(VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Status());
 var receipt = System.IO.File.Exists(Root + "/launch-identity.json") ? Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(Root + "/launch-identity.json")) : null;

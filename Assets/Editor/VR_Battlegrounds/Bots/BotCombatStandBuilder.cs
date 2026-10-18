@@ -51,7 +51,7 @@ namespace VrBattlegrounds.EditorTools
                 var neutral = Material("BotStandNeutral", new Color(0.38f, 0.42f, 0.48f));
                 var hard = Material("BotStandHard", new Color(0.22f, 0.30f, 0.40f));
                 var soft = Material("BotStandSoft", new Color(0.60f, 0.36f, 0.16f));
-                Box(env.transform, "Floor", new Vector3(0, -0.15f, 0), new Vector3(24, 0.3f, 20), neutral);
+                Box(env.transform, "Floor", new Vector3(0, -0.15f, 0), new Vector3(24, 0.3f, 20), neutral).layer = LayerMask.NameToLayer("Ground");
                 Box(env.transform, "North_Hard", new Vector3(0, 1.5f, 10), new Vector3(24, 3, 0.3f), neutral);
                 Box(env.transform, "South_Hard", new Vector3(0, 1.5f, -10), new Vector3(24, 3, 0.3f), neutral);
                 Box(env.transform, "West_Hard", new Vector3(-12, 1.5f, 0), new Vector3(0.3f, 3, 20), neutral);
@@ -100,6 +100,7 @@ namespace VrBattlegrounds.EditorTools
                 var env = scene.GetRootGameObjects().First(x => x.name == "Environment").transform;
                 env.SetPositionAndRotation(Vector3.zero, Quaternion.identity); env.localScale = Vector3.one;
                 SetBox(env, "Floor", new Vector3(0,-.15f,0), new Vector3(24,.3f,20));
+                env.Find("Floor").gameObject.layer = LayerMask.NameToLayer("Ground");
                 SetBox(env, "North_Hard", new Vector3(0,1.5f,10), new Vector3(24,3,.3f));
                 SetBox(env, "South_Hard", new Vector3(0,1.5f,-10), new Vector3(24,3,.3f));
                 SetBox(env, "West_Hard", new Vector3(-12,1.5f,0), new Vector3(.3f,3,20));

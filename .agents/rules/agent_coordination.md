@@ -132,7 +132,8 @@ writes; контракт между живыми экспертными сесс
 python Tools/agents/coordination.py task-close --task <task-id> --owner <owner> --expected-revision <N> --reason "<итог>"
 ```
 
-Команда допускает закрытие, когда все этапы merged/accepted либо ещё не начинались. Закрытая задача
+Команда допускает закрытие, когда все этапы merged/accepted либо planned: ещё не начинались
+(`epoch=0`) или штатно остановлены через `stop` (`epoch>0` и `stop_reason`). Закрытая задача
 не принимает register/begin; новая цель оформляется через `task-new`. Закрытие не удаляет старые
 worktree, WIP, результаты или историю и не заменяет требуемое вливание.
 

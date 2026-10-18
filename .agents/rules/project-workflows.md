@@ -151,8 +151,12 @@ worktree. Отчёты, пробы и временные стенды задач
 **Вливание задачи** (после принятия пользователем, из своего worktree и ветки `task/<task-id>`):
 1. `git fetch` → `git rebase origin/dev`. Конфликты решает тот, кто вливает **позже**, в своём
    worktree; чужую работу не откатывать. Если rebase задел код/ассеты — перепроверить (worker при необходимости).
-2. Approve ревью (`review-ack`) по каждой затронутой зоне для итогового SHA; новый коммит или rebase — новое ревью.
-3. `git push origin HEAD:dev` — только fast-forward. Отказ (`origin/dev` сдвинулся) — снова fetch → rebase → ревью → push.
+2. Approve последнего раунда ревью по каждой затронутой зоне для точных base/candidate SHA.
+   После rebase ACK сохраняется только при том же `git patch-id --stable` diff относительно базы
+   merge-заявки; изменённый diff требует нового ревью.
+3. Штатное вливание — `merge-request --base <полный SHA origin/dev> --sha <принятый candidate SHA>` →
+   `merge-execute`. Если `origin/dev` сдвинулся — fetch → rebase → проверка SHA/patch-id и нужное ревью →
+   новая merge-заявка. При неизвестном исходе push — сначала `merge-recover`.
 4. Подать `Tools/agents/editor-broker.py request-base --owner <owner> --task <task-id>
    --sha <полный принятый SHA> --source-root <свой worktree> --key <уникальный ключ>`.
    Системный исполнитель брокера публикует базу по FIFO, результат приходит в inbox.

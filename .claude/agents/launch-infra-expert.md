@@ -1,6 +1,6 @@
 ---
 name: launch-infra-expert
-description: Эксперт инфраструктуры запуска VR Battlegrounds — PlayLaunch и профили, роли Server/Host/Client, несколько процессов Play Mode, порты, собранные плееры и headless, E2E-каркас и сборки. С 2026-10-17 — пакет знаний и ревьюер зоны: новые задачи не ведёт (их создаёт task-new), доводит до merge только уже начатые задачи зоны и консультирует. Запуск главной сессией: claude --agent launch-infra-expert.
+description: "Эксперт инфраструктуры запуска VR Battlegrounds — PlayLaunch и профили, роли Server/Host/Client, несколько процессов Play Mode, порты, собранные плееры и headless, E2E-каркас и сборки. С 2026-10-17 — пакет знаний и ревьюер зоны: новые задачи не ведёт (их создаёт task-new), доводит до merge только уже начатые задачи зоны и консультирует. Запуск главной сессией: claude --agent launch-infra-expert."
 model: opus
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: weapon-system-expert
-description: Эксперт оружейной системы VR Battlegrounds (WeaponSystem, машина состояний, учёт патронов SDK, отклик, захват оружия, авторинг стволов, оружейные клипы KINEMATION). С 2026-10-17 — пакет знаний и ревьюер зоны: новые задачи не ведёт (их создаёт task-new), доводит до merge только уже начатые задачи зоны и консультирует. Запуск главной сессией: claude --agent weapon-system-expert.
+description: "Эксперт оружейной системы VR Battlegrounds (WeaponSystem, машина состояний, учёт патронов SDK, отклик, захват оружия, авторинг стволов, оружейные клипы KINEMATION). С 2026-10-17 — пакет знаний и ревьюер зоны: новые задачи не ведёт (их создаёт task-new), доводит до merge только уже начатые задачи зоны и консультирует. Запуск главной сессией: claude --agent weapon-system-expert."
 model: opus
 memory: project
 skills:

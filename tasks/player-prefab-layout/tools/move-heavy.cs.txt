@@ -1,0 +1,101 @@
+// Архив выполненного ticket819: не повторять. Диагностический receipt Heavy, не тест качества поведения.
+var src = "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab";
+var dst = "Assets/Prefabs/Player/Unused/Heavy_Soldier_Base_Avatar.prefab";
+var guid = "fefcf679beb2d0f42b6cce742988357e";
+var reportPath = "tasks/player-prefab-layout/reports/heavy-native-receipt.json";
+var refs = new[] {
+    "Assets/Data/Player/Avatars/HeavySoldier.asset",
+    "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+    "Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab",
+    "Assets/Art/Weapons/HandsPack/LegacyBuildDonors/M16_Rifle_prefab.prefab",
+    "Assets/Art/Weapons/HandsPack/LegacyBuildDonors/M16_Magazine.prefab",
+    "Assets/Art/Weapons/HandsPack/LegacyBuildDonors/Gun_real.prefab"
+};
+var chainPaths = new[] {
+    "Assets/Prefabs/Player/PlayerBase.prefab",
+    "Assets/Prefabs/Player/CyborgHandsBase.prefab",
+    "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab",
+    "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab"
+};
+System.Func<string, string> hash = p => System.IO.File.Exists(p)
+    ? System.BitConverter.ToString(System.Security.Cryptography.SHA256.Create().ComputeHash(System.IO.File.ReadAllBytes(p))).Replace("-", "").ToLowerInvariant()
+    : null;
+System.Func<UnityEngine.Object, Newtonsoft.Json.Linq.JObject> identity = obj => {
+    string g = null; long id = 0;
+    if (obj != null) UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out g, out id);
+    return new Newtonsoft.Json.Linq.JObject {
+        ["guid"] = g, ["fileId"] = id,
+        ["path"] = obj == null ? null : UnityEditor.AssetDatabase.GetAssetPath(obj),
+        ["name"] = obj == null ? null : obj.name
+    };
+};
+System.Func<string, Newtonsoft.Json.Linq.JObject> prefab = p => {
+    var obj = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(p);
+    return new Newtonsoft.Json.Linq.JObject {
+        ["path"] = p, ["identity"] = identity(obj),
+        ["type"] = obj == null ? null : UnityEditor.PrefabUtility.GetPrefabAssetType(obj).ToString(),
+        ["source"] = identity(obj == null ? null : UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(obj)),
+        ["sha256"] = hash(p), ["metaSha256"] = hash(p + ".meta")
+    };
+};
+System.Func<Newtonsoft.Json.Linq.JArray> references = () => {
+    var rows = new Newtonsoft.Json.Linq.JArray();
+    foreach (var p in refs) {
+        var objects = new System.Collections.Generic.List<UnityEngine.Object>();
+        var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(p);
+        if (root != null) objects.AddRange(root.GetComponentsInChildren<UnityEngine.Component>(true));
+        else objects.Add(UnityEditor.AssetDatabase.LoadMainAssetAtPath(p));
+        var properties = new Newtonsoft.Json.Linq.JArray();
+        foreach (var obj in objects) {
+            if (obj == null) continue;
+            var so = new UnityEditor.SerializedObject(obj);
+            var it = so.GetIterator();
+            while (it.Next(true)) {
+                if (it.propertyType == UnityEditor.SerializedPropertyType.ObjectReference && it.objectReferenceValue != null) {
+                    var target = identity(it.objectReferenceValue);
+                    if ((string)target["guid"] == guid) properties.Add(new Newtonsoft.Json.Linq.JObject {
+                        ["owner"] = obj.name, ["type"] = obj.GetType().FullName,
+                        ["property"] = it.propertyPath, ["target"] = target
+                    });
+                } else if (it.propertyType == UnityEditor.SerializedPropertyType.String && it.stringValue == guid) {
+                    properties.Add(new Newtonsoft.Json.Linq.JObject {
+                        ["owner"] = obj.name, ["type"] = obj.GetType().FullName,
+                        ["property"] = it.propertyPath, ["guidString"] = it.stringValue
+                    });
+                }
+            }
+        }
+        rows.Add(new Newtonsoft.Json.Linq.JObject {
+            ["path"] = p, ["sha256"] = hash(p), ["properties"] = properties
+        });
+    }
+    return rows;
+};
+System.Func<Newtonsoft.Json.Linq.JArray> chain = () => {
+    var rows = new Newtonsoft.Json.Linq.JArray();
+    foreach (var p in chainPaths) rows.Add(prefab(p));
+    return rows;
+};
+if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling)
+    throw new System.InvalidOperationException("Editor занят");
+if (UnityEditor.AssetDatabase.AssetPathToGUID(src) != guid || System.IO.File.Exists(dst) || System.IO.File.Exists(dst + ".meta"))
+    throw new System.InvalidOperationException("Предусловия однократного переноса не выполнены");
+var report = new Newtonsoft.Json.Linq.JObject {
+    ["utc"] = System.DateTime.UtcNow.ToString("O"), ["projectRoot"] = System.IO.Directory.GetCurrentDirectory(),
+    ["source"] = src, ["destination"] = dst,
+    ["before"] = prefab(src), ["referencesBefore"] = references(), ["chainBefore"] = chain()
+};
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+var moveError = UnityEditor.AssetDatabase.MoveAsset(src, dst);
+report["moveError"] = moveError;
+report["after"] = prefab(dst);
+report["sourceExistsAfter"] = System.IO.File.Exists(src);
+report["sourceMetaExistsAfter"] = System.IO.File.Exists(src + ".meta");
+report["guidPathAfter"] = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+report["referencesAfter"] = references();
+report["chainAfter"] = chain();
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { moveError, reportPath, destinationGuid = UnityEditor.AssetDatabase.AssetPathToGUID(dst), sourceExists = System.IO.File.Exists(src) };

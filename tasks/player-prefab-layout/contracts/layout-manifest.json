@@ -1,0 +1,201 @@
+{
+  "task_id": "player-prefab-layout",
+  "prepared_on": "2026-10-18",
+  "decision_event": 9661,
+  "execution_status": "native_completed_user_accepted",
+  "user_acceptance_event": 9743,
+  "enabled": false,
+  "note": "Layout выполнен native API и принят9743; manifest исторический, replay выключен. Последующий этап9851/9854/9889/9893 явно разрешил standalone Regular Ghost и связанный тестовый ремонт/автодоведение до ревью и FF-публикации; см. test-repair.json. Живые inheritance chains и layout GUID/metas сохранены.",
+  "root": "Assets/Prefabs/Player/",
+  "create_folders": [
+    "Session",
+    "HandPoses",
+    "Equipment",
+    "Equipment/Watches",
+    "Corpses/MEF",
+    "Avatars",
+    "Avatars/Bases",
+    "Avatars/CyborgHands",
+    "Avatars/CyborgHands/Base",
+    "Avatars/CyborgHands/Cyborg",
+    "Avatars/CyborgHands/MEF"
+  ],
+  "moves": [
+    {
+      "source": "PlayerSession.prefab",
+      "destination": "Session/PlayerSession.prefab",
+      "guid": "3374152f61b37254f951d6b35b3fac95",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "PlayerBase.prefab",
+      "destination": "Avatars/Bases/PlayerBase.prefab",
+      "guid": "eee4c6960159a24459810d9c0851279c",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "PlayerBase_NonSdkHands.prefab",
+      "destination": "Avatars/Bases/PlayerBase_NonSdkHands.prefab",
+      "guid": "b2400db87f97da14482f0ab99a44d4e8",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "CyborgHandsBase.prefab",
+      "destination": "Avatars/CyborgHands/Base/CyborgHandsBase.prefab",
+      "guid": "71b74b0d08444f49bbb7aa2828d0890a",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "PlayerControllersCyborgAvatar.prefab",
+      "destination": "Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+      "guid": "8e0e06323e4754f479a9f19788554652",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "MEF_cyborg_hands_Player.prefab",
+      "destination": "Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab",
+      "guid": "2aa0ab6714e2413f9d829637b62df0c0",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "MEF_cyborg_hands_Player_Black.prefab",
+      "destination": "Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab",
+      "guid": "60604d8891226f64592f880c9b2da883",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "Ghost",
+      "destination": "Avatars/Ghost",
+      "guid": "12a4af053cfaf6443b520191988b5cf9",
+      "kind": "folder",
+      "asset_count": 2,
+      "layout": "approved"
+    },
+    {
+      "source": "MEF_cyborg_hands/HandPoses",
+      "destination": "HandPoses/CyborgHands",
+      "guid": "071565fdb4dfc0a4e851f3fe5153d09d",
+      "kind": "folder",
+      "asset_count": 30,
+      "layout": "approved"
+    },
+    {
+      "source": "WristWatch.prefab",
+      "destination": "Equipment/Watches/WristWatch.prefab",
+      "guid": "08f12e05f059bf94aafe9807c4c2d44e",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "WristWatch_HUD.prefab",
+      "destination": "Equipment/Watches/WristWatch_HUD.prefab",
+      "guid": "a0f4423b771d0dd478596daa93a49b63",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "Pockets",
+      "destination": "Equipment/Pockets",
+      "guid": "a695ea4e1ff53e44ea88cd7856c029aa",
+      "kind": "folder",
+      "asset_count": 3,
+      "layout": "approved"
+    },
+    {
+      "source": "Corpses/MEF_cyborg_hands_Player_Corpse.prefab",
+      "destination": "Corpses/MEF/MEF_cyborg_hands_Player_Corpse.prefab",
+      "guid": "11fd5eadc324909429832c5fe338258b",
+      "kind": "asset",
+      "layout": "approved"
+    },
+    {
+      "source": "Corpses/MEF_cyborg_hands_Player_Black_Corpse.prefab",
+      "destination": "Corpses/MEF/MEF_cyborg_hands_Player_Black_Corpse.prefab",
+      "guid": "7a23a6039e6f0bb4995ef06ec109f114",
+      "kind": "asset",
+      "layout": "approved"
+    }
+  ],
+  "completed_in_current_package": {
+    "source": "Heavy_Soldier_Base_Avatar.prefab",
+    "destination": "Unused/Heavy_Soldier_Base_Avatar.prefab",
+    "guid": "fefcf679beb2d0f42b6cce742988357e",
+    "ticket": 819,
+    "result_sha": "8874a93c191c43636f4a2b93bd3bf6c6e4151d76"
+  },
+  "retain": [
+    {
+      "path": "Unused",
+      "guid": "98f8ffa89c8f56a49abed5eddbb7a772",
+      "reason": "Архив сохраняется, Heavy уже доставлен"
+    },
+    {
+      "path": "Corpses",
+      "guid": "ae9fbcb1f7ac83a4fb44d66dd4900aa1",
+      "reason": "Существующий контейнер сохраняет meta; создаётся только дочерний MEF"
+    }
+  ],
+  "delete_after_moves_if_empty": [
+    {
+      "path": "MEF_cyborg_hands",
+      "guid": "aa52a452195a4b8b8f2e7d93fb03e5fe",
+      "api": "AssetDatabase.DeleteAsset",
+      "condition": "Directory.GetFileSystemEntries(path).Length == 0"
+    }
+  ],
+  "invariants": [
+    "Все MoveAsset выполняются AssetDatabase, включая folder.meta и вложенные metas; YAML вручную не редактируется",
+    "Имена файлов, GUID, содержимое, ссылки реестров/grips/spawnables и prefab inheritance сохраняются",
+    "Новые folder.meta создаются только Unity в будущем отдельном подготовленном broker-пакете",
+    "UserQA предшествует изменению tests/expectations и accepted commit",
+    "Никаких генераторов; устаревшие unrelated defaults остаются отдельными findings",
+    "Inbox читается перед claim/begin и каждым новым изменяющим MCP вызовом; STOP прекращает новые операции"
+  ],
+  "counts": {
+    "moveasset_calls": 14,
+    "moved_assets": 46,
+    "moved_existing_folders": 3,
+    "new_folders": 11,
+    "empty_container_deletions": 1,
+    "heavy_repeated_moves": 0
+  },
+  "created_folder_guids": {
+    "Session": "7c5320054d6b3764fb1f4cc629a14ecc",
+    "HandPoses": "050e78d4915c3f943b877d6dc1e6b69a",
+    "Equipment": "11ddd31b595ed284588c8570219e592f",
+    "Equipment/Watches": "21f9b2a9a1a81f748a8efc7f9ba91eef",
+    "Corpses/MEF": "58395b0d2b37ca240bea922a1667a1c8",
+    "Avatars": "3ee17fab30c4ab642b47bdb820956033",
+    "Avatars/Bases": "d2585308177539e49b5dc612559656f5",
+    "Avatars/CyborgHands": "47a0f1b3ea29f5947a95d22f7323733c",
+    "Avatars/CyborgHands/Base": "d411a2e728f9bbe499476c401d60f07f",
+    "Avatars/CyborgHands/Cyborg": "fc2ddeba7847cc34d9bcc915addc56ec",
+    "Avatars/CyborgHands/MEF": "380e14f1c5ad35f4ba9983de1bf9636d"
+  },
+  "folder_creation_receipt": {
+    "ticket": 821,
+    "result_sha": "daef3613e417b60aef16b2e730901f2b15a2d5a8",
+    "successful_moves": 0,
+    "completed": false
+  },
+  "native_execution": {
+    "folder_ticket": 821,
+    "folder_result": "daef3613e417b60aef16b2e730901f2b15a2d5a8",
+    "moves_ticket": 823,
+    "input": "6a99521c6778ba798b0a567182ffc8c26de98f37",
+    "result": "32b72bd3adf7da51c29bce8e3f1fa1e7ae1ac3d4",
+    "status": "DONE/IMPORTED",
+    "reference_assets": 72,
+    "reference_properties": 87740,
+    "transferred_physical_files_unchanged": 95,
+    "existing_original_files_unchanged": 122,
+    "approved_empty_meta_deleted": 1
+  }
+}

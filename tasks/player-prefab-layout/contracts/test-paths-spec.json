@@ -1,0 +1,62 @@
+{
+  "task": "player-prefab-layout",
+  "stage": "test-paths",
+  "user_acceptance_event": 9743,
+  "base_sha": "2e1b6a2fc342e894d4b8526287b804fa5e3093b0",
+  "before_checkpoint": "6e62abc6e607f78536d455ba73daaafff1d4917d",
+  "backup_stash": "42ef3f5cdec17a8c0e88e5ca342dce6d5edf55ea",
+  "path_edits": 15,
+  "test_files": 9,
+  "mode": "EditMode",
+  "fixtures": [
+    "VrBattlegrounds.Tests.Prefabs.AvatarHandPoseChainTests",
+    "VrBattlegrounds.Tests.Modes.GameModeWiringTests",
+    "VrBattlegrounds.Tests.Prefabs.AvatarRendererOwnershipTests",
+    "VrBattlegrounds.Tests.Prefabs.KinemationHandPoseTests",
+    "VrBattlegrounds.Tests.Prefabs.HandsPackHandPoseTests",
+    "VrBattlegrounds.Tests.Prefabs.RegisteredAvatarBodyTests",
+    "VrBattlegrounds.Tests.UI.WristDisplayTests",
+    "VrBattlegrounds.Tests.Prefabs.GhostAvatarTests",
+    "VrBattlegrounds.Editor.HandPoseReview.Tests.SdkHandPreviewParityTests"
+  ],
+  "outputs": ["tasks/player-prefab-layout/reports/test-paths"],
+  "actions": [
+    "claim/begin own FIFO ticket with fresh inbox; guard; verify own proxy and worker readiness/compilation",
+    "fresh inbox; run one bounded EditMode job for exactly these nine existing fixtures",
+    "poll terminal with complete case details; save full native JSON and console/guard evidence",
+    "archive report in declared output folder; immediate cleanup/finish/receive, including failed checks"
+  ],
+  "release_condition": "Known terminal outcome, no active test/compile/Play, own preview cleanup through normal broker finish",
+  "no_replay": "No asset moves, generators, native snapshots, product changes, assertion edits or full project suite",
+  "findings": [
+    "Optimized_MEF_Player missing before layout in SdkHandPreviewParityTests and unchanged SdkPreviewBindingTests; do not substitute",
+    "LegacySdkHands root path in chain test is intentional absence/archive assertion",
+    "Pack pose inputs Assets/Art/HandPoses are separate unchanged assets; do not redirect to shared Cyborg/MEF poses",
+    "BotCombatStand/Floor belongs to bots-validation and remains outside this stage",
+    "Known quality/grip/legacy failures are recorded without fixing assertions or product"
+  ],
+  "execution": {
+    "status": "completed_received",
+    "ticket": 825,
+    "input_sha": "42bb37946f2c6d5710a3abba0d96da784fdbddc3",
+    "result_sha": "daa7b8f3a8ef28e21c0f3e4c0e9bf865145fa8e4",
+    "job": "de4ea1b6cc7741988477e3285cc37e0c",
+    "total": 135,
+    "passed": 120,
+    "failed": 15,
+    "skipped": 0,
+    "invalid_empty_case_sources": 6,
+    "missing_legacy_input_errors": 7,
+    "quality_failures": 2,
+    "product_output_paths": [],
+    "unexpected": [],
+    "compile_errors_cs": 0,
+    "source_body_changes": "Only15literal path substitutions; assertions unchanged",
+    "player_raw_blob_deltas": 0,
+    "report": "reports/test-paths/native-terminal.json",
+    "report_sha256": "af1db0a393205e0e0b4124d21c4ca9fd741b78bc11f67e2d4b4df79fdf487c77",
+    "format": "Complete structured native MCP JSON, no XML export",
+    "lease_released": true
+  },
+  "acceptance": "Structure accepted; no accepted commit/merge/push/task-close authorized"
+}

@@ -47,14 +47,14 @@ namespace VrBattlegrounds.Editor.Avatars
         public const string CyborgBaseGuid              = "71b74b0d08444f49bbb7aa2828d0890a";
         public const string CyborgAvatarGuid            = "8e0e06323e4754f479a9f19788554652";
         public const string MefCyborgPlayerGuid         = "2aa0ab6714e2413f9d829637b62df0c0";
-        public const string CanonicalCyborgHandsBasePath = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
+        public const string CanonicalCyborgHandsBasePath = "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab";
         public const string LegacyMefCyborgBasePath     = "Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Base.prefab";
-        public const string CyborgAvatarPath            = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
-        public const string MefCyborgPlayerPath         = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
-        public const string MefCyborgPlayerBlackPath    = "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab";
+        public const string CyborgAvatarPath            = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+        public const string MefCyborgPlayerPath         = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab";
+        public const string MefCyborgPlayerBlackPath    = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab";
         public const string MefCyborgModelPath          = "Assets/Models/Avatars/MEF_CyborgHands/MEF_CyborgHands.fbx";
 
-        private const string CyborgFolder = "Assets/Prefabs/Player/MEF_cyborg_hands";
+        private const string CyborgPoseFolder = "Assets/Prefabs/Player/HandPoses/CyborgHands";
 
         public string Name;
 
@@ -135,7 +135,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 RecordAvatarPath     = basePath,
                 ExpectedRecordGuid   = CyborgBaseGuid,
                 PoseRegistryPath     = basePath,
-                PoseFolder           = $"{CyborgFolder}/HandPoses",
+                PoseFolder           = CyborgPoseFolder,
                 AlignAvatarName      = MefCyborgHandsName,
                 Anchor               = GripAnchor.PalmCenter,
                 Encoding             = GripPoseEncoding.TargetRigWorld,
@@ -159,7 +159,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 RecordAvatarPath     = basePath,
                 ExpectedRecordGuid   = CyborgBaseGuid,
                 PoseRegistryPath     = basePath,
-                PoseFolder           = $"{CyborgFolder}/HandPoses",
+                PoseFolder           = CyborgPoseFolder,
                 AlignAvatarName      = MefCyborgHandsName,
                 Anchor               = GripAnchor.PalmCenter,
                 Encoding             = GripPoseEncoding.TargetRigWorld,

@@ -72,7 +72,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         public void CyborgKeepsAcceptedBodyAfterSetupAndLegacyGhostRemoval()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab");
+                "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab");
             Assert.That(prefab, Is.Not.Null);
             var holder = new GameObject("InactiveCyborgRegression");
             holder.SetActive(false);

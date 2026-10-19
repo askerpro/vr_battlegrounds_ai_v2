@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
     /// <summary>Межкарманные ссылки хранятся как адреса и восстанавливаются после инстанцирования всех шаблонов.</summary>
     internal static class AvatarPocketTemplateBindings
     {
-        internal const string Path = "Assets/Prefabs/Player/Pockets/Bindings.json";
+        internal const string Path = "Assets/Prefabs/Player/Equipment/Pockets/Bindings.json";
         [Serializable] internal sealed class Manifest { public int version = 1; public Binding[] bindings; }
         [Serializable] internal sealed class Binding
         {

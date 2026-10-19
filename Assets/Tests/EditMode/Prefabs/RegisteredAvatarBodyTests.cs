@@ -135,7 +135,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             WristDisplay display = avatarGo.GetComponentInChildren<WristDisplay>(true);
             Assume.That(display, Is.Not.Null, "Часов нет — это ловит На_руке_часы_с_табло");
 
-            WristDisplay etalon = Load("Assets/Prefabs/Player/WristWatch_HUD.prefab").GetComponentInChildren<WristDisplay>(true);
+            WristDisplay etalon = Load("Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab").GetComponentInChildren<WristDisplay>(true);
             float ratio = display.transform.lossyScale.x / etalon.transform.lossyScale.x;
             Assert.That(ratio, Is.InRange(0.5f, 2f), $"Табло часов в {ratio:G3} раза от эталона — часы не того размера");
 

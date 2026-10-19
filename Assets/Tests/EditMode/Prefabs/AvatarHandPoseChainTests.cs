@@ -22,19 +22,20 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// <para>
     /// Поза наследуется по цепочке <c>UxrAvatar._parentPrefab</c>; она должна совпадать с настоящей
     /// цепочкой вариантов Unity, иначе SDK ищет позы и записи хвата не там.
-    /// Controllers и MEF наследуют CyborgHandsBase, Black — MEF, Ghost — Controllers.
+    /// Controllers и MEF наследуют CyborgHandsBase, Black — MEF. Ghost — самостоятельный
+    /// Regular prefab с локальными жестами UI и хвата планшета, без оружейных поз живого аватара.
     /// Старая SDK-база хранится только в Unused и не участвует в активных цепочках.
     /// </para>
     /// </summary>
     public class AvatarHandPoseChainTests
     {
-        private const string PlayerBase     = "Assets/Prefabs/Player/PlayerBase.prefab";
-        private const string CyborgHands    = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
-        private const string NonSdkHands    = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
-        private const string Controllers    = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
-        private const string MefPlayer      = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
-        private const string MefPlayerBlack = "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab";
-        private const string Ghost          = "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab";
+        private const string PlayerBase     = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab";
+        private const string CyborgHands    = "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab";
+        private const string NonSdkHands    = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
+        private const string Controllers    = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+        private const string MefPlayer      = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab";
+        private const string MefPlayerBlack = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab";
+        private const string Ghost          = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
         private const string LegacySdkHands = "Assets/Prefabs/Player/PlayerBase_SdkHands.prefab";
         private const string ArchivedSdkHands = "Assets/Prefabs/Player/Unused/PlayerBase_SdkHands.prefab";
         private const string CyborgHandsGuid = "71b74b0d08444f49bbb7aa2828d0890a";
@@ -63,7 +64,6 @@ namespace VrBattlegrounds.Tests.Prefabs
         [TestCase(Controllers, CyborgHands)]
         [TestCase(MefPlayer, CyborgHands)]
         [TestCase(MefPlayerBlack, MefPlayer)]
-        [TestCase(Ghost, Controllers)]
         [TestCase(NonSdkHands, PlayerBase)]
         public void Непосредственный_родитель_соответствует_контракту(string path, string parentPath)
         {
@@ -76,6 +76,30 @@ namespace VrBattlegrounds.Tests.Prefabs
             Assert.That(avatar, Is.Not.Null, $"{path}: нет UxrAvatar");
             Assert.That(AssetDatabase.GetAssetPath(avatar.ParentPrefab), Is.EqualTo(parentPath),
                 $"{path}: неверный непосредственный UXR parent");
+        }
+
+        [Test]
+        public void Призрак_самостоятельный_с_локальными_позами_UI_и_планшета()
+        {
+            GameObject prefab = Load(Ghost);
+            Assert.That(PrefabUtility.GetPrefabAssetType(prefab), Is.EqualTo(PrefabAssetType.Regular));
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(prefab), Is.Null);
+            UxrAvatar avatar = prefab.GetComponent<UxrAvatar>();
+            Assert.That(avatar, Is.Not.Null);
+            Assert.That(avatar.ParentPrefab, Is.Null);
+            Assert.That(avatar.ParentAvatarPrefab, Is.Null);
+            Assert.That(avatar.GetPrefabGuidChain(), Is.EqualTo(new[] { AssetDatabase.AssetPathToGUID(Ghost) }));
+            string[] poseGuids =
+            {
+                "3f8364620cf31c447a54358fb66bfd35", // Default
+                "56f373d38c0d6d1469a8e33faa184670", // Pointing
+                "44ea1f76294e38d47885b28c3a3438bd", // Grab
+                "50e73c61f1d966d409da705792e92e86", // GrabStandard
+            };
+            Assert.That(avatar.GetHandPoses().Select(AssetDatabase.GetAssetPath).Select(AssetDatabase.AssetPathToGUID),
+                Is.EquivalentTo(poseGuids), "Призрак хранит только свои четыре жеста; оружейные позы не наследуются.");
+            Assert.That(avatar.GetAllHandPoses(), Is.EquivalentTo(avatar.GetHandPoses()));
+            Assert.That(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(avatar.DefaultHandPose)), Is.EqualTo(poseGuids[0]));
         }
 
         [TestCaseSource(nameof(Variants))]

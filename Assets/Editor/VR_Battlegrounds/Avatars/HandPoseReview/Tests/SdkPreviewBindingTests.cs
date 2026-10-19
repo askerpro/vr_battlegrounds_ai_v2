@@ -14,7 +14,8 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
 {
     public class SdkPreviewBindingTests
     {
-        const string AvatarPath="Assets/Prefabs/Player/Optimized_MEF_Player.prefab";
+        // Capture/cache проверяется на активном MEF с общими runtime-позами CyborgHands.
+        const string AvatarPath="Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab";
         const string WeaponPath="Assets/Prefabs/Weapons/AK105/AK105.prefab";
         static UxrAvatar Avatar=>AssetDatabase.LoadAssetAtPath<GameObject>(AvatarPath).GetComponent<UxrAvatar>();
         static GameObject Weapon=>AssetDatabase.LoadAssetAtPath<GameObject>(WeaponPath);

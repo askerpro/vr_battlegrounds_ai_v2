@@ -20,9 +20,9 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class AvatarHandBases
     {
-        public const string PlayerBase  = "Assets/Prefabs/Player/PlayerBase.prefab";
-        public const string SdkHands    = "Assets/Prefabs/Player/CyborgHandsBase.prefab";
-        public const string NonSdkHands = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+        public const string PlayerBase  = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab";
+        public const string SdkHands    = "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab";
+        public const string NonSdkHands = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
 
         private const string HandPoses = "_handPoses";
 

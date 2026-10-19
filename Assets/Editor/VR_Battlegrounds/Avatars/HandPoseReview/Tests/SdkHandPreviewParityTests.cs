@@ -19,8 +19,9 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
     /// <summary>Превью SDK обязано совпадать с runtime-позой на целевом риге, независимо от исходных матриц пака.</summary>
     public class SdkHandPreviewParityTests
     {
-        private const string Mef = "Assets/Prefabs/Player/Optimized_MEF_Player.prefab";
-        private const string Cyborg = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        // SDK-preview сравнивается с runtime-позами текущего игрового MEF и его CyborgHands-ригом.
+        private const string Mef = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab";
+        private const string Cyborg = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
         private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
 
         [TestCase(Mef, "Kinemation_AK105_Grip", UxrHandSide.Left, 0f)]

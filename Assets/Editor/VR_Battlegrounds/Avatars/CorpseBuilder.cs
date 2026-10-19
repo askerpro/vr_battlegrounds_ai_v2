@@ -26,7 +26,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class CorpseBuilder
     {
-        public const string OutFolder = "Assets/Prefabs/Player/Corpses";
+        public const string OutFolder = "Assets/Prefabs/Player/Corpses/MEF";
 
         private sealed class Part
         {
@@ -81,7 +81,8 @@ namespace VrBattlegrounds.Editor.Avatars
         {
             HitboxBuilder.EnsureLayer(CorpsePhysics.LayerName);
             CorpsePhysics.ConfigureLayerCollisions();
-            if (!AssetDatabase.IsValidFolder(OutFolder)) AssetDatabase.CreateFolder("Assets/Prefabs/Player", "Corpses");
+            if (!AssetDatabase.IsValidFolder("Assets/Prefabs/Player/Corpses")) AssetDatabase.CreateFolder("Assets/Prefabs/Player", "Corpses");
+            if (!AssetDatabase.IsValidFolder(OutFolder)) AssetDatabase.CreateFolder("Assets/Prefabs/Player/Corpses", "MEF");
 
             // Базы раньше вариантов: вариант наследует CorpseSource и переопределяет только ссылки.
             foreach (GameObject avatar in TeamAvatars().OrderBy(VariantDepth))

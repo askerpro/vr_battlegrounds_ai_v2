@@ -28,7 +28,7 @@ namespace VrBattlegrounds.Tests.Prefabs
     {
         private const string StrategyPath = "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset";
         private const string ManagersPrefabPath = "Assets/Prefabs/Managers/--- MANAGERS ---.prefab";
-        private const string GhostMaterialPath = "Assets/Prefabs/Player/Ghost/GhostMaterial.mat";
+        private const string GhostMaterialPath = "Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat";
         private const string TabletPath = "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab";
 
         private static AvatarRegistry Registry() =>
@@ -139,6 +139,23 @@ namespace VrBattlegrounds.Tests.Prefabs
             Assert.IsNotNull(tablet, $"Нет {TabletPath}.");
             UxrGrabbableObject tabletGrab = tablet.GetComponentInChildren<UxrGrabbableObject>(true);
             Assert.IsNotNull(tabletGrab, "У планшета нет UxrGrabbableObject.");
+
+            UxrAvatar ghost = GhostPrefab().GetComponent<UxrAvatar>();
+            Assert.That(tabletGrab.GrabPointCount, Is.EqualTo(2));
+            for (int i = 0; i < tabletGrab.GrabPointCount; ++i)
+            {
+                var entries = tabletGrab.GetGrabPoint(i).AvatarGripPoseEntries;
+                var explicitGhost = entries.Where(entry => entry.AvatarPrefabGuid == ghost.PrefabGuid).ToArray();
+                Assert.That(explicitGhost, Has.Length.EqualTo(1), $"Точка {i}: самостоятельному Ghost нужна своя запись, без fallback.");
+                var source = entries.Single(entry => entry.AvatarPrefabGuid == "71b74b0d08444f49bbb7aa2828d0890a");
+                var resolved = tabletGrab.GetGrabPoint(i).GetGripPoseInfo(ghost);
+                Assert.That(resolved, Is.SameAs(explicitGhost[0]));
+                Assert.That(resolved.HandPose, Is.SameAs(ghost.GetHandPose("GrabStandard")));
+                Assert.That(resolved.HandPose, Is.SameAs(source.HandPose));
+                Assert.That(resolved.PoseBlendValue, Is.EqualTo(source.PoseBlendValue));
+                Assert.That(resolved.GripAlignTransformHandLeft, Is.Not.Null.And.SameAs(source.GripAlignTransformHandLeft));
+                Assert.That(resolved.GripAlignTransformHandRight, Is.Not.Null.And.SameAs(source.GripAlignTransformHandRight));
+            }
 
             UxrGrabbableObject weaponGrab = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Weapons" })
                 .Select(AssetDatabase.GUIDToAssetPath)

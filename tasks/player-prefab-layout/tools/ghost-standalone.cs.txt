@@ -1,0 +1,81 @@
+// Native package9851/9877 step1: отделить Ghost от исходных Controllers ПЕРЕД head canonicalization.
+var path = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
+var ghostGuid = "f3401ffe5a644d647a14eff0c476b4d2";
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/ghost-standalone.json";
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+var report = new Newtonsoft.Json.Linq.JObject { ["status"] = "preflight", ["path"] = path, ["user_decision"] = 9851 };
+System.Action persist = () => System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+System.Func<string,string> hash = p => { using (var sha = System.Security.Cryptography.SHA256.Create()) return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(p))).Replace("-", "").ToLowerInvariant(); };
+System.Func<UnityEngine.Object, Newtonsoft.Json.Linq.JObject> id = obj => { string guid = null; long fileId = 0; if (obj != null) UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out fileId); return new Newtonsoft.Json.Linq.JObject { ["guid"] = guid, ["fileId"] = fileId }; };
+UnityEngine.GameObject contents = null;
+persist();
+try {
+    if (hash("Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab") != "f8f31422b93aa259f9d037db00e3d3d0ea02a5be0581936b6d5a34ced295eed4") throw new System.InvalidOperationException("Нужны исходные Controllers IDs до отделения Ghost.");
+    if (hash(path) != "bc94bed0133e4e24407352644b5dd0bb284d478de636b3172f23360a7fdbc922") throw new System.InvalidOperationException("Ghost source CAS mismatch; не повторять.");
+    var original = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var rootBefore = id(original); var metaBefore = hash(path + ".meta");
+    report["rootBefore"] = rootBefore; report["metaBefore"] = metaBefore;
+    report["rootComponentTypesBefore"] = Newtonsoft.Json.Linq.JArray.FromObject(original.GetComponents<UnityEngine.Component>().Where(c=>c!=null).Select(c=>c.GetType().FullName)); persist();
+    contents = UnityEditor.PrefabUtility.LoadPrefabContents(path);
+    // Прежний Strip-контракт применяется до отделения всей корневой цепочки.
+    foreach (var typeName in new[] { "MagazineEjectInput", "PlayerLoadoutManager" }) { var c = contents.GetComponent(typeName); if (c != null) UnityEngine.Object.DestroyImmediate(c); }
+    foreach (var c in contents.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>(true)) if (c != null) UnityEngine.Object.DestroyImmediate(c.gameObject);
+    foreach (var c in contents.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true)) if (c != null) UnityEngine.Object.DestroyImmediate(c.gameObject);
+    foreach (var c in contents.GetComponentsInChildren<UnityEngine.Component>(true).Where(c => c != null && c.GetType().Name == "Hitbox").ToArray()) if (c != null) UnityEngine.Object.DestroyImmediate(c.gameObject);
+    foreach (var c in contents.GetComponentsInChildren<UnityEngine.Collider>(true).Where(c => !c.isTrigger).ToArray()) if (c != null) UnityEngine.Object.DestroyImmediate(c);
+    var legacy = contents.GetComponentsInChildren<UnityEngine.Transform>(true).FirstOrDefault(t => t.name == "Ghost" && t.parent != null && t.parent.name == "Cyborg");
+    if (legacy != null) UnityEngine.Object.DestroyImmediate(legacy.gameObject);
+    int unpackCount = 0;
+    while (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(contents)) {
+        if (++unpackCount > 5) throw new System.InvalidOperationException("Неожиданная глубина root prefab chain.");
+        UnityEditor.PrefabUtility.UnpackPrefabInstance(contents, UnityEditor.PrefabUnpackMode.OutermostRoot, UnityEditor.InteractionMode.AutomatedAction);
+    }
+    var avatar = contents.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    var serialized = new UnityEditor.SerializedObject(avatar);
+    serialized.FindProperty("_parentPrefab").objectReferenceValue = null;
+    serialized.FindProperty("_prefabGuid").stringValue = ghostGuid;
+    var poses = serialized.FindProperty("_handPoses");
+    var poseGuids = new[] { "3f8364620cf31c447a54358fb66bfd35", "56f373d38c0d6d1469a8e33faa184670", "44ea1f76294e38d47885b28c3a3438bd", "50e73c61f1d966d409da705792e92e86" };
+    poses.arraySize = poseGuids.Length;
+    for (int i = 0; i < poseGuids.Length; i++) {
+        var pose = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(UnityEditor.AssetDatabase.GUIDToAssetPath(poseGuids[i]));
+        if (pose == null) throw new System.InvalidOperationException("Нет согласованной SDK позы " + poseGuids[i]);
+        poses.GetArrayElementAtIndex(i).objectReferenceValue = pose;
+        if (i == 0) serialized.FindProperty("_defaultHandPose").objectReferenceValue = pose;
+    }
+    serialized.ApplyModifiedPropertiesWithoutUndo();
+    // Отделённый Ghost хранит собственные3ссылки скрытия головы, без SDK/Unity inheritance.
+    var mirror = contents.GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>();
+    var mirrorData = new UnityEditor.SerializedObject(mirror);
+    var hidden = mirrorData.FindProperty("_localDisabledGameObjects");
+    var headPaths = new[] { "Cyborg/CyborgGeo/HelmetGeo", "Cyborg/CyborgGeo/VisorGeo", "Cyborg/CyborgGeo/HelmetInteriorGeo" };
+    hidden.arraySize = headPaths.Length;
+    for (int i = 0; i < headPaths.Length; i++) {
+        var target = contents.transform.Find(headPaths[i]);
+        if (target == null) throw new System.InvalidOperationException("Нет собственного меша головы Ghost.");
+        hidden.GetArrayElementAtIndex(i).objectReferenceValue = target.gameObject;
+    }
+    mirrorData.ApplyModifiedPropertiesWithoutUndo();
+    // При исходных IDs Controllers прежние material overrides разрешаются; Paint здесь не нужен.
+    var material = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>("Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat");
+    var opaque = contents.GetComponentsInChildren<UnityEngine.SkinnedMeshRenderer>(true).Where(r => r.GetComponentInParent<UltimateXR.Avatar.UxrHandIntegration>(true) == null && r.sharedMaterials.Any(m => m != material)).Select(r=>r.name).ToArray();
+    report["opaqueBeforeSave"] = Newtonsoft.Json.Linq.JArray.FromObject(opaque);
+    if (opaque.Length != 0) throw new System.InvalidOperationException("Исходные Ghost material overrides не разрешаются; не маскировать Paint.");
+    bool saved; UnityEditor.PrefabUtility.SaveAsPrefabAsset(contents, path, out saved);
+    report["saved"] = saved; report["unpackCount"] = unpackCount; report["status"] = "saved_readback"; persist();
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    avatar = root.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    report["rootAfter"] = id(root); report["metaAfter"] = hash(path + ".meta"); report["sha256"] = hash(path);
+    report["prefabType"] = UnityEditor.PrefabUtility.GetPrefabAssetType(root).ToString();
+    report["guidChain"] = Newtonsoft.Json.Linq.JArray.FromObject(avatar.GetPrefabGuidChain());
+    report["controllersPPtrRemaining"] = System.IO.File.ReadAllText(path).Contains("guid: 8e0e06323e4754f479a9f19788554652");
+    report["poses"] = Newtonsoft.Json.Linq.JArray.FromObject(avatar.GetHandPoses().Select(p => new { p.name, id = id(p) }));
+    report["rootComponentTypesAfter"] = Newtonsoft.Json.Linq.JArray.FromObject(root.GetComponents<UnityEngine.Component>().Where(c=>c!=null).Select(c=>c.GetType().FullName));
+    report["skinnedRenderers"] = Newtonsoft.Json.Linq.JArray.FromObject(root.GetComponentsInChildren<UnityEngine.SkinnedMeshRenderer>(true).Select(r=> new { r.name, mesh=id(r.sharedMesh), bones=r.bones.Length, nullBones=r.bones.Count(b=>b==null), rootBone=r.rootBone!=null ? r.rootBone.name : null, materials=r.sharedMaterials.Select(m=>id(m)).ToArray() }));
+    report["colliders"] = Newtonsoft.Json.Linq.JArray.FromObject(root.GetComponentsInChildren<UnityEngine.Collider>(true).Select(c=>new { c.name, c.isTrigger, c.enabled }));
+    report["localDisabled"] = Newtonsoft.Json.Linq.JArray.FromObject(root.GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>().LocalDisabledGameObjects.Select(g=>g!=null ? g.name : null));
+    if (!saved || !Newtonsoft.Json.Linq.JToken.DeepEquals(rootBefore, id(root)) || metaBefore != hash(path + ".meta") || UnityEditor.PrefabUtility.GetPrefabAssetType(root) != UnityEditor.PrefabAssetType.Regular || !avatar.GetPrefabGuidChain().SequenceEqual(new[] { ghostGuid }) || (bool)report["controllersPPtrRemaining"]) throw new System.InvalidOperationException("Ghost root/GUID/type/SDK-chain guard failed.");
+    report["status"] = "completed_pending_quality_userqa";
+} catch (System.Exception e) { report["status"] = "failed_known_terminal"; report["error"] = e.ToString(); }
+finally { if (contents != null) UnityEditor.PrefabUtility.UnloadPrefabContents(contents); persist(); }
+return new { reportPath, status = (string)report["status"], executionCompleted = true };

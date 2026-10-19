@@ -49,7 +49,7 @@ namespace VrBattlegrounds.Editor.Avatars
         internal const string AlignSource = "HandsPack";
 
         private const string Pack       = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
-        internal const string PoseBase  = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+        internal const string PoseBase  = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
 
         /// <summary>Аватары, чьим записям хвата на оружии назначаются позы пака (профиль MEF Grip Extraction читает тот же список).</summary>
         internal static readonly string[] GripAvatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };

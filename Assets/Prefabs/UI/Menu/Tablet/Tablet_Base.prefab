@@ -849,6 +849,11 @@ MonoBehaviour:
       _poseBlendValue: 0.924
       _gripAlignTransformHandLeft: {fileID: 3367377402964391894}
       _gripAlignTransformHandRight: {fileID: 2780423973028584104}
+    - _avatarPrefabGuid: f3401ffe5a644d647a14eff0c476b4d2
+      _handPose: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+      _poseBlendValue: 0.924
+      _gripAlignTransformHandLeft: {fileID: 3367377402964391894}
+      _gripAlignTransformHandRight: {fileID: 2780423973028584104}
     _alignToController: 0
     _alignToControllerAxes: {fileID: 0}
     _grabProximityMode: 0
@@ -894,6 +899,11 @@ MonoBehaviour:
       _gripAlignTransformHandLeft: {fileID: 2528210746322755395}
       _gripAlignTransformHandRight: {fileID: 4255666441354301504}
     - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
+      _handPose: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+      _poseBlendValue: 0.923
+      _gripAlignTransformHandLeft: {fileID: 5201699850521591179}
+      _gripAlignTransformHandRight: {fileID: 6261732803296499393}
+    - _avatarPrefabGuid: f3401ffe5a644d647a14eff0c476b4d2
       _handPose: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
       _poseBlendValue: 0.923
       _gripAlignTransformHandLeft: {fileID: 5201699850521591179}

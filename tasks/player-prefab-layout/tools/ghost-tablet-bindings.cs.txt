@@ -1,0 +1,60 @@
+// Native package9851 step3: только2явных Ghost entries, прочие bindings сохраняются.
+var path = "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab";
+var ghostPath = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
+var ghostGuid = "f3401ffe5a644d647a14eff0c476b4d2";
+var baseGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/ghost-tablet-bindings.json";
+var report = new Newtonsoft.Json.Linq.JObject { ["status"] = "preflight", ["path"] = path };
+System.Action persist = () => System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+System.Func<string,string> hash = p => { using (var sha = System.Security.Cryptography.SHA256.Create()) return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(p))).Replace("-", "").ToLowerInvariant(); };
+System.Func<UnityEngine.Object, object> id = obj => { string guid = null; long fileId = 0; if (obj != null) UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out fileId); return new { guid, fileId, name = obj != null ? obj.name : null }; };
+System.Func<UltimateXR.Manipulation.UxrGrabbableObject, Newtonsoft.Json.Linq.JArray> entries = grab => {
+    var result = new Newtonsoft.Json.Linq.JArray();
+    for (int i = 0; i < grab.GrabPointCount; i++) result.Add(Newtonsoft.Json.Linq.JObject.FromObject(new { point = i, entries = grab.GetGrabPoint(i).AvatarGripPoseEntries.Select(e => new { guid = e.AvatarPrefabGuid, pose = id(e.HandPose), blend = e.PoseBlendValue, left = id(e.GripAlignTransformHandLeft), right = id(e.GripAlignTransformHandRight) }).ToArray() }));
+    return result;
+};
+persist();
+try {
+    var ghostReceipt = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/player-prefab-layout/reports/test-repair/ghost-standalone.json"));
+    if ((string)ghostReceipt["status"] != "completed_pending_quality_userqa") throw new System.InvalidOperationException("Ghost readback gate не пройден.");
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var grab = root.GetComponentInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true);
+    var before = entries(grab); var metaBefore = hash(path + ".meta"); report["before"] = before; report["metaBefore"] = metaBefore; persist();
+    if (grab.GrabPointCount != 2 || Enumerable.Range(0, grab.GrabPointCount).Any(i => grab.GetGrabPoint(i).AvatarGripPoseEntries.Any(e => e.AvatarPrefabGuid == ghostGuid))) throw new System.InvalidOperationException("Неожиданные points/существующая Ghost entry; не повторять.");
+    for (int i = 0; i < grab.GrabPointCount; i++) {
+        var point = grab.GetGrabPoint(i);
+        var source = point.AvatarGripPoseEntries.Single(e => e.AvatarPrefabGuid == baseGuid);
+        point.CheckAddGripPoseInfo(ghostGuid);
+        var target = point.AvatarGripPoseEntries.Single(e => e.AvatarPrefabGuid == ghostGuid);
+        target.HandPose = source.HandPose; target.PoseBlendValue = source.PoseBlendValue;
+        target.GripAlignTransformHandLeft = source.GripAlignTransformHandLeft; target.GripAlignTransformHandRight = source.GripAlignTransformHandRight;
+    }
+    if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(grab)) UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(grab);
+    UnityEditor.EditorUtility.SetDirty(grab);
+    bool saved; UnityEditor.PrefabUtility.SavePrefabAsset(root, out saved);
+    report["saved"] = saved; report["status"] = "saved_readback"; persist();
+    root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path); grab = root.GetComponentInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true);
+    var after = entries(grab); report["after"] = after; report["metaAfter"] = hash(path + ".meta"); report["sha256"] = hash(path);
+    var oldEntriesAfter = (Newtonsoft.Json.Linq.JArray)after.DeepClone();
+    foreach (var point in oldEntriesAfter) foreach (var entry in point["entries"].Where(e => (string)e["guid"] == ghostGuid).ToArray()) entry.Remove();
+    bool preserved = Newtonsoft.Json.Linq.JToken.DeepEquals(before, oldEntriesAfter); report["previousEntriesUnchanged"] = preserved;
+    if (!saved || !preserved || metaBefore != hash(path + ".meta")) throw new System.InvalidOperationException("Tablet previous bindings/meta guard failed.");
+    // Наблюдательная SDK geometry диагностика, без новых test expectations до UserQA.
+    var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(ghostPath).GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    var geometry = new Newtonsoft.Json.Linq.JArray();
+    for (int pointIndex = 0; pointIndex < grab.GrabPointCount; pointIndex++) {
+        var resolved = grab.GetGrabPoint(pointIndex).GetGripPoseInfo(avatar);
+        foreach (var side in new[] { UltimateXR.Core.UxrHandSide.Left, UltimateXR.Core.UxrHandSide.Right }) {
+            UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh preview = null;
+            try {
+                preview = UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh.BuildForAvatar(avatar, resolved.HandPose, side, resolved.PoseBlendValue);
+                var align = side == UltimateXR.Core.UxrHandSide.Left ? resolved.GripAlignTransformHandLeft : resolved.GripAlignTransformHandRight;
+                geometry.Add(Newtonsoft.Json.Linq.JObject.FromObject(new { point = pointIndex, side = side.ToString(), pose = id(resolved.HandPose), blend = resolved.PoseBlendValue, alignment = id(align), valid = preview != null && preview.IsValid, vertices = preview != null && preview.UnityMesh != null ? preview.UnityMesh.vertexCount : 0, bounds = preview != null && preview.UnityMesh != null ? preview.UnityMesh.bounds.ToString() : null }));
+            } finally { if (preview != null && preview.UnityMesh != null) UnityEngine.Object.DestroyImmediate(preview.UnityMesh); }
+        }
+    }
+    report["sdkTabletGeometry"] = geometry;
+    report["status"] = "completed_pending_quality_userqa";
+} catch (System.Exception e) { report["status"] = "failed_known_terminal"; report["error"] = e.ToString(); }
+finally { persist(); }
+return new { reportPath, status = (string)report["status"], previousEntriesUnchanged = (bool?)report["previousEntriesUnchanged"], executionCompleted = true };

@@ -247,12 +247,12 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             {
                 ActionButton("Настроить UI fingertips", "Кончики указательных пальцев выбранного prefab.", () => AvatarScopedActions.Inputs(context), () => AvatarScopedActions.Fingertips(path));
                 ActionButton("Добавить / обновить карманы", "Выбранный prefab; общие шаблоны читаются. Проверьте позиции после создания.",
-                    () => AvatarScopedActions.Inputs(context, "Assets/Prefabs/Player/Pockets"), () => AvatarScopedActions.Pockets(path));
+                    () => AvatarScopedActions.Inputs(context, "Assets/Prefabs/Player/Equipment/Pockets"), () => AvatarScopedActions.Pockets(path));
                 watchReference = (GameObject)EditorGUILayout.ObjectField("Эталон часов", watchReference, typeof(GameObject), false);
                 var reference = watchReference;
                 using (new EditorGUI.DisabledScope(!reference))
                     ActionButton("Установить часы", "Один prefab; поза нормализуется по предплечью выбранного эталона.",
-                        () => AvatarScopedActions.Inputs(context, AssetDatabase.GetAssetPath(reference), "Assets/Prefabs/Player/WristWatch_HUD.prefab"), () => { AvatarScopedActions.RequireOwnPrefab(path); string result = WristWatchInstaller.InstallFor(path, reference); AvatarScopedActions.NormalizeAndVerify(path); return result; });
+                        () => AvatarScopedActions.Inputs(context, AssetDatabase.GetAssetPath(reference), "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab"), () => { AvatarScopedActions.RequireOwnPrefab(path); string result = WristWatchInstaller.InstallFor(path, reference); AvatarScopedActions.NormalizeAndVerify(path); return result; });
             }
             var data = context.Data;
             using (new EditorGUI.DisabledScope(!data))

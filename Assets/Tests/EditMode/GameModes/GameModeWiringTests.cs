@@ -36,7 +36,7 @@ namespace VrBattlegrounds.Tests.Modes
         public const string MapRegistryPath = "Assets/Data/Maps/MapRegistry.asset";
         public const string LobbyMapPath = "Assets/Data/Maps/MapData_Lobby.asset";
         private const string WarmupTeamPath = "Assets/Data/Teams/Warmup_Team.asset";
-        private const string CyborgPrefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        private const string CyborgPrefabPath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
         private const string AvatarStrategyPath = "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset";
         private const string WarmupModePrefabPath = "Assets/Prefabs/GameModes/WarmupMode.prefab";
         private const string AvatarsRegistryPath = "Assets/Data/Player/Avatars/AvatarsRegistry.asset";

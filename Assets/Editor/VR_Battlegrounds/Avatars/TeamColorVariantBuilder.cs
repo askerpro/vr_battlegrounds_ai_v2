@@ -31,7 +31,7 @@ namespace VrBattlegrounds.Editor.Avatars
     internal static class TeamColorVariantBuilder
     {
         private const string Folder = "Assets/Models/Avatars/MEF_Optimized/";
-        private const string SourcePrefab = "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab";
+        private const string SourcePrefab = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab";
         private const string SourceMaterial = Folder + "MEF_Optimized.mat";
         private const string Mask = Folder + "MEF_Optimized_TeamMask.png";
         private const string SourceData = "Assets/Data/Player/Avatars/OptimizedMEF.asset";
@@ -74,7 +74,7 @@ namespace VrBattlegrounds.Editor.Avatars
         public static string Build(string suffix, string displayName, Color main, Color additional, Color helmet)
         {
             string materialPath = Folder + $"MEF_Optimized_{suffix}.mat";
-            string prefabPath = $"Assets/Prefabs/Player/MEF_cyborg_hands_Player_{suffix}.prefab";
+            string prefabPath = $"Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_{suffix}.prefab";
             string dataPath = $"Assets/Data/Player/Avatars/OptimizedMEF_{suffix}.asset";
 
             SetupSource();

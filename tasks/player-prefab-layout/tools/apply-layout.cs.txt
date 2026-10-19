@@ -1,0 +1,53 @@
+// Только утверждённые native moves/create folders и удаление доказанно пустого старого контейнера.
+var manifest = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/player-prefab-layout/contracts/layout-manifest.json"));
+var root = (string)manifest["root"];
+var reportPath = "tasks/player-prefab-layout/reports/layout/moves.json";
+var operations = new Newtonsoft.Json.Linq.JArray();
+var report = new Newtonsoft.Json.Linq.JObject { ["utc"] = System.DateTime.UtcNow.ToString("O"), ["operations"] = operations, ["completed"] = false };
+System.Action save = () => System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+if (!(bool)manifest["enabled"] || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode || UnityEditor.EditorApplication.isCompiling)
+    throw new System.InvalidOperationException("Пакет не разрешён или Editor занят");
+foreach (var move in manifest["moves"]) {
+    var src = root + (string)move["source"]; var dst = root + (string)move["destination"];
+    if (UnityEditor.AssetDatabase.AssetPathToGUID(src) != (string)move["guid"] || System.IO.File.Exists(dst) || System.IO.Directory.Exists(dst) || System.IO.File.Exists(dst + ".meta"))
+        throw new System.InvalidOperationException("Предусловия MoveAsset не выполнены: " + src);
+}
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+save();
+foreach (var token in manifest["create_folders"]) {
+        var p = root + (string)token;
+        var expectedGuid = (string)manifest["created_folder_guids"][(string)token];
+        var guid = UnityEditor.AssetDatabase.AssetPathToGUID(p);
+        if (!UnityEditor.AssetDatabase.IsValidFolder(p) || guid != expectedGuid)
+            throw new System.InvalidOperationException("Не импортирована папка из результата821 или GUID иной: " + p);
+        operations.Add(new Newtonsoft.Json.Linq.JObject { ["api"] = "RetainCreatedFolder", ["path"] = p, ["guid"] = guid });
+        save();
+}
+UnityEditor.AssetDatabase.StartAssetEditing();
+try {
+    foreach (var move in manifest["moves"]) {
+        var src = root + (string)move["source"]; var dst = root + (string)move["destination"];
+        var error = UnityEditor.AssetDatabase.MoveAsset(src, dst);
+        operations.Add(new Newtonsoft.Json.Linq.JObject { ["api"] = "MoveAsset", ["source"] = src, ["destination"] = dst, ["error"] = error, ["guidAfter"] = UnityEditor.AssetDatabase.AssetPathToGUID(dst) });
+        save();
+        if (!string.IsNullOrEmpty(error)) throw new System.InvalidOperationException(error);
+    }
+    foreach (var item in manifest["delete_after_moves_if_empty"]) {
+        var p = root + (string)item["path"];
+        var entries = System.IO.Directory.GetFileSystemEntries(p);
+        if (entries.Length != 0 || UnityEditor.AssetDatabase.AssetPathToGUID(p) != (string)item["guid"])
+            throw new System.InvalidOperationException("Старый контейнер не пуст или GUID иной: " + p);
+        var removed = UnityEditor.AssetDatabase.DeleteAsset(p);
+        operations.Add(new Newtonsoft.Json.Linq.JObject { ["api"] = "DeleteAsset", ["path"] = p, ["entriesBefore"] = entries.Length, ["removed"] = removed, ["folderExistsAfter"] = System.IO.Directory.Exists(p), ["metaExistsAfter"] = System.IO.File.Exists(p + ".meta") });
+        save();
+        if (!removed) throw new System.InvalidOperationException("Не удалён пустой контейнер: " + p);
+    }
+    report["completed"] = true;
+} catch (System.Exception ex) {
+    report["error"] = ex.ToString();
+    throw;
+} finally {
+    UnityEditor.AssetDatabase.StopAssetEditing();
+    save();
+}
+return new { reportPath, operations = operations.Count, completed = (bool)report["completed"] };

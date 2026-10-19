@@ -20,7 +20,7 @@ public static class CreateBaseAvatars
             "Military_Cap_Base_Avatar"
         };
 
-        string playerBasePath = "Assets/Prefabs/Player/PlayerBase.prefab";
+        string playerBasePath = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab";
         GameObject playerBaseAsset = AssetDatabase.LoadAssetAtPath<GameObject>(playerBasePath);
 
         if (playerBaseAsset == null)
@@ -65,7 +65,9 @@ public static class CreateBaseAvatars
             }
 
             // Save
-            string outPath = $"Assets/Prefabs/Player/{names[i]}.prefab";
+            string outPath = names[i] == "Heavy_Soldier_Base_Avatar"
+                ? $"Assets/Prefabs/Player/Unused/{names[i]}.prefab"
+                : $"Assets/Prefabs/Player/{names[i]}.prefab";
             PrefabUtility.SaveAsPrefabAsset(baseInstance, outPath);
             GameObject.DestroyImmediate(baseInstance);
             GameLog.Player.Info($"Created {outPath}");

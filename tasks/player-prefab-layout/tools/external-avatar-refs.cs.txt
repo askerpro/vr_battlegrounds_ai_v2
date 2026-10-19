@@ -1,0 +1,38 @@
+// Наблюдательный native census разрешённых внешних PPtrs; не тест новых expectations.
+var phase = "before";
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/external-avatar-refs-" + phase + ".json";
+var paths = new[] {
+    "Assets/Data/Player/Avatars/Cyborg.asset", "Assets/Data/Player/Avatars/Ghost.asset", "Assets/Data/Player/Avatars/TeamAvatarStrategy.asset",
+    "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+    "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Gun.prefab",
+    "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Grenade.prefab",
+    "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Machinegun.prefab",
+    "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Shotgun.prefab"
+};
+var refs = new Newtonsoft.Json.Linq.JArray();
+var hashes = new Newtonsoft.Json.Linq.JArray();
+foreach (var path in paths) {
+    using (var sha = System.Security.Cryptography.SHA256.Create()) hashes.Add(new Newtonsoft.Json.Linq.JObject { ["path"] = path, ["sha256"] = System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(path))).Replace("-", "").ToLowerInvariant() });
+    var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(path);
+    var root = asset as UnityEngine.GameObject;
+    var objects = root != null ? root.GetComponentsInChildren<UnityEngine.Component>(true).Where(c=>c!=null).Cast<UnityEngine.Object>().ToArray() : new[] { asset };
+    foreach (var obj in objects) {
+        var serialized = new UnityEditor.SerializedObject(obj); var iterator = serialized.GetIterator();
+        while (iterator.Next(true)) {
+            if (iterator.propertyType != UnityEditor.SerializedPropertyType.ObjectReference || iterator.objectReferenceValue == null) continue;
+            string guid; long fileId;
+            if (!UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(iterator.objectReferenceValue, out guid, out fileId) || (guid != "8e0e06323e4754f479a9f19788554652" && guid != "f3401ffe5a644d647a14eff0c476b4d2")) continue;
+            var component = obj as UnityEngine.Component;
+            refs.Add(new Newtonsoft.Json.Linq.JObject { ["asset"] = path, ["owner"] = component != null ? UnityEditor.AnimationUtility.CalculateTransformPath(component.transform, root.transform) + ":" + obj.GetType().FullName : obj.GetType().FullName, ["property"] = iterator.propertyPath, ["guid"] = guid, ["fileId"] = fileId, ["type"] = iterator.objectReferenceValue.GetType().FullName });
+        }
+    }
+}
+var report = new Newtonsoft.Json.Linq.JObject { ["phase"] = phase, ["references"] = refs, ["hashes"] = hashes };
+if (phase == "after") {
+    var before = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/player-prefab-layout/reports/test-repair/external-avatar-refs-before.json"));
+    report["referencesUnchanged"] = Newtonsoft.Json.Linq.JToken.DeepEquals(before["references"], refs);
+    report["sourceAssetsUnchanged"] = Newtonsoft.Json.Linq.JToken.DeepEquals(before["hashes"], hashes);
+}
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { reportPath, phase, count = refs.Count, referencesUnchanged = (bool?)report["referencesUnchanged"], sourceAssetsUnchanged = (bool?)report["sourceAssetsUnchanged"], executionCompleted = true };

@@ -1,0 +1,59 @@
+// Native package9877 step2: после отделения Ghost допустима native canonicalization внутренних IDs.
+var path = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/head-persistent.json";
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+var report = new Newtonsoft.Json.Linq.JObject { ["status"] = "preflight", ["path"] = path };
+System.Func<string,string> hash = p => { using (var sha = System.Security.Cryptography.SHA256.Create()) return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(p))).Replace("-", "").ToLowerInvariant(); };
+System.Action persist = () => System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+System.Func<UnityEngine.GameObject, Newtonsoft.Json.Linq.JArray> ids = root => {
+    var result = new Newtonsoft.Json.Linq.JArray();
+    foreach (var t in root.GetComponentsInChildren<UnityEngine.Transform>(true)) {
+        string relative = UnityEditor.AnimationUtility.CalculateTransformPath(t, root.transform);
+        var objects = new System.Collections.Generic.List<UnityEngine.Object> { t.gameObject };
+        objects.AddRange(t.GetComponents<UnityEngine.Component>().Where(c => c != null).Cast<UnityEngine.Object>());
+        for (int i = 0; i < objects.Count; i++) {
+            string guid; long fileId;
+            if (!UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(objects[i], out guid, out fileId)) throw new System.InvalidOperationException("Нет persistent ID: " + relative);
+            result.Add(new Newtonsoft.Json.Linq.JObject { ["path"] = relative, ["slot"] = i, ["type"] = objects[i].GetType().FullName, ["guid"] = guid, ["fileId"] = fileId });
+        }
+    }
+    return result;
+};
+persist();
+try {
+    var ghostPath = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
+    var ghost = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(ghostPath);
+    if (UnityEditor.PrefabUtility.GetPrefabAssetType(ghost) != UnityEditor.PrefabAssetType.Regular ||
+        !ghost.GetComponent<UltimateXR.Avatar.UxrAvatar>().GetPrefabGuidChain().SequenceEqual(new[] { "f3401ffe5a644d647a14eff0c476b4d2" }) ||
+        System.IO.File.ReadAllText(ghostPath).Contains("guid: 8e0e06323e4754f479a9f19788554652")) throw new System.InvalidOperationException("Сначала отделить Ghost от Controllers native/SDK chain.");
+    if (hash(path) != "f8f31422b93aa259f9d037db00e3d3d0ea02a5be0581936b6d5a34ced295eed4") throw new System.InvalidOperationException("Source CAS mismatch; не повторять пакет.");
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var before = ids(root);
+    string metaBefore = hash(path + ".meta");
+    report["before"] = before; report["metaBefore"] = metaBefore; persist();
+    var mirror = root.GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>();
+    if (UnityEditor.AssetDatabase.GetAssetPath(mirror) != path || mirror.LocalDisabledGameObjects.Count != 0) throw new System.InvalidOperationException("Неожиданный owner/list mirror.");
+    var targets = new[] { "Cyborg/CyborgGeo/HelmetGeo", "Cyborg/CyborgGeo/VisorGeo", "Cyborg/CyborgGeo/HelmetInteriorGeo" }.Select(p => root.transform.Find(p)).ToArray();
+    if (targets.Any(t => t == null || !t.gameObject.activeSelf || t.GetComponent<UnityEngine.Renderer>() == null)) throw new System.InvalidOperationException("Нет существующих отдельных мешей головы.");
+    var so = new UnityEditor.SerializedObject(mirror);
+    var list = so.FindProperty("_localDisabledGameObjects"); list.arraySize = targets.Length;
+    for (int i = 0; i < targets.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = targets[i].gameObject;
+    so.ApplyModifiedPropertiesWithoutUndo();
+    if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(mirror)) UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(mirror);
+    UnityEditor.EditorUtility.SetDirty(mirror);
+    bool saved; UnityEditor.PrefabUtility.SavePrefabAsset(root, out saved);
+    report["saved"] = saved; report["status"] = "saved_identity_check"; persist();
+    var after = ids(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path));
+    report["after"] = after; report["sha256"] = hash(path); report["metaAfter"] = hash(path + ".meta");
+    bool same = Newtonsoft.Json.Linq.JToken.DeepEquals(before, after);
+    report["identitiesUnchanged"] = same;
+    var rootBefore = new Newtonsoft.Json.Linq.JArray(before.Where(e => (string)e["path"] == ""));
+    var rootAfter = new Newtonsoft.Json.Linq.JArray(after.Where(e => (string)e["path"] == ""));
+    bool stableExternalRoot = Newtonsoft.Json.Linq.JToken.DeepEquals(rootBefore, rootAfter);
+    report["externalRootIdentitiesUnchanged"] = stableExternalRoot;
+    report["canonicalizationDecision"] = 9877;
+    if (!saved || !stableExternalRoot || metaBefore != hash(path + ".meta")) throw new System.InvalidOperationException("SavePrefabAsset root/meta guard failed.");
+    report["status"] = "completed_pending_quality_userqa";
+} catch (System.Exception e) { report["status"] = "failed_known_terminal"; report["error"] = e.ToString(); }
+finally { persist(); }
+return new { reportPath, status = (string)report["status"], identitiesUnchanged = (bool?)report["identitiesUnchanged"], executionCompleted = true };

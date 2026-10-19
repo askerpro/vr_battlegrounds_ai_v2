@@ -7,7 +7,7 @@ public class RefineBackPocket
 {
     public static void Refine()
     {
-        string prefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        string prefabPath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
         GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
 
         try

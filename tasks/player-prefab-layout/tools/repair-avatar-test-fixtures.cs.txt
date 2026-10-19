@@ -1,0 +1,138 @@
+// ИСТОРИЯ830: НЕ ВЫПОЛНЯТЬ. SaveAs Controllers remapped IDs; superseded standalone9851 и persistent SavePrefabAsset.
+throw new System.InvalidOperationException("Исторический пакет830 отключён; использовать standalone9851 пакет.");
+var controllersPath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+var ghostPath = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/asset-repair.json";
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+var report = new Newtonsoft.Json.Linq.JObject();
+var operations = new Newtonsoft.Json.Linq.JArray();
+report["operations"] = operations;
+report["status"] = "preflight";
+report["user_instruction"] = 9786;
+report["quality_userqa_required"] = true;
+System.Action persist = () => System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+System.Func<string, string> hash = path => {
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(path))).Replace("-", "").ToLowerInvariant();
+};
+System.Func<UnityEngine.Object, object> identity = obj => {
+    string guid = null;
+    long fileId = 0;
+    bool persistent = obj != null && UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out guid, out fileId);
+    if (!persistent) { guid = null; fileId = 0; }
+    return new { guid, fileId, name = obj != null ? obj.name : null };
+};
+System.Func<UnityEngine.Transform, string> hierarchy = transform => {
+    var names = new System.Collections.Generic.List<string>();
+    for (var current = transform; current != null; current = current.parent) names.Insert(0, current.name);
+    return string.Join("/", names);
+};
+System.Func<UnityEngine.GameObject, bool> effectiveActive = obj => {
+    for (var current = obj.transform; current != null; current = current.parent)
+        if (!current.gameObject.activeSelf) return false;
+    return true;
+};
+System.Func<UnityEngine.Renderer, UnityEngine.Mesh> meshOf = renderer => {
+    var skin = renderer as UnityEngine.SkinnedMeshRenderer;
+    if (skin != null) return skin.sharedMesh;
+    var filter = renderer.GetComponent<UnityEngine.MeshFilter>();
+    return filter != null ? filter.sharedMesh : null;
+};
+System.Func<string, object> census = path => {
+    var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+    var avatar = root.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+    var mirror = root.GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>();
+    var relevant = new System.Collections.Generic.HashSet<string> { "Hitbox", "UxrGrabbableObjectAnchor", "UxrGrabbableObject", "PlayerLoadoutManager", "MagazineEjectInput" };
+    return new {
+        path, sha256 = hash(path), metaSha256 = hash(path + ".meta"), id = identity(root),
+        prefabType = UnityEditor.PrefabUtility.GetPrefabAssetType(root).ToString(),
+        source = identity(UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(root)),
+        sourcePath = UnityEditor.AssetDatabase.GetAssetPath(UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(root)),
+        rootActiveSelf = root.activeSelf,
+        components = root.GetComponentsInChildren<UnityEngine.Component>(true).Where(c => c != null && relevant.Contains(c.GetType().Name)).Select(c => new {
+            type = c.GetType().FullName, path = hierarchy(c.transform), id = identity(c), activeSelf = c.gameObject.activeSelf,
+            effectiveActive = effectiveActive(c.gameObject)
+        }).ToArray(),
+        colliders = root.GetComponentsInChildren<UnityEngine.Collider>(true).Select(c => new {
+            type = c.GetType().Name, path = hierarchy(c.transform), id = identity(c), source = identity(UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(c)),
+            c.enabled, c.isTrigger, layer = c.gameObject.layer, activeSelf = c.gameObject.activeSelf,
+            activeInHierarchy = c.gameObject.activeInHierarchy, effectiveActive = effectiveActive(c.gameObject)
+        }).ToArray(),
+        localDisabled = mirror.LocalDisabledGameObjects.Select(go => new { path = go != null ? hierarchy(go.transform) : null, id = identity(go) }).ToArray(),
+        headGeometry = root.GetComponentsInChildren<UnityEngine.Renderer>(true).Where(r => r.name == "HelmetGeo" || r.name == "VisorGeo" || r.name == "HelmetInteriorGeo").Select(r => new {
+            path = hierarchy(r.transform), id = identity(r), gameObject = identity(r.gameObject),
+            source = identity(UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(r)), mesh = identity(meshOf(r)),
+            vertices = meshOf(r) != null ? meshOf(r).vertexCount : 0,
+            r.enabled, r.forceRenderingOff, activeSelf = r.gameObject.activeSelf, effectiveActive = effectiveActive(r.gameObject),
+            bodyOwned = avatar.AvatarRenderers.Contains(r),
+            rootBone = r is UnityEngine.SkinnedMeshRenderer && ((UnityEngine.SkinnedMeshRenderer)r).rootBone != null ? hierarchy(((UnityEngine.SkinnedMeshRenderer)r).rootBone) : null
+        }).ToArray(),
+        bodyRendererNulls = avatar.AvatarRenderers.Count(r => r == null)
+    };
+};
+persist();
+try {
+    if (UnityEditor.EditorApplication.isPlaying || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+        throw new System.InvalidOperationException("Editor занят; native-пакет не начат.");
+    if (!string.Equals(hash(controllersPath), "f8f31422b93aa259f9d037db00e3d3d0ea02a5be0581936b6d5a34ced295eed4", System.StringComparison.OrdinalIgnoreCase) ||
+        !string.Equals(hash(ghostPath), "bc94bed0133e4e24407352644b5dd0bb284d478de636b3172f23360a7fdbc922", System.StringComparison.OrdinalIgnoreCase))
+        throw new System.InvalidOperationException("Исходные тела prefab изменились; пакет не применять повторно.");
+    report["before"] = Newtonsoft.Json.Linq.JToken.FromObject(new[] { census(controllersPath), census(ghostPath) });
+    persist();
+
+    var headPaths = new[] { "Cyborg/CyborgGeo/HelmetGeo", "Cyborg/CyborgGeo/VisorGeo", "Cyborg/CyborgGeo/HelmetInteriorGeo" };
+    var controllers = UnityEditor.PrefabUtility.LoadPrefabContents(controllersPath);
+    try {
+        var targets = headPaths.Select(path => controllers.transform.Find(path)).ToArray();
+        if (targets.Any(t => t == null || !effectiveActive(t.gameObject) || t.GetComponent<UnityEngine.Renderer>() == null || meshOf(t.GetComponent<UnityEngine.Renderer>()) == null))
+            throw new System.InvalidOperationException("Не найдены три действующих отдельные меша головы; Controllers не сохранён.");
+        var mirror = controllers.GetComponent<UltimateXR.Networking.Integrations.Net.Mirror.UxrMirrorAvatar>();
+        if (mirror == null || mirror.LocalDisabledGameObjects.Count != 0)
+            throw new System.InvalidOperationException("Неожиданное исходное локальное скрытие; Controllers не сохранён.");
+        var serialized = new UnityEditor.SerializedObject(mirror);
+        var property = serialized.FindProperty("_localDisabledGameObjects");
+        if (property == null) throw new System.InvalidOperationException("Нет штатного сериализованного списка скрытия.");
+        property.arraySize = targets.Length;
+        for (int i = 0; i < targets.Length; i++) property.GetArrayElementAtIndex(i).objectReferenceValue = targets[i].gameObject;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(mirror);
+        bool saved;
+        UnityEditor.PrefabUtility.SaveAsPrefabAsset(controllers, controllersPath, out saved);
+        if (!saved) throw new System.InvalidOperationException("Controllers SaveAsPrefabAsset вернул false.");
+        operations.Add(new Newtonsoft.Json.Linq.JObject { ["operation"] = "restore_local_head_targets", ["path"] = controllersPath, ["targetPaths"] = Newtonsoft.Json.Linq.JArray.FromObject(headPaths) });
+        report["status"] = "controllers_saved";
+        persist();
+    } finally { UnityEditor.PrefabUtility.UnloadPrefabContents(controllers); }
+
+    // Только прежний Strip-контракт Ghost, без Paint, Build/Register и сохранения других assets.
+    var ghost = UnityEditor.PrefabUtility.LoadPrefabContents(ghostPath);
+    try {
+        foreach (string typeName in new[] { "MagazineEjectInput", "PlayerLoadoutManager" }) {
+            var component = ghost.GetComponent(typeName);
+            if (component != null) UnityEngine.Object.DestroyImmediate(component);
+        }
+        foreach (var anchor in ghost.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObjectAnchor>(true))
+            if (anchor != null) UnityEngine.Object.DestroyImmediate(anchor.gameObject);
+        foreach (var grabbable in ghost.GetComponentsInChildren<UltimateXR.Manipulation.UxrGrabbableObject>(true))
+            if (grabbable != null) UnityEngine.Object.DestroyImmediate(grabbable.gameObject);
+        foreach (var hitbox in ghost.GetComponentsInChildren<UnityEngine.Component>(true).Where(c => c != null && c.GetType().Name == "Hitbox").ToArray())
+            if (hitbox != null) UnityEngine.Object.DestroyImmediate(hitbox.gameObject);
+        foreach (var collider in ghost.GetComponentsInChildren<UnityEngine.Collider>(true).Where(c => !c.isTrigger).ToArray())
+            if (collider != null) UnityEngine.Object.DestroyImmediate(collider);
+        var legacy = ghost.GetComponentsInChildren<UnityEngine.Transform>(true).FirstOrDefault(t => t.name == "Ghost" && t.parent != null && t.parent.name == "Cyborg");
+        if (legacy != null) UnityEngine.Object.DestroyImmediate(legacy.gameObject);
+        bool saved;
+        UnityEditor.PrefabUtility.SaveAsPrefabAsset(ghost, ghostPath, out saved);
+        if (!saved) throw new System.InvalidOperationException("Ghost SaveAsPrefabAsset вернул false.");
+        operations.Add(new Newtonsoft.Json.Linq.JObject { ["operation"] = "restore_ghost_strip_overrides", ["path"] = ghostPath });
+        report["status"] = "ghost_saved";
+        persist();
+    } finally { UnityEditor.PrefabUtility.UnloadPrefabContents(ghost); }
+
+    report["after"] = Newtonsoft.Json.Linq.JToken.FromObject(new[] { census(controllersPath), census(ghostPath) });
+    report["status"] = "completed_pending_quality_userqa";
+} catch (System.Exception error) {
+    report["status"] = "failed_known_terminal";
+    report["error"] = error.ToString();
+} finally { persist(); }
+return new { reportPath, status = (string)report["status"], operationCount = operations.Count, executionCompleted = true };

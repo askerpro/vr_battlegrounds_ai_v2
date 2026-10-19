@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Editor.HandRigQuality
 
         void OnEnable()
         {
-            if(!_target)_target=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab");
+            if(!_target)_target=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab");
             if(!_reference)_reference=AssetDatabase.LoadAssetAtPath<GameObject>(HandRigQualityCalibration.Cyborg);
         }
 

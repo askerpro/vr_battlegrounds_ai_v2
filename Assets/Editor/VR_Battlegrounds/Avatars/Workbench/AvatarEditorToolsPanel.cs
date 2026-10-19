@@ -152,8 +152,8 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             string path = context.AssetPath;
             using (new EditorGUI.DisabledScope(!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)))
             {
-                ActionButton("Экспортировать карманы как общие шаблоны", "Перезапись четырёх шаблонов в Assets/Prefabs/Player/Pockets; выбранный аватар только вход.",
-                    () => AvatarScopedActions.Inputs(context, "Assets/Prefabs/Player/Pockets"), () => AvatarMaintenanceTools.ExportPockets(path));
+                ActionButton("Экспортировать карманы как общие шаблоны", "Перезапись четырёх шаблонов в Assets/Prefabs/Player/Equipment/Pockets; выбранный аватар только вход.",
+                    () => AvatarScopedActions.Inputs(context, "Assets/Prefabs/Player/Equipment/Pockets"), () => AvatarMaintenanceTools.ExportPockets(path));
                 ActionButton("Refine Back Pocket Proximity", "Выбранный аватар: Anchor_Back → Proximity_Back_R, MaxPlaceDistance=0.2. Рецепт обобщён с Cyborg.",
                     () => AvatarScopedActions.Inputs(context), () => AvatarMaintenanceTools.RefineBack(path));
             }
@@ -187,7 +187,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
                 string[] registered = registry ? (registry.avatars ?? Array.Empty<AvatarData>()).Where(d => d && d.prefab).Select(d => AssetDatabase.GetAssetPath(d.prefab)).Distinct().ToArray() : Array.Empty<string>();
                 string reference = watchReference ? AssetDatabase.GetAssetPath(watchReference) : "";
                 using (new EditorGUI.DisabledScope(registered.Length == 0 || !reference.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)))
-                    ActionButton("Установить часы зарегистрированным аватарам", "Только захваченный список " + registered.Length + " prefab; реестр не меняется.", () => AvatarMaintenanceTools.Scope(registered.Concat(new[] { reference, AssetDatabase.GetAssetPath(registry), "Assets/Prefabs/Player/WristWatch_HUD.prefab" }).ToArray()),
+                    ActionButton("Установить часы зарегистрированным аватарам", "Только захваченный список " + registered.Length + " prefab; реестр не меняется.", () => AvatarMaintenanceTools.Scope(registered.Concat(new[] { reference, AssetDatabase.GetAssetPath(registry), "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab" }).ToArray()),
                         () => { foreach (string avatar in registered) { AvatarScopedActions.RequireOwnPrefab(avatar); WristWatchInstaller.InstallFor(avatar, AssetDatabase.LoadAssetAtPath<GameObject>(reference)); AvatarScopedActions.NormalizeAndVerify(avatar); } return "Обработано аватаров: " + registered.Length; });
             }
             historicalTools = EditorGUILayout.Foldout(historicalTools, "Модельные рецепты и прежние миграции", true);

@@ -27,7 +27,7 @@ namespace VrBattlegrounds.Editor.Avatars
             AvatarHandBases.PlayerBase, GripTargetProfile.CanonicalCyborgHandsBasePath,
             GripTargetProfile.CyborgAvatarPath, GripTargetProfile.MefCyborgPlayerPath,
             GripTargetProfile.MefCyborgPlayerBlackPath,
-            "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab"
+            "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab"
         };
 
         /// <summary>Диагностика текущих источников; ничего не сохраняет и не принимает качество.</summary>

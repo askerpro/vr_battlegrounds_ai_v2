@@ -28,7 +28,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class WristWatchInstaller
     {
-        private const string WatchPrefabPath = "Assets/Prefabs/Player/WristWatch_HUD.prefab";
+        private const string WatchPrefabPath = "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab";
 
         public static void InstallOnRegisteredAvatars()
         {

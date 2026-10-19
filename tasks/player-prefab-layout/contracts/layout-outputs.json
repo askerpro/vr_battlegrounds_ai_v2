@@ -1,0 +1,589 @@
+{
+  "decision_event": 9661,
+  "mappings": [
+    {
+      "source": "Assets/Prefabs/Player/PlayerSession.prefab",
+      "destination": "Assets/Prefabs/Player/Session/PlayerSession.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerSession.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Session/PlayerSession.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerBase.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerBase.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/CyborgHandsBase.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/CyborgHandsBase.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Ghost.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/Ghost.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Ghost/GhostMaterial.mat.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Ghost/GhostMaterial.mat",
+      "destination": "Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab",
+      "destination": "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Uzi_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Uzi_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Uzi_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Uzi_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Support.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Support.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Support.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Support.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Grip.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Grip.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Grip.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Grip.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Gun.asset.meta",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Gun.asset.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Gun.asset",
+      "destination": "Assets/Prefabs/Player/HandPoses/CyborgHands/Gun.asset"
+    },
+    {
+      "source": "Assets/Prefabs/Player/WristWatch.prefab",
+      "destination": "Assets/Prefabs/Player/Equipment/Watches/WristWatch.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/WristWatch.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Watches/WristWatch.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/WristWatch_HUD.prefab",
+      "destination": "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/WristWatch_HUD.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/MagazinePocket.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/MagazinePocket.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/MagazinePocket.prefab",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/MagazinePocket.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/Anchor_Hip_R.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Hip_R.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/Anchor_Hip_R.prefab",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Hip_R.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/Anchor_Back.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Back.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Pockets/Anchor_Back.prefab",
+      "destination": "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Back.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Corpse.prefab",
+      "destination": "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Corpse.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Corpse.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Corpse.prefab.meta"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Black_Corpse.prefab",
+      "destination": "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Black_Corpse.prefab"
+    },
+    {
+      "source": "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Black_Corpse.prefab.meta",
+      "destination": "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Black_Corpse.prefab.meta"
+    }
+  ],
+  "outputs": [
+    "Assets/Prefabs/Player/Avatars.meta",
+    "Assets/Prefabs/Player/Avatars/Bases.meta",
+    "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab",
+    "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab",
+    "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Base.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/MEF.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/Ghost.meta",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostMaterial.mat.meta",
+    "Assets/Prefabs/Player/Corpses/MEF.meta",
+    "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Black_Corpse.prefab",
+    "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Black_Corpse.prefab.meta",
+    "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Corpse.prefab",
+    "Assets/Prefabs/Player/Corpses/MEF/MEF_cyborg_hands_Player_Corpse.prefab.meta",
+    "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Black_Corpse.prefab",
+    "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Black_Corpse.prefab.meta",
+    "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Corpse.prefab",
+    "Assets/Prefabs/Player/Corpses/MEF_cyborg_hands_Player_Corpse.prefab.meta",
+    "Assets/Prefabs/Player/CyborgHandsBase.prefab",
+    "Assets/Prefabs/Player/CyborgHandsBase.prefab.meta",
+    "Assets/Prefabs/Player/Equipment.meta",
+    "Assets/Prefabs/Player/Equipment/Pockets.meta",
+    "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Back.prefab",
+    "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Back.prefab.meta",
+    "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Hip_R.prefab",
+    "Assets/Prefabs/Player/Equipment/Pockets/Anchor_Hip_R.prefab.meta",
+    "Assets/Prefabs/Player/Equipment/Pockets/MagazinePocket.prefab",
+    "Assets/Prefabs/Player/Equipment/Pockets/MagazinePocket.prefab.meta",
+    "Assets/Prefabs/Player/Equipment/Watches.meta",
+    "Assets/Prefabs/Player/Equipment/Watches/WristWatch.prefab",
+    "Assets/Prefabs/Player/Equipment/Watches/WristWatch.prefab.meta",
+    "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab",
+    "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab.meta",
+    "Assets/Prefabs/Player/Ghost.meta",
+    "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab",
+    "Assets/Prefabs/Player/Ghost/GhostAvatar.prefab.meta",
+    "Assets/Prefabs/Player/Ghost/GhostMaterial.mat",
+    "Assets/Prefabs/Player/Ghost/GhostMaterial.mat.meta",
+    "Assets/Prefabs/Player/HandPoses.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Gun.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Gun.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Gun_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_MP5K_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_PPK_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Revolver_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Scar_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_SniperRifle_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Uzi_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/HandsPack_Uzi_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_AK105_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Herrington_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_MKR9_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Mk14_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_R08_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_SRM12_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_TR15_Support.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Grip.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Grip.asset.meta",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Support.asset",
+    "Assets/Prefabs/Player/HandPoses/CyborgHands/Kinemation_Viper_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Gun.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Gun.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Gun_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_MP5K_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_PPK_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Revolver_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Scar_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_SniperRifle_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Uzi_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/HandsPack_Uzi_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_AK105_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Herrington_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_MKR9_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Mk14_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_R08_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_SRM12_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_TR15_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Grip.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset",
+    "Assets/Prefabs/Player/MEF_cyborg_hands/HandPoses/Kinemation_Viper_Support.asset.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player.prefab.meta",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab",
+    "Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab.meta",
+    "Assets/Prefabs/Player/PlayerBase.prefab",
+    "Assets/Prefabs/Player/PlayerBase.prefab.meta",
+    "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab",
+    "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab.meta",
+    "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab",
+    "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab.meta",
+    "Assets/Prefabs/Player/PlayerSession.prefab",
+    "Assets/Prefabs/Player/PlayerSession.prefab.meta",
+    "Assets/Prefabs/Player/Pockets.meta",
+    "Assets/Prefabs/Player/Pockets/Anchor_Back.prefab",
+    "Assets/Prefabs/Player/Pockets/Anchor_Back.prefab.meta",
+    "Assets/Prefabs/Player/Pockets/Anchor_Hip_R.prefab",
+    "Assets/Prefabs/Player/Pockets/Anchor_Hip_R.prefab.meta",
+    "Assets/Prefabs/Player/Pockets/MagazinePocket.prefab",
+    "Assets/Prefabs/Player/Pockets/MagazinePocket.prefab.meta",
+    "Assets/Prefabs/Player/Session.meta",
+    "Assets/Prefabs/Player/Session/PlayerSession.prefab",
+    "Assets/Prefabs/Player/Session/PlayerSession.prefab.meta",
+    "Assets/Prefabs/Player/WristWatch.prefab",
+    "Assets/Prefabs/Player/WristWatch.prefab.meta",
+    "Assets/Prefabs/Player/WristWatch_HUD.prefab",
+    "Assets/Prefabs/Player/WristWatch_HUD.prefab.meta"
+  ]
+}

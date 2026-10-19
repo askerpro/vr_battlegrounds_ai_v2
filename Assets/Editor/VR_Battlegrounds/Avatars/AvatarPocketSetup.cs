@@ -20,7 +20,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class AvatarPocketSetup
     {
-        private const string PocketPrefabFolder = "Assets/Prefabs/Player/Pockets";
+        private const string PocketPrefabFolder = "Assets/Prefabs/Player/Equipment/Pockets";
         
         /// <summary>
         /// Авторские базовые теги и параметры карманов. Теги магазинов дополняются

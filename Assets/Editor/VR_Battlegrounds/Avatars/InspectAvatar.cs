@@ -6,7 +6,7 @@ public static class InspectAvatar
 {
     public static void Inspect()
     {
-        string path = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        string path = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         if (prefab == null) return;
         

@@ -6,8 +6,8 @@ public static class ExtractPlayerBase
 {
     public static void Execute()
     {
-        string sourcePath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
-        string targetPath = "Assets/Prefabs/Player/PlayerBase.prefab";
+        string sourcePath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+        string targetPath = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab";
 
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
         if (prefab == null) {

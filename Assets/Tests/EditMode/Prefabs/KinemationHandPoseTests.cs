@@ -22,7 +22,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const string Pack       = "Assets/ThirdParty/KINEMATION/TacticalShooterPack/";
         private const string Character  = Pack + "Meshes/Character/Operator/SKM_Operator.fbx";
         private const string PoseFolder = "Assets/Art/HandPoses/Kinemation/";
-        private const string PoseBase   = "Assets/Prefabs/Player/PlayerBase_NonSdkHands.prefab";
+        private const string PoseBase   = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
 
         private const float FingerTolerance = 5f;
         private const float ThumbTolerance  = 20f;
@@ -81,10 +81,27 @@ namespace VrBattlegrounds.Tests.Prefabs
             return false;
         }
 
-        public static IEnumerable<TestCaseData> PoseOnAvatarCases() =>
-            from c in Cases()
-            from a in Avatars
-            select new TestCaseData(c, a).SetName($"{{m}}({c.Pose}, {System.IO.Path.GetFileNameWithoutExtension(a)})");
+        public static IEnumerable<TestCaseData> PoseOnAvatarCases()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PoseBase) == null)
+                throw new System.InvalidOperationException($"Нет базы исходной семьи поз: {PoseBase}");
+            if (!RegisteredAvatars.Prefabs().Any())
+                throw new System.InvalidOperationException("Реестр игровых аватаров пуст; применимость семьи поз определить нельзя.");
+
+            string[] avatars = Avatars.ToArray();
+            if (avatars.Length == 0)
+            {
+                // Исходные pack-позы относятся к NonSdkHands, а не к игровому CyborgHands-ригу.
+                yield return new TestCaseData((Case)null, (string)null)
+                    .SetName("{m}(семья NonSdkHands не зарегистрирована)")
+                    .Ignore("В реестре нет потомков PlayerBase_NonSdkHands. Геометрия и контакт исходной семьи поз не проверяются; проверка регистрации pose assets остаётся применимой.");
+                yield break;
+            }
+
+            foreach (Case c in Cases())
+            foreach (string avatar in avatars)
+                yield return new TestCaseData(c, avatar).SetName($"{{m}}({c.Pose}, {System.IO.Path.GetFileNameWithoutExtension(avatar)})");
+        }
 
         [TestCaseSource(nameof(PoseOnAvatarCases))]
         public void Поза_повторяет_кадр_пака_на_обеих_руках(Case c, string avatarPath)

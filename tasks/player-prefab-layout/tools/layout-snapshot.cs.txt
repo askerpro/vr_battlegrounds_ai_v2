@@ -1,0 +1,111 @@
+// Диагностический снимок разрешённого переноса: идентичность, байты, native references. Не тест поведения.
+var phase = "__PHASE__";
+var referenceStart = __START__;
+var referenceEnd = __END__;
+var folder = "tasks/player-prefab-layout/reports/layout/";
+var manifest = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText("tasks/player-prefab-layout/contracts/layout-manifest.json"));
+var root = (string)manifest["root"];
+var moves = (Newtonsoft.Json.Linq.JArray)manifest["moves"];
+System.Func<string, string> destination = p => {
+    foreach (var move in moves) {
+        var src = root + (string)move["source"];
+        if (p == src || p == src + ".meta" || p.StartsWith(src + "/", System.StringComparison.Ordinal))
+            return root + (string)move["destination"] + p.Substring(src.Length);
+    }
+    return p;
+};
+System.Func<string, string> hash = p => {
+    if (!System.IO.File.Exists(p)) return null;
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+        return System.BitConverter.ToString(sha.ComputeHash(System.IO.File.ReadAllBytes(p))).Replace("-", "").ToLowerInvariant();
+};
+System.Func<UnityEngine.Object, Newtonsoft.Json.Linq.JObject> identity = obj => {
+    string g = null; long id = 0;
+    if (obj != null) UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(obj, out g, out id);
+    return new Newtonsoft.Json.Linq.JObject {
+        ["guid"] = g, ["fileId"] = id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["path"] = obj == null ? null : UnityEditor.AssetDatabase.GetAssetPath(obj)
+    };
+};
+var sources = new System.Collections.Generic.List<string>();
+if (phase == "before") {
+    foreach (var p in System.IO.Directory.GetFiles(root, "*", System.IO.SearchOption.AllDirectories)) sources.Add(p.Replace('\\', '/'));
+    sources.Sort(System.StringComparer.Ordinal);
+}
+else {
+    var before = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(folder + "before-0.json"));
+    foreach (var row in before["files"]) sources.Add((string)row["originalPath"]);
+}
+var files = new Newtonsoft.Json.Linq.JArray();
+var movedGuids = new System.Collections.Generic.HashSet<string>();
+foreach (var original in sources) {
+    var p = phase == "before" ? original : destination(original);
+    var assetPath = p.EndsWith(".meta", System.StringComparison.Ordinal) ? p.Substring(0, p.Length - 5) : p;
+    var obj = UnityEditor.AssetDatabase.LoadMainAssetAtPath(assetPath);
+    var row = new Newtonsoft.Json.Linq.JObject {
+        ["originalPath"] = original, ["path"] = p, ["sha256"] = hash(p),
+        ["identity"] = identity(obj), ["assetGuid"] = UnityEditor.AssetDatabase.AssetPathToGUID(assetPath)
+    };
+    var go = obj as UnityEngine.GameObject;
+    if (go != null && !p.EndsWith(".meta", System.StringComparison.Ordinal)) {
+        row["prefabType"] = UnityEditor.PrefabUtility.GetPrefabAssetType(go).ToString();
+        row["source"] = identity(UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(go));
+    }
+    files.Add(row);
+    if (destination(original) != original && !string.IsNullOrEmpty((string)row["assetGuid"])) movedGuids.Add((string)row["assetGuid"]);
+}
+var referencePaths = Newtonsoft.Json.Linq.JArray.Parse(System.IO.File.ReadAllText("tasks/player-prefab-layout/contracts/layout-reference-inputs.json"));
+var references = new Newtonsoft.Json.Linq.JArray();
+for (int referenceIndex = referenceStart; referenceIndex < System.Math.Min(referenceEnd, referencePaths.Count); referenceIndex++) {
+    var token = referencePaths[referenceIndex];
+    var original = (string)token;
+    var p = phase == "before" ? original : destination(original);
+    var properties = new Newtonsoft.Json.Linq.JArray();
+    var objects = new System.Collections.Generic.List<UnityEngine.Object>();
+    var go = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(p);
+    if (go != null) objects.AddRange(go.GetComponentsInChildren<UnityEngine.Component>(true));
+    else objects.AddRange(UnityEditor.AssetDatabase.LoadAllAssetsAtPath(p));
+    int missingComponents = 0;
+    foreach (var obj in objects) {
+        if (obj == null) { missingComponents++; continue; }
+        var owner = identity(obj);
+        var it = new UnityEditor.SerializedObject(obj).GetIterator();
+        while (it.Next(true)) {
+            if (it.propertyType == UnityEditor.SerializedPropertyType.ObjectReference && it.objectReferenceValue != null) {
+                var target = identity(it.objectReferenceValue);
+                if (movedGuids.Contains((string)target["guid"])) properties.Add(new Newtonsoft.Json.Linq.JObject {
+                    ["owner"] = owner.DeepClone(), ["property"] = it.propertyPath, ["target"] = target
+                });
+            } else if (it.propertyType == UnityEditor.SerializedPropertyType.String && movedGuids.Contains(it.stringValue)) {
+                properties.Add(new Newtonsoft.Json.Linq.JObject {
+                    ["owner"] = owner.DeepClone(), ["property"] = it.propertyPath, ["guidString"] = it.stringValue
+                });
+            }
+        }
+    }
+    var dependencies = new Newtonsoft.Json.Linq.JArray();
+    var dependencyPaths = UnityEditor.AssetDatabase.GetDependencies(p, true);
+    System.Array.Sort(dependencyPaths, System.StringComparer.Ordinal);
+    foreach (var dep in dependencyPaths) {
+        var g = UnityEditor.AssetDatabase.AssetPathToGUID(dep);
+        if (movedGuids.Contains(g)) dependencies.Add(new Newtonsoft.Json.Linq.JObject { ["guid"] = g, ["path"] = dep });
+    }
+    references.Add(new Newtonsoft.Json.Linq.JObject {
+        ["originalPath"] = original, ["path"] = p, ["sha256"] = hash(p), ["missingComponents"] = missingComponents,
+        ["properties"] = properties, ["dependencies"] = dependencies
+    });
+}
+var newFolders = new Newtonsoft.Json.Linq.JArray();
+foreach (var token in manifest["create_folders"]) {
+    var p = root + (string)token;
+    newFolders.Add(new Newtonsoft.Json.Linq.JObject { ["path"] = p, ["guid"] = UnityEditor.AssetDatabase.AssetPathToGUID(p), ["metaSha256"] = hash(p + ".meta") });
+}
+var report = new Newtonsoft.Json.Linq.JObject {
+    ["phase"] = phase, ["utc"] = System.DateTime.UtcNow.ToString("O"), ["projectRoot"] = System.IO.Directory.GetCurrentDirectory(),
+    ["files"] = files, ["references"] = references, ["newFolders"] = newFolders,
+    ["isCompiling"] = UnityEditor.EditorApplication.isCompiling, ["isPlaying"] = UnityEditor.EditorApplication.isPlaying
+};
+System.IO.Directory.CreateDirectory(folder);
+var reportPath = folder + phase + "-" + referenceStart + ".json";
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { reportPath, files = files.Count, referenceAssets = references.Count, movedGuids = movedGuids.Count };

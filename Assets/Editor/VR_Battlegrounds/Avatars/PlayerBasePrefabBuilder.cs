@@ -11,8 +11,8 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class PlayerBasePrefabBuilder
     {
-        private const string SourcePrefabPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
-        private const string OutputPrefabPath = "Assets/Prefabs/Player/PlayerBase.prefab";
+        private const string SourcePrefabPath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
+        private const string OutputPrefabPath = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab";
 
         public static void CreatePlayerBase()
         {

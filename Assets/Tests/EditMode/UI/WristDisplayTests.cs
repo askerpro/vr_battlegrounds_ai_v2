@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Tests.UI
     {
         private const string PrefabPath = "Assets/Prefabs/UI/HUD/WristDisplay.prefab";
         private const string OvalPrefabPath = "Assets/Prefabs/UI/HUD/WristDisplay_Oval.prefab";
-        private const string WatchHudPath = "Assets/Prefabs/Player/WristWatch_HUD.prefab";
+        private const string WatchHudPath = "Assets/Prefabs/Player/Equipment/Watches/WristWatch_HUD.prefab";
 
         /// <summary>
         /// Табло на часах MEF лежит на экране: смотрит наружу, как экран, и отстоит от него

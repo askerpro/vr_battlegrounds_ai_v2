@@ -1,0 +1,47 @@
+{
+  "task": "player-prefab-layout",
+  "stage": "layout",
+  "decision_event": 9661,
+  "status": "executed_user_accepted_9743",
+  "backend": "existing_native_unityMCP_own_worktree_only",
+  "alternative_client_allowed": false,
+  "play_allowed": false,
+  "outputs_manifest": "tasks/player-prefab-layout/contracts/layout-outputs.json",
+  "references_manifest": "tasks/player-prefab-layout/contracts/layout-reference-inputs.json",
+  "steps": [
+    "Fresh fetch/rebase and technical input checkpoint; request with all202exactoutputs",
+    "Canonical inbox before claim and again before begin; stop if STOP received",
+    "Own begin/guard: responsive, ready, not playing/compiling/testing, no dirty prefab stage",
+    "Before each execute: canonical inbox; then layout-snapshot.cs.txt phase=before, ranges0:20,20:40,40:60,60:72, CodeDom",
+    "Folders created in known partial821 are retained by recorded GUID; no repeatedCreateFolder. Canonical inbox; one continuation apply-layout.cs.txt call:14MoveAsset and1DeleteAsset proven-empty, no Heavy replay. Explicit safety_checks=false is needed for authorizedDeleteAsset; brokerguard stays active",
+    "Before each execute: canonical inbox; then layout-snapshot.cs.txt phase=after, same four ranges through72, CodeDom",
+    "Read native receipts and compare file hashes/meta/GUID/fileId/source/references; do not replay unknown mutations",
+    "Canonical inbox before explicit refresh; native guard readiness after refresh",
+    "Canonical inbox; unchanged AvatarLoadoutTests and PrefabCompositionTests fixtures in EditMode; capture full terminal result",
+    "Canonical inbox; unchanged exact NetworkAssetId catalogue method in EditMode; capture full terminal result",
+    "Compile diagnostics, own cleanup, immediate finish with receipts/results artifacts, then receive",
+    "Local diff/R100/hash/LF/path/tree audit completed; structure accepted9743, no accepted commit/merge/push"
+  ],
+  "existing_test_filters": {
+    "assembly": "VrBattlegrounds.Tests.EditMode",
+    "fixtures_run": [
+      "VrBattlegrounds.Tests.Prefabs.AvatarLoadoutTests",
+      "VrBattlegrounds.Tests.Prefabs.PrefabCompositionTests"
+    ],
+    "separate_exact_method_run": "VrBattlegrounds.Tests.Prefabs.NetworkAssetIdOnDiskTests.Сетевые_префабы_хранят_канонический_assetId",
+    "exclude_entire_network_fixture": "Other cases create temporary persistent assets; not part of this transfer package"
+  },
+  "evidence_requirements": {
+    "native_receipts": ["before-0.json", "before-20.json", "before-40.json", "before-60.json", "moves.json", "after-0.json", "after-20.json", "after-40.json", "after-60.json"],
+    "report_directory": "tasks/player-prefab-layout/reports/layout",
+    "tests": "Full native terminal JSON:fixtures80cases77passed3knownFloorFailed,network1passed. XML exports contain all81cases from these JSON; native ITestResultXML is not exposed. Full own Editor log captured. Before821/after823 receipts archived by broker; old Heavy result is historical",
+    "baseline_known_failures": "BotCombatStand/Floor belongs to bots-validation; record actual result without editing it",
+    "obsolete_expectations": "At delivery823 literal-path tests stayed unchanged; after user acceptance9743 see test-paths-spec.json for15mechanical path edits and actual9fixture results"
+  },
+  "cli_migration_preparation": {
+    "production_executor_available_in_this_task": false,
+    "status": "immutable actions/filters/outputs and artifact requirements prepared for maintainer adapter",
+    "run_second_editor_or_own_client": false,
+    "gate": "Same broker/FIFO, existing accepted backend only; maintainer owns backend deployment"
+  }
+}

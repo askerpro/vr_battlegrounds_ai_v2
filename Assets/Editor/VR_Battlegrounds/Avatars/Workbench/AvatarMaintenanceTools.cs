@@ -147,7 +147,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             so.FindProperty("_maxPlaceDistance").floatValue = .2f;
             so.ApplyModifiedPropertiesWithoutUndo(); return "Задний карман привязан к Proximity_Back_R.";
         });
-        internal static string ExportPockets(string path, string outputFolder = "Assets/Prefabs/Player/Pockets")
+        internal static string ExportPockets(string path, string outputFolder = "Assets/Prefabs/Player/Equipment/Pockets")
         {
             if (!outputFolder.StartsWith("Assets/Prefabs/", StringComparison.Ordinal) || outputFolder.Contains("..")) throw new InvalidOperationException("Недопустимая область экспорта карманов.");
             var root = PrefabUtility.LoadPrefabContents(path);

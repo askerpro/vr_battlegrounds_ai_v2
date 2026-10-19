@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// </summary>
     public static class CyborgLegsBuilder
     {
-        public const string AvatarPath = "Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab";
+        public const string AvatarPath = "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab";
         public const string OutFolder = "Assets/Art/Avatars/PlayerControllersCyborgAvatar/Legs";
         public const string HumanAvatarPath = OutFolder + "/CyborgHumanoid.asset";
 

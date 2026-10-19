@@ -1,0 +1,27 @@
+// Наблюдательная readback-диагностика уже полученного835 Ghost; ассеты не сохраняются.
+var path = "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab";
+var root = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(path);
+var avatar = root.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+var reportPath = "tasks/player-prefab-layout/reports/test-repair/ghost-final-diagnostics.json";
+var geometry = new Newtonsoft.Json.Linq.JArray();
+foreach (var pose in avatar.GetHandPoses()) foreach (var side in new[] { UltimateXR.Core.UxrHandSide.Left, UltimateXR.Core.UxrHandSide.Right }) {
+    UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh preview = null;
+    try {
+        preview = UltimateXR.Editor.Manipulation.HandPoses.UxrPreviewHandGripMesh.BuildForAvatar(avatar, pose, side, 0f);
+        geometry.Add(Newtonsoft.Json.Linq.JObject.FromObject(new { pose = pose.name, side = side.ToString(), valid = preview != null && preview.IsValid, vertices = preview != null && preview.UnityMesh != null ? preview.UnityMesh.vertexCount : 0 }));
+    } finally { if (preview != null && preview.UnityMesh != null) UnityEngine.Object.DestroyImmediate(preview.UnityMesh); }
+}
+var components = root.GetComponentsInChildren<UnityEngine.Component>(true).Where(c=>c!=null).ToArray();
+var report = Newtonsoft.Json.Linq.JObject.FromObject(new {
+    path, type = UnityEditor.PrefabUtility.GetPrefabAssetType(root).ToString(), chain = avatar.GetPrefabGuidChain().ToArray(),
+    bodyRendererCount = avatar.AvatarRenderers.Count(), bodyRendererNulls = avatar.AvatarRenderers.Count(r=>r==null),
+    rigTransforms = avatar.AvatarRig.Transforms.Count(), rigTransformsOutsideRoot = avatar.AvatarRig.Transforms.Count(t=>t!=null && t!=root.transform && !t.IsChildOf(root.transform)),
+    trackingUiNetwork = components.Where(c=>c.GetType().Name.Contains("Tracking") || c.GetType().Name.Contains("AvatarController") || c.GetType().Name.Contains("FingerTip") || c.GetType().Name.Contains("MirrorAvatar") || c.GetType().Name == "NetworkIdentity").Select(c=>new { type = c.GetType().FullName, path = UnityEditor.AnimationUtility.CalculateTransformPath(c.transform,root.transform), activeSelf = c.gameObject.activeSelf, enabled = c is UnityEngine.Behaviour ? (bool?)((UnityEngine.Behaviour)c).enabled : null }).ToArray(),
+    defaultPose = avatar.DefaultHandPose != null ? avatar.DefaultHandPose.name : null,
+    geometry,
+    sourceSha256 = "15842ec3c6d1130de9d2d0f182c4b486a81e31b9",
+    evidenceScope = "Editor native readback/SDK meshes only; no Play/physical Quest/user visual validation"
+});
+System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+System.IO.File.WriteAllText(reportPath, report.ToString(), new System.Text.UTF8Encoding(false));
+return new { reportPath, bodyRendererNulls = (int)report["bodyRendererNulls"], rigTransformsOutsideRoot = (int)report["rigTransformsOutsideRoot"], geometryCount = geometry.Count, executionCompleted = true };

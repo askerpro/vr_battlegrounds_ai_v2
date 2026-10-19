@@ -1,0 +1,61 @@
+{
+  "task": "player-prefab-layout",
+  "stage": "test-repair",
+  "user_instruction_event": 9786,
+  "structure_userqa_event": 9743,
+  "publication_authorized_when_ready": true,
+  "autonomous_completion_event": 9889,
+  "chain_assertion_update_event": 9893,
+  "current_delivery": "835DONE/received R15842ec3:3prefabs,13externalPPtrs unchanged.836DONE/received Rcf845ccf paths[]:same13boundedfilters227results221pass0fail6ignored,CS0. Standalone chain/tablet assertions updated per9889/9893. No replay or further native mutations required.",
+  "execution_status": "completed_no_replay",
+  "enabled": false,
+  "base_sha": "48d38b9b2885b771f9cc961b4b640eaa7f74ca9e",
+  "final_test_input": "d928805a31e4787bc4a2454b4d7c2861c04ee17c",
+  "latest_backup_stash": "f740bf4e20b50387529b0deeb85b941145017b46",
+  "wip_checkpoint_before_rebase": "d5447a0819aca654833afda88f9ffb994de06ab5",
+  "backup_stash": "b3b44018a694c0aba77cb3f0b0b4f0af539005f0",
+  "test_repairs": {
+    "sdk_fixture": "Active MEF_cyborg_hands_Player CyborgHands rig; SDK preview/runtime and capture/cache use resolved runtime AK105 poses, not historical pack geometry",
+    "legacy_family_applicability": "Keep NonSdkHands and Assets/Art pack inputs; one ignored parameterized sentinel per method only when registered family absent; missing base/empty entire registry remain discovery errors",
+    "ghost_head_assertions": "Keep existing meaningful assertions; evidence shows real asset authoring defects, not obsolete expectations"
+  },
+  "native_actions": [
+    "Guard exact source SHA256; save limited native census of2prefabs before mutation",
+    "Supersedes failed attempt830: restored exact Controllers/Ghost bodies from116f98; backup596e1e43 and Rcf789 retained",
+    "833 persistent SavePrefabAsset also canonicalizes111child IDs; known terminal stopped package, R203e37b7 preserved; original Controllers restored.9877: first detach Ghost from original IDs; inspect external consumers before accepting native canonicalization, no blind Save retries",
+    "User9851/9854: Ghost becomes standalone Regular prefab by native bounded OutermostRoot unpack, same GUID/root external fileID; Strip living-only components, anchors/grabbables, Hitbox objects, solids and legacy Cyborg/Ghost; clear SDK parent metadata; retain4local SDK poses Default/Pointing/Grab/GrabStandard",
+    "Tablet_Base: append2distinct Ghost-GUID grip entries copying exact CyborgHandsBase pose/blend/left/right alignment; preserve all preexisting entries",
+    "Native limited diagnostics: GUID chain only Ghost, rig/input/fingertips/network preserved, root references and materials resolve, SDK preview geometry for both tablet points and hands. After835 delivery structural chain/tablet assertions updated under explicit9889/9893 autonomous instruction; physical UserQA not claimed",
+    "Save limited after census, source chain/GUID/meta hashes, receipt after each save; no full Build/Register/Paint, no generators or layout replay",
+    "Compile and run one bounded EditMode job with10repaired/affected fixtures plus composition/loadout and exact network assetId catalogue",
+    "Save full native terminal JSON/logs; immediate cleanup/finish/receive including failed checks"
+  ],
+  "outputs": [
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+    "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab.meta",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab",
+    "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab.meta",
+    "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab",
+    "Assets/Prefabs/UI/Menu/Tablet/Tablet_Base.prefab.meta",
+    "tasks/player-prefab-layout/reports/test-repair"
+  ],
+  "test_names": [
+    "VrBattlegrounds.Tests.Prefabs.AvatarHandPoseChainTests",
+    "VrBattlegrounds.Tests.Modes.GameModeWiringTests",
+    "VrBattlegrounds.Tests.Prefabs.AvatarRendererOwnershipTests",
+    "VrBattlegrounds.Tests.Prefabs.KinemationHandPoseTests",
+    "VrBattlegrounds.Tests.Prefabs.HandsPackHandPoseTests",
+    "VrBattlegrounds.Tests.Prefabs.RegisteredAvatarBodyTests",
+    "VrBattlegrounds.Tests.UI.WristDisplayTests",
+    "VrBattlegrounds.Tests.Prefabs.GhostAvatarTests",
+    "VrBattlegrounds.Editor.HandPoseReview.Tests.SdkHandPreviewParityTests",
+    "VrBattlegrounds.Editor.HandPoseReview.Tests.SdkPreviewBindingTests",
+    "VrBattlegrounds.Tests.Prefabs.PrefabCompositionTests",
+    "VrBattlegrounds.Tests.Prefabs.AvatarLoadoutTests",
+    "VrBattlegrounds.Tests.Prefabs.NetworkAssetIdOnDiskTests.Сетевые_префабы_хранят_канонический_assetId"
+  ],
+  "excluded": "Floor/BotCombatStand changes; future PlayerBase split; whole project suite; mutating NetworkAssetId fixture cases; Play; vendor/models/registry/managers changes; grips other than2explicit Tablet Ghost entries",
+  "release_condition": "Known completed native actions and test terminal; no active compile/tests/Play; report saved then immediate finish/receive",
+  "quality_gate": "9889 explicitly directs autonomous completion through reviews/publication without waiting intermediate manual acceptance;9893 explicitly permits standalone-chain assertion update after835 receive. Physical/visual VR quality has NOT been user-validated and is not claimed by Editor/SDK checks.",
+  "review_gate": "Before merge independent zone reviews cover whole layout+21productionfiles+alltests+nativecorrections, exact candidateSHA/patch-id"
+}

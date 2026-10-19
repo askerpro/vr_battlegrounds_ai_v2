@@ -9,8 +9,8 @@ public static class FixHandTrackingCache
     public static void Execute()
     {
         string[] prefabs = new[] {
-            "Assets/Prefabs/Player/PlayerBase.prefab",
-            "Assets/Prefabs/Player/Heavy_Soldier_Base_Avatar.prefab",
+            "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab",
+            "Assets/Prefabs/Player/Unused/Heavy_Soldier_Base_Avatar.prefab",
             "Assets/Prefabs/Player/Military_Soldier_Base_Avatar.prefab",
             "Assets/Prefabs/Player/Spy_Base_Avatar.prefab",
             "Assets/Prefabs/Player/Military_Cap_Base_Avatar.prefab"

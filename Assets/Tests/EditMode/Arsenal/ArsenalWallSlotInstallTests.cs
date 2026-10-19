@@ -86,6 +86,59 @@ namespace VrBattlegrounds.Tests.Arsenal
             Assert.Throws<InvalidOperationException>(() => wall.InstallSlots(new[] { first }), "Установка — один раз.");
         }
 
+        // ── Подписка на события слотов ───────────────────────────────────────
+        //
+        // Сборщик станции ставит слоты позже OnEnable. До правки 2026-10-19 подписка была только
+        // в OnEnable — по пустому массиву: стена не слышала захват, касса (ArsenalCheckout) не
+        // списывала деньги, покупки со стены были бесплатными.
+
+        private static int SubscriptionsOf(ArsenalSlotController slot, string eventName, ArsenalWallController wall)
+        {
+            // OnItemTaken/OnItemReturned — публичные поля-делегаты, ItemTakenBy/ItemReturnedBy — события.
+            var field = typeof(ArsenalSlotController).GetField(eventName, Private | BindingFlags.Public);
+            Assert.IsNotNull(field, $"Поле события {eventName} не найдено — тест устарел.");
+            var handler = field.GetValue(slot) as Delegate;
+            if (handler == null) return 0;
+            int count = 0;
+            foreach (Delegate d in handler.GetInvocationList())
+                if (ReferenceEquals(d.Target, wall)) count++;
+            return count;
+        }
+
+        private static readonly string[] SlotEvents = { "OnItemTaken", "OnItemReturned", "ItemTakenBy", "ItemReturnedBy" };
+
+        [Test]
+        public void Установленные_слоты_подписаны_на_стену_ровно_один_раз()
+        {
+            var wall = Wall("Subscribed");
+            ArsenalSlotController slot = Slot(wall, "Slot");
+            Assert.IsTrue(wall.isActiveAndEnabled, "Контроль: стена включена, OnEnable уже позади.");
+
+            wall.InstallSlots(new[] { slot });
+
+            foreach (string eventName in SlotEvents)
+                Assert.AreEqual(1, SubscriptionsOf(slot, eventName, wall),
+                    $"Слот, установленный после OnEnable, не сообщает стене {eventName}: " +
+                    "захват со стены не дойдёт до кассы, и покупка будет бесплатной.");
+        }
+
+        [Test]
+        public void Слоты_выключенной_стены_подписываются_при_включении()
+        {
+            var wall = Wall("Disabled");
+            ArsenalSlotController slot = Slot(wall, "Slot");
+            wall.enabled = false;
+
+            wall.InstallSlots(new[] { slot });
+            foreach (string eventName in SlotEvents)
+                Assert.AreEqual(0, SubscriptionsOf(slot, eventName, wall), "Выключенная стена событий не слушает.");
+
+            wall.enabled = true;
+            typeof(ArsenalWallController).GetMethod("OnEnable", Private).Invoke(wall, null);
+            foreach (string eventName in SlotEvents)
+                Assert.AreEqual(1, SubscriptionsOf(slot, eventName, wall), $"После включения {eventName} — ровно одна подписка.");
+        }
+
         [Test]
         public void Неверная_установка_отклоняется_без_изменений()
         {

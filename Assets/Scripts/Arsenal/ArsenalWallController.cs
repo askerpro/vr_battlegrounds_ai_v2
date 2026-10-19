@@ -374,8 +374,12 @@ namespace VrBattlegrounds.Arsenal
                 installed[i] = slots[i];
             }
 
+            // Сборщик станции ставит слоты позже OnEnable: подписка там прошла по пустому массиву.
+            // Без неё стена не слышит захват — касса не списывает деньги, возврат не приходит.
+            if (isActiveAndEnabled) UnsubscribeSlots();
             _allSlots = installed;
             _slotsInstalled = true;
+            if (isActiveAndEnabled) SubscribeSlots();
 
             // Привязки, пришедшие до установки, теперь проверяются по известному массиву.
             foreach (int pendingIndex in new System.Collections.Generic.List<int>(_pendingSlotBindings))
@@ -800,13 +804,7 @@ namespace VrBattlegrounds.Arsenal
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed += HandleTagGrabbed;
 
-            foreach (var slot in _allSlots)
-            {
-                slot.OnItemTaken    += HandleItemTaken;
-                slot.OnItemReturned += HandleItemReturned;
-                slot.ItemTakenBy    += HandleItemTakenBy;
-                slot.ItemReturnedBy += HandleItemReturnedBy;
-            }
+            SubscribeSlots();
         }
 
         private void OnDisable()
@@ -821,8 +819,26 @@ namespace VrBattlegrounds.Arsenal
             if (_dogTagController != null)
                 _dogTagController.OnTagGrabbed -= HandleTagGrabbed;
 
+            UnsubscribeSlots();
+        }
+
+        /// <summary>События слотов — стене. Зовут OnEnable и <see cref="InstallSlots" /> (слоты пришли позже).</summary>
+        private void SubscribeSlots()
+        {
             foreach (var slot in _allSlots)
             {
+                slot.OnItemTaken    += HandleItemTaken;
+                slot.OnItemReturned += HandleItemReturned;
+                slot.ItemTakenBy    += HandleItemTakenBy;
+                slot.ItemReturnedBy += HandleItemReturnedBy;
+            }
+        }
+
+        private void UnsubscribeSlots()
+        {
+            foreach (var slot in _allSlots)
+            {
+                if (slot == null) continue;
                 slot.OnItemTaken    -= HandleItemTaken;
                 slot.OnItemReturned -= HandleItemReturned;
                 slot.ItemTakenBy    -= HandleItemTakenBy;

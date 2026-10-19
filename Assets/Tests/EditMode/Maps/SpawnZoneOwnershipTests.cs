@@ -213,6 +213,93 @@ namespace VrBattlegrounds.Tests.SpawnZones
                 "После выхода игрок не в зоне вообще, а не «в зоне команды 0».");
         }
 
+        // ── Тело уничтожено внутри зоны ──────────────────────────────────────
+        //
+        // Смерть → призрак, возрождение и выбывание меняют тело уничтожением. Unity не присылает
+        // OnTriggerExit за уничтоженный коллайдер, и до правки 2026-10-19 признак «в зоне» оставался
+        // у сессии навсегда. После «Играть заново» (стороны сброшены) бот считал себя на базе,
+        // стоял в центре карты, а режим каждый раунд ждал его возвращения.
+
+        private static void ReleaseDestroyed(TeamSpawnZone zone)
+        {
+            InvokePrivateMethod(zone, "ServerReleaseDestroyedPlayers");
+        }
+
+        [Test]
+        public void Тело_уничтоженное_в_зоне_снимает_признак()
+        {
+            SilenceMirrorNoise();
+
+            TeamSpawnZone ownZone = CreateZone("СвояЗона", CreateTeam("Красные", OwnTeam));
+            PlayerSession session = CreateSession("Погибший", OwnTeam);
+            PlayerController body = CreateAvatar("ТелоПогибшего", session);
+
+            Report(ownZone, body, true);
+            Assert.IsTrue(session.IsInSpawnZone, "Контроль: тело в своей зоне.");
+
+            Object.DestroyImmediate(body.gameObject);
+            ReleaseDestroyed(ownZone);
+
+            Assert.AreEqual(PlayerSession.NoSpawnZone, session.SpawnZoneTeamIndex,
+                "Тело уничтожено в зоне, а сессия по-прежнему «в зоне»: OnTriggerExit за уничтоженный " +
+                "коллайдер не приходит, и снять признак обязана сама зона.");
+        }
+
+        [Test]
+        public void Уничтоженное_тело_выходит_с_командой_входа_после_сброса_сторон()
+        {
+            SilenceMirrorNoise();
+
+            TeamData home = CreateTeam("Военные", OwnTeam);
+            TeamData away = CreateTeam("Повстанцы", EnemyTeam);
+            try
+            {
+                // Вторая половина: домашняя зона «Военных» принадлежит «Повстанцам».
+                SpawnSides.Set(home, away, true);
+                TeamSpawnZone zone = CreateZone("ЗонаВторойПоловины", home);
+                Assert.AreSame(away, zone.Team, "Контроль: стороны поменяны.");
+
+                PlayerSession session = CreateSession("Союзник", EnemyTeam);
+                PlayerController body = CreateAvatar("ТелоСоюзника", session);
+                Report(zone, body, true);
+                Assert.IsTrue(session.IsInSpawnZone, "Контроль: союзник у себя на базе второй половины.");
+
+                // Погиб на базе, затем матч кончился, и стороны вернулись на место.
+                Object.DestroyImmediate(body.gameObject);
+                SpawnSides.Reset();
+                ReleaseDestroyed(zone);
+
+                Assert.IsFalse(session.IsInSpawnZone,
+                    "Сценарий «Играть заново»: признак остался с прошлой половины, бот считает себя " +
+                    "на базе и не идёт домой. Выход обязан сниматься с командой, с которой был вход.");
+            }
+            finally
+            {
+                SpawnSides.Reset();
+            }
+        }
+
+        [Test]
+        public void Возрождение_на_месте_в_зоне_признак_сохраняет()
+        {
+            SilenceMirrorNoise();
+
+            TeamSpawnZone ownZone = CreateZone("СвояЗона", CreateTeam("Красные", OwnTeam));
+            PlayerSession session = CreateSession("Возрождённый", OwnTeam);
+            PlayerController oldBody = CreateAvatar("СтароеТело", session);
+            Report(ownZone, oldBody, true);
+
+            // Новое тело той же сессии появилось в зоне и отчиталось раньше, чем зона убрала старое.
+            PlayerController newBody = CreateAvatar("НовоеТело", session);
+            Report(ownZone, newBody, true);
+            Object.DestroyImmediate(oldBody.gameObject);
+            ReleaseDestroyed(ownZone);
+
+            Assert.IsTrue(session.IsInSpawnZone,
+                "Уборка старого тела сняла признак, хотя новое тело той же сессии стоит в зоне: " +
+                "зона уже считает его внутри и повторно не сообщит.");
+        }
+
         [Test]
         public void Зона_без_команды_молчит()
         {

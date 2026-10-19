@@ -71,6 +71,13 @@ namespace VrBattlegrounds.Maps
         private readonly Dictionary<PlayerController, Transform> _cameraTransformCache =
             new Dictionary<PlayerController, Transform>();
 
+        // Сервер: чьей сессии и с какой командой зона сообщила «внутри». Тело, уничтоженное в зоне
+        // (смерть → призрак, возрождение, выбывание), OnTriggerExit не присылает — без этой записи
+        // сессии нечем снять признак, и «в своей зоне» живёт до следующего входа, даже через смену сторон.
+        private readonly Dictionary<PlayerController, (PlayerSession session, int teamIndex)> _reportedInside =
+            new Dictionary<PlayerController, (PlayerSession session, int teamIndex)>();
+        private readonly List<PlayerController> _destroyedPlayers = new List<PlayerController>();
+
         /// <summary>
         /// Чья зона сейчас. Сериализованная <see cref="HomeTeam"/> — хозяин первой половины карты;
         /// после смены сторон (<see cref="SpawnSides"/>) зона принадлежит другой команде. Все
@@ -293,6 +300,12 @@ namespace VrBattlegrounds.Maps
             }
             _localPlayer = null;
             foreach (PlayerController player in _playersInZone) ReportZoneState(player, false);
+            // Уничтоженным телам ReportZoneState сказать уже не может — снимаем по записи.
+            foreach (var reported in _reportedInside.Values)
+            {
+                if (reported.session != null) reported.session.ServerExitSpawnZone(reported.teamIndex);
+            }
+            _reportedInside.Clear();
             _playersInZone.Clear();
             _playersTouching.Clear();
             _playerContacts.Clear();
@@ -351,6 +364,8 @@ namespace VrBattlegrounds.Maps
         /// </summary>
         private void Update()
         {
+            if (_reportedInside.Count > 0) ServerReleaseDestroyedPlayers();
+
             bool alive = _localPlayer == null || _localPlayer.IsAlive;
             GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
             if (alive == _lastLocalAlive && ReferenceEquals(mode, _lastMode)) return;
@@ -549,9 +564,53 @@ namespace VrBattlegrounds.Maps
             if (Team == null) return;
 
             if (inside)
+            {
                 player.Session.ServerEnterSpawnZone(Team.teamIndex);
+                _reportedInside[player] = (player.Session, Team.teamIndex);
+            }
             else
+            {
                 player.Session.ServerExitSpawnZone(Team.teamIndex);
+                _reportedInside.Remove(player);
+            }
+        }
+
+        /// <summary>
+        /// Сервер: тела, уничтоженные внутри зоны, выходят из неё. Выход снимается с той командой, с которой
+        /// был вход: после смены сторон зона уже чужая, и её нынешний индекс сессия бы не узнала (RDY-04
+        /// сохраняется — запись снимается, только если сессия ещё помнит именно эту зону).
+        /// </summary>
+        private void ServerReleaseDestroyedPlayers()
+        {
+            foreach (PlayerController player in _reportedInside.Keys)
+            {
+                if (player == null) _destroyedPlayers.Add(player);
+            }
+            if (_destroyedPlayers.Count == 0) return;
+
+            foreach (PlayerController player in _destroyedPlayers)
+            {
+                (PlayerSession session, int teamIndex) = _reportedInside[player];
+                _reportedInside.Remove(player);
+                // Возрождение на месте: новое тело той же сессии уже внутри и отчиталось — признак верный.
+                if (session != null && !HasLiveReport(session)) session.ServerExitSpawnZone(teamIndex);
+
+                _playersInZone.Remove(player);
+                _playersTouching.Remove(player);
+                _playerContacts.Remove(player);
+                _cameraTransformCache.Remove(player);
+            }
+            _playersInZoneCount = _playersInZone.Count;
+            _destroyedPlayers.Clear();
+        }
+
+        private bool HasLiveReport(PlayerSession session)
+        {
+            foreach (var pair in _reportedInside)
+            {
+                if (pair.Key != null && pair.Value.session == session) return true;
+            }
+            return false;
         }
 
         /// <summary>Возвращает копию списка всех игроков, физически находящихся в зоне.</summary>

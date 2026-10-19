@@ -164,3 +164,16 @@ WeaponSystem.cs:453/601, WeaponContextSensor.cs:45-47); комментарии c
   CmdSetDogTagGrabbed, CmdRequestTeamChange, CartridgeIntake (право по соединению → по держателю); `isOwned` →
   `IsAuthoredHere` в HandleTagGrabbed; тело после смены карты — одна функция для соединений и сессий без соединения;
   фиктивных соединений не делать. Покупка со стены по хвату уже не зависит от соединения (manipulation).
+
+## xr-input: реализация вехи 1 (2026-10-19, не проверено в Unity)
+
+- Рантайм `Assets/Scripts/Debug/E2E/Input/`: DeviceFrame/IAvatarInputSource, ScriptedInputGate, ScriptedControllerInput,
+  ScriptedControllerTracking (всегда компилируются), E2EScriptedInput, ScriptedPilot, InputScript, ScriptedClientRunner
+  (`#if !VRBG_NO_E2E`); сценарии `Scripts/input-smoke.json`, `Scripts/wall-purchase.json`.
+- Сценарий `Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs` (`scripted-input-smoke`, `scripted-wall-purchase`),
+  регистрация в E2ERunner.
+- Editor: `Assets/Editor/VR_Battlegrounds/Testing/ScriptedInputPrefabSetup.cs` — меню
+  «Tools/VR Battlegrounds/Testing/Скриптовый ввод в префабах аватаров» кладёт выключенный объект ScriptedInput в
+  PlayerBase и GhostAvatar (сенсоры Quest 3).
+- Unity MCP: прокси сессии запускается из cwd сессии (`.mcp.json` → `Tools/agents/unity_mcp_proxy.py`, агент = worktree
+  скрипта). Сессия, запущенная в bots-validation, переведена в worktree задачи до первой аренды.

@@ -1,0 +1,8 @@
+- [x] design — задача, термины (источник ввода → ввод DeviceFrame → аватар; бот слепо исполняет ввод), инвентаризация обходов (Details.md)
+- [ ] input-research — может ли аватар бота на сервере принимать DeviceFrame через слот устройства UXR, как клиент; выход — решение или запасной серверный исполнитель
+- [ ] rules-parity — бот через общие серверные обработчики: стена → ArsenalCheckout, жетон, TeamChangeRequests, тело и смена карты, без автобаланса людей
+- [ ] input-frame (бывший B-1, отложен до решения input-research) — источник Blaze → пилот → DeviceFrame → исполнитель; SDK только в исполнителе
+- [ ] scenario-source — ScenarioInputSource, buy → draw → fire → stow → ready ботом, детерминизм 3/3
+- [ ] xr-input — симулированный ввод в клиентском процессе (MPPM и плеер)
+- [ ] scripted-client — тот же сценарий обычным сетевым клиентом, паритет с ботом
+- [ ] match-smoke — полный матч elimination, поздний вход, reconnect

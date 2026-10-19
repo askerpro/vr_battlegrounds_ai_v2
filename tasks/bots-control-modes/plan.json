@@ -1,0 +1,20 @@
+{
+  "task_id": "bots-control-modes",
+  "owner": "bots-control-modes",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/bots-control-modes",
+  "base_sha": "a62039a26f1d2d454b69e134aeb6eea38670042a",
+  "doc_path": "tasks/bots-control-modes/Readme.md",
+  "title": "Боты: паритет правил с клиентами и два режима управления",
+  "branch": "task/bots-control-modes",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/bots-control-modes/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -177,3 +177,34 @@ WeaponSystem.cs:453/601, WeaponContextSensor.cs:45-47); комментарии c
   PlayerBase и GhostAvatar (сенсоры Quest 3).
 - Unity MCP: прокси сессии запускается из cwd сессии (`.mcp.json` → `Tools/agents/unity_mcp_proxy.py`, агент = worktree
   скрипта). Сессия, запущенная в bots-validation, переведена в worktree задачи до первой аренды.
+
+## xr-input: прогон 1 в worker (2026-10-19, ticket 841, вход ae2c3b3e4)
+
+- Компиляция чистая (0 ошибок консоли). `ScriptedInputPrefabSetup.Setup()`: ScriptedInput под `Components` в PlayerBase и
+  GhostAvatar, сенсоры SensorLeft/RightMetaTouchQuest3, компоненты выключены; варианты (CyborgHandsBase,
+  PlayerControllersCyborgAvatar, MEF_cyborg_hands_Player(+Black), PlayerBase_NonSdkHands) наследуют, UXR дописал служебные
+  `__isInPrefab/__prefabGuid`. Префабы `Unused/*` Unity пересохранил с посторонними полями рига — не взяты; результат
+  принят вручную из ref R c3574c93b + `ack` (receive отказал: пути вне output roots).
+- S+1 `scripted-input-smoke` (TestMap2, run d97d2d65): activate, ходьба головой 2 м + поворот 90° + 1 м — PASS; сервер
+  видит голову клиента в 1,823 м от корня — PASS; запястья ≤ 0,003 мм / 1,8°; 0 UxrComponentNotFound. FAIL measure-check
+  головы 5 см / 8,7° — ошибка замера (сравнение с позой пилота, обновлённой после записи кадра; ≈ один кадр при ~20 fps
+  клона), исправлено: замер против применённого кадра.
+- S+2 `scripted-wall-purchase` (run d69b7570): команды 1/2 выбраны клиентами через CmdRequestTeamChange — PASS; GoLive
+  эквивалентом кнопки — PASS; призраки дошли головой до своих зон и возродились, фаза Equipment за 5,7 с — PASS; у каждого
+  своя стена (2 и 3) — PASS; client-2 дошёл до стены (2,1 м); остановлено тем же ложным measure-check до хвата.
+- Логи: `tasks/bots-control-modes/reports/smoke-1/`, `reports/purchase-1/` (вне Git).
+
+## xr-input: прогон 2 (2026-10-19, ticket 843 → 845, вход a30d6a7c1)
+
+- Ticket 843: MCP `refresh_unity` не вернул ответа 1800 с (мост MCP устарел после domain reload, editor/state stale),
+  аренда истекла → RECOVERY_REQUIRED. Ответ worker на pending refresh найден (ok, ready, без Play/dirty) — владелец
+  выполнил `recover --force` (DONE). Сопровождающему отправлены два infra_issue (нативного маршрута нет — client_mismatch).
+  В 845 компиляцию сделал сам `begin`, `refresh_unity` не вызывался.
+- S+1 `scripted-input-smoke` (run cbffe534): 11/11 клиент, 2/2 сервер. Голова ≤ 0 см / 0°, запястья ≤ 0,003 мм / 1,9°,
+  223 кадра; сервер видит голову клиента в 1,822 м от корня; 0 UxrComponentNotFound / NRE.
+- S+2 `scripted-wall-purchase` (run 7ad1722d): 16/16 у каждого клиента, 6/6 сервер. Команды 1/2 выбраны клиентами,
+  GoLive, призраки → свои зоны → возрождение, Equipment за 5,7 с, свои стены (4 и 2), путь 2,2–4,3 м головой;
+  хват Viper (200) по Grip Right; касса: −200 «WK-11 Viper», 800→600, чек есть, слот пуст, держит клиент с соединением;
+  каждый клиент видит оружие в руке другого (0,057 м до руки). Запястья ≤ 0,017 мм, угол запястья до 7,6° (критерия
+  нет; вероятно скручивание IK — на ревью avatar-ik). 0 UxrComponentNotFound / NRE.
+- R прогона 2 — только пересохранённые Unity `Unused/*` (не взяты, `ack`). Логи: `reports/smoke-2/`, `reports/purchase-2/`.

@@ -32,6 +32,9 @@
 |---|---|---|---|
 | 1 | xr-input веха 1 (Editor/MPPM): скриптовый ввод шлема и контроллеров в обычном сетевом клиенте, пилот, JSON-сценарии, сценарии `scripted-input-smoke` (S+1) и `scripted-wall-purchase` (S+2) с оракулом кассы | [bots-control-modes](../bots-control-modes/Readme.md), влито `43332888b` | S+1 11/11 + 2/2 (голова 0 см/0°, запястья 0,003 мм); S+2 16/16 + 16/16 + 6/6: клиенты выбрали команды, дошли головой до зон и стен, купили по Grip, касса −200/чек/слот пуст, видят оружие друг у друга. Принято пользователем 2026-10-20. ScriptedInputTests 11/11 |
 | 2.1 | Бой, итерация 1: выстрел курком по противнику, урон виден оракулу (`scripted-combat-hit`) | [e2e-combat](../e2e-combat/Readme.md), влито `2ca9ee314` | S+2: Viper, штатный выстрел SDK, урон от актора стрелка, 100 → 74,4; принято пользователем; ScriptedInputTests 17/17; найдено 12 UxrComponentNotFound IsGrabbable у стен в Resolution |
+| 2.2 | Бой, итерация 2: раунд вводом — жетон рукой, стрельба до убийства, призрак, Resolution (`scripted-combat-round`) | [e2e-combat](../e2e-combat/Readme.md), влито `c913dbb91` | оракул: готовность не по пределу, PlayerKilled, Kill +300, счёт 1:0, RoundWin 3250 / RoundLoss 1900; принято пользователем. Найдено и исправлено: стена писала IsGrabbable до сетевого спавна (UxrComponentNotFound у клиентов в каждом Resolution); сервер получал события снятого оружия — допуск relay v2 по netId предмета (**breaking wire**: хэш CmdComponentStateChanged 43519→6239, все участники одной сборки, Quest/Windows пересобрать) |
+| 6.1 | HeavyWindows: `heavy --profile windows` — e2e-плеер на HEAD (`Build-Game -Targets e2e -Ref`), Run-E2E, тот же вердикт; fix1 по ревью | [e2e-heavy-windows](../e2e-heavy-windows/Readme.md), влито `646170c47`, `3db8dfc5a` | e2e-kit-selftest + map-run-startup-route — код 0; найден дефект discovery |
+| fix | Mirror NetworkDiscovery автостартовал рекламу на UDP 47777 до E2E-портов (SocketException при открытом Editor) — SDK-патч Mirror 8 | e2e-discovery-autostart, влито `e59b8ed5f` | heavy windows зелёный при занятом 47777; DiscoveryAdvertiseOwnerTests |
 | 4 | HeavyEditor: `python Tools/e2e/heavy.py --profile editor --suite default [--editmode also]` — аренда агента, набор через MCP своего worktree, `verdict.json` + код 0/1/2, EditMode против `Tools/e2e/editmode-known-red.json`, раздел AGENTS.md «Heavy-регрессия перед вливанием» | [e2e-heavy-editor](../e2e-heavy-editor/Readme.md), влито `911f93b37`, `664630c18` | набор default (smoke, wall-purchase, combat-hit) + EditMode — код 0 за 14 мин; unittest 51/51; ревью launch-infra approve |
 | fix | uid-fix: UniqueId скриптового ввода в Unused-префабах (регрессия от этапа 1, сообщение bots-validation) | эта задача, влито `137517ecb` | UxrUniqueIdOnDiskTests 1/1 на влитом SHA |
 
@@ -93,8 +96,7 @@ SDK «внешний аватар с вводом», 5 точек), правил
 
 ## Статус
 
-2026-10-20: этапы 1 и 4 влиты, этап 2 — итерация 1 влита, итерация 2 (жетон, убийство, призрак, Resolution, деньги,
-следующий раунд) в работе; в ней найдена гонка снятия оружия → допуск сетевых событий v2 (вариант А выбран
-пользователем; breaking wire — одна сборка всех участников; нужно ревью network). Перевод ботов на флоу клиентов —
-bots-epic (bots-input уже работает над устройством ввода бота). Дальше: этап 3 после вливания этапа 2 (общие файлы
-скриптового ввода); HeavyEditor-агент может брать этап 6 HeavyWindows (свои файлы `Tools/e2e`).
+2026-10-21: влиты этапы 1, 4 и итерации 2.1–2.2 (раунд вводом), 6.1 (HeavyWindows); регрессия уже нашла и закрыла
+4 дефекта игры/сети (UniqueId Unused, IsGrabbable стены, события снятого оружия, автостарт discovery). Этап 2 —
+итерация 3 (следующий раунд); этап 6 — scripted-* в плеерах после этапа 5. Worker выключен пользователем
+(11072) — работа с Unity на паузе. Перевод ботов на флоу клиентов — bots-epic (bots-input).

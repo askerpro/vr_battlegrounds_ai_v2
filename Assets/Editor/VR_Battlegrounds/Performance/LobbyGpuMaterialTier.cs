@@ -312,6 +312,9 @@ namespace VrBattlegrounds.Editor.Performance
                     : (m.HasProperty("_EmissionMap") ? "" : null),
             };
 
+            // Альфа оттенка в материалах пакетов часто 0 (в графе не используется); в Baked Lit она умножает
+            // альфу текстуры и полностью отсекла бы cutout-материалы.
+            color.a = 1f;
             m.shader = target;
             m.shaderKeywords = Array.Empty<string>();
             m.SetTexture("_BaseMap", baseMap);

@@ -1,7 +1,8 @@
 fileFormatVersion: 2
 guid: abc00000000007746103394261483583
 NativeFormatImporter:
+  externalObjects: {}
   mainObjectFileID: 2100000
-  userData: 
+  userData: '{"marker":"lobby-gpu-tier-v1","shaderName":"Universal Render Pipeline/Lit","shaderPath":"Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader","renderQueue":2000,"keywords":["_METALLICSPECGLOSSMAP","_NORMALMAP","_OCCLUSIONMAP"],"renderType":"Opaque","hadBaseColor":true,"baseColor":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"baseMapST":{"x":1.0,"y":1.0,"z":0.0,"w":0.0},"hadCull":true,"cull":2.0,"hadCutoff":true,"cutoff":0.5,"hadAlphaClip":true,"alphaClip":0.0,"hadEmissionColor":true,"emissionColor":{"r":0.0,"g":0.0,"b":0.0,"a":1.0},"emissionMapGuid":"","hadAlphaToMask":true,"alphaToMask":0.0}'
   assetBundleName: 
   assetBundleVariant: 

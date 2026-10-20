@@ -1,7 +1,8 @@
 fileFormatVersion: 2
 guid: abc00000000006551271451934160829
 NativeFormatImporter:
+  externalObjects: {}
   mainObjectFileID: 2100000
-  userData: 
+  userData: '{"marker":"lobby-gpu-tier-v1","shaderName":"Shader Graphs/S_BasicTextured","shaderPath":"Assets/Art/Lobby/Imported/MilitaryCamp/Art/Shaders/S_BasicTextured.shadergraph","renderQueue":2225,"keywords":["_DISABLE_SSR_TRANSPARENT","_NORMALMAP","_NORMALMAP_TANGENT_SPACE"],"renderType":"Opaque","hadBaseColor":false,"baseColor":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"baseMapST":{"x":1.0,"y":1.0,"z":0.0,"w":0.0},"hadCull":true,"cull":2.0,"hadCutoff":false,"cutoff":0.5,"hadAlphaClip":true,"alphaClip":0.0,"hadEmissionColor":false,"emissionColor":{"r":0.0,"g":0.0,"b":0.0,"a":1.0},"emissionMapGuid":"","hadAlphaToMask":true,"alphaToMask":0.0}'
   assetBundleName: 
   assetBundleVariant: 

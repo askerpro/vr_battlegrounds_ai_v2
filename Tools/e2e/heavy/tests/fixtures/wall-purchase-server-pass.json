@@ -1,0 +1,158 @@
+{
+  "scenario": "scripted-wall-purchase",
+  "role": "server",
+  "passed": true,
+  "status": "completed",
+  "summary": "скриптовые клиенты купили оружие со своих стен вводом, касса провела покупки",
+  "startedUtc": "2026-10-20T04:28:54.6722073Z",
+  "durationSeconds": 27.17,
+  "buildGuid": "00000000000000000000000000000000",
+  "appVersion": "0.1.0",
+  "unityVersion": "6000.4.1f1",
+  "developmentBuild": true,
+  "platform": "WindowsEditor",
+  "artifacts": [],
+  "checks": [
+    {
+      "name": "сервер: клиенты подключены обычными соединениями, ботов нет",
+      "passed": true,
+      "detail": "сессий с соединением 2 (ждали 2), без соединения 0"
+    },
+    {
+      "name": "сервер: команды выбраны клиентами, обе команды заняты",
+      "passed": true,
+      "detail": "Player_7970→1, Player_4572→2 — дождались «клиенты в разных командах» за 0,00 с. Player_7970→1, Player_4572→2"
+    },
+    {
+      "name": "сервер: матч начат эквивалентом кнопки админа",
+      "passed": true,
+      "detail": "IsAvailable(GoLive)=True, GoLive()=True"
+    },
+    {
+      "name": "сервер: фаза Equipment — все в своих зонах, стены открыты",
+      "passed": true,
+      "detail": "дождались «фаза Equipment» за 5,86 с. фаза Equipment; Player_7970: в зоне=True, выбыл=False, Player_4572: в зоне=True, выбыл=False; Player_7970: в зоне=True, выбыл=False, Player_4572: в зоне=True, выбыл=False"
+    },
+    {
+      "name": "сервер: у каждого клиента своя стена",
+      "passed": true,
+      "detail": "Player_7970: стена 3 (закрыта), Player_4572: стена 2 (закрыта)"
+    },
+    {
+      "name": "сервер: касса провела покупку каждого клиента",
+      "passed": true,
+      "detail": "client-1: netId=29 'Viper_instance', держит Player_7970 (соединение есть), покупка -200 (WK-11 Viper), деньги 800→600, чек есть, в слоте нет; client-2: netId=19 'Viper_instance', держит Player_4572 (соединение есть), покупка -200 (WK-11 Viper), деньги 800→600, чек есть, в слоте нет"
+    }
+  ],
+  "logIssues": [],
+  "logIssuesDropped": 0,
+  "knownNoise": [],
+  "steps": [
+    {
+      "name": "input-active",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:00.9116807Z",
+      "outcome": "received"
+    },
+    {
+      "name": "team-requested",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:01.3782410Z",
+      "outcome": "received"
+    },
+    {
+      "name": "input-active",
+      "role": "client-2",
+      "data": "",
+      "utc": "2026-10-20T04:29:11.0626430Z",
+      "outcome": "received"
+    },
+    {
+      "name": "input-active",
+      "role": "server",
+      "data": "client-1,client-2",
+      "utc": "2026-10-20T04:29:11.2682528Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "team-requested",
+      "role": "client-2",
+      "data": "",
+      "utc": "2026-10-20T04:29:11.6068268Z",
+      "outcome": "received"
+    },
+    {
+      "name": "team-requested",
+      "role": "server",
+      "data": "client-1,client-2",
+      "utc": "2026-10-20T04:29:11.6465763Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "match-live",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:11.6985125Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "equipment",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:17.5794183Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "grabbed",
+      "role": "client-2",
+      "data": "netId=19",
+      "utc": "2026-10-20T04:29:20.1993267Z",
+      "outcome": "received"
+    },
+    {
+      "name": "grabbed",
+      "role": "client-1",
+      "data": "netId=29",
+      "utc": "2026-10-20T04:29:20.2403697Z",
+      "outcome": "received"
+    },
+    {
+      "name": "grabbed",
+      "role": "server",
+      "data": "client-1,client-2",
+      "utc": "2026-10-20T04:29:20.2491337Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "oracle-done",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.7776293Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "done",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.8544963Z",
+      "outcome": "received"
+    },
+    {
+      "name": "done",
+      "role": "client-2",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.8544963Z",
+      "outcome": "received"
+    },
+    {
+      "name": "done",
+      "role": "server",
+      "data": "client-1,client-2",
+      "utc": "2026-10-20T04:29:21.8596683Z",
+      "outcome": "barrier-passed"
+    }
+  ],
+  "stepsDropped": 0
+}

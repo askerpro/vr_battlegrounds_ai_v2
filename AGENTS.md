@@ -164,6 +164,19 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
 - Save complete MCP reports to task reports/ and return only passed/counts/up to 10 examples/path. Use `Tools/UnityMcp/compact-result.js` with a 2000-token output budget.
 - `executionCompleted=true` means the action ran; never repeat it for output. After a timeout inspect durable/native state before retrying a mutation. Without MCP use current Editor.log evidence and concrete user edit steps.
 
+## Heavy-регрессия перед вливанием
+
+Задача, меняющая игровой код или ассеты (`Assets/**`, `Packages/**`, `ProjectSettings/**`), перед merge-request
+прогоняет набор e2e-сценариев на Editor-стенде. Только документы/инструменты — по желанию.
+1. Rebase на свежую origin/dev, затем своя аренда worker: checkpoint → request → watch-ticket → claim → begin → guard.
+2. Из своего worktree: `python Tools/e2e/heavy.py --profile editor --suite default` (около 4 мин на набор).
+   heavy о брокере не знает: Unity — через MCP-прокси этого worktree; без своей аренды прокси отказывает.
+   Если прогон дольше 10 мин, параллельно `editor-broker.py renew`.
+3. Сразу после прогона finish, затем receive (без своего output при отказе из-за пересохранённых Unity файлов — ack).
+4. Код 0 — можно вливать; 1 — регрессия (не вливать, разобрать `verdict.json`); 2 — вердикт не получен
+   (тоже не вливать; сбой аренды/стенда/MCP — infra_issue сопровождающему). Путь к `verdict.json` — в review-request.
+Новый сценарий добавляет в `Tools/e2e/suites/default.json` его автор после приёмки пользователем. [Набор и вердикт](Tools/e2e/heavy/README.md).
+
 ## Read only what this task needs
 
 Use rg scoped to the relevant area. For game C# start in Assets/Scripts or Assets/Editor; search ThirdParty/Packages only for the relevant SDK/package. Search .unity/.prefab by class/GUID instead of reading entire files.

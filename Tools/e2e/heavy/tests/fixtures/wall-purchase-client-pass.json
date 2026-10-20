@@ -1,0 +1,173 @@
+{
+  "scenario": "scripted-wall-purchase",
+  "role": "client-1",
+  "passed": true,
+  "status": "completed",
+  "summary": "сценарий 'wall-purchase' пройден вводом устройства",
+  "startedUtc": "2026-10-20T04:29:00.1925026Z",
+  "durationSeconds": 21.6,
+  "buildGuid": "00000000000000000000000000000000",
+  "appVersion": "0.1.0",
+  "unityVersion": "6000.4.1f1",
+  "developmentBuild": true,
+  "platform": "WindowsEditor",
+  "artifacts": [],
+  "checks": [
+    {
+      "name": "01 activate",
+      "passed": true,
+      "detail": "аватар Player_7970 (Local), рост глаз 1.6 м — дождались «скриптовый ввод подан своему аватару» за 0,60 с. аватар=Player_7970 (Local), кадров=11, отказ=нет"
+    },
+    {
+      "name": "02 step input-active",
+      "passed": true,
+      "detail": "шаг отправлен"
+    },
+    {
+      "name": "03 choose-team",
+      "passed": true,
+      "detail": "команда 1 (команды карты: 1,2) — дождались «сервер принял команду 1» за 0,45 с. TeamIndex=1"
+    },
+    {
+      "name": "04 step team-requested",
+      "passed": true,
+      "detail": "шаг отправлен"
+    },
+    {
+      "name": "05 wait-server match-live",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "06 walk own-spawn-zone",
+      "passed": true,
+      "detail": "в зоне команды 1, жив; аватар Player_7970 (Local)"
+    },
+    {
+      "name": "07 wait-server equipment",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "08 measure-start",
+      "passed": true,
+      "detail": "замер начат"
+    },
+    {
+      "name": "09 walk own-wall",
+      "passed": true,
+      "detail": "у своей стены netId=3, путь 2.15 м по прямой"
+    },
+    {
+      "name": "10 measure-check",
+      "passed": true,
+      "detail": "голова ≤0 см / 0°, запястья ≤0,016 мм / 5,535°, кадров 28"
+    },
+    {
+      "name": "11 grab-wall-item",
+      "passed": true,
+      "detail": "Viper_instance netId=29 цена 200, денег до хвата 800; хват по Grip Right"
+    },
+    {
+      "name": "12 expect-held",
+      "passed": true,
+      "detail": "в руке Right: Viper_instance"
+    },
+    {
+      "name": "13 step grabbed",
+      "passed": true,
+      "detail": "netId=29"
+    },
+    {
+      "name": "14 wait-server oracle-done",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "15 expect-peers-holding",
+      "passed": true,
+      "detail": "Player_4572: Viper_instance (до руки 0.057 м)"
+    },
+    {
+      "name": "16 step done",
+      "passed": true,
+      "detail": "шаг отправлен"
+    }
+  ],
+  "logIssues": [],
+  "logIssuesDropped": 0,
+  "knownNoise": [],
+  "steps": [
+    {
+      "name": "input-active",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:00.8412855Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "team-requested",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:01.3083641Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "match-live",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:11.7951973Z",
+      "outcome": "received"
+    },
+    {
+      "name": "match-live",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:11.9731826Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "equipment",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:17.6227428Z",
+      "outcome": "received"
+    },
+    {
+      "name": "equipment",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:17.6405060Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "grabbed",
+      "role": "client-1",
+      "data": "netId=29",
+      "utc": "2026-10-20T04:29:20.1820008Z",
+      "outcome": "reached"
+    },
+    {
+      "name": "oracle-done",
+      "role": "server",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.7985961Z",
+      "outcome": "received"
+    },
+    {
+      "name": "oracle-done",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.8063523Z",
+      "outcome": "barrier-passed"
+    },
+    {
+      "name": "done",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:29:21.8104667Z",
+      "outcome": "reached"
+    }
+  ],
+  "stepsDropped": 0
+}

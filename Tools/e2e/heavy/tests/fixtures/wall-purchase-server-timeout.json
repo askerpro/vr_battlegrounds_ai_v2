@@ -1,0 +1,74 @@
+{
+  "scenario": "scripted-wall-purchase",
+  "role": "server",
+  "passed": false,
+  "status": "timeout",
+  "summary": "сценарий не уложился в общий таймаут 10 с; шло ожидание барьер input-active: клиенты client-1, client-2 (срок 90 с), прошло 11 с",
+  "startedUtc": "2026-10-20T04:03:53.1405800Z",
+  "durationSeconds": 10.52,
+  "buildGuid": "00000000000000000000000000000000",
+  "appVersion": "0.1.0",
+  "unityVersion": "6000.4.1f1",
+  "developmentBuild": true,
+  "platform": "WindowsEditor",
+  "artifacts": [],
+  "checks": [
+    {
+      "name": "сервер: клиенты подключены обычными соединениями, ботов нет",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    },
+    {
+      "name": "сервер: команды выбраны клиентами, обе команды заняты",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    },
+    {
+      "name": "сервер: матч начат эквивалентом кнопки админа",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    },
+    {
+      "name": "сервер: фаза Equipment — все в своих зонах, стены открыты",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    },
+    {
+      "name": "сервер: у каждого клиента своя стена",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    },
+    {
+      "name": "сервер: касса провела покупку каждого клиента",
+      "passed": false,
+      "detail": "не выполнялась — общий таймаут 10 с истёк"
+    }
+  ],
+  "logIssues": [],
+  "logIssuesDropped": 0,
+  "knownNoise": [],
+  "steps": [
+    {
+      "name": "input-active",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:03:59.7444528Z",
+      "outcome": "received"
+    },
+    {
+      "name": "team-requested",
+      "role": "client-1",
+      "data": "",
+      "utc": "2026-10-20T04:04:00.0870616Z",
+      "outcome": "received"
+    },
+    {
+      "name": "abort",
+      "role": "server",
+      "data": "сценарий не уложился в общий таймаут 10 с; шло ожидание барьер input-active: клиенты client-1, client-2 (срок 90 с), прошло 11 с",
+      "utc": "2026-10-20T04:04:03.6834793Z",
+      "outcome": "aborted"
+    }
+  ],
+  "stepsDropped": 0
+}

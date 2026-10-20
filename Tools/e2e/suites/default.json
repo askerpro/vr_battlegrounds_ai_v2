@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "description": "Набор перед вливанием: скриптовый ввод сетевых клиентов (этап 1 эпика e2e-regression).",
+  "defaults": {
+    "map": "Assets/Scenes/Maps/TestMap2.unity",
+    "mode": "elimination",
+    "readyTimeoutSeconds": 180,
+    "scenarioTimeoutSeconds": 240
+  },
+  "scenarios": [
+    {
+      "name": "scripted-input-smoke",
+      "clients": 1,
+      "profiles": ["editor"]
+    },
+    {
+      "name": "scripted-wall-purchase",
+      "clients": 2,
+      "profiles": ["editor"]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "task_id": "e2e-heavy-editor",
+  "owner": "e2e-heavy-editor",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-heavy-editor",
+  "base_sha": "ae095ad49e7ff1f8254d65e75819b7b540700554",
+  "doc_path": "tasks/e2e-heavy-editor/Readme.md",
+  "title": "E2E этап 4: HeavyEditor — одна команда регрессии",
+  "branch": "task/e2e-heavy-editor",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-heavy-editor/**",
+        "Tools/e2e/heavy.py",
+        "Tools/e2e/heavy/**",
+        "Tools/e2e/suites/**",
+        "Tools/e2e/editmode-known-red.json",
+        "AGENTS.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

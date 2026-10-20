@@ -1,0 +1,20 @@
+{
+  "task_id": "e2e-discovery-autostart",
+  "owner": "e2e-discovery-autostart",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-discovery-autostart",
+  "base_sha": "646170c47d023d6aa278046cb501e7b28f19ccd6",
+  "doc_path": "tasks/e2e-discovery-autostart/Readme.md",
+  "title": "Discovery без автостарта в headless: порты E2E до старта сети",
+  "branch": "task/e2e-discovery-autostart",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-discovery-autostart/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -94,11 +94,10 @@ namespace Mirror.Discovery
             if (transport == null)
                 transport = Transport.active;
 
-            // Server mode? then start advertising
-            if (Utils.IsHeadless())
-            {
-                AdvertiseServer();
-            }
+            // VR Battlegrounds patch 8: без автостарта рекламы в headless. Рекламой владеет GameNetworkDiscovery:
+            // он вызывает AdvertiseServer() после ServerPublished, когда порты прогона применены и карта готова (S1).
+            // Апстрим здесь биндил порт сцены (47777) до применения пары e2e-плеера.
+            // tasks/e2e-discovery-autostart/changelog/2026-10-20-sdk-8.md.
         }
 
         public static long RandomLong()

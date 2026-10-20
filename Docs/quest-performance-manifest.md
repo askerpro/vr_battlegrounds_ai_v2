@@ -72,7 +72,7 @@ Lobby 2026-10-20: 10,81 → 4,26 мс после правок scene-detail (см
 | QPM-SHADER-003 | Не больше 1–2 текстур на пиксель на больших площадях. Детали запекать в одну текстуру или в vertex colour. | Столлы выборки на Adreno. | не измерено (ориентир: S_BasicTextured/S_Foliage — ~49% тактов replay кадра Lobby) | `material.texture-count`, `shadergraph.heavy-sampling` |
 | QPM-SHADER-004 | Пакетные материалы с HDRP-наследием (`_DISABLE_SSR_TRANSPARENT`, `RayTracingPrepass` в disabledShaderPasses) — признак ПК-пака. Перевести на мобильный шейдер до попадания в карту. | Пак рассчитан на десктоп. | — | `material.hdrp-legacy` |
 | QPM-SHADER-005 | Simple Lit без бликов: `_SpecularHighlights = 1` (это `SpecularSource.NoSpecular`; 0 — блики **включены**). | Обратная семантика легко включает лишние блики. | не измерено | — |
-| QPM-SHADER-006 | Свечение плафонов — Unlit или Simple Lit с `_EMISSION`, GI-флаг `None`. Флаг `EmissiveIsBlack` в URP при валидации **выключает** `_EMISSION` — плафон перестаёт светиться. | Скрытая ошибка, не цена. | — | — |
+| QPM-SHADER-006 | Свечение плафонов — Unlit (цвет) или Simple Lit с `_EMISSION` и GI-флагом `RealtimeEmissive` (realtime GI выключен — в свет не идёт). URP при импорте и валидации включает `_EMISSION` только при `AnyEmissive`: с `None` или `EmissiveIsBlack` эмиссия **молча выключается**; `BakedEmissive` даёт вклад в лайтмапы. | Скрытая ошибка, не цена: проверять сохранённый ассет, а не материал в памяти. | — | — |
 | QPM-SHADER-007 | У материала один писатель. Если инструмент оптимизации меняет материал, авторинг-инструмент сцены обязан ставить то же целевое состояние или исключить материал. | Повторный запуск авторинга молча возвращает дорогой шейдер. | — | — |
 
 ### Небо и фон (SKY)
@@ -180,7 +180,7 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 Ещё не автоматизированы — кандидаты в правила аудитора:
 - QPM-SHADER-005 — Simple Lit с бликами;
-- QPM-SHADER-006 — `EmissiveIsBlack` на материале с эмиссией;
+- QPM-SHADER-006 — эмиссия (`_EmissionColor` не чёрный) без флага `AnyEmissive`;
 - QPM-SHADER-007 — несколько писателей одного материала;
 - QPM-LIGHT-001 — realtime-свет в статичной сцене, ContributeGI у подвижных;
 - QPM-LIGHT-004 — светильник без источника; range ламп меньше расстояния до центра помещения;

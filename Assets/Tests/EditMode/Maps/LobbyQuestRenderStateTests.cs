@@ -173,9 +173,11 @@ namespace VrBattlegrounds.Tests.Maps
         {
             var lamp = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Lobby/Night/LobbyNightLampLong.mat");
             Assert.IsNotNull(lamp);
-            Assert.IsTrue(lamp.IsKeywordEnabled("_EMISSION"), "QPM-SHADER-006: плафон светится");
-            Assert.AreEqual(MaterialGlobalIlluminationFlags.None, lamp.globalIlluminationFlags,
-                "EmissiveIsBlack выключил бы _EMISSION при валидации");
+            // Состояние с диска: URP при импорте пересчитывает _EMISSION по GI-флагам, поэтому проверяется сохранённый файл.
+            string text = System.IO.File.ReadAllText(AssetDatabase.GetAssetPath(lamp));
+            Assert.That(text, Does.Contain("- _EMISSION"), "QPM-SHADER-006: _EMISSION сохранён в ассете");
+            Assert.AreEqual(MaterialGlobalIlluminationFlags.RealtimeEmissive, lamp.globalIlluminationFlags,
+                "None/EmissiveIsBlack выключают _EMISSION при импорте; BakedEmissive дал бы вклад в лайтмапы");
             if (lamp.shader.name == "Universal Render Pipeline/Simple Lit")
                 Assert.AreEqual(1f, lamp.GetFloat("_SpecularHighlights"), "QPM-SHADER-005: 1 = NoSpecular");
         }

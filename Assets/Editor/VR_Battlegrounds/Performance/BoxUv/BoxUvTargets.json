@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "note": "Генерирует Tools/VR Battlegrounds/Performance/Box UV/Scan And Apply. Руками не править.",
   "materials": [
     "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Concrete_01.mat",

@@ -216,8 +216,10 @@ namespace VrBattlegrounds.EditorTools
         // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому ярус материалов
         // (LobbyGpuMaterialTier) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
         // освещён, светится только рассеиватель), стекло SM_TopLight/SM_LampPost/SM_Lamp_02 — непрозрачный Unlit.
-        // GI-флаг None: эмиссия видна, но в GI не идёт (свет ламп запекают настоящие источники). EmissiveIsBlack
-        // в URP выключает _EMISSION при валидации материала — с ним плафон гас (так было до 2026-10-20).
+        // GI-флаг RealtimeEmissive: URP (BaseShaderGUI.SetMaterialKeywords) включает _EMISSION только при AnyEmissive,
+        // а с None или EmissiveIsBlack при импорте/валидации выключает его — плафон гас. Realtime GI в Lobby выключен,
+        // поэтому эмиссия видна, но в свет не идёт (свет ламп запекают настоящие источники); BakedEmissive дал бы
+        // вклад в лайтмапы.
         private static void ApplyLampGlow(Material lampLong, StringBuilder log)
         {
             if (lampLong != null)
@@ -234,8 +236,8 @@ namespace VrBattlegrounds.EditorTools
                 lampLong.SetTexture("_BumpMap", null);
                 lampLong.SetTexture("_EmissionMap", emissionMap);
                 lampLong.SetColor("_EmissionColor", WarmLamp * LampGlowBoost);
+                lampLong.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 lampLong.EnableKeyword("_EMISSION");
-                lampLong.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 EditorUtility.SetDirty(lampLong);
                 log.AppendLine("Плафон: " + AssetDatabase.GetAssetPath(lampLong) + " — Simple Lit, эмиссия по карте " + (emissionMap != null ? emissionMap.name : "нет") + ".");
             }

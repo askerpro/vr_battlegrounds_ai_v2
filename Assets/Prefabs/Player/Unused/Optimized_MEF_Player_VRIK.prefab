@@ -500,6 +500,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 1ff8365c-5805-4494-9a6b-9d7cb8383eab
       objectReference: {fileID: 0}
+    - target: {fileID: 1569972322444911619, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
+      propertyPath: __prefabGuid
+      value: 7bb4afb58899e9b4c9d0ef0cdc3bda05
+      objectReference: {fileID: 0}
     - target: {fileID: 1578106730562334272, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -2204,6 +2208,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 7879699f-545f-4e93-91b6-d787ead7fb40
       objectReference: {fileID: 0}
+    - target: {fileID: 7013445968538774959, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
+      propertyPath: __prefabGuid
+      value: 7bb4afb58899e9b4c9d0ef0cdc3bda05
+      objectReference: {fileID: 0}
     - target: {fileID: 7046346249413547036, guid: b8146035f3f436a4799882b3a0d1dd45, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -3075,9 +3083,6 @@ MonoBehaviour:
       rootRotationHeader: 0
       maxRootAngleMoving: 10
       maxRootAngleStanding: 90
-      turnStartAngle: 30
-      turnStopAngle: 18
-      turnReleaseSpeed: 12
       stepLengthMlp: 1
       footDistance: 0.3
       stepThreshold: 0.4

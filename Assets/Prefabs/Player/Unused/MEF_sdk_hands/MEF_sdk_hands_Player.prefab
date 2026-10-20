@@ -4362,6 +4362,10 @@ PrefabInstance:
       propertyPath: _uxrUniqueId
       value: 46969636-67e0-4b18-bd5c-ec5008bfb2a2
       objectReference: {fileID: 0}
+    - target: {fileID: 190321332368196895, guid: 9f39b98b7a0c4d37b23227208e927680, type: 3}
+      propertyPath: __prefabGuid
+      value: d7dcf2f69bb944c8ba65f34db4af7ec8
+      objectReference: {fileID: 0}
     - target: {fileID: 211826640858059706, guid: 9f39b98b7a0c4d37b23227208e927680, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -6769,6 +6773,10 @@ PrefabInstance:
     - target: {fileID: 8494406224235740559, guid: 9f39b98b7a0c4d37b23227208e927680, type: 3}
       propertyPath: _uxrUniqueId
       value: cffade88-3a8b-43ba-a00f-11d793fc3c8f
+      objectReference: {fileID: 0}
+    - target: {fileID: 8518913077693664435, guid: 9f39b98b7a0c4d37b23227208e927680, type: 3}
+      propertyPath: __prefabGuid
+      value: d7dcf2f69bb944c8ba65f34db4af7ec8
       objectReference: {fileID: 0}
     - target: {fileID: 8549001048139314432, guid: 9f39b98b7a0c4d37b23227208e927680, type: 3}
       propertyPath: __isInPrefab

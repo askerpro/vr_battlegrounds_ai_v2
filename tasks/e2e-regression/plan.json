@@ -1,0 +1,20 @@
+{
+  "task_id": "e2e-regression",
+  "owner": "e2e-regression",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-regression",
+  "base_sha": "43332888b76611fb2299e4d9f2df0e3acd286791",
+  "doc_path": "tasks/e2e-regression/Readme.md",
+  "title": "Эпик: E2E-регрессия геймплея (HeavyTests)",
+  "branch": "task/e2e-regression",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-regression/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

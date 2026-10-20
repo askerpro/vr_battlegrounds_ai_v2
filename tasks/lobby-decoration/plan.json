@@ -48,6 +48,7 @@
         "Assets/Scripts/Debug/LobbyDetail.meta",
         "Assets/Scripts/Maps/ShootingRangeDisplay.cs",
         "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
+        "Assets/Scripts/UI/Menu/MenuDebug.cs",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Rendering/FX/UxrPlanarReflectionUrp.cs",
         "ProjectSettings/QualitySettings.asset",
         ".gitattributes",
@@ -70,11 +71,6 @@
         {
           "task": "catalog-fingerprint",
           "stage": "env-independent",
-          "state": "merged"
-        },
-        {
-          "task": "scene-detail",
-          "stage": "core",
           "state": "merged"
         }
       ],

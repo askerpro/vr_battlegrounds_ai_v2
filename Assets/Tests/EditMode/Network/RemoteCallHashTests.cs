@@ -56,10 +56,11 @@ namespace VrBattlegrounds.Tests.Network
         [Test]
         public void Расчёт_хэша_совпадает_с_регистрацией_Mirror()
         {
-            // Аргументы допуска корня аватара входят в полное имя, которое регистрирует Weaver.
+            // Аргументы допуска корня аватара и предмета (контракт v2: netId предмета) входят в полное имя,
+            // которое регистрирует Weaver.
             string relay = FullName(typeof(NetworkStateRelay), "CmdComponentStateChanged",
-                new[] { typeof(byte[]), typeof(uint), typeof(Guid), typeof(NetworkConnectionToClient) });
-            Assert.AreEqual(43519, Hash(relay));
+                new[] { typeof(byte[]), typeof(uint), typeof(Guid), typeof(uint), typeof(NetworkConnectionToClient) });
+            Assert.AreEqual(6239, Hash(relay));
             Assert.That(RemoteCalls().Select(call => call.FullName), Has.Member(relay),
                 "Тест не нашёл известную команду — поменялся формат Weaver.");
         }

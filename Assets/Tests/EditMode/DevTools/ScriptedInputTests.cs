@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Tests.DevTools
     /// </summary>
     public class ScriptedInputTests
     {
-        private static readonly string[] BuiltInScripts = { "input-smoke", "wall-purchase", "combat-hit" };
+        private static readonly string[] BuiltInScripts = { "input-smoke", "wall-purchase", "combat-hit", "combat-round" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -69,6 +69,7 @@ namespace VrBattlegrounds.Tests.DevTools
 
         [TestCase("{\"op\":\"grab-wall-item\",\"item\":\"rifle\"}", "rifle")]
         [TestCase("{\"op\":\"hold\",\"client\":-1}", "client")]
+        [TestCase("{\"op\":\"shoot-enemy\",\"until\":\"wound\"}", "wound")]
         public void Load_RejectsUnknownItemFilterAndNegativeClient(string step, string expected)
         {
             string file = Path.Combine(Path.GetTempPath(), "scripted-input-bad-step.json");
@@ -130,15 +131,65 @@ namespace VrBattlegrounds.Tests.DevTools
         }
 
         [Test]
+        public void CombatRound_ReadyByTagThenShooterKillsAndTargetBecomesGhost()
+        {
+            InputScript script = InputScript.Load("combat-round", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int tag = -1, inZone = -1, combat = -1, shoot = -1, eliminated = -1;
+            for (int i = 0; i < script.steps.Length; i++)
+            {
+                InputStep step = script.steps[i];
+                if (step.op == "grab-dog-tag") tag = i;
+                if (step.op == "walk" && step.target == "own-spawn-point") inZone = i;
+                if (step.op == "wait-server" && step.name == "combat") combat = i;
+                if (step.op == "shoot-enemy") shoot = i;
+                if (step.op == "expect-eliminated") eliminated = i;
+            }
+
+            Assert.That(tag, Is.GreaterThanOrEqualTo(0), "готовность — жетон, снятый рукой");
+            Assert.That(script.steps[tag].client, Is.Zero, "жетон снимают оба (готовы все игроки команд)");
+            Assert.That(script.steps[tag].hand, Is.EqualTo("left"), "правая рука держит оружие");
+            Assert.That(inZone, Is.GreaterThan(tag), "Countdown держится, пока живой игрок вне своей зоны");
+            Assert.That(combat, Is.GreaterThan(inZone));
+            Assert.That(shoot, Is.GreaterThan(combat), "оружие стреляет только в Combat");
+            Assert.That(script.steps[shoot].client, Is.EqualTo(1));
+            Assert.That(script.steps[shoot].until, Is.EqualTo("kill"));
+            Assert.That(script.steps[shoot].shots, Is.GreaterThanOrEqualTo(4), "Viper: 4 попадания в торс на 100 здоровья");
+            Assert.That(eliminated, Is.GreaterThan(combat));
+            Assert.That(script.steps[eliminated].client, Is.EqualTo(2), "выбывает жертва — клиент 2");
+        }
+
+        [Test]
         public void ShootingSummary_FitsBarrierStepData()
         {
             var outcome = new ScriptedGunner.Outcome
             {
-                Hit = true, Presses = int.MaxValue, Shots = int.MaxValue,
+                Hit = true, Killed = true, Presses = int.MaxValue, Shots = int.MaxValue,
                 HealthBefore = float.MaxValue, HealthAfter = float.MinValue, Distance = float.MaxValue
             };
 
             Assert.That(E2EStepRules.ValidateStep("shot", outcome.StepData()), Is.Null);
+        }
+
+        [TestCase(45f, 0f, 1f)]
+        [TestCase(0f, 0f, 1f)]
+        [TestCase(-30f, 0f, 1f)]
+        [TestCase(45f, 90f, 0f)]
+        [TestCase(0f, 180f, -1f)]
+        public void WeaponLevel_IsRollAroundBarrel_NotPitch(float pitch, float roll, float expected)
+        {
+            var go = new GameObject("muzzle");
+            try
+            {
+                go.transform.rotation = Quaternion.Euler(pitch, 30f, 0f) * Quaternion.AngleAxis(roll, Vector3.forward);
+                Assert.That(ScriptedGunner.Level(go.transform), Is.EqualTo(expected).Within(1e-3f),
+                    "наклон ствола вниз/вверх не делает оружие «не ровным», крен вокруг ствола — делает");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         [Test]
@@ -174,6 +225,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(E2ERunner.IsRegistered("scripted-input-smoke"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-wall-purchase"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-hit"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-combat-round"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

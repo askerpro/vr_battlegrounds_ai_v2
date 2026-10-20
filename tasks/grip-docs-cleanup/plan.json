@@ -20,6 +20,24 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "grip-extraction",
+      "writes": [
+        "tasks/grip-docs-cleanup/**",
+        "Docs/grip-extraction.md",
+        "Docs/grip-quality-analysis.md",
+        "Docs/grip-known-issues.md",
+        "experts/avatar-grip/AGENT.md"
+      ],
+      "after": [
+        {
+          "task": "grip-docs-cleanup",
+          "stage": "quality-analysis",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

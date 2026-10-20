@@ -13,7 +13,7 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - `weapon-system`: weapon mechanics, `MainGripAimLock`/`PumpGrabFollow`. `bots`: `BotBody`. `network`: authority.
 
 ### Invariants
-- MEF `_bodyIKSettings._eyesBaseHeight=1.7202504` (override in `MEF_Base_Avatar.prefab`, headset-tuned) and accepted
+- MEF `_bodyIKSettings._eyesBaseHeight=1.7202504` (override in `Unused/MEF_Base_Avatar.prefab`, headset-tuned) and accepted
   calibration are preserved; avatar-ik alone changes them, you re-check grips. Never use MEF eye-bone height (nose level).
 - Hand-bone writers, `UxrManager` frame order (`UXR` = `Assets/ThirdParty/UltimateXR/Runtime/Scripts`); basis of the
   planned writer contract with avatar-ik, the order changes only via that contract:
@@ -48,7 +48,7 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
   SaveAsPrefabAsset, retaining identity guard. Worker647: compiled witness + Apply accepted Viper PASS,
   all3 asset bytes unchanged/canonical id. Worker683: full EditMode57,56PASS1FAIL (older Cyborg own-head);
   identifiers4/4 and hand-chain13/13 PASS. User accepted merge on 2026-10-15; publication tracked in task Readme.
-- MEF — `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`, `Tools/mef-avatar/README.md`
+- MEF (native hand, unused since 2026-10-17) — `Assets/Prefabs/Player/Unused/MEF_Base_Avatar.prefab`, `Tools/mef-avatar/README.md`
 - Coverage guard item × avatar — `Assets/Tests/EditMode/Prefabs/GrabPoseCoverageTests.cs`
 
 ### Details (grep the heading)
@@ -57,6 +57,7 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - `tasks/hand-rig-quality/Details.md` (54 KB) — «План аудита хватов MEF — 2026-10-10», «Контракт и границы»; `tool.md` — «Шкала и покрытие».
 - `Docs/hand-rig-quality-tool.md` — HRQ: запуск, метрики/шкала, «Перед первым использованием на новом аватаре»; `Docs/hand-rig-quality-mef-research.md` — итог по ригу MEF (закрыт 2026-10-20).
 - `Docs/grip-quality-analysis.md` — автоанализ хвата: правила, пороги, ограничения, «Состояние на 2026-10-20»; `Docs/grip-known-issues.md` — реестр дефектов хватов (F1–F8, G1–G8) с аватаром и статусом.
+- `Docs/grip-extraction.md` — Grip Extraction (направление 3): конвейер, профили, запрос и Apply, история R0–R2, «Перед следующим применением», «Предлагаемое направление».
 - `Docs/hand-pose-fit-tool.md` — «Вход для агента», «Пределы версии»; `Docs/UltimateXR/known-issues.md` — Issue 26, 28; `Docs/avatar-editor-workbench.md` — «Кисти и подготовка».
 
 ### Zone rules

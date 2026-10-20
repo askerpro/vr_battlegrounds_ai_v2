@@ -39,7 +39,7 @@
 
 **Не перепроверено** (Unity, Play и шлем не запускались): геометрия хватов на CyborgHandsBase, прохождение
 `GrabPoseCoverageTests`, `RegisteredAvatarBodyTests` и `CorpseTests` после реструктуризации 2026-10-18,
-записи 9 стволов R2 в префабах против результата 712 (ассеты поз сверены: 13 из 16 совпадают), захват ручек планшета в игре,
+записи 9 стволов R2 в префабах против результата 712 (ассеты поз сверены: 12 из 15 `*_Grip` совпадают), захват ручек планшета в игре,
 совместимость полос `contact-bands-v1` с изменённым 2026-10-16 снимком.
 
 **Расхождения старых документов с кодом:**
@@ -48,3 +48,60 @@
   заглушка (`HandPoseSdkContactDiagnostics.Enabled = false`), `HandPoseEditorCapture.Export` не вызывается;
 - `Docs/hand-pose-fit-tool.md` описывает версию `mesh-fit-0.4-local-volume`, схему 2; в коде схема 4,
   `mesh-fit-0.6-grip-rules`; знаковые метрики, правила, лист ревью и предпросмотр там не описаны.
+
+## Этап grip-extraction
+
+2026-10-20. Направление 3 — перенос хватов из паков HandsPack и KINEMATION под кисть Cyborg (Grip Extraction).
+
+**Сделано:**
+
+- [Docs/grip-extraction.md](../../Docs/grip-extraction.md) — входной документ: место среди направлений, схема
+  конвейера, источники (реализован только `pack`), нейтральный хват и центр ладони, посадка (формула, k),
+  кодирование позы, профили цели и добавление профиля, режимы Measure/Preview/Apply и что пишет Apply,
+  поля запроса и пример для `CyborgHands`, проверка результата, ограничения, история R0–R2 с числами,
+  план R3–R5 и причина остановки, «Предлагаемое направление» (перенос контактов через контактный IK,
+  помечено как предложение), «Состояние на 2026-10-20», «Перед следующим применением».
+- Ссылки на него в `Docs/grip-quality-analysis.md` (назначение, раздел API) и `Docs/grip-known-issues.md`
+  («Как читать», G1); строка в `experts/avatar-grip/AGENT.md` (Details).
+
+**Сверено с кодом** `Assets/Editor/VR_Battlegrounds/Avatars/GripExtraction/` (HEAD ветки совпадает с `origin/dev`
+по этим путям): порядок шагов `Run`, поля `GripExtractionRequest` и умолчания, профили и их константы,
+формула `GripPlacement`, зеркало `GripSample.ForSide`, кодирование и проверки `GripPoseEncoder`,
+запись `GripPoseAssets` и `GripRecordWriter` (align, `BindToPrefab`, `_assetId`, сторож), scoped-save,
+`GripFitCheck`, R0; определение центра ладони — SDK `UxrAvatarHand.GetPalmCenter`; публичный API
+`ContactIkPreviewSession` и `ContactIkSourceTargetMapping.FromSource`.
+
+**Сверено с деревом и историей Git:**
+
+- пути профилей после переезда 2026-10-19 (`a62039a26`): все константы Cyborg существуют, GUID базы
+  совпадает; нет прежнего `Experimental/…/MEF_cyborg_hands_Base.prefab` (запасной путь) и
+  `Assets/Prefabs/Player/MEF_Base_Avatar.prefab` (перенесён в `Unused/` 2026-10-17);
+- ассеты поз результата 712 (ветка `archive/avatar-grip/r2-rejected-result-712-verified`, `1a71e6af6`)
+  против `origin/dev`: 26 из 30 совпадают побайтово; отличаются `HandsPack_Gun_Grip`,
+  `Kinemation_Herrington_Grip`, `Kinemation_Viper_Grip`, `Gun` — версии dev из `1b2f88612`, не равны ни 712,
+  ни его базе `04fc9de88`; пять из семи поз коррекции 712 на dev — версии 712;
+- коммиты истории на dev: `67e3b06f5`, `6190ce80d`, `e83a2d4a5`, `e16b86b82`, `846fa4bca`, `1b2f88612`;
+  scoped-save, профиль `CyborgHands` и захват геометрии источника пришли в dev в `1b2f88612`.
+
+**Не проверено** (Unity, Play и шлем не запускались): компиляция и прогон конвейера на текущем dev,
+цепочка префабов `CheckRig` (только чтение YAML), совпадение «граббер → ладонь» у `PlayerControllersCyborgAvatar`
+и `MEF_cyborg_hands_Player`, текущее состояние этапов в хабе (взято из Readme hand-rig-quality), содержимое
+отчётов R1 (числа — из Details.md и changelog), публикация архивных веток на origin (ls-remote пуст).
+
+**Расхождения:**
+
+- профиль `MEF` и R0 не работают: `HandsPackPoseImporter.GripAvatars` указывает на отсутствующий
+  `Assets/Prefabs/Player/MEF_Base_Avatar.prefab`; тот же путь — у импортёра паков, `ArsenalEditorWindow`,
+  `ArsenalBuildPreflight`, `AvatarMixamoLocomotionSetup`, `CyborgLegsBuilder` и в Architecture map
+  `experts/avatar-grip/AGENT.md`;
+- `AvatarRecordGripSource` и `ManualGripSource` не существуют даже как заглушки — только упоминание в
+  комментарии `IGripSource` и исключение `CreateSource`;
+- комментарий поля `Target` в `GripExtractionRequest` перечисляет только `MEF | MEF_cyborg_hands`;
+- реестр `Docs/grip-known-issues.md` (G5) и бриф этапа называли «13 из 16 поз `*_Grip` совпадают»; фактически
+  из 15 поз `*_Grip` результата 712 совпадают 12 (из всех 30 ассетов — 26). В `grip-extraction.md` записаны
+  проверенные числа; G5 и раздел этапа quality-analysis исправлены основным агентом в этом же этапе;
+- `reports/resume-2026-10-14/r3-source-prerequisites.md` называет прежний путь
+  `Assets/Prefabs/Player/PlayerControllersCyborgAvatar.prefab`;
+- захват геометрии источника (`GripSourceContactFrame`, обе прямые руки, `PackClipGripSource.Sample(point, true)`)
+  уже есть в коде (Details: «opt-in source capture»), но конвейер `Run` его не вызывает, а `Pads` остаются null;
+  в `grip-extraction.md` он учтён как основа «Предлагаемого направления».

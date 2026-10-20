@@ -12,6 +12,9 @@
 
 ## Статус
 
+- 2026-10-20: этап `work` влит в origin/dev — 24f806907 (вливание подтверждено пользователем). Этап `journal` —
+  запись в `experts/launch-infra/journal/`.
+
 - Причина найдена и подтверждена замером на worker: `PlayLaunch.Plan` (Lobby) ~1000 мс, почти всё — рекурсивный
   `AssetDatabase.GetDependencies`; окно звало его в каждом OnGUI при безусловном Repaint 10 Гц. Подробности — [Details.md](Details.md).
 - Исправление: кэш плана/статуса в окне, перерисовка по изменению; кэш разметки сцены в `PlayLaunch.Resolve` со сбросом по `projectChanged`.

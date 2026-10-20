@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 1,
+  "note": "Генерирует Tools/VR Battlegrounds/Performance/Box UV/Scan And Apply. Руками не править.",
+  "materials": [
+    "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Concrete_01.mat",
+    "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Tiles_ObjectSpace.mat"
+  ],
+  "scenes": [
+    "Assets/Scenes/Lobby.unity"
+  ],
+  "targets": [
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Antenna_c.fbx",
+      "mesh": "SM_Antenna_c_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Antenna_c.fbx",
+      "mesh": "SM_Antenna_c_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Border_2m.fbx",
+      "mesh": "SM_Border_2m_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Border_2m.fbx",
+      "mesh": "SM_Border_2m_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Border_90d.fbx",
+      "mesh": "SM_Border_90d_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Border_90d.fbx",
+      "mesh": "SM_Border_90d_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_roof_1x2_02.fbx",
+      "mesh": "SM_Building_roof_1x2_02_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_roof_1x2_02.fbx",
+      "mesh": "SM_Building_roof_1x2_02_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_1m_A.fbx",
+      "mesh": "SM_Building_wall_1m_A_LOD0",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_1m_A.fbx",
+      "mesh": "SM_Building_wall_1m_A_LOD1",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_2m_A.fbx",
+      "mesh": "SM_Building_wall_2m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_2m_A.fbx",
+      "mesh": "SM_Building_wall_2m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_4x4m_A.fbx",
+      "mesh": "SM_Building_wall_4x4m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_4x4m_A.fbx",
+      "mesh": "SM_Building_wall_4x4m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_corner_90d_A.fbx",
+      "mesh": "SM_Building_wall_corner_90d_A_LOD0",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_corner_90d_A.fbx",
+      "mesh": "SM_Building_wall_corner_90d_A_LOD1",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_entrance_2m_A.fbx",
+      "mesh": "SM_Building_wall_entrance_2m_A_LOD0",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_entrance_2m_A.fbx",
+      "mesh": "SM_Building_wall_entrance_2m_A_LOD1",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_entrance_2m_B.fbx",
+      "mesh": "SM_Building_wall_entrance_2m_B_LOD0",
+      "submeshes": [
+        0,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_entrance_2m_B.fbx",
+      "mesh": "SM_Building_wall_entrance_2m_B_LOD1",
+      "submeshes": [
+        0,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_A.fbx",
+      "mesh": "SM_Building_wall_window_2m_A_LOD0",
+      "submeshes": [
+        0,
+        3
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_A.fbx",
+      "mesh": "SM_Building_wall_window_2m_A_LOD1",
+      "submeshes": [
+        0,
+        3
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_A.fbx",
+      "mesh": "SM_Building_wall_window_2m_A_LOD2",
+      "submeshes": [
+        0,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_B.fbx",
+      "mesh": "SM_Building_wall_window_2m_B_LOD0",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_B.fbx",
+      "mesh": "SM_Building_wall_window_2m_B_LOD1",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_2m_B.fbx",
+      "mesh": "SM_Building_wall_window_2m_B_LOD2",
+      "submeshes": [
+        1,
+        2
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_4m_A.fbx",
+      "mesh": "SM_Building_wall_window_4m_A_LOD0",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_4m_A.fbx",
+      "mesh": "SM_Building_wall_window_4m_A_LOD1",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Building_wall_window_4m_A.fbx",
+      "mesh": "SM_Building_wall_window_4m_A_LOD2",
+      "submeshes": [
+        0,
+        1
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_beam_3m_A.fbx",
+      "mesh": "SM_Concrete_beam_3m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_beam_3m_A.fbx",
+      "mesh": "SM_Concrete_beam_3m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_pile_B.fbx",
+      "mesh": "SM_Concrete_pile_B_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_pile_B.fbx",
+      "mesh": "SM_Concrete_pile_B_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_support_A.fbx",
+      "mesh": "SM_Concrete_support_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Concrete_support_A.fbx",
+      "mesh": "SM_Concrete_support_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_1m_A.fbx",
+      "mesh": "SM_Cornice_1m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_1m_A.fbx",
+      "mesh": "SM_Cornice_1m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_2m_A.fbx",
+      "mesh": "SM_Cornice_2m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_2m_A.fbx",
+      "mesh": "SM_Cornice_2m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_3m_A.fbx",
+      "mesh": "SM_Cornice_3m_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_3m_A.fbx",
+      "mesh": "SM_Cornice_3m_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_90d_A.fbx",
+      "mesh": "SM_Cornice_90d_A_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_90d_A.fbx",
+      "mesh": "SM_Cornice_90d_A_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Cornice_90d_A.fbx",
+      "mesh": "SM_Cornice_90d_A_LOD2",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Hangar_wall_8x6_a.fbx",
+      "mesh": "SM_Hangar_wall_8x6_a_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Hangar_wall_8x6_a.fbx",
+      "mesh": "SM_Hangar_wall_8x6_a_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Hangar_WallRoof.fbx",
+      "mesh": "SM_Hangar_WallRoof_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_Hangar_WallRoof.fbx",
+      "mesh": "SM_Hangar_WallRoof_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_WatchTower_01.fbx",
+      "mesh": "SM_WatchTower_01_LOD0",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_WatchTower_01.fbx",
+      "mesh": "SM_WatchTower_01_LOD1",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_WatchTower_01.fbx",
+      "mesh": "SM_WatchTower_01_LOD2",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_WatchTower_01.fbx",
+      "mesh": "SM_WatchTower_01_LOD3",
+      "submeshes": [
+        0
+      ]
+    },
+    {
+      "model": "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Assets/SM_WatchTower_01.fbx",
+      "mesh": "SM_WatchTower_01_LOD4",
+      "submeshes": [
+        0
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "model": "Library/unity default resources",
+      "mesh": "Cube",
+      "reason": "not an imported model (builtin or mesh asset)"
+    }
+  ],
+  "unverifiedScenes": []
+}

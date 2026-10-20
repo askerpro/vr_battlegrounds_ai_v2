@@ -22,9 +22,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
     /// <item><c>choose-team</c> — команда по индексу клиента тем же Command, что у планшета;</item>
     /// <item><c>grab-wall-item</c> — подвести кисть <c>hand</c> к самому дешёвому доступному предмету своей стены и
     ///       нажать Grip; <c>item</c> = <c>pistol</c> — только пистолет с одной пулей на выстрел;</item>
+    /// <item><c>grab-dog-tag</c> — снять жетон своей стены рукой <c>hand</c> (Grip) и отпустить: готовность к раунду;</item>
     /// <item><c>carry</c> — рука <c>hand</c> с предметом опускается и идёт за головой, Grip держится;</item>
     /// <item><c>shoot-enemy</c> — подойти к живому противнику на <c>meters</c> м, навести ствол руки <c>hand</c> на
-    ///       его торс и жать Trigger до попадания, не больше <c>shots</c> нажатий;</item>
+    ///       его торс и жать Trigger до попадания (<c>until</c> = <c>hit</c>) или до его смерти (<c>kill</c>), не
+    ///       больше <c>shots</c> нажатий;</item>
+    /// <item><c>expect-eliminated</c> — свой игрок выбыл, ввод перенесён на новый аватар (призрак);</item>
     /// <item><c>expect-held</c>, <c>expect-peers-holding</c> — проверки реплицированного состояния;</item>
     /// <item><c>release</c>, <c>hold</c> (<c>seconds</c>);</item>
     /// <item><c>step</c> / <c>wait-server</c> — барьер шагов e2e (<c>name</c>, <c>timeoutS</c>).</item>
@@ -45,11 +48,15 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public static readonly string[] Operations =
         {
             "activate", "measure-start", "measure-check", "walk", "turn", "choose-team", "grab-wall-item",
-            "carry", "shoot-enemy", "release", "hold", "expect-held", "expect-peers-holding", "step", "wait-server"
+            "grab-dog-tag", "carry", "shoot-enemy", "expect-eliminated", "release", "hold", "expect-held",
+            "expect-peers-holding", "step", "wait-server"
         };
 
         /// <summary>Фильтры предмета <see cref="InputStep.item"/> для <c>grab-wall-item</c>.</summary>
         public static readonly string[] ItemFilters = { "", "pistol" };
+
+        /// <summary>Цели стрельбы <see cref="InputStep.until"/> для <c>shoot-enemy</c>.</summary>
+        public static readonly string[] ShootGoals = { "hit", "kill" };
 
         /// <summary>
         /// Загружает сценарий: <paramref name="path"/> — файл (плеер, <c>-e2eArg script=</c>), иначе встроенный
@@ -96,6 +103,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                         return null;
                     }
 
+                    if (Array.IndexOf(ShootGoals, script.steps[i].until ?? "") < 0)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: неизвестная цель стрельбы '{script.steps[i].until}'";
+                        return null;
+                    }
+
                     if (script.steps[i].client < 0)
                     {
                         error = $"шаг {i + 1} сценария {file}: client {script.steps[i].client} < 0";
@@ -128,6 +141,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public float timeoutS = 60f;
         public string item = "";
         public int shots = 3;
+        public string until = "hit";
 
         /// <summary>Номер клиента, который исполняет шаг; 0 — все.</summary>
         public int client;

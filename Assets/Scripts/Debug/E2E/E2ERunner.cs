@@ -439,6 +439,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ScriptedClientScenario(ScriptedClientScenario.SmokeName, "input-smoke");
             yield return new ScriptedClientScenario(ScriptedClientScenario.PurchaseName, "wall-purchase");
             yield return new ScriptedClientScenario(ScriptedClientScenario.CombatHitName, "combat-hit");
+            yield return new ScriptedClientScenario(ScriptedClientScenario.CombatRoundName, "combat-round");
         }
 
         /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>

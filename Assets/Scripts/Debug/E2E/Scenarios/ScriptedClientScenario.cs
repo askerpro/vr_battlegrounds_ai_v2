@@ -36,6 +36,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// <item><c>scripted-combat-hit</c> (S + 2): закупка пистолетов как в <c>scripted-wall-purchase</c>, возврат в зоны,
     ///       Combat (готовность пока по пределу ожидания режима), клиент 1 наводит ствол на клиента 2 и жмёт Trigger;
     ///       сервер видит повтор выстрела на оружии стрелка, урон по жертве от его актора и падение здоровья.</item>
+    /// <item><c>scripted-combat-round</c> (S + 2): то же, но готовность — жетоны, снятые рукой, клиент 1 стреляет до
+    ///       смерти клиента 2; сервер проверяет готовность не по пределу ожидания, PlayerKilled и смену тела жертвы,
+    ///       награду за убийство, Resolution со счётом 1:0 и деньгами за раунд.</item>
     /// </list>
     /// </summary>
     public sealed class ScriptedClientScenario : IE2EScenario
@@ -43,6 +46,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         public const string SmokeName = "scripted-input-smoke";
         public const string PurchaseName = "scripted-wall-purchase";
         public const string CombatHitName = "scripted-combat-hit";
+        public const string CombatRoundName = "scripted-combat-round";
 
         private const string CheckClients = "сервер: клиенты подключены обычными соединениями, ботов нет";
         private const string CheckWalked = "сервер: голова каждого клиента ушла от корня (поза реплицирована)";
@@ -51,9 +55,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckEquipment = "сервер: фаза Equipment — все в своих зонах, стены открыты";
         private const string CheckWalls = "сервер: у каждого клиента своя стена";
         private const string CheckPurchase = "сервер: касса провела покупку каждого клиента";
-        private const string CheckCombat = "сервер: бой начался (Combat, оружие включено), все живы в своих зонах";
+        private const string CheckCombat = "сервер: бой начался (Combat, оружие включено), стрелок и жертва живы";
         private const string CheckShotReplayed = "сервер: выстрел стрелка повторён сервером на его оружии";
         private const string CheckDamage = "сервер: урон по жертве от актора стрелка, здоровье упало";
+        private const string CheckReadiness = "сервер: готовность жетонами — оба сняли жетон, бой не по пределу ожидания";
+        private const string CheckKill = "сервер: жертва убита стрелком — PlayerKilled, выбыла, тело заменено";
+        private const string CheckKillReward = "сервер: касса начислила стрелку награду за убийство оружием из покупки";
+        private const string CheckRound = "сервер: Resolution — раунд и счёт за командой стрелка, деньги за раунд";
 
         private const string ShooterRole = "client-1";
         private const string TargetRole = "client-2";
@@ -64,6 +72,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private readonly Dictionary<string, Bought> _bought = new Dictionary<string, Bought>();
         private readonly List<string> _combatLog = new List<string>();
         private readonly List<UxrDamageEventArgs> _damage = new List<UxrDamageEventArgs>();
+        private readonly List<(PlayerSession victim, PlayerSession killer)> _kills = new List<(PlayerSession, PlayerSession)>();
         private int _serverShots;
 
         /// <summary>Что купил клиент: предмет и сессия, которая его держит (по данным сервера).</summary>
@@ -154,9 +163,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunPurchaseServer(E2EContext context, E2EResult result)
         {
-            bool combat = _name == CombatHitName;
+            bool round = _name == CombatRoundName;
+            bool combat = round || _name == CombatHitName;
             result.Declare(CheckClients, CheckTeams, CheckLive, CheckEquipment, CheckWalls, CheckPurchase);
             if (combat) result.Declare(CheckCombat, CheckShotReplayed, CheckDamage);
+            if (round) result.Declare(CheckReadiness, CheckKill, CheckKillReward, CheckRound);
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             yield return E2EBarrier.WaitClients(context, "input-active", 90f);
@@ -213,7 +224,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 CheckPurchases(result, grabbed, before);
 
                 context.ServerStep("oracle-done");
-                if (combat) yield return RunCombatHit(context, result, mode);
+                if (combat) yield return RunCombatHit(context, result, mode, round);
                 yield return E2EBarrier.WaitClients(context, "done", 90f);
             }
             finally
@@ -222,6 +233,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             result.Summary = !result.AllChecksGreen ? "см. проверки"
+                : round ? "раунд сыгран вводом: жетоны, убийство курком, Resolution — счёт и деньги за командой стрелка"
                 : combat ? "скриптовый клиент выстрелил курком в противника, сервер увидел урон от его актора"
                 : "скриптовые клиенты купили оружие со своих стен вводом, касса провела покупки";
         }
@@ -230,7 +242,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         //  Сервер: бой — выстрел и урон
         // ══════════════════════════════════════════════════════════════════
 
-        private IEnumerator RunCombatHit(E2EContext context, E2EResult result, EliminationMode mode)
+        private IEnumerator RunCombatHit(E2EContext context, E2EResult result, EliminationMode mode, bool round)
         {
             _bought.TryGetValue(ShooterRole, out Bought shooter);
             _bought.TryGetValue(TargetRole, out Bought target);
@@ -240,6 +252,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             yield return E2EBarrier.WaitClients(context, "in-zone", 60f);
 
             UxrProjectileSource source = shooter.Item != null ? shooter.Item.GetComponent<UxrProjectileSource>() : null;
+            // В Resolution режим снимает оружие у всех (EquipmentStrip) — имя и netId фиксируются до боя.
+            string weapon = shooter.Item != null
+                ? $"{shooter.Item.name} netId={shooter.Item.netId.ToString(CultureInfo.InvariantCulture)}"
+                : "нет";
             UxrActor shooterActor = ActorOf(shooter.Holder);
             UxrActor targetActor = ActorOf(target.Holder);
             if (source == null || shooterActor == null || targetActor == null)
@@ -252,8 +268,12 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             System.Action<int> onShot = _ => _serverShots++;
             System.EventHandler<UxrNonDamagingImpactEventArgs> onImpact = (_, e) =>
                 Log($"снаряд {(e.WeaponOwner != null ? e.WeaponOwner.name : "?")} в {(e.RaycastHit.collider != null ? e.RaycastHit.collider.name : "?")}");
+            _kills.Clear();
             System.Action<PlayerSession, PlayerSession, IReadOnlyList<PlayerSession>> onKilled = (victim, killer, _) =>
+            {
+                _kills.Add((victim, killer));
                 Log($"убит {(victim != null ? victim.PlayerName : "?")}, убийца {(killer != null ? killer.PlayerName : "нет")}");
+            };
 
             source.ShotFired += onShot;
             UxrWeaponManager.Instance.DamageReceiving += OnDamage;
@@ -268,11 +288,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     () => $"фаза {mode.CurrentRoundPhase}, оружие {(UxrWeaponManager.Instance.WeaponSystemEnabled ? "вкл" : "выкл")}; {DescribeZones()}");
                 bool alive = shooter.Holder.ActiveAvatar != null && shooter.Holder.ActiveAvatar.IsAlive &&
                              target.Holder.ActiveAvatar != null && target.Holder.ActiveAvatar.IsAlive;
+                bool limitExpired = mode.RoundPhases.Readiness.LimitExpired;
                 result.Set(CheckCombat, fight.Succeeded && alive,
-                    $"{fight.Diagnosis}; готовность по пределу ожидания={mode.RoundPhases.Readiness.LimitExpired}, " +
+                    $"{fight.Diagnosis}; готовность по пределу ожидания={limitExpired}, " +
                     $"от зон до боя {F(Now - equipmentEnd)} с; {DescribeZones()}");
+                if (round)
+                    result.Set(CheckReadiness, !limitExpired && shooter.Holder.HasGrabbedDogTag && target.Holder.HasGrabbedDogTag,
+                        $"предел ожидания истёк={limitExpired}; жетон снят: {shooter.Holder.PlayerName}={shooter.Holder.HasGrabbedDogTag}, " +
+                        $"{target.Holder.PlayerName}={target.Holder.HasGrabbedDogTag}; от зон до боя {F(Now - equipmentEnd)} с");
                 if (!fight.Succeeded || !alive) Abort(result, "бой не начался");
 
+                PlayerController targetBody = target.Holder.ActiveAvatar;
                 float healthBefore = targetActor.Life;
                 context.ServerStep("combat");
 
@@ -283,7 +309,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 string reported = shot != null && shot.TryGetValue(ShooterRole, out string data) ? data : "нет";
                 result.Set(CheckShotReplayed, _serverShots > 0,
-                    $"ShotFired на {shooter.Item.name} netId={shooter.Item.netId}: {_serverShots}; клиент: {reported}");
+                    $"ShotFired на {weapon}: {_serverShots}; клиент: {reported}");
 
                 UxrDamageEventArgs hit = null;
                 foreach (UxrDamageEventArgs e in _damage)
@@ -297,7 +323,24 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     (hit != null ? $"урон {F(hit.Damage)} в {part} от {shooter.Holder.PlayerName}" : "урона от стрелка нет") +
                     $"; событий урона {_damage.Count}" + (_combatLog.Count > 0 ? "; " + string.Join("; ", _combatLog) : ""));
 
-                context.ServerStep("hit-verified");
+                if (!round)
+                {
+                    context.ServerStep("hit-verified");
+                    yield break;
+                }
+
+                VerifyKill(result, shooter.Holder, target.Holder, targetBody);
+                VerifyKillReward(result, shooter.Holder);
+
+                E2EWaitOutcome resolution = new E2EWaitOutcome();
+                yield return E2EWait.Until(resolution, "фаза Resolution", 15f,
+                    () => mode.CurrentRoundPhase == RoundPhase.Resolution || mode.CurrentRoundPhase == RoundPhase.Scoreboard,
+                    () => $"фаза {mode.CurrentRoundPhase}");
+                // Деньги за раунд начисляются на входе в Resolution — тем же кадром; запас на доставку событий.
+                yield return E2EWait.Hold(0.5f);
+                VerifyRoundResult(result, mode, resolution, shooter.Holder, target.Holder);
+
+                context.ServerStep("round-verified");
             }
             finally
             {
@@ -310,6 +353,84 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 if (MapReferee.Instance != null) MapReferee.Instance.PlayerKilled -= onKilled;
             }
+        }
+
+        /// <summary>Сервер объявил смерть жертвы от стрелка; жертва выбыла, тело сменилось (призрак).</summary>
+        private void VerifyKill(E2EResult result, PlayerSession shooter, PlayerSession target, PlayerController targetBody)
+        {
+            bool announced = false;
+            var kills = new List<string>();
+            foreach ((PlayerSession victim, PlayerSession killer) in _kills)
+            {
+                kills.Add($"{(victim != null ? victim.PlayerName : "?")}←{(killer != null ? killer.PlayerName : "нет")}");
+                announced |= victim == target && killer == shooter;
+            }
+
+            PlayerController body = target.ActiveAvatar;
+            bool replaced = body != targetBody;
+            result.Set(CheckKill, announced && target.IsEliminated && replaced,
+                $"PlayerKilled: {(kills.Count > 0 ? string.Join(", ", kills) : "нет")}; {target.PlayerName}: выбыл={target.IsEliminated}, " +
+                $"тело {(replaced ? "заменено" : "прежнее")} ({(body != null ? body.name : "нет")})");
+        }
+
+        /// <summary>Касса начислила стрелку награду за убийство — KillAward оружия в руке (по чеку покупки).</summary>
+        private void VerifyKillReward(E2EResult result, PlayerSession shooter)
+        {
+            string key = MatchEconomy.KeyOf(shooter);
+            EconomyTransaction? kill = null;
+            EconomyTransaction? purchase = null;
+            foreach (EconomyTransaction t in _transactions)
+            {
+                if (t.Player != key) continue;
+                if (t.Reason == EconomyReason.Kill) kill = t;
+                if (t.Reason == EconomyReason.Purchase) purchase = t;
+            }
+
+            WeaponInfo info = null;
+            if (kill.HasValue)
+                foreach (WeaponInfo candidate in Resources.FindObjectsOfTypeAll<WeaponInfo>())
+                    if (candidate != null && candidate.DisplayName == kill.Value.Detail) info = candidate;
+
+            int expected = info != null ? EconomyRules.KillReward(info.KillAward, false) : -1;
+            bool ok = kill.HasValue && kill.Value.Delta > 0 && (info == null || kill.Value.Delta == expected) &&
+                      purchase.HasValue && kill.Value.Detail == purchase.Value.Detail;
+            result.Set(CheckKillReward, ok,
+                kill.HasValue
+                    ? $"{shooter.PlayerName}: Kill {kill.Value.Delta:+0;-0} за «{kill.Value.Detail}» (ждали {(info != null ? expected.ToString(CultureInfo.InvariantCulture) : "KillAward ?")}), " +
+                      $"деньги после {kill.Value.Money}; куплено «{(purchase.HasValue ? purchase.Value.Detail : "нет")}»"
+                    : $"{shooter.PlayerName}: транзакции Kill нет; транзакций {_transactions.Count}");
+        }
+
+        /// <summary>Resolution: раунд за командой стрелка, счёт 1:0, деньги за победу и поражение.</summary>
+        private void VerifyRoundResult(E2EResult result, EliminationMode mode, E2EWaitOutcome resolution,
+                                      PlayerSession shooter, PlayerSession target)
+        {
+            TeamData shooterTeam = TeamOf(mode, shooter.TeamIndex);
+            TeamData targetTeam = TeamOf(mode, target.TeamIndex);
+            TeamData winner = mode.RoundPhases.RoundWinner;
+            int shooterScore = mode.GetScore(shooterTeam);
+            int targetScore = mode.GetScore(targetTeam);
+
+            int win = 0, loss = 0;
+            foreach (EconomyTransaction t in _transactions)
+            {
+                if (t.Reason == EconomyReason.RoundWin && t.Player == MatchEconomy.KeyOf(shooter)) win = t.Delta;
+                if (t.Reason == EconomyReason.RoundLoss && t.Player == MatchEconomy.KeyOf(target)) loss = t.Delta;
+            }
+
+            bool ok = resolution.Succeeded && winner != null && winner.teamIndex == shooter.TeamIndex &&
+                      shooterScore == 1 && targetScore == 0 && win == EconomyRules.RoundWinReward && loss > 0;
+            result.Set(CheckRound, ok,
+                $"{resolution.Diagnosis}; победитель {(winner != null ? winner.teamIndex.ToString(CultureInfo.InvariantCulture) : "нет")} " +
+                $"(стрелок в {shooter.TeamIndex}); счёт {shooterScore}:{targetScore}; RoundWin {win} (ждали {EconomyRules.RoundWinReward}), " +
+                $"RoundLoss {loss}; раунд {mode.CurrentRoundNumber}");
+        }
+
+        private static TeamData TeamOf(EliminationMode mode, int teamIndex)
+        {
+            foreach (TeamRuntimeData state in mode.TeamStates.Values)
+                if (state != null && state.Team != null && state.Team.teamIndex == teamIndex) return state.Team;
+            return null;
         }
 
         private void OnDamage(object sender, UxrDamageEventArgs e)

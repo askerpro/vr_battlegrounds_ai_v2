@@ -53,6 +53,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         private const float AimGain = 0.7f;
 
         private readonly ScriptedPilot _pilot;
+        private readonly List<Collider> _torso = new List<Collider>();
+        private BarrelObstruction _obstruction;
         private Quaternion _aimRotation;
         private bool _aiming;
 
@@ -60,29 +62,37 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public sealed class Outcome
         {
             public bool Hit;
+            public bool Killed;
             public string Failure;
             public int Presses;
             public int Shots;
             public float HealthBefore;
             public float HealthAfter;
             public float Distance;
+
+            /// <summary>Наименьшая ровность оружия (<see cref="Level"/>) на нажатиях: 1 — ровно, 0 — на боку.</summary>
+            public float Upright = 1f;
+
+            /// <summary>Наименьшая ровность оружия (<see cref="Level"/>) при подходе к цели (оружие несут).</summary>
+            public float CarryUpright = 1f;
             public string Weapon;
             public string Victim;
             public readonly List<string> Seen = new List<string>();
 
             /// <summary>Сводка для шага барьера (≤ 256 символов).</summary>
             public string StepData() =>
-                $"hit={(Hit ? 1 : 0)} presses={Presses} shots={Shots} hp={F(HealthBefore)}->{F(HealthAfter)} d={F(Distance)}";
+                $"hit={(Hit ? 1 : 0)} kill={(Killed ? 1 : 0)} presses={Presses} shots={Shots} hp={F(HealthBefore)}->{F(HealthAfter)} d={F(Distance)}";
         }
 
         public ScriptedGunner(ScriptedPilot pilot) => _pilot = pilot;
 
         /// <summary>
         /// Подойти к противнику на <paramref name="range"/> м (по свободному пути), навести ствол руки
-        /// <paramref name="side"/> на его торс и жать курок до попадания, не больше <paramref name="maxPresses"/> раз.
-        /// Провал — в <see cref="Outcome.Failure"/>.
+        /// <paramref name="side"/> на его торс и жать курок до попадания (<paramref name="untilKill"/> — до его смерти),
+        /// не больше <paramref name="maxPresses"/> раз. Провал — в <see cref="Outcome.Failure"/>.
         /// </summary>
-        public IEnumerator ShootEnemy(UxrHandSide side, float range, float speed, int maxPresses, float timeoutS, Outcome outcome)
+        public IEnumerator ShootEnemy(UxrHandSide side, float range, float speed, int maxPresses, bool untilKill, float timeoutS,
+                                      Outcome outcome)
         {
             float deadline = Now + timeoutS;
             UxrAvatar avatar = E2EScriptedInput.Avatar;
@@ -110,8 +120,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             }
 
             outcome.Victim = victim.Session != null ? victim.Session.PlayerName : victim.name;
+            PlayerSession victimSession = victim.Session;
             UxrActor victimActor = victim.GetComponent<UxrActor>();
             outcome.HealthBefore = victim.Health;
+            CacheTarget(victim, firearm);
 
             int shotsFired = 0;
             System.Action<int> onShot = _ => shotsFired++;
@@ -149,6 +161,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                         Note(outcome, $"линия огня закрыта ({blocker}) — подхожу до {F(stopAt)} м");
                     }
 
+                    outcome.CarryUpright = Mathf.Min(outcome.CarryUpright, Level(shot.ShotSource));
                     if (Blocked(avatar, toVictim.normalized, out string obstacle))
                     {
                         outcome.Failure = $"на пути к {outcome.Victim} препятствие {obstacle} (до цели {F(toVictim.magnitude)} м) — " +
@@ -185,7 +198,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 }
 
                 // ── Наведение и курок ─────────────────────────────────────
-                while (outcome.Presses < maxPresses)
+                while (outcome.Presses < maxPresses && !Killed(victim, victimActor, victimSession))
                 {
                     int stable = 0;
                     string ray = null;
@@ -194,7 +207,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                         Vector3 target = Target(victim);
                         float error = Aim(side, grabber, shot, target);
                         bool clear = RayHits(shot, victim, out ray);
-                        bool free = !Obstructed(firearm);
+                        bool free = !Obstructed();
                         stable = error <= AimToleranceDeg && clear && free ? stable + 1 : 0;
                         if (Now > deadline)
                         {
@@ -207,10 +220,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                     }
 
                     int shotsBefore = shotsFired;
-                    float healthBefore = victim != null ? victim.Health : 0f;
+                    float healthBefore = Health(victim);
                     outcome.Presses++;
                     outcome.Distance = (shot.ShotSource.position - Target(victim)).magnitude;
-                    Note(outcome, $"нажатие {outcome.Presses}: {F(outcome.Distance)} м, луч — {ray}");
+                    float upright = Level(shot.ShotSource);
+                    outcome.Upright = Mathf.Min(outcome.Upright, upright);
+                    Note(outcome, $"нажатие {outcome.Presses}: {F(outcome.Distance)} м, ровность {F(upright)}, луч — {ray}");
 
                     for (int i = 0; i < ReleaseFrames; i++)
                     {
@@ -239,21 +254,27 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                     else
                     {
                         float hitDeadline = Now + HitConfirmSeconds;
-                        while (!Damaged(victim, victimActor, healthBefore) && Now < hitDeadline) yield return null;
-                        if (Damaged(victim, victimActor, healthBefore))
+                        while (!Damaged(victim, victimActor, victimSession, healthBefore) && Now < hitDeadline) yield return null;
+                        if (Damaged(victim, victimActor, victimSession, healthBefore))
                         {
                             outcome.Hit = true;
-                            outcome.HealthAfter = victim != null ? victim.Health : 0f;
-                            yield break;
+                            outcome.HealthAfter = Health(victim);
+                            outcome.Killed = Killed(victim, victimActor, victimSession);
+                            if (!untilKill || outcome.Killed) yield break;
                         }
                     }
 
                     yield return E2EWait.Hold(RetryPause);
                 }
 
-                outcome.HealthAfter = victim != null ? victim.Health : 0f;
-                outcome.Failure = $"{outcome.Presses} нажатий, выстрелов {outcome.Shots}, попадания по {outcome.Victim} нет " +
-                                  $"(здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)})";
+                outcome.HealthAfter = Health(victim);
+                outcome.Killed = Killed(victim, victimActor, victimSession);
+                if (outcome.Hit && (!untilKill || outcome.Killed)) yield break;
+                outcome.Failure = outcome.Hit
+                    ? $"{outcome.Presses} нажатий, выстрелов {outcome.Shots}: {outcome.Victim} ранен, но жив " +
+                      $"(здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)})"
+                    : $"{outcome.Presses} нажатий, выстрелов {outcome.Shots}, попадания по {outcome.Victim} нет " +
+                      $"(здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)})";
             }
             finally
             {
@@ -289,27 +310,51 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
             if (!_aiming)
             {
-                // Первый кадр: решение по модели «дуло жёстко в руке» из точки удержания.
+                // Первый кадр: решение по модели «дуло жёстко в руке» из точки удержания — ствол на цель, верх вверх
+                // (как держит человек; минимальный поворот из позы переноски оставил бы ствол на боку).
                 _aimRotation = hand.rotation;
                 for (int i = 0; i < 3; i++)
                 {
                     Vector3 muzzlePosition = hold + _aimRotation * muzzleInHand;
-                    Vector3 muzzleForward = _aimRotation * muzzleInHandRotation * Vector3.forward;
-                    _aimRotation = Quaternion.FromToRotation(muzzleForward, target - muzzlePosition) * _aimRotation;
+                    _aimRotation = LookUpright(target - muzzlePosition) * Quaternion.Inverse(muzzleInHandRotation);
                 }
 
                 _aiming = true;
             }
             else
             {
-                // Дальше — по фактическому дулу: отклонение, которое не объясняет модель (ограничения кисти, отдача),
-                // накапливается в команде. Коэффициент < 1 — команда применяется кадром позже.
-                Quaternion correction = Quaternion.FromToRotation(muzzle.forward, target - muzzle.position);
+                // Дальше — по фактическому дулу: отклонение направления и крена, которое не объясняет модель
+                // (ограничения кисти, отдача), накапливается в команде. Коэффициент < 1 — команда применяется кадром позже.
+                Quaternion correction = LookUpright(target - muzzle.position) * Quaternion.Inverse(muzzle.rotation);
                 _aimRotation = Quaternion.Slerp(Quaternion.identity, correction, AimGain) * _aimRotation;
             }
 
             _pilot.ReachGrabber(side, hold, _aimRotation);
             return Vector3.Angle(muzzle.forward, target - muzzle.position);
+        }
+
+        /// <summary>
+        /// Ровность оружия — крен вокруг ствола: 1 — верх оружия смотрит в «вертикальный верх» для текущего направления
+        /// ствола, 0 — оружие на боку, −1 — вверх ногами. Наклон ствола вниз или вверх на меру не влияет.
+        /// </summary>
+        public static float Level(Transform frame)
+        {
+            Vector3 upright = Vector3.ProjectOnPlane(Vector3.up, frame.forward);
+            return upright.sqrMagnitude < 1e-6f ? 1f : Vector3.Dot(frame.up, upright.normalized);
+        }
+
+        /// <summary>Поза дула «смотрит по направлению, верх вверх».</summary>
+        private static Quaternion LookUpright(Vector3 direction) => Quaternion.LookRotation(direction, Vector3.up);
+
+        /// <summary>
+        /// Ось предмета для наведения и переноски: у огнестрела — дуло спуска 0 (вперёд — ствол, вверх — верх оружия),
+        /// у остальных предметов — их корень.
+        /// </summary>
+        public static Transform AimFrame(UxrGrabbableObject held)
+        {
+            UxrFirearmWeapon firearm = held != null ? held.GetComponentInParent<UxrFirearmWeapon>() : null;
+            UxrShotDescriptor shot = firearm != null ? ShotOf(firearm, firearm.GetComponent<UxrProjectileSource>()) : null;
+            return shot != null && shot.ShotSource != null ? shot.ShotSource : held.transform;
         }
 
         /// <summary>Расхождение фактического грабера с командой наведения: метры и градусы.</summary>
@@ -322,16 +367,37 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                    $"{F(Quaternion.Angle(grabber.transform.rotation, _aimRotation))}°";
         }
 
-        /// <summary>Центр торса цели по хитбоксам; без хитбоксов — грудь над корнем.</summary>
-        private static Vector3 Target(PlayerController victim)
+        /// <summary>Хитбоксы торса цели и упор ствола — на время шага, а не поиском каждый кадр.</summary>
+        private void CacheTarget(PlayerController victim, UxrFirearmWeapon firearm)
+        {
+            _torso.Clear();
+            foreach (Hitbox hitbox in victim.GetComponentsInChildren<Hitbox>())
+            {
+                Collider collider = hitbox.Part == HitZone.Torso ? hitbox.GetComponent<Collider>() : null;
+                if (collider != null) _torso.Add(collider);
+            }
+
+            _obstruction = firearm.GetComponentInChildren<BarrelObstruction>();
+        }
+
+        /// <summary>Центр торса цели (кеш хитбоксов шага); без хитбоксов — грудь над корнем.</summary>
+        private Vector3 Target(PlayerController victim) => TorsoCenter(victim, _torso);
+
+        /// <summary>Центр торса по коллайдерам <paramref name="torso"/>; null — найти хитбоксы торса у цели.</summary>
+        private static Vector3 TorsoCenter(PlayerController victim, List<Collider> torso = null)
         {
             if (victim == null) return Vector3.zero;
             Bounds bounds = default;
             bool any = false;
-            foreach (Hitbox hitbox in victim.GetComponentsInChildren<Hitbox>())
+            if (torso == null)
             {
-                if (hitbox.Part != HitZone.Torso) continue;
-                Collider collider = hitbox.GetComponent<Collider>();
+                torso = new List<Collider>();
+                foreach (Hitbox hitbox in victim.GetComponentsInChildren<Hitbox>())
+                    if (hitbox.Part == HitZone.Torso && hitbox.TryGetComponent(out Collider found)) torso.Add(found);
+            }
+
+            foreach (Collider collider in torso)
+            {
                 if (collider == null || !collider.enabled) continue;
                 if (!any) bounds = collider.bounds;
                 else bounds.Encapsulate(collider.bounds);
@@ -380,11 +446,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             return true;
         }
 
-        private static bool Obstructed(UxrFirearmWeapon firearm)
-        {
-            BarrelObstruction obstruction = firearm.GetComponentInChildren<BarrelObstruction>();
-            return obstruction != null && obstruction.IsObstructed;
-        }
+        private bool Obstructed() => _obstruction != null && _obstruction.IsObstructed;
 
         // ── Мир (только чтение) ──────────────────────────────────────────────
 
@@ -437,7 +499,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
                 PlayerController controller = session.ActiveAvatar;
                 if (controller == null || !controller.IsAlive) continue;
-                float distance = Vector3.ProjectOnPlane(Target(controller) - from, Vector3.up).magnitude;
+                float distance = Vector3.ProjectOnPlane(TorsoCenter(controller) - from, Vector3.up).magnitude;
                 if (distance < bestDistance)
                 {
                     best = controller;
@@ -481,9 +543,14 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             return false;
         }
 
-        private static bool Damaged(PlayerController victim, UxrActor actor, float healthBefore) =>
-            victim == null || (actor != null && actor.IsDead) || victim.Health < healthBefore ||
-            (victim.Session != null && victim.Session.IsEliminated);
+        private static bool Damaged(PlayerController victim, UxrActor actor, PlayerSession session, float healthBefore) =>
+            Killed(victim, actor, session) || victim.Health < healthBefore;
+
+        /// <summary>Цель убита: актор мёртв, сессия выбыла или тело уже заменено призраком (уничтожено).</summary>
+        private static bool Killed(PlayerController victim, UxrActor actor, PlayerSession session) =>
+            victim == null || actor == null || actor.IsDead || (session != null && session.IsEliminated);
+
+        private static float Health(PlayerController victim) => victim != null ? victim.Health : 0f;
 
         private static void Note(Outcome outcome, string line)
         {

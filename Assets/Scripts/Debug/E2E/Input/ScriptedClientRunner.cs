@@ -33,6 +33,18 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         private const float ReachTolerance = 0.01f;
         private const float ReachDistance = 0.55f;
 
+        // Поза переноски грабера относительно глаз и курса: у пояса, чуть вперёд; ствол на 45° вниз.
+        private const float CarrySide = 0.2f;
+        private const float CarryDown = 0.5f;
+        private const float CarryForward = 0.3f;
+        private const float CarryPitch = 45f;
+
+        /// <summary>Наименьшая ровность оружия (крен вокруг ствола до ≈ 25°) при переноске и выстреле.</summary>
+        private const float UprightMin = 0.9f;
+
+        /// <summary>Наибольший сдвиг головы при смене тела (смерть → призрак), м: шлем при этом не двигается.</summary>
+        private const float GhostJumpMax = 0.3f;
+
         private readonly E2EContext _context;
         private readonly E2EResult _result;
         private readonly InputScript _script;
@@ -91,8 +103,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 case "turn": return Turn(step, label);
                 case "choose-team": return ChooseTeam(step, label);
                 case "grab-wall-item": return GrabWallItem(step, label);
+                case "grab-dog-tag": return GrabDogTag(step, label);
                 case "carry": return Instant(() => Carry(step, label));
                 case "shoot-enemy": return ShootEnemy(step, label);
+                case "expect-eliminated": return ExpectEliminated(step, label);
                 case "release": return Release(step, label);
                 case "hold": return Hold(step, label);
                 case "expect-held": return Instant(() => ExpectHeld(step, label));
@@ -162,17 +176,24 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
                 Vector3 goal = zone.SpawnPoint.position;
                 bool arrived = false;
+                float upright = 1f;
+                bool carrying = false;
                 while (session.IsEliminated || !session.IsInSpawnZone || (toPoint && !arrived))
                 {
                     if (Now > deadline)
                         Fail(label, $"за {step.timeoutS:0} с не возродился в своей зоне: выбыл={session.IsEliminated}, " +
                                     $"в зоне={session.IsInSpawnZone}, до точки зоны {F(Distance(goal))} м");
                     arrived = _pilot.StepTowards(goal, step.speed, Time.deltaTime, 0.1f) || Distance(goal) <= 0.1f;
+                    carrying |= HeldUpright(out float now);
+                    upright = Mathf.Min(upright, now);
                     yield return null;
                 }
 
+                // Ввод «как у человека»: оружие несут ровно, не на боку и не вверх ногами.
+                if (carrying && upright < UprightMin)
+                    Fail(label, $"нёс оружие не ровно: ровность {F(upright)} < {F(UprightMin)}");
                 Pass(label, $"в зоне команды {session.TeamIndex}{(toPoint ? $", в точке спавна ({F(Distance(goal))} м)" : "")}, " +
-                            $"жив; аватар {Name(E2EScriptedInput.Avatar)}");
+                            $"жив; аватар {Name(E2EScriptedInput.Avatar)}{(carrying ? $"; оружие в руке, ровность ≥ {F(upright)}" : "")}");
                 yield break;
             }
 
@@ -257,15 +278,62 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             NetworkIdentity identity = slot.CurrentItem.GetComponent<NetworkIdentity>();
             if (item == null || identity == null) Fail(label, $"предмет слота {slot.name} без UxrGrabbableObject/NetworkIdentity");
 
+            yield return ReachAndGrab(item, side, step.speed, deadline, label);
+
+            GrabbedNetId = identity.netId;
+            Pass(label, $"{item.name} netId={identity.netId} цена {slot.Price}, денег до хвата {money}; хват по Grip {side}");
+        }
+
+        /// <summary>
+        /// Готовность жетоном: снять жетон своей стены рукой <c>hand</c> (Grip) и отпустить. Готовность объявляет
+        /// штатный путь стены; шаг ждёт её реплицированный признак у своей сессии.
+        /// </summary>
+        private IEnumerator GrabDogTag(InputStep step, string label)
+        {
+            UxrHandSide side = Side(step);
+            PlayerSession session = PlayerSession.LocalSession;
+            ArsenalWallController wall = OwnWall(session);
+            if (wall == null) Fail(label, "своей стены нет");
+
+            DogTagController tagController = wall.GetComponentInChildren<DogTagController>(true);
+            UxrGrabbableObject tag = tagController != null ? tagController.GetComponentInChildren<UxrGrabbableObject>(true) : null;
+            if (tag == null) Fail(label, $"у стены netId={wall.netId} нет жетона");
+
+            float deadline = Now + step.timeoutS;
+            while (wall.CurrentState != ArsenalWallController.ArsenalState.Open || !tagController.IsTagOnRack || !tag.IsGrabbable)
+            {
+                if (Now > deadline)
+                    Fail(label, $"жетон недоступен: стена {wall.CurrentState}, на крючке={tagController.IsTagOnRack}, можно взять={tag.IsGrabbable}");
+                yield return null;
+            }
+
+            yield return ReachAndGrab(tag, side, step.speed, deadline, label);
+
+            // Отпустить: жетон снят, готовность объявлена; на крючок его вернёт стена к следующей закупке.
+            _pilot.Press(side, UxrInputButtons.Grip, false);
+            yield return null;
+            yield return null;
+            _pilot.Rest(side);
+
+            E2EWaitOutcome ready = new E2EWaitOutcome();
+            yield return E2EWait.Until(ready, "сервер принял готовность", 10f,
+                () => session.HasGrabbedDogTag && session.ReadyState,
+                () => $"HasGrabbedDogTag={session.HasGrabbedDogTag}, ReadyState={session.ReadyState}");
+            Require(label, ready, $"жетон снят рукой {side} со стены netId={wall.netId}");
+        }
+
+        /// <summary>Подойти на длину руки, довести грабер руки до точки хвата 0 предмета и взять по фронту Grip.</summary>
+        private IEnumerator ReachAndGrab(UxrGrabbableObject item, UxrHandSide side, float speed, float deadline, string label)
+        {
             // Подойти на длину руки и повернуться к предмету.
             while (true)
             {
                 Vector3 toItem = Vector3.ProjectOnPlane(item.transform.position - _pilot.FloorPosition, Vector3.up);
                 bool turned = _pilot.TurnTowards(toItem, Time.deltaTime, 2f);
                 bool close = toItem.magnitude <= ReachDistance ||
-                             _pilot.StepTowards(item.transform.position - toItem.normalized * (ReachDistance - 0.1f), step.speed, Time.deltaTime, 0.05f);
+                             _pilot.StepTowards(item.transform.position - toItem.normalized * (ReachDistance - 0.1f), speed, Time.deltaTime, 0.05f);
                 if (turned && close) break;
-                if (Now > deadline) Fail(label, $"не подошёл к предмету: {F(toItem.magnitude)} м");
+                if (Now > deadline) Fail(label, $"не подошёл к {item.name}: {F(toItem.magnitude)} м");
                 yield return null;
             }
 
@@ -283,11 +351,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
                 _pilot.ReachGrabber(side, position, rotation);
                 settled = _pilot.GrabberAtTarget(side, ReachTolerance) ? settled + 1 : 0;
-                if (Now > deadline) Fail(label, $"кисть не дошла до точки хвата: {F((grabber.transform.position - position).magnitude)} м");
+                if (Now > deadline) Fail(label, $"кисть не дошла до точки хвата {item.name}: {F((grabber.transform.position - position).magnitude)} м");
                 yield return null;
             }
 
-            int moneyBefore = money;
             _pilot.Press(side, UxrInputButtons.Grip, true);
 
             E2EWaitOutcome grabbed = new E2EWaitOutcome();
@@ -296,9 +363,6 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 () => $"в руке: {(grabber.GrabbedObject != null ? grabber.GrabbedObject.name : "ничего")}, " +
                       $"кисть от точки {F((grabber.transform.position - item.transform.position).magnitude)} м");
             if (!grabbed.Succeeded) Fail(label, grabbed.Diagnosis);
-
-            GrabbedNetId = identity.netId;
-            Pass(label, $"{item.name} netId={identity.netId} цена {slot.Price}, денег до хвата {moneyBefore}; хват по Grip {side}");
         }
 
         private void Carry(InputStep step, string label)
@@ -308,8 +372,52 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             UxrGrabber grabber = avatar != null ? avatar.GetGrabber(side) : null;
             if (grabber == null || grabber.GrabbedObject == null) Fail(label, $"в руке {side} нечего нести");
 
-            _pilot.Rest(side);
-            Pass(label, $"{grabber.GrabbedObject.name} опущен в руке {side}, Grip держится");
+            CarryHeld(side);
+            Pass(label, $"{grabber.GrabbedObject.name} в руке {side}: ствол вперёд-вниз, верх вверх; Grip держится");
+        }
+
+        /// <summary>
+        /// Рука с предметом — в позу переноски, как у человека: ствол (или ось предмета) вперёд-вниз, верх вверх, рука
+        /// у пояса и идёт за головой. Поза считается от того, как предмет сидит в руке; пустая рука — «опущена».
+        /// </summary>
+        private void CarryHeld(UxrHandSide side)
+        {
+            UxrAvatar avatar = E2EScriptedInput.Avatar;
+            UxrGrabber grabber = avatar != null ? avatar.GetGrabber(side) : null;
+            UxrGrabbableObject held = grabber != null ? grabber.GrabbedObject : null;
+            if (held == null)
+            {
+                _pilot.Rest(side);
+                return;
+            }
+
+            Transform frame = ScriptedGunner.AimFrame(held);
+            Quaternion carry = Quaternion.Euler(CarryPitch, 0f, 0f);
+            Quaternion frameInGrabber = Quaternion.Inverse(grabber.transform.rotation) * frame.rotation;
+            Quaternion grabberInHead = carry * Quaternion.Inverse(frameInGrabber);
+            Vector3 position = new Vector3(side == UxrHandSide.Left ? -CarrySide : CarrySide, -CarryDown, CarryForward);
+            _pilot.HoldObject(side, position, frame, carry, grabberInHead);
+        }
+
+        /// <summary>
+        /// Есть ли оружие в руках и его наименьшая ровность (<see cref="ScriptedGunner.Level"/>) по рукам.
+        /// </summary>
+        private static bool HeldUpright(out float upright)
+        {
+            upright = 1f;
+            bool any = false;
+            UxrAvatar avatar = E2EScriptedInput.Avatar;
+            if (avatar == null) return false;
+            foreach (UxrHandSide side in new[] { UxrHandSide.Left, UxrHandSide.Right })
+            {
+                UxrGrabber grabber = avatar.GetGrabber(side);
+                UxrGrabbableObject held = grabber != null ? grabber.GrabbedObject : null;
+                if (held == null || held.GetComponentInParent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>() == null) continue;
+                any = true;
+                upright = Mathf.Min(upright, ScriptedGunner.Level(ScriptedGunner.AimFrame(held)));
+            }
+
+            return any;
         }
 
         // ── Бой ──────────────────────────────────────────────────────────────
@@ -318,14 +426,64 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         {
             var outcome = new ScriptedGunner.Outcome();
             LastShooting = outcome;
+            bool untilKill = step.until == "kill";
             yield return new ScriptedGunner(_pilot).ShootEnemy(Side(step), step.meters > 0f ? step.meters : 5f, step.speed,
-                                                              Mathf.Max(1, step.shots), step.timeoutS, outcome);
-            _pilot.Rest(Side(step));
+                                                              Mathf.Max(1, step.shots), untilKill, step.timeoutS, outcome);
+            CarryHeld(Side(step));
 
             string seen = outcome.Seen.Count > 0 ? "; " + string.Join("; ", outcome.Seen) : "";
-            if (!outcome.Hit) Fail(label, (outcome.Failure ?? "попадания нет") + seen);
+            if (!outcome.Hit || (untilKill && !outcome.Killed))
+                Fail(label, (outcome.Failure ?? (untilKill ? "противник жив" : "попадания нет")) + seen);
+            // Ввод «как у человека»: стреляют, держа оружие ровно, а не на боку.
+            if (outcome.Upright < UprightMin)
+                Fail(label, $"стрелял с оружием на боку: ровность {F(outcome.Upright)} < {F(UprightMin)}{seen}");
+            if (outcome.CarryUpright < UprightMin)
+                Fail(label, $"нёс оружие к цели не ровно: ровность {F(outcome.CarryUpright)} < {F(UprightMin)}{seen}");
             Pass(label, $"{outcome.Weapon} → {outcome.Victim}: нажатий {outcome.Presses}, выстрелов {outcome.Shots}, " +
-                        $"{F(outcome.Distance)} м, здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)}{seen}");
+                        $"{F(outcome.Distance)} м, здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)}" +
+                        $"{(outcome.Killed ? ", убит" : "")}; ровность: подход ≥ {F(outcome.CarryUpright)}, выстрелы ≥ {F(outcome.Upright)}{seen}");
+        }
+
+        /// <summary>Свой игрок выбыл: сессия выбывшая, ввод перенесён на новый аватар (призрак).</summary>
+        private IEnumerator ExpectEliminated(InputStep step, string label)
+        {
+            PlayerSession session = PlayerSession.LocalSession;
+            if (session == null) Fail(label, "локальной сессии нет");
+
+            // Живое тело на старте шага; если игрок уже выбыл — смену тела не проверить, только выбывание.
+            bool eliminatedAtStart = session.IsEliminated;
+            UxrAvatar atStart = E2EScriptedInput.Avatar;
+            UxrAvatar alive = eliminatedAtStart ? null : atStart;
+            string aliveName = Name(alive); // тело уничтожается при смерти — имя фиксируется сейчас
+            GameLog.Debug.Info($"[E2E] {label}: на старте выбыл={eliminatedAtStart}, аватар ввода {Name(atStart)}");
+
+            // Голова до смерти: шлем при смене тела не двигается — игрок остаётся там, где погиб.
+            Vector3 headBefore = Head();
+            float lastAlive = Now;
+            E2EWaitOutcome eliminated = new E2EWaitOutcome();
+            yield return E2EWait.Until(eliminated, "свой игрок выбыл, ввод на новом аватаре", step.timeoutS,
+                () =>
+                {
+                    if (!session.IsEliminated && E2EScriptedInput.Avatar == alive) { headBefore = Head(); lastAlive = Now; }
+                    return session.IsEliminated && E2EScriptedInput.Avatar != null && E2EScriptedInput.Avatar != alive &&
+                           E2EScriptedInput.AppliedFrames > 10;
+                },
+                () => $"выбыл={session.IsEliminated}, аватар ввода {Name(E2EScriptedInput.Avatar)} (живое тело {Name(alive)}), " +
+                      $"кадров {E2EScriptedInput.AppliedFrames}");
+            if (!eliminated.Succeeded) Fail(label, eliminated.Diagnosis);
+
+            Vector3 headAfter = Head();
+            float jump = Vector3.ProjectOnPlane(headAfter - headBefore, Vector3.up).magnitude;
+            if (jump > GhostJumpMax)
+                Fail(label, $"при смене тела голова сдвинулась на {F(jump)} м ({headBefore} → {headAfter}) — шлем так не двигается");
+            Pass(label, $"выбыл, ввод перенесён с {aliveName} на {Name(E2EScriptedInput.Avatar)}; голова на месте гибели " +
+                        $"(сдвиг {F(jump)} м, смерть через {F(Now - lastAlive)} с после последнего живого кадра)");
+        }
+
+        private static Vector3 Head()
+        {
+            UxrAvatar avatar = E2EScriptedInput.Avatar;
+            return avatar != null && avatar.CameraTransform != null ? avatar.CameraTransform.position : Vector3.zero;
         }
 
         private IEnumerator Release(InputStep step, string label)

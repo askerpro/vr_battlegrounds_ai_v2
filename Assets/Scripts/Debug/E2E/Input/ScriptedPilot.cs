@@ -35,6 +35,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
     {
         public const float MaxWalkSpeed = 1.2f;
         private const float TurnSpeed = 180f;
+        private const float HoldGain = 0.5f;
 
         /// <summary>Максимальные ошибки поз за прогон (метры и градусы).</summary>
         public struct PrecisionStats
@@ -49,13 +50,15 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 $"{WristAngle:0.###}°, кадров {Frames}";
         }
 
-        private enum HandMode { Rest, Target }
+        private enum HandMode { Rest, Target, Hold }
 
         private struct HandState
         {
             public HandMode Mode;
-            public Vector3 TargetPosition;   // мировая поза грабера
-            public Quaternion TargetRotation;
+            public Vector3 TargetPosition;   // Target: мировая поза грабера; Hold: точка грабера в системе курса головы
+            public Quaternion TargetRotation; // Target: мировой поворот грабера; Hold: команда поворота грабера (курс головы)
+            public Transform HeldFrame;      // Hold: ось предмета в руке (обратная связь)
+            public Quaternion HeldRotation;  // Hold: желаемый поворот оси предмета в системе курса головы
             public UxrInputButtons Pressed;
             public bool Valid;               // кадр уже содержит позу этой руки
             public Vector3 SensorPosition;   // мировая поза сенсора из последнего кадра — для замера
@@ -72,6 +75,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         private Vector3 _appliedHeadPosition;
         private Quaternion _appliedHeadRotation = Quaternion.identity;
         private bool _applied;
+        private Vector3 _trackedHeadPosition;
+        private Quaternion _trackedHeadRotation = Quaternion.identity;
+        private bool _hasTrackedHead;
 
         /// <summary>Рост глаз над корнем, м: из калибровки аватара, иначе <see cref="E2EHeadPose.DefaultEyeHeight"/>.</summary>
         public float EyeHeight { get; private set; } = E2EHeadPose.DefaultEyeHeight;
@@ -152,6 +158,25 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             SetHand(side, hand);
         }
 
+        /// <summary>
+        /// Рука несёт предмет, как человек: грабер в точке <paramref name="localPosition"/> относительно головы (глаза,
+        /// курс без тангажа), ось предмета <paramref name="frame"/> держится в повороте <paramref name="frameRotation"/>
+        /// в той же системе. Поворот грабера доводится по фактической оси предмета: хват SDK может подстраивать кисть
+        /// под предмет, и расчёт «кисть = сенсор × смещение» тогда неточен. <paramref name="initialGrabberRotation"/> —
+        /// первая команда (система курса головы).
+        /// </summary>
+        public void HoldObject(UxrHandSide side, Vector3 localPosition, Transform frame, Quaternion frameRotation,
+                               Quaternion initialGrabberRotation)
+        {
+            HandState hand = Hand(side);
+            hand.Mode = HandMode.Hold;
+            hand.TargetPosition = localPosition;
+            hand.TargetRotation = initialGrabberRotation;
+            hand.HeldFrame = frame;
+            hand.HeldRotation = frameRotation;
+            SetHand(side, hand);
+        }
+
         /// <summary>Рука в позу «опущена» и следует за головой.</summary>
         public void Rest(UxrHandSide side)
         {
@@ -190,6 +215,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             Quaternion headWorldRotation = Quaternion.AngleAxis(_yaw, avatar.transform.up);
             frame.HeadPosition = space.InverseTransformPoint(_headWorld);
             frame.HeadRotation = Quaternion.Inverse(space.rotation) * headWorldRotation;
+            // Поза головы в пространстве трекинга — то, что устройство сохранит при смене аватара.
+            _trackedHeadPosition = frame.HeadPosition;
+            _trackedHeadRotation = frame.HeadRotation;
+            _hasTrackedHead = true;
             // Замер в конце кадра сравнивает с применённым кадром: сценарий может сдвинуть цель позже в этом же кадре.
             _appliedHeadPosition = _headWorld;
             _appliedHeadRotation = headWorldRotation;
@@ -206,8 +235,27 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             Vector3 sensorPosition;
             Quaternion sensorRotation;
 
-            if (hand.Mode == HandMode.Target && TrySensorForGrabber(side, avatar, hand.TargetPosition, hand.TargetRotation,
-                                                                     out sensorPosition, out sensorRotation))
+            Vector3 grabberPosition = hand.TargetPosition;
+            Quaternion grabberRotation = hand.TargetRotation;
+            if (hand.Mode == HandMode.Hold)
+            {
+                if (hand.HeldFrame != null)
+                {
+                    // Обратная связь по оси предмета: отклонение фактической позы от желаемой копится в команде.
+                    // Коэффициент < 1 — кадр применится в этом же кадре, а ось прочитана по прошлому.
+                    Quaternion desired = headRotation * hand.HeldRotation;
+                    Quaternion correction = desired * Quaternion.Inverse(hand.HeldFrame.rotation);
+                    Quaternion command = headRotation * hand.TargetRotation;
+                    command = Quaternion.Slerp(Quaternion.identity, correction, HoldGain) * command;
+                    hand.TargetRotation = Quaternion.Inverse(headRotation) * command;
+                }
+
+                grabberPosition = _headWorld + headRotation * hand.TargetPosition;
+                grabberRotation = headRotation * hand.TargetRotation;
+            }
+
+            if (hand.Mode != HandMode.Rest && TrySensorForGrabber(side, avatar, grabberPosition, grabberRotation,
+                                                                  out sensorPosition, out sensorRotation))
             {
                 // поза посчитана
             }
@@ -270,11 +318,25 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             if (avatar != null) Place(avatar);
         }
 
-        /// <summary>Новый аватар: голова над его корнем, курс — по корню, руки опущены.</summary>
+        /// <summary>
+        /// Новый аватар. Первый — голова над его корнем, курс по корню. Смена аватара (смерть → призрак, возрождение,
+        /// смена команды) — как у шлема: устройство не двигается, поза головы в пространстве трекинга прежняя; где
+        /// окажется игрок в мире, решает игра, ставя новое тело. Руки — в прежних режимах.
+        /// </summary>
         private void Place(UxrAvatar avatar)
         {
             AvatarCalibrationApplier applier = avatar.GetComponent<AvatarCalibrationApplier>();
             EyeHeight = applier != null && applier.Applied.HasEyeHeight ? applier.Applied.EyeHeight : E2EHeadPose.DefaultEyeHeight;
+
+            Transform space = avatar.CameraController;
+            if (_hasTrackedHead && space != null)
+            {
+                _headWorld = space.TransformPoint(_trackedHeadPosition);
+                Vector3 look = Vector3.ProjectOnPlane(space.rotation * _trackedHeadRotation * Vector3.forward, Vector3.up);
+                if (look.sqrMagnitude > 1e-6f) _yaw = Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg;
+                _placed = true;
+                return;
+            }
 
             Transform root = avatar.transform;
             _headWorld = root.position + root.up * EyeHeight;

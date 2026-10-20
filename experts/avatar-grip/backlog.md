@@ -1,11 +1,11 @@
-Обновлено 2026-10-14. Кандидаты вне хаба; порядок — приоритет.
+Обновлено 2026-10-14; пункты HRQ — 2026-10-20. Кандидаты вне хаба; порядок — приоритет.
 
 1. `hand-writer-contract` — контракт порядка писателей кисти с avatar-ik (список — AGENT.md «Invariants»); bots-fix пишет `BotBody`/`UxrArmIKSolver` — analysis.md «Минимальная база знаний», `expert-map.md`.
 2. `grip-pose-coverage` — `GrabPoseCoverageTests` влит красным (d8d94cf9: MEF без хвата планшета/жетона/части оружия, Cyborg — пистолета/M16/дробовика), генератора переноса поз на базы нет; сверить с инвентарём mef-grip-audit.
    Боты от него не зависят: решение пользователя (bots-fix 4115) — Cyborg убран из ботов (MEF, MEF Black).
    Нужен только для игроков на Cyborg; запись — на базе `PlayerBase_SdkHands`.
-3. `hrq-fresh-verification` — 89/89, 6/6, Android PASS HRQ 0.5 сняты на 2c845870; свежий прогон, возможно в palm-validation — handoff.md «Незавершённое и ограничения».
-4. `hrq-export-reports` — экспорт HRQ из `Docs/tasks/report/hand-rig-quality` в `tasks/hand-rig-quality/reports` — Details.md «Порядок завершения static-analyzer» п.2.
+3. `hrq-fresh-verification` — триггер: перед первым новым аватаром. 89/89, 6/6, Android PASS HRQ 0.5 сняты 2026-10-07 на 2c845870; после переезда префабов 2026-10-19 не запускался. Свежая калибровка и контрольный прогон на текущем dev — `Docs/hand-rig-quality-tool.md` «Перед первым использованием на новом аватаре».
+4. `hrq-export-reports` — триггер: перед первым новым аватаром. Экспорт HRQ из ignored `Docs/tasks/report/hand-rig-quality` перевести в `tasks/<task-id>/reports/` отдельным этапом — `Docs/hand-rig-quality-tool.md` «Состояние на 2026-10-20».
 5. `sdk59-changelog-name` — `changelog/2026-10-07-sdk-preview-scale.md` → `<date>-sdk-59.md` со ссылками — там же.
 6. `kb-links-fix` — `tasks/hand-rig-quality/expert/sources.md:61`: ссылки `../../Readme.md`, `../../Details.md`, `../../tool.md` не разрешаются (нужно `../`) — владельцу KB.
 7. `known-issues-28-sync` — Issue 28 пишет «патч и тест не реализованы», а патч 45 есть — `Docs/UltimateXR/sdk-patches.md`, через этап Docs.
@@ -17,7 +17,9 @@
 13. `graft-corpse-bones` — `CorpseTests.У_аватара_команды_есть_труп_из_его_модели(MEF_cyborg_hands_Player)` красный: кости пальцев трупа (`CC_Base_*_Index1..3` и др.) не находятся в модели после пересадки кисти — труп не встанет в позу; пересобрать труп из модели с пересаженной кистью (владелец трупов — по карте зон) или учесть в стадии `Tools/mef-avatar`. Наблюдение worker571, 2026-10-13.
 14. `mkr9-left-main-placement` — MKR9 основная точка, левая рука: кисть мимо рукояти и у MEF (F4), и у `MEF_cyborg_hands` после Grip Extraction (палец 18мм, кисть мимо) — подтверждено в шлеме 2026-10-13; разобрать зеркалирование источника для левой руки (`PackClipGripSource`), затем перезаписать.
 15. `grip-fit-penetration` — после догиба пальцы местами чуть входят в меш рукояти (шлем 2026-10-13); ограничить curl по проникновению фаланг (не только подушечки) и/или итерация анализа после записи — Grip Extraction шаг 4.
-16. `mef-pack-pose-tests-left` — `HandsPackHandPoseTests`/`KinemationHandPoseTests` на Optimized_MEF_Player(_Black) красные: левая рука расходится с кадром пака на 10–23° (Scar/PPK/SniperRifle большой палец, Mk14/AK105/MKR9 пальцы); этапом grip-extraction не вызвано — сверить на базе, вход `mef-correction`/R4.
+16. `mef-pack-pose-tests-left` — `HandsPackHandPoseTests`/`KinemationHandPoseTests` на Optimized_MEF_Player(_Black) красные: левая рука расходится с кадром пака на 10–23° (Scar/PPK/SniperRifle большой палец, Mk14/AK105/MKR9 пальцы); этапом grip-extraction не вызвано — сверить на базе, вход R4 (`mef-correction` закрыт решением 2026-10-20; эти префабы теперь в `Unused/`).
+
+Закрыто решением пользователя 2026-10-20: анализ рига кисти MEF, этапы hand-rig-quality `palm-validation`, `dynamic-probes`, `mef-correction` — неактуальны после пересадки кисти Cyborg; итог — `Docs/hand-rig-quality-mef-research.md`.
 
 ## Обязательства перед другими агентами (2026-10-14)
 

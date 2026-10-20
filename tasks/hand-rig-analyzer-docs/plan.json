@@ -1,0 +1,26 @@
+{
+  "task_id": "hand-rig-analyzer-docs",
+  "owner": "hand-rig-analyzer-docs",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/hand-rig-analyzer-docs",
+  "base_sha": "d4cb9c51928f4fb8a32dc61c857f768855600350",
+  "doc_path": "tasks/hand-rig-analyzer-docs/Readme.md",
+  "title": "Анализ рига кисти: закрытие и перенос инструмента в Docs/Tools",
+  "branch": "task/hand-rig-analyzer-docs",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/hand-rig-analyzer-docs/**",
+        "Docs/hand-rig-quality-tool.md",
+        "Docs/hand-rig-quality-mef-research.md",
+        "Docs/hand-pose-fit-tool.md",
+        "Tools/hand-rig-quality/**",
+        "experts/avatar-grip/backlog.md",
+        "experts/avatar-grip/AGENT.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

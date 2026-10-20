@@ -55,6 +55,7 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - `tasks/hand-rig-quality/expert/avatar-grip-expert.md` — «Что прочитать и найти», «Native и SDK hands: не смешивай», «Диагностика и настройка», «Правила».
 - `tasks/hand-rig-quality/expert/analysis.md` — «Каталог существующих инструментов», «Дополнительная карта применения хватов», «Подтверждено исходниками»; `sources.md` — S1–S20.
 - `tasks/hand-rig-quality/Details.md` (54 KB) — «План аудита хватов MEF — 2026-10-10», «Контракт и границы»; `tool.md` — «Шкала и покрытие».
+- `Docs/hand-rig-quality-tool.md` — HRQ: запуск, метрики/шкала, «Перед первым использованием на новом аватаре»; `Docs/hand-rig-quality-mef-research.md` — итог по ригу MEF (закрыт 2026-10-20).
 - `Docs/hand-pose-fit-tool.md` — «Вход для агента», «Пределы версии»; `Docs/UltimateXR/known-issues.md` — Issue 26, 28; `Docs/avatar-editor-workbench.md` — «Кисти и подготовка».
 
 ### Zone rules

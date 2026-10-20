@@ -105,3 +105,58 @@
 - захват геометрии источника (`GripSourceContactFrame`, обе прямые руки, `PackClipGripSource.Sample(point, true)`)
   уже есть в коде (Details: «opt-in source capture»), но конвейер `Run` его не вызывает, а `Pads` остаются null;
   в `grip-extraction.md` он учтён как основа «Предлагаемого направления».
+
+## Этап pose-editor
+
+2026-10-20. Направление 4 — ручная доводка хватов в SDK Hand Pose Editor.
+
+**Сделано:**
+
+- [Docs/grip-pose-editor.md](../../Docs/grip-pose-editor.md) — входной документ: место среди направлений, состав
+  (что в dev используется, что заглушка или не вызывается), как открыть окно и требование «аватар-владелец позы»,
+  панель «Автоснап и IK конечных фаланг» (элементы, «Обхватить», IK кончиков), рентген v4 и его цвета,
+  Undo и сохранение (AutoSave, глобальный `SaveAssets` при закрытии окна, общие позы SDK), рабочий процесс,
+  модель контактного IK по контрактам v2/v3 и коду `GripAuthoring/ContactIk/`, API для агентов, ограничения,
+  история 733–757 и рентгена v4, «Состояние на 2026-10-20», «Перед следующим применением», кандидаты массовой доводки.
+- `Docs/hand-pose-fit-tool.md`: раздел «Встроенная диагностика SDK Hand Pose Editor» помечен устаревшим
+  с 2026-10-16 и сокращён до ссылки; прежний раздел «Ограничения пользовательского рентгена» (о той же панели) снят
+  вместе с ним; фраза об открытой UI-приёмке рентгена заменена ссылкой.
+- Ссылки на `grip-pose-editor.md` в `Docs/grip-quality-analysis.md` (назначение, состояние),
+  `Docs/grip-extraction.md` (место среди направлений), `Docs/grip-known-issues.md` («Как читать», G5);
+  строка в `experts/avatar-grip/AGENT.md` (Details).
+
+**Сверено с кодом** (HEAD ветки = `origin/dev` по этим путям): `HandPoseSdkContactEditing.cs` (UI, `AutoWrapAndCommit`,
+`SolveFingerIkAndCommit`, пределы суставов, сбор треугольников), `UxrHandPoseEditorWindow.ContactEditing.cs`
+(проверки `TryCommitContactEdit`, Undo), `UxrHandPoseEditorWindow.cs` (хуки, AutoSave, read-only унаследованных поз,
+меню), `HandPoseSdkContactDiagnostics.cs` (заглушка), `HandPoseSdkContactBackend.cs` (нет вызовов),
+`HandPoseXrayRenderer.cs`/`HandPoseFit.shader`/`HandPoseFitRenderer.cs` (цвета, где используется),
+`ContactIkPreviewSession`/`ContactIkModel`/`ContactIkSolver` (`DistalPriority`, проверки входа),
+`HandContactIkPreviewCapture` (DOF −35…+65°, бюджет 96). YAML: `_handPoses` (65) на CyborgHandsBase без
+привязок `_wrist`; `_handPoses.Array.size: 0` у `MEF_cyborg_hands_Player` и `PlayerControllersCyborgAvatar`.
+История Git: `1b2f88612` и технические снимки `14d401177`, `d4f918053`, `c3f7a75d9`…`b4c156416`.
+Отчёты (основной checkout): 757-Review, `sdk-contact-20261015-r2` и `sdk-contact-20261016-xray-v4`
+(`candidate.json`/`receipt.json`: 8 → 9 из 15, `changedAssets = []`, одинаковые числа), 733/735/740/749,
+`_preserved-2026-10-20/MANIFEST.md`.
+
+**Не проверено** (Unity, Play и шлем не запускались): компиляция и работа панели на текущем dev; блокер правки поз
+CyborgHands (вывод из YAML и кода SDK); число шагов Undo при перетаскивании; поведение `EnsureValidAvatarRigAxes`;
+что именно пользователь проверил при приёмке 2026-10-16; состояние этапа `grip-contact-authoring` в хабе
+(взято из брифа, хаб не читался); исход билета 764 (в документах и отчётах не найден).
+
+**Расхождения:**
+
+- код dev ≠ контракт v3 и отчёт 757: панель в dev — эвристика по костям («Обхватить» с радиусами фаланг,
+  IK кончика без поверхности), без BakeMesh, опорных точек, `DistalPriority`, переноса ладони, профилей обхвата,
+  непрерывного режима и рентгена в окне; `HandPoseSdkContactBackend` (v3) не вызывается, `HandPoseSdkWrapProfile`
+  не используется. Замена произошла в технических снимках 2026-10-16 01:47–02:42 и пришла в dev с `1b2f88612`;
+- `tasks/hand-rig-quality/plan.json` `current_work.last_worker` (757): `numerical_targets_reached: true`,
+  `UI_interaction_checked: true`, два префаба в `changed_assets` — записано в `1b2f88612`; отчёт и `receipt.json`
+  прогона, а также снимок `b4c156416` — `false`, `[]`, `false`. В документе принят отчёт прогона;
+- подсказка панели «выберите CyborgHandsBase» устарела после иерархии 2026-10-18 (у базы нет рига);
+- статус «Обхват … (N/15 фаланг в контакте)» и текст ошибки упоминают коллайдеры, а код читает только `MeshFilter`;
+- SDK-патч 83 (и 85) отсутствует в журнале `Docs/UltimateXR/sdk-patches.md` (последний — 55); запись 44 там
+  называет подписчиком модуль HandPoseReview, а контроллер с 2026-10-15 в `GripAuthoring`. Журнал не правился (запрещён этапом);
+- `1b2f88612` изменил данные пястных общих поз SDK (`GrabClaw`, `Default`, `ControllerWindowsMixedReality`,
+  `DemoLabLaser`) и четырёх поз CyborgHands; источник не установлен;
+- меню маски в `contact-authoring-integration-20261015/Summary.md` — `VR Battlegrounds/Avatars/Hand Contact Mask`,
+  в коде — `VR Battlegrounds/Avatars/Черновики/Площадь контакта кисти`.

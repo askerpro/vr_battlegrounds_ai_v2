@@ -22,7 +22,8 @@
   с названным доказательством.
 - **Направление.** 3 — экспорт хватов из паков под кисть Cyborg (Grip Extraction, записи R1–R5;
   [grip-extraction.md](grip-extraction.md));
-  4 — ручная доводка в редакторе поз; 1 — анализатор; «другое» — с указанием зоны.
+  4 — ручная доводка в редакторе поз ([grip-pose-editor.md](grip-pose-editor.md)); 1 — анализатор;
+  «другое» — с указанием зоны.
 
 Статическая проверка 2026-10-20 выполнена скриптом, читающим `UxrGrabbableObject` в YAML: прямые
 `_avatarGripPoseEntries` и переопределения `m_Modifications` у вариантов префабов. Для каждой точки хвата
@@ -243,7 +244,8 @@ R08, Herrington, Mk14, TR15 p0/p1. Числа статического Fit — �
 (из всех 30 ассетов поз — 26);
 `HandsPack_Gun_Grip`, `Kinemation_Herrington_Grip` и `Kinemation_Viper_Grip` на dev в других версиях. Версии R2
 этих поз сохранены в ветке `archive/avatar-grip/r2-rejected-result-712-verified`.
-**Статус:** открыт. **Направление:** 4 (ручная доводка; контактный IK по опорным точкам — черновик).
+**Статус:** открыт. **Направление:** 4 (ручная доводка, [grip-pose-editor.md](grip-pose-editor.md); контактный IK
+по опорным точкам — черновик).
 
 Ревью — локально, вне Git: `tasks/hand-rig-quality/reports/r2-human-review-715/Review.md`,
 `tasks/hand-rig-quality/reports/reference-grips-715/Review.md` (ориентиры пользователя) в основном checkout.

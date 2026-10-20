@@ -17,7 +17,7 @@ SDK preview исправлен [патчем45](UltimateXR/sdk-patches.md#пат
 Уже открытое grip preview пересоздаётся у Grabbable: `Preview Grip Pose Meshes` → `None`
 → нужная рука. Для будущего адаптера доступен `UxrPreviewHandGripMesh.BuildForAvatar`:
 явные actual avatar/pose/side/Blend, без фактического удержания. SDK разрешение avatar GUID,
-GrabPoint и snap/proxy transform остаются частью контекста. Привязка выполнена через общий frozen snapshot; камера не входит в geometry key. Новая UI-приёмка рентгена ещё открыта.
+GrabPoint и snap/proxy transform остаются частью контекста. Рентген-панель SDK-окна с 2026-10-16 отключена — см. [grip-pose-editor.md](grip-pose-editor.md).
 
 Окно Hand Pose Review открывается через `Tools/VR Battlegrounds/Avatars/Редактор аватара` → «Открыть Hand Pose Review для аватара» и снимает фактическую поверхность кисти целевого аватара и предмета. Статический вход использует временную копию после применения Fixed/Blend к целевым костям и `BakeMesh(false)`; игровой вход читает уже обновлённые SDK живые объекты. Инструмент не назначает позы и не управляет хватом; SDK preview не используется.
 
@@ -39,25 +39,14 @@ GrabPoint и snap/proxy transform остаются частью контекст
 
 Калибровочные материалы 2026-10-05 сохранены вне Temp: [архив и галереи](tasks/report/hand-pose-fit-quality-2026-10-05/index.html), [mapping путей, SHA256 и размеров](tasks/report/hand-pose-fit-quality-2026-10-05/archive-manifest.json). Архив содержит 195 исходных JSON, fixtures, входные данные и 48 свежих PNG BigHands/Battery и Cyborg/LaserGrip. Байты, исходные метки и metadata не изменены; исторические пути внутри JSON остаются прежними, открывать архив следует через относительные ссылки его галерей/mapping. PNG остальных прежних случаев в этот архив не включены. Независимая проверка точных копий и всех 301 ссылки прошла также без чтения Temp.
 
-## Встроенная диагностика SDK Hand Pose Editor
+## Встроенная диагностика SDK Hand Pose Editor (устарело с 2026-10-16)
 
-В правой колонке штатного окна находится «Диагностика текущего хвата». Выбрать сценовый предмет, конкретный Grabbable, точку (основная/поддержка) и сторону. Активный Target Avatar/поза принадлежат SDK окну. При отличии от штатной позы точки панель предупреждает: анализируется текущий кандидат. Основной хват и поддержка снимаются отдельно; фиктивная вторая кисть не добавляется.
-
-«Рентген · контакт 0–2 мм» показывает кисть из единственного SDK HandRenderer, размещённую на rigid snap выбранной точки. Читаются текущие bones, включая несохранённые вращения; transient Fixed descriptor применяется исправленным runtime preview core. Asset позы не сохраняется. Object geometry использует LOD0 и исключает SDK proxy/подсветку. Вторая кисть в этом режиме не размещается.
-
-`HandPoseSdkPreviewSession` владеет одним frozen snapshot. Ключ входа проверяется не чаще раза в100 мс: mesh dirty revisions, bone/renderer/snap matrices, skin quality/rootBone/blendshapes, LOD membership и настройки. Камера исключена; служебная Renderer dirty revision от forceRenderingOff тоже исключена. На неизменном входе нет BakeMesh, topology, чтения mesh vertices или повторного mesh hash. При правке пальцев object geometry/hash и GPU-поле переиспользуются. «Обновить геометрию» принудительно читает mesh для стороннего кода, который изменил vertices без уведомления Unity.
-
-GPU-поле строится порциями. Оно автоматически охватывает исходную кисть; шаг по умолчанию1 мм. При превышении8 млн voxel/512 по оси шаг увеличивается в пределах5 мм, фактический шаг/ошибка показаны. Настройки позволяют менять центр/размер и повторно центрировать. Вне поля точки помечены неоценёнными. Async readback имеет generation guard: ответ предыдущего snapshot не публикуется после A→B→A. Готовое неизменное поле не заставляет SceneView постоянно перерисовываться.
-
-Оригинальные renderer предмета и SDK preview proxies подавляются только во время SceneView camera через forceRenderingOff; затем восстанавливаются. Аватар в другой точке сцены не скрывается. Game camera, Renderer.enabled, shared materials/property blocks, hierarchy и Undo сохраняются. Выключение/закрытие/Play/reload/удаление входного объекта освобождают свои buffers/materials/meshes/preview scene; удаление работает и после анализа без рентгена.
-
-«Анализировать и записать отчёт» запускает полное CPU-ядро по тому же frozen snapshot. Источник `editor_sdk_grip_preview`; `EditorSnapshotHash` одинаков у overlay/export. `EditorPoseStateJson` хранит состояние asset, `EditorAppliedPoseStateJson` — transient descriptor текущих bones, `EditorObjectSnapshotHash`/`EditorContactObjectHash` — object geometry. Результат устаревает при смене входа. Выгрузка: JSON,24 стандартных PNG, текущий camera view и HTML в `UserReports/HandPoseFit/<timestamp-id>/`, вне Assets/Git. Текущий ракурс — xray frozen geometry, не screenshot всего Unity UI. GPU preview приблизительный; inside неизвестен для открытой/многокомпонентной поверхности, полный CPU report сохраняет эту неизвестность.
-
-Проверено в native Editor: binding/cache11/11, query state11/11, invalid-input cleanup5/5, GPU30/30, математика37/37, camera ownership14/14 и Android PASS. На100 неизменных проверках read-only MEF/AK105: CaptureCount1, median1,628 мс/P951,686 мс, первый capture189 мс. Это input polling, не замер полного UI FPS. Export25PNG имеет одинаковый snapshot/report fingerprint; контактные метки0–2 мм визуально просмотрены. Стандартный NUnit runner с dirty сценой не запускался. [План и UI-приёмка](plans/2026-10-05-sdk-preview-diagnostics-binding.md).
-
-## Ограничения пользовательского рентгена, подтверждённые 2026-10-05
-
-Первый UI-срез имел CPU Tick443 мс, смешивал LOD и читал сценовую кисть за1,81 м от оружия. Причины устранены cache/snap binding выше; камера и временное скрытие renderer не инвалидируют geometry. Пользователь принял исправленное MEF SDK preview, но новую панель рентгена/навигацию ещё не принимал. Native fixtures используют read-only prefab bones на snap; они не подтверждают качество авторского хвата, реальный UI FPS, game IK/controller/Quest. Рабочие доказательства: `tmp/hand-fit-sdk-preview-research-20261005/`; прежняя [диагностика](../tmp/hand-fit-lag-diagnosis-20261005/findings.md) — история отказа.
+> **Устарело.** С 2026-10-16 (`1b2f88612`) панель «Диагностика текущего хвата» и «Рентген · контакт 0–2 мм»
+> в окне SDK отключены: `HandPoseSdkContactDiagnostics` — заглушка (`Enabled = false`), `HandPoseEditorCapture.Export`
+> нигде не вызывается. Место панели заняла «Автоснап и IK конечных фаланг» («Обхватить», IK кончиков), рентген v4
+> остался в PNG этого окна. Текущее состояние, ограничения и процесс ручной доводки — [grip-pose-editor.md](grip-pose-editor.md).
+> Прежнее описание панели и её проверки 2026-10-05 — в истории Git этого файла и в
+> [плане](plans/2026-10-05-sdk-preview-diagnostics-binding.md).
 
 ## Изображения и показатели
 

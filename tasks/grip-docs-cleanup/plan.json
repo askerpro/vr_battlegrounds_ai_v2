@@ -38,6 +38,26 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "pose-editor",
+      "writes": [
+        "tasks/grip-docs-cleanup/**",
+        "Docs/grip-pose-editor.md",
+        "Docs/hand-pose-fit-tool.md",
+        "Docs/grip-quality-analysis.md",
+        "Docs/grip-extraction.md",
+        "Docs/grip-known-issues.md",
+        "experts/avatar-grip/AGENT.md"
+      ],
+      "after": [
+        {
+          "task": "grip-docs-cleanup",
+          "stage": "grip-extraction",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

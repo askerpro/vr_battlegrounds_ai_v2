@@ -58,6 +58,7 @@ Rig Quality (HRQ). Primary KB: `tasks/hand-rig-quality/expert/`; this file navig
 - `Docs/hand-rig-quality-tool.md` — HRQ: запуск, метрики/шкала, «Перед первым использованием на новом аватаре»; `Docs/hand-rig-quality-mef-research.md` — итог по ригу MEF (закрыт 2026-10-20).
 - `Docs/grip-quality-analysis.md` — автоанализ хвата: правила, пороги, ограничения, «Состояние на 2026-10-20»; `Docs/grip-known-issues.md` — реестр дефектов хватов (F1–F8, G1–G8) с аватаром и статусом.
 - `Docs/grip-extraction.md` — Grip Extraction (направление 3): конвейер, профили, запрос и Apply, история R0–R2, «Перед следующим применением», «Предлагаемое направление».
+- `Docs/grip-pose-editor.md` — ручная доводка в SDK Hand Pose Editor (направление 4): панель «Обхватить»/IK кончиков, Undo/сохранение, модель контактного IK v2/v3 и API, блокер правки поз CyborgHandsBase, история 733–757, «Перед следующим применением».
 - `Docs/hand-pose-fit-tool.md` — «Вход для агента», «Пределы версии»; `Docs/UltimateXR/known-issues.md` — Issue 26, 28; `Docs/avatar-editor-workbench.md` — «Кисти и подготовка».
 
 ### Zone rules

@@ -436,6 +436,8 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new E2EKitSelfTestScenario();
             yield return new DeviceSmokeScenario();
             yield return new PerfStressScenario();
+            yield return new ScriptedClientScenario(ScriptedClientScenario.SmokeName, "input-smoke");
+            yield return new ScriptedClientScenario(ScriptedClientScenario.PurchaseName, "wall-purchase");
         }
 
         /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>

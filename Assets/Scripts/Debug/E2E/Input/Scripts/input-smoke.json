@@ -1,0 +1,16 @@
+{
+  "name": "input-smoke",
+  "steps": [
+    { "op": "activate", "timeoutS": 60 },
+    { "op": "step", "name": "input-active" },
+    { "op": "measure-start" },
+    { "op": "hold", "seconds": 1 },
+    { "op": "walk", "target": "forward", "meters": 2.0, "speed": 1.0, "timeoutS": 20 },
+    { "op": "step", "name": "walked" },
+    { "op": "wait-server", "name": "walked-seen", "timeoutS": 90 },
+    { "op": "turn", "degrees": 90, "timeoutS": 10 },
+    { "op": "walk", "target": "forward", "meters": 1.0, "speed": 0.6, "timeoutS": 20 },
+    { "op": "measure-check" },
+    { "op": "step", "name": "smoke-done" }
+  ]
+}

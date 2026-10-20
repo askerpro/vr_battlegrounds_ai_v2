@@ -1,0 +1,21 @@
+{
+  "name": "wall-purchase",
+  "steps": [
+    { "op": "activate", "timeoutS": 60 },
+    { "op": "step", "name": "input-active" },
+    { "op": "choose-team", "timeoutS": 30 },
+    { "op": "step", "name": "team-requested" },
+    { "op": "wait-server", "name": "match-live", "timeoutS": 120 },
+    { "op": "walk", "target": "own-spawn-zone", "speed": 1.2, "timeoutS": 120 },
+    { "op": "wait-server", "name": "equipment", "timeoutS": 150 },
+    { "op": "measure-start" },
+    { "op": "walk", "target": "own-wall", "speed": 1.2, "timeoutS": 30 },
+    { "op": "measure-check" },
+    { "op": "grab-wall-item", "hand": "right", "speed": 0.5, "timeoutS": 20 },
+    { "op": "expect-held", "hand": "right" },
+    { "op": "step", "name": "grabbed" },
+    { "op": "wait-server", "name": "oracle-done", "timeoutS": 60 },
+    { "op": "expect-peers-holding" },
+    { "op": "step", "name": "done" }
+  ]
+}

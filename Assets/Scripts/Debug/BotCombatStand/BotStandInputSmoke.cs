@@ -124,8 +124,12 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             // ── Оружие в кобуру (стартовая выдача, как у человека) ──
             Phase("Holster");
-            WeaponInfo weapon = BotCombatStand.Instance.Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null &&
-                w.Category == WeaponCategory.Pistol && (string.IsNullOrEmpty(_weaponName) || w.name == _weaponName));
+            // Стартовый пистолет человека — WeaponRegistry.DefaultSidearm (Viper); иначе первый пистолет стенда.
+            WeaponRegistry registry = WeaponRegistry.Instance;
+            WeaponInfo weapon = string.IsNullOrEmpty(_weaponName) && registry != null && registry.DefaultSidearm != null
+                ? registry.DefaultSidearm
+                : BotCombatStand.Instance.Weapons?.FirstOrDefault(w => w != null && w.WeaponPrefab != null &&
+                    w.Category == WeaponCategory.Pistol && (string.IsNullOrEmpty(_weaponName) || w.name == _weaponName));
             PlayerLoadoutManager loadout = avatar.GetComponent<PlayerLoadoutManager>();
             if (weapon == null || loadout == null || !loadout.ServerGiveWeapon(weapon))
                 throw new InvalidOperationException("пистолет не лёг в кобуру: " + (weapon != null ? weapon.name : "нет пистолета в Weapons стенда"));
@@ -141,9 +145,11 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
             if (_firearm == null || !BotHands.TryResolveGrips(_firearm, out UxrGrabbableObject grip, out int primary, out _))
                 throw new InvalidOperationException("в кобуре нет огнестрела с рукоятью спуска");
-            Note($"в кобуре {_firearm.name} (якорь {holster.name})");
+            Note($"в кобуре {_firearm.name} (якорь {holster.name}); учёт: {Readiness()}");
             _firearm.ProjectileShot += OnShot;
 
+            yield return new WaitForSeconds(1f);
+            Note($"через 1 с в кобуре, учёт: {Readiness()}");
             // ── Курс — к центру арены стенда: корень бота стоит у края зоны спавна лицом к стене (прогон 2: голова вошла
             // в южную стену, WallPass). Сначала поворот головы на курс, потом цель на 10 м по нему. ──
             Phase("Target");
@@ -215,6 +221,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 yield return null;
             }
             Check("grab", grabber.GrabbedObject == grip, $"в правой руке {(grabber.GrabbedObject != null ? grabber.GrabbedObject.name : "ничего")}");
+            for (int i = 0; i < 10; i++) yield return null;
+            Note($"после хвата, учёт: {Readiness()}");
             if (grabber.GrabbedObject != grip) yield break;
 
             // ── Наведение и курок ──
@@ -240,7 +248,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     yield return null;
                     stable = error <= AimToleranceDeg ? stable + 1 : 0;
                 }
-                Note($"попытка {attempt + 1}: ошибка дула {error:0.00}°");
+                Note($"попытка {attempt + 1}: ошибка дула {error:0.00}°; учёт: {Readiness()}");
 
                 // Как человек: курок отпущен ≥ 2 кадров, нажат 3, отпущен.
                 for (int i = 0; i < 2; i++) { Aim(grabber, muzzle, TargetAim()); yield return null; }
@@ -336,6 +344,17 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             kit.Body.Place(feet, yaw + 180f);
             _target.ActiveAvatar._actor.Life = 100000f;
             Note($"цель {_target.ActiveAvatar.name} в {TargetDistance} м по курсу");
+        }
+
+        /// <summary>Учёт готовности спуска 0 (только чтение): инициализирован, патрон в патроннике, магазин, строка машины.</summary>
+        private string Readiness()
+        {
+            if (_firearm == null) return "нет оружия";
+            UxrFirearmReadinessState state = _firearm.UsesReadinessLedger(0) ? _firearm.GetReadinessState(0) : null;
+            VrBattlegrounds.Weapons.WeaponSystem system = _firearm.GetComponent<VrBattlegrounds.Weapons.WeaponSystem>();
+            return $"ledger={_firearm.UsesReadinessLedger(0)}, init={state?.ReadinessInitialized}, chamber={state?.ChamberRound}, " +
+                   $"actionOpen={state?.ActionOpen}, ammo={_firearm.GetAmmoLeft(0)}, loaded={_firearm.IsLoaded(0)}, " +
+                   $"row={(system != null ? system.LastRowId : "-")}, machine={(system != null ? system.MachineState.ToString() : "-")}";
         }
 
         // ── Наблюдение ───────────────────────────────────────────────────────

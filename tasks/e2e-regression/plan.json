@@ -44,6 +44,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "docs-2",
+      "writes": [
+        "tasks/e2e-regression/**"
+      ],
+      "after": [
+        {
+          "task": "e2e-regression",
+          "stage": "docs-1",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

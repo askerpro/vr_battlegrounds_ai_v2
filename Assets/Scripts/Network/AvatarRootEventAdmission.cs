@@ -6,6 +6,7 @@ using UltimateXR.Core.StateSync;
 using UltimateXR.Core.Unique;
 using UltimateXR.Extensions.System;
 using UltimateXR.Networking.Integrations.Net.Mirror;
+using UnityEngine;
 
 namespace VrBattlegrounds.Network
 {
@@ -62,6 +63,12 @@ namespace VrBattlegrounds.Network
         public ulong InvalidAlignment;
         public ulong InvalidRegistry;
         public ulong ScopedApplied;
+
+        /// <summary>v2: событие пришло с netId сетевого предмета (только сервер, только от клиента).</summary>
+        public ulong ItemScopedReceived;
+
+        /// <summary>v2: предмета с этим netId уже нет в spawned получателя; событие отброшено до SDK.</summary>
+        public ulong ItemUnavailable;
     }
 
     /// <summary>
@@ -163,6 +170,53 @@ namespace VrBattlegrounds.Network
             return identity != null && identity.netId == scope.NetId
                 ? AvatarRootAdmissionResult.Allowed
                 : AvatarRootAdmissionResult.InvalidBinding;
+        }
+    }
+
+    /// <summary>
+    /// Контракт допуска v2: ворота доступности сетевого предмета до SDK-декодера сервера.
+    ///
+    /// <para>
+    /// Клиент-автор шлёт событие предмета (курок, затвор, отпускание) за RTT до того, как узнает, что
+    /// сервер этот предмет уже снял (снаряжение в конце раунда, смерть, смена карты). На сервере
+    /// SDK-декодер не находит цель и пишет Error. Клиент кладёт в конверт netId ближайшей
+    /// <see cref="NetworkIdentity"/> источника; сервер, не найдя её в <c>NetworkServer.spawned</c>,
+    /// отбрасывает событие тихо — без decode, Execute и рассылки.
+    /// </para>
+    ///
+    /// <para>
+    /// Это только ворота доступности, не binding: decoded target с netId не сверяется. Ближайшая
+    /// NetworkIdentity компонента может смениться в полёте (магазин отделён, предмет перепарентен),
+    /// а обман конверта даёт клиенту лишь потерю собственного события. Живой предмет идёт прежним
+    /// строгим путём SDK. Аватары (корень и дети) и объекты без NetworkIdentity — вне scope.
+    /// Mirror владеет spawned; истории снятых netId здесь нет.
+    /// </para>
+    /// </summary>
+    internal static class ItemEventAdmission
+    {
+        /// <summary>
+        /// netId ближайшей заспавненной NetworkIdentity источника, если это не аватар; иначе 0 (прежний путь).
+        /// </summary>
+        internal static uint CaptureOutgoing(IUxrStateSync source, IReadOnlyDictionary<uint, NetworkIdentity> spawned)
+        {
+            Component component = source?.Component;
+            if (component == null) return 0;
+
+            NetworkIdentity identity = component.GetComponentInParent<NetworkIdentity>(true);
+            if (identity == null || identity.netId == 0) return 0;
+
+            // Корень аватара ведёт AvatarRoot scope v1, дети аватара остаются на прежнем пути.
+            if (identity.GetComponent<UxrAvatar>() != null) return 0;
+
+            return spawned.TryGetValue(identity.netId, out NetworkIdentity live) && ReferenceEquals(live, identity)
+                ? identity.netId
+                : 0;
+        }
+
+        /// <summary>Жив ли у получателя сетевой объект с этим netId (по Mirror spawned).</summary>
+        internal static bool IsAvailable(uint itemNetId, IReadOnlyDictionary<uint, NetworkIdentity> spawned)
+        {
+            return spawned.TryGetValue(itemNetId, out NetworkIdentity identity) && identity != null;
         }
     }
 }

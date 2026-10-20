@@ -265,7 +265,11 @@ namespace VrBattlegrounds.Network
             }
             else if (NetworkClient.active && NetworkClient.ready)
             {
-                CmdComponentStateChanged(serializedEvent, capture.Scope.NetId, capture.Scope.UniqueId);
+                // Контракт допуска v2: netId сетевого предмета-цели, чтобы сервер отбросил событие
+                // до декодера, если уже снял предмет, пока событие было в пути. Корень аватара
+                // идёт своим scope (v1), его событие предметным не помечается.
+                uint itemNetId = capture.Scope.NetId == 0 ? ItemEventAdmission.CaptureOutgoing(component, spawned) : 0u;
+                CmdComponentStateChanged(serializedEvent, capture.Scope.NetId, capture.Scope.UniqueId, itemNetId);
             }
             else
             {
@@ -287,7 +291,7 @@ namespace VrBattlegrounds.Network
         /// </summary>
         [Command(requiresAuthority = false)]
         private void CmdComponentStateChanged(byte[] serializedEvent, uint avatarRootNetId, Guid avatarRootUniqueId,
-                                             NetworkConnectionToClient sender = null)
+                                             uint itemNetId, NetworkConnectionToClient sender = null)
         {
             // Disconnect снимает соединение немедленно, но его уже разобранный
             // batch может ещё содержать команды. Они не принадлежат живому отправителю.
@@ -303,6 +307,7 @@ namespace VrBattlegrounds.Network
             if (scope.NetId != 0 && scope.UniqueId != Guid.Empty) _serverAvatarRootCounters.ScopedReceived++;
             AvatarRootAdmissionResult admission = AvatarRootEventAdmission.CheckIncoming(in scope, NetworkServer.spawned, out var root);
             if (!AcceptIncomingAvatarRoot(admission, in scope, ref _serverAvatarRootCounters, "server")) return;
+            if (!AcceptIncomingItem(itemNetId, in scope)) return;
 
             // Снятый Mirror root не входит в SDK. Живой root сохраняет прежний строгий decoder и ammo policy.
             if (scope.NetId != 0) _serverAvatarRootCounters.ScopedDecoderEntered++;
@@ -365,6 +370,35 @@ namespace VrBattlegrounds.Network
             if (scope.NetId != 0) _clientAvatarRootCounters.ScopedDecoderEntered++;
             var execution = UxrManager.Instance.ExecuteStateSyncEvent(serializedEvent);
             if (!execution.IsError && scope.NetId != 0) _clientAvatarRootCounters.ScopedApplied++;
+        }
+
+        /// <summary>
+        ///     Контракт допуска v2: событие сетевого предмета, которого у сервера уже нет в spawned,
+        ///     не входит в SDK-декодер, не исполняется и не рассылается. Это штатная гонка «клиент
+        ///     отпустил курок — сервер уже снял оружие», а не ошибка: Verbose и счётчик.
+        ///     Живой предмет идёт прежним строгим путём.
+        /// </summary>
+        private bool AcceptIncomingItem(uint itemNetId, in AvatarRootEventScope scope)
+        {
+            if (itemNetId == 0) return true;
+
+            _serverAvatarRootCounters.ItemScopedReceived++;
+
+            // Один scope на событие: корень аватара и предмет вместе — повреждённый конверт.
+            if (scope.NetId != 0)
+            {
+                _serverAvatarRootCounters.InvalidEnvelope++;
+                GameLog.Network.Error(
+                    $"[NetworkStateRelay] server: конверт с двумя scope (AvatarRoot netId={scope.NetId}, предмет netId={itemNetId}); событие отклонено.");
+                return false;
+            }
+
+            if (ItemEventAdmission.IsAvailable(itemNetId, NetworkServer.spawned)) return true;
+
+            _serverAvatarRootCounters.ItemUnavailable++;
+            if (GameLog.Network.IsEnabled(LogLevel.Verbose))
+                GameLog.Network.Verbose($"[NetworkStateRelay] server: предмет недоступен (netId={itemNetId}); SDK/forward пропущены.");
+            return false;
         }
 
         private static bool AcceptOutgoingAvatarRoot(AvatarRootAdmissionResult result, AvatarRootEventScope scope)

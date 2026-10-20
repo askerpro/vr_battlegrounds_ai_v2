@@ -160,6 +160,49 @@ namespace VrBattlegrounds.Tests.Network
             Assert.AreEqual(Phase.Cancelled, GameNetworkDiscovery.InitialPhase, "После отмены попытки не возобновляются.");
         }
 
+        // ── Хвосты ревью (2026-10-20): отключение между попытками ────────────
+
+        private static GameNetworkDiscovery CreateDiscovery(out GameObject go)
+        {
+            go = new GameObject("TestDiscovery") { hideFlags = HideFlags.DontSave };
+            return go.AddComponent<GameNetworkDiscovery>(); // NetworkDiscovery добавит RequireComponent
+        }
+
+        [Test]
+        public void Отключение_между_попытками_прекращает_их_без_ошибки()
+        {
+            GameNetworkDiscovery discovery = CreateDiscovery(out GameObject go);
+            try
+            {
+                Connecting(1);
+                GameNetworkDiscovery.NotifyClientStopped(false);
+                Assert.AreEqual(Phase.WaitingRetry, GameNetworkDiscovery.InitialPhase, "Контроль: клиент между попытками, не активен.");
+
+                Assert.DoesNotThrow(() => discovery.RequestClientDisconnect(),
+                    "Отключиться между попытками — значит прекратить их; ClientNotActive вводил бы вызывающего в заблуждение.");
+                Assert.AreEqual(Phase.Cancelled, GameNetworkDiscovery.InitialPhase);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void Отключение_без_клиента_и_без_попыток_остаётся_ошибкой()
+        {
+            GameNetworkDiscovery discovery = CreateDiscovery(out GameObject go);
+            try
+            {
+                var error = Assert.Throws<System.InvalidOperationException>(() => discovery.RequestClientDisconnect());
+                Assert.AreEqual("ClientNotActive", error.Message, "Нечего отключать и нечего отменять — прежний ответ.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
         [Test]
         public void По_истечении_срока_именованный_отказ()
         {

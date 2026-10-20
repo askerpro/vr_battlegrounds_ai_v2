@@ -470,7 +470,8 @@ namespace VrBattlegrounds.Network
         public void RequestClientDisconnect()
         {
             if (NetworkServer.active) throw new System.InvalidOperationException("HostDisconnectUnsupported");
-            CancelInitialConnect("штатное отключение клиента");
+            // Между первыми попытками клиент не активен: отключиться — значит прекратить попытки, это не ошибка.
+            if (CancelInitialConnect("штатное отключение клиента") && !NetworkClient.active) return;
             if (!NetworkClient.active) throw new System.InvalidOperationException("ClientNotActive");
             if (CurrentRole == null) CurrentRole = AppRole.Client;
             if (CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
@@ -484,6 +485,9 @@ namespace VrBattlegrounds.Network
             if (CurrentRole != null && CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
             string networkError = PrepareNetworkStart(AppRole.Client);
             if (!string.IsNullOrEmpty(networkError)) throw new System.InvalidOperationException(networkError);
+            // Явное подключение заменяет начальные попытки: иначе после обрыва они продолжились бы сами
+            // рядом с адресной командой.
+            CancelInitialConnect("адресное подключение");
             CurrentRole = AppRole.Client;
             _holdClientAutoStart = false;
             try
@@ -602,11 +606,13 @@ namespace VrBattlegrounds.Network
                 $"{(string.IsNullOrEmpty(_initialLastError) ? "" : $" ({_initialLastError})")}; повтор через {delay:0} с.");
         }
 
-        private static void CancelInitialConnect(string reason)
+        /// <summary>Прекращает начальные попытки; true — они шли и прекращены.</summary>
+        private static bool CancelInitialConnect(string reason)
         {
-            if (_initialPhase != InitialConnectPhase.Connecting && _initialPhase != InitialConnectPhase.WaitingRetry) return;
+            if (_initialPhase != InitialConnectPhase.Connecting && _initialPhase != InitialConnectPhase.WaitingRetry) return false;
             _initialPhase = InitialConnectPhase.Cancelled;
             GameLog.Network.Info($"[GameNetworkDiscovery] Первое подключение прекращено: {reason}.");
+            return true;
         }
 
         private static void ConnectToAddress(string address)

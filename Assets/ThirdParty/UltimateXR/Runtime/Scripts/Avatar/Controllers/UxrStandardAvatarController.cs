@@ -322,7 +322,8 @@ namespace UltimateXR.Avatar.Controllers
         /// <returns>Удалось выбрать существующую runtime-позу; пустая или отсутствующая поза даёт false</returns>
         public bool UpdateExternalHandPoseFromGrabState(UxrHandSide handSide)
         {
-            if (Avatar == null || Avatar.AvatarMode != UxrAvatarMode.UpdateExternally ||
+            // VR Battlegrounds patch 89: у аватара с вводом на этой машине позу ведёт ProcessControllerEvents.
+            if (Avatar == null || Avatar.AvatarMode != UxrAvatarMode.UpdateExternally || Avatar.InputDriven ||
                 (handSide != UxrHandSide.Left && handSide != UxrHandSide.Right) ||
                 (UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync))
             {

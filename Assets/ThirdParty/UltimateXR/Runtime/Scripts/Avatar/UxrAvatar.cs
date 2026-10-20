@@ -236,6 +236,21 @@ namespace UltimateXR.Avatar
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 89: внешний аватар (<see cref="UxrAvatarMode.UpdateExternally" />), чей ввод
+        ///     устройства подаётся на этой машине (бот на сервере). Такой аватар проходит стадию Update контроллера,
+        ///     читает <see cref="ControllerInput" /> из своего включённого ввода и проходит Local-гейты хвата и курка,
+        ///     оставаясь не-Local (камера, AudioListener и <see cref="LocalAvatar" /> не затрагиваются). Не
+        ///     синхронизируется. Ставит и снимает только владелец ввода аватара.
+        /// </summary>
+        public bool InputDriven { get; set; }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 89: ввод этого аватара обрабатывается на этой машине — Local или
+        ///     <see cref="InputDriven" /> внешний.
+        /// </summary>
+        public bool HasInputHere => AvatarMode == UxrAvatarMode.Local || (AvatarMode == UxrAvatarMode.UpdateExternally && InputDriven);
+
+        /// <summary>
         ///     Gets the first enabled controller input belonging to the avatar. If there is no enabled
         ///     controller input available, to avoid null checks, it returns a dummy component that sends no
         ///     input events.
@@ -244,6 +259,14 @@ namespace UltimateXR.Avatar
         {
             get
             {
+                if (AvatarMode == UxrAvatarMode.UpdateExternally && InputDriven)
+                {
+                    // VR Battlegrounds patch 89: ввод внешнего аватара на этой машине — его включённый контроллер,
+                    // без синхронизируемого OnControllerInputChanged (у других машин этот аватар внешний и без ввода).
+                    UxrControllerInput driven = UxrControllerInput.GetComponents(this).FirstOrDefault(i => i.GetType() != typeof(UxrDummyControllerInput) && i.GetType() != typeof(UxrGamepadInput));
+                    return driven != null ? driven : gameObject.GetOrAddComponent<UxrDummyControllerInput>();
+                }
+
                 if (AvatarMode == UxrAvatarMode.UpdateExternally)
                 {
                     // This makes sure that when synchronizing multiplayer/replays we use the correct input model 

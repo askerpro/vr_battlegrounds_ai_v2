@@ -236,7 +236,7 @@ namespace UltimateXR.Mechanics.Weapons
         private bool HasLocalTriggerContext(int index, UxrGrabber hand, RuntimeTriggerInfo runtime)
         {
             return isActiveAndEnabled && CanUse && !IsReadinessReplay && CanOwnReadiness(index) &&
-                hand != null && hand.Avatar != null && hand.Avatar.AvatarMode == UltimateXR.Avatar.UxrAvatarMode.Local &&
+                hand != null && hand.Avatar != null && hand.Avatar.HasInputHere && // VR Battlegrounds patch 89: и бот с вводом на этой машине
                 _runtimeTriggers.TryGetValue(index,out RuntimeTriggerInfo current) && ReferenceEquals(runtime,current) &&
                 TryGetTriggerGrip(index,out UxrGrabbableObject grip,out int point) &&
                 UxrGrabManager.HasInstance && UxrGrabManager.Instance.GetGrabbingHand(grip,point,out UxrGrabber main) && main==hand;

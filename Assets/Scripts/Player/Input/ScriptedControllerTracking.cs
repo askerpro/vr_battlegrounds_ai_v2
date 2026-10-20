@@ -1,4 +1,5 @@
-// Скриптовый трекинг контроллеров (контракт tasks/bots-control-modes/contracts/xr-input.md).
+// Скриптовый трекинг контроллеров (контракты tasks/bots-control-modes/contracts/xr-input.md,
+// tasks/bots-input/contracts/bot-input-design.md).
 // Компонент лежит выключенным в префабах аватаров и компилируется во всех сборках; включается штатным событием
 // подключения парного ScriptedControllerInput.
 using System;
@@ -25,9 +26,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public override Type RelatedControllerInputType => typeof(ScriptedControllerInput);
         public override string SDKDependency => null;
 
+        /// <summary>Компонент заявлен устройством аватара (<see cref="AvatarInputDevice"/>) — только тогда он вправе работать.</summary>
+        internal bool Claimed { get; set; }
+
         /// <summary>
         /// Позы сенсоров в пространстве корня аватара — то, что SDK ждёт в <c>UpdateSensor</c>. Пишет только
-        /// E2EScriptedInput, раз за кадр, до стадии Update.
+        /// <see cref="AvatarInputDevice"/>, раз за кадр, до стадии Update.
         /// </summary>
         internal void Apply(Vector3 leftPosition, Quaternion leftRotation, Vector3 rightPosition, Quaternion rightRotation)
         {
@@ -65,11 +69,11 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (ScriptedInputGate.Allows) return;
+            if (Claimed) return;
 
             enabled = false;
             if (Application.isPlaying)
-                GameLog.Error($"[ScriptedInput] {name}: скриптовый трекинг включён без E2EScriptedInput — выключен.");
+                GameLog.Error($"[ScriptedInput] {name}: скриптовый трекинг включён без устройства аватара — выключен.");
         }
 
         protected override void UpdateSensors()

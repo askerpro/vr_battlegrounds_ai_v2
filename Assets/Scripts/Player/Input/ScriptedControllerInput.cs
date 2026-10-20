@@ -1,6 +1,6 @@
-// Скриптовые контроллеры для симуляции ввода (контракт tasks/bots-control-modes/contracts/xr-input.md).
-// Компонент лежит выключенным в префабах аватаров и компилируется во всех сборках; включает его только
-// E2EScriptedInput (вырезается VRBG_NO_E2E), в остальных случаях он выключает себя сам.
+// Скриптовые контроллеры для симуляции ввода (контракты tasks/bots-control-modes/contracts/xr-input.md,
+// tasks/bots-input/contracts/bot-input-design.md). Компонент лежит выключенным в префабах аватаров и компилируется во
+// всех сборках; включает его только устройство аватара (AvatarInputDevice) по своей заявке, иначе он выключает себя сам.
 using UltimateXR.Core;
 using UltimateXR.Devices;
 using UnityEngine;
@@ -59,7 +59,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             return input2D == UxrInput2D.Joystick ? Vector2.ClampMagnitude(_frame[handSide].Joystick, 1f) : Vector2.zero;
         }
 
-        /// <summary>Кадр, который прочитает ближайший <see cref="UpdateInput"/>. Пишет только E2EScriptedInput.</summary>
+        /// <summary>Компонент заявлен устройством аватара (<see cref="AvatarInputDevice"/>) — только тогда он вправе работать.</summary>
+        internal bool Claimed { get; set; }
+
+        /// <summary>Кадр, который прочитает ближайший <see cref="UpdateInput"/>. Пишет только <see cref="AvatarInputDevice"/>.</summary>
         internal void Apply(in DeviceFrame frame) => _frame = frame;
 
         /// <summary>Подключение устройства: штатное событие SDK включает парный <see cref="ScriptedControllerTracking"/>.</summary>
@@ -82,12 +85,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         protected override void OnEnable()
         {
             base.OnEnable();
-            if (ScriptedInputGate.Allows) return;
+            if (Claimed) return;
 
             // База уже зарегистрировала компонент: выключение пройдёт штатным OnDisable.
             enabled = false;
             if (Application.isPlaying)
-                GameLog.Error($"[ScriptedInput] {name}: скриптовый ввод включён без E2EScriptedInput — выключен.");
+                GameLog.Error($"[ScriptedInput] {name}: скриптовый ввод включён без устройства аватара — выключен.");
         }
 
         protected override void UpdateInput()

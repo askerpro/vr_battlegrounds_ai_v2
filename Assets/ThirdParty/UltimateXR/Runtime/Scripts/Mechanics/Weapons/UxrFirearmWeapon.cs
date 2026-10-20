@@ -434,7 +434,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="e">Event parameters</param>
         private void Trigger_Released(object sender, UxrManipulationEventArgs e)
         {
-            if (e.Grabber != null && e.Grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+            // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине (бот).
+            if (e.Grabber != null && e.Grabber.Avatar.HasInputHere)
             {
                 SyncAmmoLeft(e.GrabbableObject);
             }
@@ -447,7 +448,8 @@ namespace UltimateXR.Mechanics.Weapons
         /// <param name="e">Event parameters</param>
         private void Trigger_Placed(object sender, UxrManipulationEventArgs e)
         {
-            if (e.Grabber != null && e.Grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+            // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине (бот).
+            if (e.Grabber != null && e.Grabber.Avatar.HasInputHere)
             {
                 SyncAmmoLeft(e.GrabbableObject);
             }
@@ -471,20 +473,21 @@ namespace UltimateXR.Mechanics.Weapons
 
                 if (trigger.TriggerGrabbable && UxrGrabManager.Instance.GetGrabbingHand(trigger.TriggerGrabbable, trigger.GrabbableGrabPointIndex, out UxrGrabber grabber))
                 {
-                    if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+                    // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине (бот).
+                    if (grabber.Avatar.HasInputHere)
                     {
                         // Get the trigger press amount and use it to send it to the animation var that controls the hand trigger. Use it to rotate the trigger as well.
 
-                        float triggerPressAmount = UxrAvatar.LocalAvatarInput.GetInput1D(grabber.Side, UxrInput1D.Trigger);
+                        float triggerPressAmount = grabber.Avatar.ControllerInput.GetInput1D(grabber.Side, UxrInput1D.Trigger); // VR Battlegrounds patch 89: ввод держащего аватара
                         trigger.TriggerGrabbable.GetGrabPoint(trigger.GrabbableGrabPointIndex).GetGripPoseInfo(grabber.Avatar).PoseBlendValue = triggerPressAmount;
                         SetTriggerPressedAmount(i, triggerPressAmount);
 
                         // Now depending on the weapon type check if we need to shoot
 
                         SyncTriggerPressStates(i,
-                                               UxrAvatar.LocalAvatarInput.GetButtonsPress(grabber.Side, UxrInputButtons.Trigger),
-                                               UxrAvatar.LocalAvatarInput.GetButtonsPressDown(grabber.Side, UxrInputButtons.Trigger),
-                                               UxrAvatar.LocalAvatarInput.GetButtonsPressUp(grabber.Side, UxrInputButtons.Trigger));
+                                               grabber.Avatar.ControllerInput.GetButtonsPress(grabber.Side, UxrInputButtons.Trigger),
+                                               grabber.Avatar.ControllerInput.GetButtonsPressDown(grabber.Side, UxrInputButtons.Trigger),
+                                               grabber.Avatar.ControllerInput.GetButtonsPressUp(grabber.Side, UxrInputButtons.Trigger));
                     }
                     else
                     {
@@ -496,7 +499,8 @@ namespace UltimateXR.Mechanics.Weapons
                     // аватара выстрел не пересчитывает: единственный источник — синхронизируемый Shoot стрелка,
                     // а звук, отдачу и патрон копия проигрывает по нему (Source_ShotFired). Раньше копия
                     // стреляла сама по синхронизированному спуску — вторая пуля и двойной урон на сервере.
-                    if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+                    // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине (бот).
+                    if (grabber.Avatar.HasInputHere)
                     {
 
                     bool ledgerTrigger = UsesReadinessLedger(i);
@@ -590,7 +594,8 @@ namespace UltimateXR.Mechanics.Weapons
                         }
                     }
 
-                    if (grabber.Avatar.AvatarMode == UxrAvatarMode.Local && runtimeTrigger.TriggerPressEnded)
+                    // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине (бот).
+                    if (grabber.Avatar.HasInputHere && runtimeTrigger.TriggerPressEnded)
                     {
                         // Sync ammo after shooting a fully automatic weapon to make sure the ammo left is the same.
                         if (trigger.CycleType == UxrShotCycle.FullyAutomatic)
@@ -604,7 +609,7 @@ namespace UltimateXR.Mechanics.Weapons
 
                 if (UsesReadinessLedger(i) && (!trigger.TriggerGrabbable ||
                     !UxrGrabManager.Instance.GetGrabbingHand(trigger.TriggerGrabbable, trigger.GrabbableGrabPointIndex, out UxrGrabber localHand) ||
-                    localHand.Avatar == null || localHand.Avatar.AvatarMode != UxrAvatarMode.Local))
+                    localHand.Avatar == null || !localHand.Avatar.HasInputHere)) // VR Battlegrounds patch 89
                     ResetLocalTriggerEpisode(i);
 
                 runtimeTrigger.TriggerPressStarted = false;

@@ -2090,7 +2090,8 @@ namespace UltimateXR.Manipulation
             Quaternion sourceRotation = TransformExt.GetWorldRotation(grabInfo.GrabAlignParentTransformUsed, grabInfo.RelativeGrabAlignRotation);
             Quaternion targetRotation = grabber.transform.rotation;
 
-            if (grabPointInfo.AlignToController && grabber != null && grabber.Avatar != null && grabber.Avatar.AvatarMode == UxrAvatarMode.Local)
+            // VR Battlegrounds patch 89: и внешний аватар с вводом на этой машине — кисть у него тоже из контроллера.
+            if (grabPointInfo.AlignToController && grabber != null && grabber.Avatar != null && grabber.Avatar.HasInputHere)
             {
                 // Align the object to the controller. Useful for weapons or things that need directional precision.
                 // In externally updated avatars (multiplayer, replays...), this doesn't need to be computed because the hand position/rotation is already sampled.
@@ -2560,7 +2561,8 @@ namespace UltimateXR.Manipulation
         /// <returns>Whether the grip should be released</returns>
         private bool ShouldGrabberReleaseFarAwayGrip(UxrGrabber grabber)
         {
-            if (grabber.Avatar == UxrAvatar.LocalAvatar && grabber != null && grabber.GrabbedObject != null)
+            // VR Battlegrounds patch 89: дальнее отпускание — у любого аватара с вводом на этой машине.
+            if (grabber != null && grabber.Avatar != null && (grabber.Avatar == UxrAvatar.LocalAvatar || grabber.Avatar.InputDriven) && grabber.GrabbedObject != null)
             {
                 // Check if the user separated the hands too much to drop it from the hand that went too far
                 if (Vector3.Distance(grabber.UnprocessedGrabberPosition, grabber.transform.position) > grabber.GrabbedObject.LockedGrabReleaseDistance)

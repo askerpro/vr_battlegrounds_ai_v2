@@ -196,7 +196,8 @@ namespace UltimateXR.Avatar.Controllers
             Func<UxrAvatar, bool> hook   = ShouldSolveRemoteAvatarThisFrame;
             UxrAvatar             avatar = Avatar;
 
-            if (hook == null || avatar == null || avatar.AvatarMode != UxrAvatarMode.UpdateExternally)
+            // VR Battlegrounds patch 89: аватар с вводом на этой машине (бот) решается каждый кадр, как локальный.
+            if (hook == null || avatar == null || avatar.AvatarMode != UxrAvatarMode.UpdateExternally || avatar.InputDriven)
             {
                 return true;
             }

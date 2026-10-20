@@ -189,7 +189,9 @@ namespace UltimateXR.Devices
         {
             base.OnEnable();
 
-            if (!_cameraInitialized)
+            // VR Battlegrounds patch 89: камеру внешнего аватара с вводом на этой машине пишет владелец ввода, а не XR;
+            // без XR (выделенный сервер) корутина крутилась бы каждый кадр у каждого бота.
+            if (!_cameraInitialized && !(Avatar != null && Avatar.InputDriven))
             {
                 StartCoroutine(RepeatSetupCameraCoroutine());
             }
@@ -237,6 +239,13 @@ namespace UltimateXR.Devices
         /// <param name="e">Event args</param>
         private void UxrControllerInput_GlobalControllerConnected(object sender, UxrDeviceConnectEventArgs e)
         {
+            // VR Battlegrounds patch 89: событие статическое — устройство чужого аватара (другой бот) не включает и не
+            // выключает трекинг этого аватара.
+            if (sender is UxrControllerInput senderInput && senderInput.Avatar != null && Avatar != null && senderInput.Avatar != Avatar)
+            {
+                return;
+            }
+
             if (RelatedControllerInputType != null && sender.GetType() == RelatedControllerInputType)
             {
                 // Compatible device.

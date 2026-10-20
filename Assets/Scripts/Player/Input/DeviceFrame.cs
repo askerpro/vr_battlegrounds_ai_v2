@@ -1,6 +1,6 @@
-// Ввод устройства для симуляции шлема и контроллеров (контракт tasks/bots-control-modes/contracts/xr-input.md).
-// Тип компилируется во всех сборках: им пользуются компоненты ScriptedControllerInput/Tracking, которые лежат в
-// префабах аватаров. Включает их только E2EScriptedInput (вырезается VRBG_NO_E2E).
+// Ввод устройства для симуляции шлема и контроллеров (контракты tasks/bots-control-modes/contracts/xr-input.md,
+// tasks/bots-input/contracts/bot-input-design.md). Тип компилируется во всех сборках: им пользуются устройство аватара
+// (AvatarInputDevice) и компоненты ScriptedControllerInput/Tracking в префабах аватаров — скриптовый клиент и боты.
 using UltimateXR.Core;
 using UltimateXR.Devices;
 using UnityEngine;

@@ -2067,7 +2067,8 @@ namespace UltimateXR.Core
 
                 if (avatar.AvatarController && avatar.AvatarController.enabled && avatar.AvatarController.Initialized)
                 {
-                    if (avatar.AvatarMode == UxrAvatarMode.Local)
+                    // VR Battlegrounds patch 89: полная Animation и у внешнего аватара с вводом на этой машине.
+                    if (avatar.HasInputHere)
                     {
                         OnAvatarUpdating(avatar, GetAvatarUpdateArgs(avatar, UxrUpdateStage.Animation));
                         ((IUxrAvatarControllerUpdater)avatar.AvatarController).UpdateAvatarAnimation();
@@ -2375,7 +2376,8 @@ namespace UltimateXR.Core
                 return false;
             }
 
-            if (localOnly && avatar.AvatarMode != UxrAvatarMode.Local)
+            // VR Battlegrounds patch 89: стадии «только локальный» проходит и внешний аватар с вводом на этой машине.
+            if (localOnly && !avatar.HasInputHere)
             {
                 return false;
             }
@@ -2455,7 +2457,8 @@ namespace UltimateXR.Core
             {
                 foreach (UxrAvatar avatar in UxrAvatar.EnabledComponents)
                 {
-                    if (avatar.AvatarMode == UxrAvatarMode.Local && avatar.AvatarController != null && avatar.AvatarController.enabled && avatar.AvatarController.Initialized)
+                    // VR Battlegrounds patch 89: стадия Update и у внешнего аватара с вводом на этой машине (бот).
+                    if (avatar.HasInputHere && avatar.AvatarController != null && avatar.AvatarController.enabled && avatar.AvatarController.Initialized)
                     {
                         yield return avatar.AvatarController;
                     }

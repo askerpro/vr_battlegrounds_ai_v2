@@ -1,4 +1,106 @@
-# Профиль детализации сцены
+# Детальная GPU-диагностика сцены
+
+Обновлено: **19.10.2026**. Текущее продолжение — задача `scene-detail` в
+`F:/CodexWorktrees/71af/Vr_Battlegrounds_ai`, ветка `codex/scene-detail-perf-20261018`.
+
+**Текущий статус:** выполняется разрешённый пользователем
+[единый план завершения](gpu-diagnostics-completion-plan.md). GPU-исходники перенесены
+выборочно из immutable1d85; начат offline анализ реального исторического scene.json.
+Основной выход — машиночитаемый JSON/JSONL/CSV для агента; HTML пользователю не нужен.
+Текущая база обновлена до dev48d38b9b2, HEAD9daadf810 после rebase; WIP сохранён
+checkpointb6139021 и stashffc3386e, затем восстановлен без конфликтов.
+
+**Продолжение19Oct:** Windows Testd5db59ea: Unity/wrapper exit0,0errors/8warnings.
+Identity исправлен и подтверждён в клиенте:14802refs/51unresolved; scene SHA совпал
+с structural index. Парные RenderDoc A/B GREEN из той же сборки/вида, native-r11
+export exit0,195из660 GPU ресурсов имеют asset candidates. Через replay-query агент
+читает timing→pass ancestry→bindings→asset candidate→места сцены. Prefab build-copy IDs
+сопоставляются отдельно как уникальные fold candidates; коллизии не угадываются.
+compare-replay подтвердил farStart25→20 как единственную primary quality разницу:
+7geometry groups изменились, submitted indexed elements−38358. Это command metadata,
+не доказанный выигрыш GPU frame time. Актуальные joins: reports/windows-identity-joins-A-r4-20261019
+и B-r4; сравнение: reports/windows-identity-replay-ab-r3-20261019/comparison.json.
+Read-only аудит выявил неверный нулевой множитель у draw без instancing; исправлено,
+фактические суммы743694→705336, дельта прежняя. Использованные bytes проверяются по SHA.
+Android Testd5db59ea: Unity/wrapper exit0,0errors/134warnings; APK установлен на Quest3.
+Первый discovery остановился до workload: неполный dirty evidence и /sdcard alias.
+Host-исправления готовы. Пользователь разрешил закрыть Link и продолжить Quest-замеры.
+Link закрыт, discoveryA workload/focus/logs GREEN; итог INCONCLUSIVE из-за Windows ADB
+MAX_PATH на harvest.11raw files восстановлены в reports/qraw-051853-flat; lifecycle/hash
+проверка без замечаний; runner исправлен. Quest Vulkan72Hz, FFR0.75/CPU4/GPU2.
+
+**Quest3 результаты19Oct (detailed OFF, сборка d5db59ea):** серия center-north
+A/A + 3 пары A/B с чередованием — все8 GREEN; AppGPUTime p50 ≈9,93мс, A/A Δ0,003мс,
+A/B Δ≈0,003мс; последний B 10,82мс — позднее смещение, повторилось и в следующем
+full-A center-north, причина не установлена. Полный обход8видов A/B GREEN:
+p50 A 4,55…10,93мс, Δ(B−A) от −0,05 до +0,44мс без систематического выигрыша
+(reports/q3-full-observation-summary-20261019.json, q3-normal-observation-summary-20261019.json).
+Scene identity на Quest совпала с Windows:14802refs, тот же хеш сцены.
+**Stage-трассы A/B** (instrumented, ovrgpuprofiler -t, collector включал/вернул detailed сам;
+сейчас OFF): основной стерео-проход 2016×1760 MSAA4 multiview — работа без Preempt
+A10,353/B10,363мс, Render ≈8,4мс, Binning ≈1,3–1,5мс; Preempt (компоновщик) A0,9/B2,3мс.
+Вывод: кадр Lobby фрагментно-ограничен, LOD farStart25→20 не меняет GPU работу; путь к7мс —
+фрагментная стоимость (MSAA/шейдеры/overdraw/разрешение) и вспомогательные проходы
+(2×768² поверхности ≈0,6мс/кадр + compute ≈0,2мс — гипотеза: планарное отражение UXR).
+Данные: reports/q3-stage-compare-20261019/ (tools/compare_stage_traces.py), raw A/B
+q3-stage-raw-{A,B}-20261019. Это замеры одного вида и гипотезы, не принятые оптимизации.
+Per-draw: ovrgpuprofiler -x на этом runtime данных не даёт. Новый адаптер
+Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py (Meta RenderDoc Fork68.18,
+снимок/откат шлема, ревью approve; изменения шлема разрешены пользователем). Пробы r1–r7:
+инъекция, захват кадра и PIL-сессия на шлеме работают, откат каждый раз verified; кадр стартового
+экрана без E2E пустой (0 draw) — следующий шаг: захват Lobby через Run-QuestE2E (adb-launch
+--intent-args). С19Oct задачу ведёт Claude-сессия (route epoch15). Новых tests нет;
+quality/review/приёмка пользователем pending.
+
+## Диагностические checkpoints18–19Oct (история)
+
+AndroidCompileGate checkpoint9cc517a: PASS,0ошибок, ticket827 закрыт и receive выполнен.
+Windows E2E Player7e07a43 собран Unity:0ошибок/108warnings. Wrapper завершился exit1
+после сборки из-за отсутствующего cross-profile uxr-ids.txt; исправление подготовлено.
+Windows discoveryA/B и pilotA/B GREEN19Oct; local ready windows приняты, restore выполнен.
+GPU observation p50 A1.015808ms/B1.002496ms; одна пара без noise/repeats не доказывает
+выигрыш и не является Quest budget. Полные8views A/B пройдены, но оба прогона RED
+из-за потери фокуса; raw сохранён и не принимается как полноценная A/B серия.
+Формат: [scene-index-v1](contracts/scene-index-v1.md). Новых тестов и Quest-прогонов нет.
+
+Продолжение18Oct: runtime adapter/conditions, Windows applicability и управляемая
+LOD-пара с restore реализованы и скомпилированы на input9cc517a,
+ticket827 (826 заменён до аренды). Добавлен import-runtime с честными observations
+и отдельными observation deltas. Build-Game умеет e2e Test через прежний builder,
+dry-run exit0. Shared build dirty сохранён сопровождающим (9760), roots освобождены.
+Opt-in build identity скомпилирован на223da422: AndroidCompileGate PASS0/ticket831.
+Finish831 сначала не подтвердил возврат B; сопровождающий восстановил очередь9872,
+сохранив исходный результат7b54c096. Ровно2meta получены штатным receive, без чужого
+префаба. Instrumented mode скомпилирован в Windows Testf8bae4d9; новый discovery GREEN.
+Ticket828 не начинался и закрыт
+сопровождающим (event9780), blocked/recovery_required=false. Build7e07 имеет явный
+dirty packages-lock, созданный UPM; его точные bytes/hash сохранены в RunSpec bundle.
+Runtime7e07 и importer подтверждены Windows pilot; native source GPU frame/interval
+остаются unknown. Отчёт reports/windows-pilot-ab-20261019/comparison.json — limited.
+Для новой сборки dirty dedicated root сохранён и освобождён сопровождающим9832
+(WIP44addf1db). Windows Testf8bae4d9: Unity и wrapper exit0. Opt-in identity processor
+падал на Unity fake-null MeshFilter; минимальная правка и fail-build подготовлены,
+новая сборка pending. Следующее сохранение generated build diff запрошено9911.
+RenderDoc1.46: реальный instrumented E2E GREEN, capture206341966bytes,
+export native-r10 exit0:446events/364work/660resources,368timed events,0missing refs.
+Данные: reports/windows-renderdoc-export-A-r3-20261019, сохранён replay.log.
+Это replay timing; scene joins и точная привязка source GPU frame остаются unresolved.
+[Подробный статус и evidence](status-2026-10-18.md).
+
+- Rebase завершён на dev2e1b6a2fc, HEAD67ea4b3d3. До обновления документов дерево
+  чистое, production paths равны dev. Исходная история и несвязанный WIP сохранены.
+- SceneDetail74bd/UI47c и launch provider e70e9a5e1 уже в принятой базе.
+- GPU tools/recorder/exporter — неслитый source1d85f2305; реальный edit-time экспорт
+  r2 найден:8643objects/1376resources/75lights, compilePASS. Это ещё не runtime/GPU A/B.
+- Ведущий этого диалога реализует всё необходимое в своём checkout; эксперты проверяют
+  готовый результат. Ниже сохранена **история15Oct**: назначения «инструменты только perf»,
+  ожидания zone-ACK/передачи и старые checkout не являются текущим порядком работы.
+- Исторические9evidence файлов скопированы с SHA256 в
+  `reports/status-recovery-20261018/`. Новые Windows/Quest результаты не объявлялись.
+- Hub task штатно передан в71af сопровождающим (rev24/event9672), route epoch8 опубликован.
+  Guard не обходился. Подробности исполнения — в changelog/2026-10-18-execution.md.
+
+## История до восстановления 18Oct
 
 Обновлено: 2026-10-15 (продолжение Codex). Задача `scene-detail`, владелец level-design, участие performance.
 Checkout: `F:/UnityProjects/Vr_Battlegrounds_ai` (основной), ветка `scene-detail`, содержит origin/dev `d3c62ca5e`.
@@ -193,6 +295,13 @@ LOD/дальнего декора/Android-текстур; исторически
   настраивать. возможно в будущем ещё добавим параметры + уникальные настройки на предмет или префаб»;
   управление — «в планшете в разделе отладка».
 - 2026-10-14: «инструмент детализации нужен будет и в дальнейшем поэтому начинаем с него».
+- 2026-10-20: цель — производительность в ущерб картинке; зеркало в лобби **оставить** («люди любят вставать
+  у зеркала и дурачиться»), на игровых картах его нет. Удешевлять можно, удалять нельзя. Факт: Lobby
+  UxrPlanarReflectionUrp _textureSize 768, _maxReflectionDistance 16, две поверхности 768² (по глазу) ≈0,3мс
+  каждая в center-north; patch 78 уже не рисует отражение вне кадра.
+- 2026-10-20: всегда оценивать целесообразность — доля GPU объекта против трудоёмкости его оптимизации;
+  при дорогой оптимизации предлагать замену почти бесплатной альтернативой (пример — пол), сначала проверять
+  стандартные приёмы оптимизации игр. Правило внесено в experts/performance/AGENT.md.
 
 ## Договорённости и ловушки
 

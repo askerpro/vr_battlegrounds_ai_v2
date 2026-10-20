@@ -1,0 +1,14 @@
+- [x] Восстановить исходники, историю, контракты; rebase на origin/dev.
+- [x] Собрать машиночитаемый индекс реальной сцены и ограниченные выборки; проверить компиляцию текущих исходников.
+- [x] Подключить runtime recorder к E2E phase/view/conditions/readiness и штатному harvest; фактические Windows runs GREEN, quality acceptance впереди.
+- [x] Добавить runtime identity и observational import с явной границей точности времени.
+- [ ] Получить repeated A/B с оценкой между-run шума; не считать API polls независимыми GPU frames.
+- [ ] Выполнить реальные rendered Windows прогоны для быстрого анализа.
+- [x] Windows identity/capture A/B:14802refs,195resource candidates,7LOD geometry changes; query и comparison JSON работают на реальных данных.
+- [ ] Выполнить normal Windows A/A/repeated A/B; instrumented captures не считать бюджетом.
+- [x] Выполнить Quest3 baseline, A/A и LOD A/B (detailed OFF): центр A/A+3пары и 8видов A/B GREEN, выигрыша LOD нет.
+- [x] Stage-трассы Quest A/B: кадр фрагментно-ограничен (Render≈8,4мс из≈10,35), LOD не меняет работу GPU.
+- [x] Связать Quest capture с мешами/шейдерами: per-draw Lobby center-north (Run-QuestE2E + Meta RenderDoc), 502 draw → меш/шейдер; ranking.json.
+- [x] Собрать Test Windows/Quest из d5db59ea, подготовить Quest RunSpec через прежний runner; Link закрыт с разрешения пользователя, discoveryA workload прошёл, raw восстановлен после MAX_PATH.
+- [ ] Подтвердить детализацию проходов, текстур, света; сопоставить Windows и Quest3.
+- [ ] Оптимизировать сцену по измерениям, получить ревью и пользовательскую приёмку, закрепить tests и выпустить.

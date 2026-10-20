@@ -27,6 +27,22 @@ review; optimisation in a foreign zone is done by its owner from your spec/revie
 - Post-processing, HDR, render scale != 1, opaque/depth texture, renderer features push rendering past
   FFR: re-measure before changing them.
 - A measuring scenario never assigns its own threshold. Unknown budget: measure and agree, never invent.
+- Replace before optimise (user, 2026-10-20): for every heavy object first weigh its measured GPU share against the
+  effort (agent time, compute, risk) of optimising it. If a near-free substitute exists (cheap shader, baked texture,
+  impostor, solid colour, removal), propose replacing it instead of tuning it. Check the standard tricks below before
+  inventing a custom optimisation.
+
+## Standard Quest tricks (check these first)
+- Large screen areas (floor, ground, walls, sky) get the cheapest material: Baked Lit/Unlit + lightmap, 1–2 texture
+  samples, no triplanar/world-aligned blending, no per-pixel normal far away; detail baked into one texture or vertex colour.
+- Sky: solid colour, gradient or static cubemap (Unlit), never Skybox/Procedural; distant scenery as baked cards.
+- Far objects: impostors/billboards, aggressive LOD (last LOD a few hundred tris), HLOD/combined meshes; cull by distance.
+- Mobile shaders: half precision, few samples, no realtime lights/shadows (bake), no alpha test or blending on big areas.
+- Batching: atlases and shared materials, static batching, GPU instancing for repeated props.
+- Extra passes (mirrors, cameras, post) only where they matter: lower resolution, layer/distance limits, render on visibility.
+- Global levers last-but-known: render scale, MSAA, FFR — they hit the whole game, decide with the user.
+- Source of truth for "what is heavy": per-draw counters on the headset (`Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py`
+  via `Run-QuestE2E.ps1 -MetaRenderDocCmd`), not Windows timing; gain is proven only by a normal A/B on the headset.
 
 ## Budgets today (sources only)
 - Frame = 1000 / XR display rate; no display -> 72 Hz -> 13.9 ms (`PerfStats.BudgetMs`). The game does

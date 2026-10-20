@@ -548,7 +548,18 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -HeadPose of
 Порядок: сервер → заглушка `server.json` → `KEYCODE_WAKEUP`, `prox_close`, `logcat -c` → `am start -S -W -n
 <pkg>/<activity> -e unity "<аргументы>"` с `-e2eQuitOnFinish` и результатом в `/sdcard/Android/data/<pkg>/files/e2e/
 <прогон>/client-1.json` → опрос обоих вердиктов до статуса ≠ `started` или таймаута. В `finally` всегда: `am
-force-stop`, гашение своего серверного PID и потомков, `automation_disable`, logcat, сбор, `run.json`.
+force-stop`, гашение своего серверного PID и потомков, `automation_disable`, `KEYCODE_SLEEP`, logcat, сбор,
+`run.json`.
+
+**После теста шлем — обратно в сон** (решение пользователя 2026-10-20): любой инструмент, который будил шлем
+(`KEYCODE_WAKEUP`/`prox_close`), в конце работы при любом исходе отправляет `input keyevent KEYCODE_SLEEP`, иначе
+шлем без человека разряжается. Так делают `Run-QuestE2E.ps1` (finally) и адаптер Meta RenderDoc (после отката).
+
+**adb по Wi-Fi** (шлем стоит на зарядке): один раз по USB `adb -s <serial> tcpip 5555`, затем
+`adb connect <ip>:5555`, дальше `-Serial <ip>:5555`. Режим живёт до перезагрузки шлема. Проверено 2026-10-20 на
+Quest 3: во сне (`KEYCODE_SLEEP`) первые 5 мин связь держится, `KEYCODE_WAKEUP` по Wi-Fi будит шлем. После более
+долгого сна устройство может числиться `offline` — перед прогоном `adb disconnect <ip>:5555` и `adb connect <ip>:5555`
+(сессия поднимается со 1–2 попытки, затем шлем будится как обычно).
 
 **Шлем должен быть свободен.** Пока на шлеме открыт системный диалог (`…Dialog…` от `com.oculus`/`com.meta`:
 «нужны контроллеры», «Link отключён», граница), игра не получит фокус — дирижёр проверяет это до прогона и отказывает

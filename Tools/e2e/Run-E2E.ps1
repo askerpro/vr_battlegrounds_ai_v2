@@ -81,6 +81,8 @@ param(
 
     # Immutable bundle: run-spec JSON, build.json и optional views рядом с ним.
     [string] $RunSpec = '',
+    # Opt-in ранний SDK actuator, только для instrumented/draw с одним Windows клиентом.
+    [string] $RenderDocBridge = '',
     [string] $ViewsFile = '',
     [string] $HeadPose = 'off',
 
@@ -100,6 +102,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 try {
     Import-Module (Join-Path $PSScriptRoot 'E2ELogVerdict.psm1') -Force -ErrorAction Stop
     Import-Module (Join-Path $PSScriptRoot 'E2EDiagnosticInputs.psm1') -Force -ErrorAction Stop
+    Import-Module (Join-Path $PSScriptRoot 'E2ERenderDoc.psm1') -Force -ErrorAction Stop
 }
 catch {
     Write-Host ''
@@ -222,6 +225,7 @@ foreach ($item in $Arg) {
 }
 
 $diagnosticInput = $null
+$buildProfile = $null
 $viewsInfo = $null
 $windowWidth = 640; $windowHeight = 480; $windowFullscreen = 0
 try {
@@ -235,6 +239,13 @@ try {
         if ($diagnosticInput.spec.headPose.mode -eq 'eye') { $HeadPose = ([double]$diagnosticInput.spec.headPose.eyeMeters).ToString('R', [Globalization.CultureInfo]::InvariantCulture) }
         $windowWidth = $diagnosticInput.spec.windows.width; $windowHeight = $diagnosticInput.spec.windows.height
         $windowFullscreen = [int](-not $diagnosticInput.spec.windows.windowed)
+    }
+    if ($RenderDocBridge) {
+        if ($null -eq $diagnosticInput -or $diagnosticInput.spec.mode -cne 'instrumented' -or
+            $diagnosticInput.spec.capture.kind -cne 'draw' -or $Clients -ne 1 -or $Scenario -cne 'perf-stress') {
+            throw 'RenderDoc требует instrumented/draw RunSpec, perf-stress и ровно одного клиента'
+        }
+        $RenderDocBridge = (Resolve-Path -LiteralPath $RenderDocBridge).Path
     }
     $headPoseInfo = Get-E2EHeadPose $HeadPose
     if ($ViewsFile) {
@@ -282,6 +293,27 @@ if (Test-Path $managedDir) {
 }
 
 if (-not $SkipStaleCheck) {
+    if ($null -ne $diagnosticInput) {
+        try {
+            # Editor-only изменения могут менять build-сцены без обновления EXE/Managed DLL.
+            # Используем начало успешной попытки только после проверки полного artifact inventory.
+            $buildProfile = Assert-E2EBuildArtifact $diagnosticInput 'e2e' $Player -Role server
+            if ($buildProfile.profile -cne 'e2e') { throw 'Windows клиентам требуется profile=e2e' }
+            if ($null -ne $buildProfile.terminal) {
+                $terminal = $buildProfile.terminal
+                if ($terminal.result -cne 'Succeeded' -or -not $terminal.startedUtc -or -not $terminal.endedUtc) {
+                    throw 'Неполный terminal успешной сборки'
+                }
+                $buildStarted = [DateTimeOffset]$terminal.startedUtc
+                $buildEnded = [DateTimeOffset]$terminal.endedUtc
+                if ($buildEnded -lt $buildStarted -or $buildEnded -gt [DateTimeOffset]::UtcNow) {
+                    throw 'Некорректные границы времени сборки'
+                }
+                $playerStamp = $buildStarted.UtcDateTime
+            }
+        }
+        catch { Write-Host ('ОТКАЗ: build freshness provenance: ' + $_.Exception.Message) -ForegroundColor Red; exit 2 }
+    }
     $sourceRoots = @(
         (Join-Path $RepoRoot 'Assets\Scripts'),
         (Join-Path $RepoRoot 'Assets\Editor')
@@ -311,7 +343,7 @@ if (-not $SkipStaleCheck) {
 $persistentRoot = $null
 try {
     if ($null -ne $diagnosticInput) {
-        $buildProfile = Assert-E2EBuildArtifact $diagnosticInput 'e2e' $Player -Role server
+        if ($null -eq $buildProfile) { $buildProfile = Assert-E2EBuildArtifact $diagnosticInput 'e2e' $Player -Role server }
         if ($buildProfile.profile -cne 'e2e') { throw 'Windows клиентам требуется profile=e2e того же запускаемого artifact' }
         $persistentRoot = Get-E2EBuildDataPath $buildProfile
     }
@@ -407,9 +439,14 @@ Write-Host ('  результат: ' + $runDir)
 
 $launched = New-Object System.Collections.ArrayList
 $expected = New-Object System.Collections.ArrayList
+$renderdocState = $null
 
 function Start-Player([string[]] $ExtraArgs, [string] $LogPath) {
     $arguments = @('-logFile', $LogPath) + $ExtraArgs
+    if ($RenderDocBridge -and $ExtraArgs -notcontains '-nographics') {
+        $script:renderdocState = Start-E2ERenderDocPlayer -Bridge $RenderDocBridge -Player $Player -PlayerArguments $arguments -RunDirectory $runDir -OwnedProcesses $launched
+        return $script:renderdocState.process
+    }
     # Start-Process соединяет массив пробелами; MSVCRT quoting сохраняет пути с пробелами.
     $quoted = @($arguments | ForEach-Object {
         if ($_ -notmatch '[\s"]') { $_ }
@@ -506,6 +543,9 @@ try {
     $verdictReady = $false
 
     while ((Get-Date) -lt $deadline) {
+        if ($null -ne $renderdocState) {
+            Update-E2ERenderDocCapture -State $renderdocState -StageRoot $stages['client-1'].root -RunId $diagnosticInput.spec.runId -OwnedProcesses $launched
+        }
         if (Test-Path $serverResult) {
             $status = ''
             try {
@@ -601,6 +641,11 @@ $stepFeed = New-Object System.Collections.ArrayList
 $stepsDropped = 0
 $harvestReceipts = New-Object Collections.Generic.List[object]
 $harvestProblems = New-Object Collections.Generic.List[string]
+$renderdocReceipt = Complete-E2ERenderDocCapture -State $renderdocState -RunId $(if ($null -ne $diagnosticInput) { $diagnosticInput.spec.runId } else { '' })
+if ($null -ne $renderdocReceipt) {
+    $renderdocReceipt | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $runDir 'renderdoc/evidence.json') -Encoding UTF8
+    if ($renderdocReceipt.problem) { $harvestProblems.Add('RenderDoc: ' + $renderdocReceipt.problem) }
+}
 
 # Отсутствующий результат не должен скрывать оставшийся stage/неполный JSONL.
 foreach ($role in $stages.Keys) {
@@ -750,6 +795,7 @@ $summary = [pscustomobject]@{
     exitCode = $exitCode
     launchFailure = $launchFailure
     diagnosticRunSpecSha256 = $(if ($null -ne $diagnosticInput) { $diagnosticInput.sha256 } else { $null })
+    renderdoc = $renderdocReceipt
     artifactProblems = $harvestProblems.ToArray()
     roles = $roleReports
     lateRole = $lateRole

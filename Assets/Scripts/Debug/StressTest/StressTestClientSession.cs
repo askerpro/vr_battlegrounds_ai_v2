@@ -17,8 +17,45 @@ namespace VrBattlegrounds.DevTools.StressTest
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(-10000)] // Tick рекордера — первым в кадре, см. PerfFrameRecorder.
-    public sealed class StressTestClientSession : MonoBehaviour
+    public sealed class StressTestClientSession : MonoBehaviour, IPerfFrameObserver
     {
+        private static DiagnosticScope _diagnosticScope;
+
+        /// <summary>
+        /// Явная подписка диагностического прогона до его старта. Не воспроизводит прошлые
+        /// фазы и не меняет workload. Вызывающий обязан освободить scope в finally.
+        /// </summary>
+        public static System.IDisposable ObserveRuns(IStressTestDiagnosticObserver observer)
+        {
+            if (observer == null) throw new System.ArgumentNullException(nameof(observer));
+            if (Current != null) throw new System.InvalidOperationException("Наблюдение подключается до старта сессии.");
+            if (_diagnosticScope != null) throw new System.InvalidOperationException("Диагностический scope уже занят.");
+            return _diagnosticScope = new DiagnosticScope(observer);
+        }
+
+        private sealed class DiagnosticScope : System.IDisposable
+        {
+            internal readonly IStressTestDiagnosticObserver Observer;
+            internal StressTestClientSession Session;
+            internal bool WasAttached;
+            internal DiagnosticScope(IStressTestDiagnosticObserver observer) { Observer = observer; }
+            public void Dispose()
+            {
+                if (_diagnosticScope != this) return;
+                _diagnosticScope = null;
+                if (Session != null) Session.StopDiagnostics("observer-detached");
+                else if (!WasAttached)
+                {
+                    try { Observer.OnStopped("observer-detached-before-session"); }
+                    catch (System.Exception e)
+                    {
+                        GameLog.Perf.Warning("[StressTest] Ошибка отключения диагностики: " + e.GetType().Name);
+                    }
+                }
+                Session = null;
+            }
+        }
+
         public static StressTestClientSession Current { get; private set; }
         public static bool IsRunning => Current != null;
 
@@ -61,6 +98,11 @@ namespace VrBattlegrounds.DevTools.StressTest
         private float  _nextOverlayAt;
         private bool   _finished;
         private int    _phaseNumber;
+        private bool _phaseMeasured;
+        private IStressTestDiagnosticObserver _diagnosticObserver;
+        private bool _diagnosticPhaseOpen;
+        /// <summary>Ошибка наблюдателя; не является отказом игрового прогона.</summary>
+        public string DiagnosticFailureReason { get; private set; }
         // Точки обзора измеряемых фаз, ещё не закрытых: имя фазы → снимок (SetPhaseView).
         private readonly Dictionary<string, PerfViewReport> _pendingViews = new Dictionary<string, PerfViewReport>();
 
@@ -124,6 +166,13 @@ namespace VrBattlegrounds.DevTools.StressTest
             try
             {
                 _recorder = new PerfFrameRecorder(_report.Directory, _report.BudgetMs, _report.BuildHeader());
+                if (_diagnosticScope != null)
+                {
+                    _diagnosticScope.Session = this;
+                    _diagnosticScope.WasAttached = true;
+                    _diagnosticObserver = _diagnosticScope.Observer;
+                    _recorder.SetDiagnosticObserver(this);
+                }
             }
             catch (System.Exception e)
             {
@@ -159,12 +208,16 @@ namespace VrBattlegrounds.DevTools.StressTest
             _report.clutterCount = Mathf.Max(_report.clutterCount, msg.clutterCount);
             _report.AddSkins(msg.skins);
             _nextOverlayAt = 0f;
+            _phaseMeasured = msg.measured;
+            ObservePhase(isBegin: true);
         }
 
         private void ClosePhase()
         {
             if (!_phaseOpen) return;
             _phaseOpen = false;
+
+            ObservePhase(isBegin: false);
 
             PerfPhaseReport phase = _recorder.EndPhase();
             if (phase == null) return;
@@ -209,6 +262,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         {
             if (_finished || _recorder == null) return;
 
+            if (!NetworkClient.active) StopDiagnostics("network-disconnected");
             _recorder.Tick();
 
             if (!NetworkClient.active)
@@ -241,6 +295,7 @@ namespace VrBattlegrounds.DevTools.StressTest
             _finished = true;
 
             ClosePhase();
+            StopDiagnostics(completed ? "run-completed" : reason);
             _report.completed = completed;
             _report.endReason = reason;
             _report.Save();
@@ -256,14 +311,64 @@ namespace VrBattlegrounds.DevTools.StressTest
 
         private void OnDestroy()
         {
-            // Рекордер мог не создаться (Awake упал) — тогда и дописывать нечего.
-            if (!_finished && _recorder != null && _report != null) Finish(false, "сессия уничтожена");
-            _finished = true;
+            try
+            {
+                // Рекордер мог не создаться (Awake упал) — тогда и дописывать нечего.
+                if (!_finished && _recorder != null && _report != null) Finish(false, "сессия уничтожена");
+            }
+            finally
+            {
+                StopDiagnostics("session-destroyed");
+                _finished = true;
+                _recorder?.Dispose();
+                _recorder = null;
+                if (Current == this) Current = null;
+            }
+        }
 
-            _recorder?.Dispose();
-            _recorder = null;
+        private void OnDisable() => StopDiagnostics("session-disabled");
+        private void OnApplicationPause(bool paused) { if (paused) StopDiagnostics("application-paused"); }
+        private void OnApplicationFocus(bool focused) { if (!focused) StopDiagnostics("focus-lost"); }
 
-            if (Current == this) Current = null;
+        private void ObservePhase(bool isBegin)
+        {
+            if (_diagnosticObserver == null) return;
+            if (!isBegin && !_diagnosticPhaseOpen) return;
+            _diagnosticPhaseOpen = isBegin;
+            var value = new PerfPhaseObservation(_phaseName, _phaseNumber, isBegin, _phaseMeasured,
+                Time.frameCount, System.Diagnostics.Stopwatch.GetTimestamp(), System.Diagnostics.Stopwatch.Frequency,
+                Time.realtimeSinceStartupAsDouble, isBegin ? PhaseSecondsLeft : 0f, _puppets, _clutter, _skins);
+            try { _diagnosticObserver.OnPhase(in value); }
+            catch (System.Exception e) { DiagnosticFailed(e); }
+        }
+
+        void IPerfFrameObserver.OnRawFrame(in PerfRawFrame value)
+        {
+            if (_diagnosticObserver == null || !_phaseOpen) return;
+            try { _diagnosticObserver.OnRawFrame(in value); }
+            catch (System.Exception e) { DiagnosticFailed(e); }
+        }
+
+        private void DiagnosticFailed(System.Exception error)
+        {
+            DiagnosticFailureReason = error.GetType().Name + ": " + error.Message;
+            StopDiagnostics("observer-error: " + DiagnosticFailureReason);
+            GameLog.Perf.Warning("[StressTest] Диагностический канал отключён: " + DiagnosticFailureReason);
+        }
+
+        private void StopDiagnostics(string reason)
+        {
+            IStressTestDiagnosticObserver observer = _diagnosticObserver;
+            _diagnosticObserver = null;
+            _diagnosticPhaseOpen = false;
+            _recorder?.SetDiagnosticObserver(null);
+            if (observer == null) return;
+            try { observer.OnStopped(reason); }
+            catch (System.Exception e)
+            {
+                DiagnosticFailureReason = e.GetType().Name + ": " + e.Message;
+                GameLog.Perf.Warning("[StressTest] Ошибка закрытия диагностики: " + DiagnosticFailureReason);
+            }
         }
     }
 }

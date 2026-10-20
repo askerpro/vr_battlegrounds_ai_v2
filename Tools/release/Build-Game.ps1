@@ -34,6 +34,9 @@ param(
     # Устарело: то же, что -Config Test.
     [switch] $Development,
 
+    # Opt-in read-only таблица Unity refs → авторские IDs только в Development build-копиях сцен.
+    [switch] $GpuSceneIdentity,
+
     # Путь к Unity.exe. Пусто — версия из ProjectSettings/ProjectVersion.txt в Unity Hub.
     [string] $Unity = '',
 
@@ -98,8 +101,10 @@ function Get-UnityRunArguments($Run, [string] $Log, [string[]] $OtherRoots) {
         '-buildTarget', $Run.BuildTarget
     )
     if ($Run.Name -eq 'e2e') {
-        return $arguments + @('-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunBatch',
+        $arguments += @('-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunBatch',
             '-logFile', "`"$Log`"", '-buildRevision', $sharedRevision)
+        if ($GpuSceneIdentity) { $arguments += '-gpuSceneIdentity' }
+        return $arguments
     }
     $arguments += @(
         '-executeMethod', 'VrBattlegrounds.EditorTools.Release.GameBuilder.RunBatch',
@@ -110,6 +115,7 @@ function Get-UnityRunArguments($Run, [string] $Log, [string[]] $OtherRoots) {
     if ($Config -eq 'Test') {
         $arguments += @('-buildRevision', $sharedRevision)
     }
+    if ($GpuSceneIdentity) { $arguments += '-gpuSceneIdentity' }
     foreach ($extRoot in $OtherRoots) {
         $arguments += @('-compareBuildRoot', "`"$extRoot`"")
     }
@@ -515,6 +521,10 @@ try {
     $runs = @(Get-BuildRuns $Targets)
 } catch {
     Write-Host ('Профили: ' + $_.Exception.Message) -ForegroundColor Red
+    exit 2
+}
+if ($GpuSceneIdentity -and $Config -ne 'Test') {
+    Write-Host 'Профили: GpuSceneIdentity требует -Config Test.' -ForegroundColor Red
     exit 2
 }
 if ($Config -ne 'Test' -and @($runs | Where-Object { $_.Name -eq 'e2e' }).Count -gt 0) {

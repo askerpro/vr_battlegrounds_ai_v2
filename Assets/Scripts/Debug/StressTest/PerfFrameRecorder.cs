@@ -266,6 +266,17 @@ namespace VrBattlegrounds.DevTools.StressTest
         private int    _consecutiveSpikes;
         private const int MaxConsecutiveSpikes = 3;
         private bool   _disposed;
+        private IPerfFrameObserver _diagnosticObserver;
+
+        /// <summary>Ошибка отдельного диагностического канала; основной замер продолжается.</summary>
+        public string DiagnosticFailureReason { get; private set; }
+
+        /// <summary>Подключение только по явному запросу диагностического прогона.</summary>
+        public void SetDiagnosticObserver(IPerfFrameObserver observer)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(PerfFrameRecorder));
+            _diagnosticObserver = observer;
+        }
 
         public string Directory { get; }
         public string LogPath   { get; }
@@ -464,6 +475,21 @@ namespace VrBattlegrounds.DevTools.StressTest
             foreach (Metric m in _metrics)
             {
                 m.FrameValue = Read(m, hasTiming, uxrMs);
+            }
+
+            if (_diagnosticObserver != null)
+            {
+                var observation = new PerfRawFrame(Time.frameCount, Stopwatch.GetTimestamp(), Stopwatch.Frequency,
+                    Time.realtimeSinceStartupAsDouble, Time.unscaledDeltaTime * 1000f, uxrMs, hasTiming,
+                    hasTiming ? _timings[0].cpuFrameTime : 0d, hasTiming ? _timings[0].gpuFrameTime : 0d,
+                    _ovrValid, _ovrValid ? _ovr : default);
+                try { _diagnosticObserver.OnRawFrame(in observation); }
+                catch (Exception e)
+                {
+                    _diagnosticObserver = null;
+                    DiagnosticFailureReason = e.GetType().Name + ": " + e.Message;
+                    GameLog.Perf.Warning("[Perf] Диагностический наблюдатель отключён: " + DiagnosticFailureReason);
+                }
             }
 
             int frame = Time.frameCount - 1;
@@ -716,6 +742,7 @@ namespace VrBattlegrounds.DevTools.StressTest
         public void Dispose()
         {
             if (_disposed) return;
+            _diagnosticObserver = null;
 
             UxrManager.StageUpdating -= OnUxrStageUpdating;
             UxrManager.StageUpdated  -= OnUxrStageUpdated;

@@ -57,6 +57,225 @@ namespace VrBattlegrounds.Maps.Detail
 
         public SceneDetailProfile Profile => _profile;
 
+        /// <summary>Локальная версия собственных Apply/Restore для read-only диагностики.</summary>
+        public uint DiagnosticsRevision { get; private set; }
+
+        /// <summary>
+        /// Снимает данные без изменения сцены. Вызывать только на главном потоке Unity,
+        /// на границе измерительной фазы, не каждый кадр. Успех не подтверждает GPU draw.
+        /// </summary>
+        public bool TryCaptureDiagnostics(out SceneDetailDiagnosticsSnapshot snapshot, out string unavailableReason)
+        {
+            snapshot = null;
+            unavailableReason = null;
+            if (Current != this || !isActiveAndEnabled)
+            {
+                unavailableReason = "Применитель не является активным Current.";
+                return false;
+            }
+            if (_profile == null || _live == null || _lods == null || _renderers == null ||
+                _originalLods == null || _originalLods.Length != _lods.Length)
+            {
+                unavailableReason = "Профиль, записи или исходный кэш применителя не инициализированы либо несовместимы.";
+                return false;
+            }
+
+            var limitations = new List<string>
+            {
+                "original — кэш Awake до собственного Apply; соответствие edit-time authoring требует manifest.",
+                "enabled и effective не доказывают видимость, выбранный камерой LOD или GPU draw."
+            };
+            var groups = new SceneDetailDiagnosticsSnapshot.Group[_lods.Length];
+            bool complete = true;
+            for (int i = 0; i < _lods.Length; i++)
+            {
+                LodEntry entry = _lods[i];
+                LOD[] original = _originalLods[i];
+                LOD[] effective = entry.group != null ? entry.group.GetLODs() : new LOD[0];
+                SceneDetailProfile.PlaneRule rule = RuleAt(entry.distance);
+                int[] mapping = CaptureDiagnosticsMapping(original, effective, rule.lodSkip, out string reason);
+                if (entry.group == null) reason = "LODGroup отсутствует.";
+                var group = new SceneDetailDiagnosticsSnapshot.Group
+                {
+                    group = entry.group,
+                    arenaEdgeDistance = entry.distance,
+                    band = entry.distance >= Mathf.Max(_live.farStart, _live.midStart) ? "far" :
+                        entry.distance >= _live.midStart ? "mid" : "near",
+                    rule = rule,
+                    original = CaptureDiagnosticsLevels(original, "original группы " + i, limitations, ref complete),
+                    effective = CaptureDiagnosticsLevels(effective, "effective группы " + i, limitations, ref complete),
+                    effectiveToOriginal = mapping,
+                    mappingVerified = string.IsNullOrEmpty(reason),
+                    reason = reason
+                };
+                if (!group.mappingVerified)
+                {
+                    complete = false;
+                    limitations.Add("Группа " + i + ": " + reason);
+                    for (int level = 0; level < mapping.Length; level++) mapping[level] = -1;
+                }
+                groups[i] = group;
+            }
+
+            var renderers = new List<SceneDetailDiagnosticsSnapshot.RendererState>();
+            var represented = new HashSet<Renderer>();
+            // Повторные записи сохраняют каждую управляемую дистанцию/размер общего рендерера.
+            foreach (RendererEntry entry in _renderers)
+            {
+                SceneDetailDiagnosticsSnapshot.RendererState state = CaptureDiagnosticsRenderer(entry.renderer);
+                state.hasManagedDistance = true;
+                state.arenaEdgeDistance = entry.distance;
+                state.size = entry.size;
+                renderers.Add(state);
+                if (entry.renderer != null) represented.Add(entry.renderer);
+            }
+            foreach (KeyValuePair<Renderer, bool> pair in _baseEnabled)
+            {
+                if (pair.Key != null && !represented.Add(pair.Key)) continue;
+                renderers.Add(new SceneDetailDiagnosticsSnapshot.RendererState
+                {
+                    renderer = pair.Key,
+                    baselineKnown = true,
+                    baselineEnabled = pair.Value,
+                    currentEnabled = pair.Key != null && pair.Key.enabled
+                });
+            }
+            foreach (SceneDetailDiagnosticsSnapshot.Group group in groups)
+            {
+                CaptureDiagnosticsLevelRenderers(group.original, represented, renderers);
+                CaptureDiagnosticsLevelRenderers(group.effective, represented, renderers);
+            }
+            for (int i = 0; i < renderers.Count; i++)
+            {
+                if (renderers[i].renderer != null && renderers[i].baselineKnown) continue;
+                complete = false;
+                limitations.Add("Рендерер " + i + ": отсутствует объект или исходное enabled.");
+            }
+
+            var textureNames = new List<string>();
+            for (int band = 0; band < BandEdges.Length; band++) textureNames.Add(BandGroupPrefix + band);
+            foreach (string name in _baseTextureSettings.Keys)
+                if (!textureNames.Contains(name)) textureNames.Add(name);
+            var textureGroups = new SceneDetailDiagnosticsSnapshot.TextureGroupState[textureNames.Count];
+            for (int i = 0; i < textureNames.Count; i++)
+            {
+                string name = textureNames[i];
+                bool exists = TextureMipmapLimitGroups.HasGroup(name);
+                bool baselineKnown = _baseTextureSettings.TryGetValue(name, out TextureMipmapLimitSettings baseline);
+                textureGroups[i] = new SceneDetailDiagnosticsSnapshot.TextureGroupState
+                {
+                    name = name,
+                    exists = exists,
+                    baselineKnown = baselineKnown,
+                    baseline = baseline,
+                    current = exists ? QualitySettings.GetTextureMipmapLimitSettings(name) : default
+                };
+                if (exists && baselineKnown) continue;
+                complete = false;
+                limitations.Add("Группа текстур " + name + ": отсутствует группа или исходные настройки.");
+            }
+
+            var rendererStates = new SceneDetailDiagnosticsSnapshot.RendererState[renderers.Count];
+            renderers.CopyTo(rendererStates);
+            snapshot = new SceneDetailDiagnosticsSnapshot
+            {
+                scenePath = gameObject.scene.path,
+                sceneName = gameObject.scene.name,
+                applier = this,
+                profile = _profile,
+                observationFrame = Time.frameCount,
+                observationRealtime = Time.realtimeSinceStartupAsDouble,
+                midStart = _live.midStart,
+                farStart = _live.farStart,
+                mid = _live.mid,
+                far = _live.far,
+                globalTextureMipmapLimit = QualitySettings.globalTextureMipmapLimit,
+                lodBias = QualitySettings.lodBias,
+                groups = groups,
+                renderers = rendererStates,
+                textureGroups = textureGroups,
+                limitations = limitations.ToArray(),
+                complete = complete
+            };
+            return true;
+        }
+
+        private SceneDetailDiagnosticsSnapshot.RendererState CaptureDiagnosticsRenderer(Renderer renderer)
+        {
+            bool baseline = false;
+            bool known = renderer != null && _baseEnabled.TryGetValue(renderer, out baseline);
+            return new SceneDetailDiagnosticsSnapshot.RendererState
+            {
+                renderer = renderer,
+                baselineKnown = known,
+                baselineEnabled = baseline,
+                currentEnabled = renderer != null && renderer.enabled
+            };
+        }
+
+        private void CaptureDiagnosticsLevelRenderers(SceneDetailDiagnosticsSnapshot.Level[] levels,
+            HashSet<Renderer> represented, List<SceneDetailDiagnosticsSnapshot.RendererState> renderers)
+        {
+            foreach (SceneDetailDiagnosticsSnapshot.Level level in levels)
+                foreach (Renderer renderer in level.renderers)
+                    if (renderer != null && represented.Add(renderer)) renderers.Add(CaptureDiagnosticsRenderer(renderer));
+        }
+
+        private static SceneDetailDiagnosticsSnapshot.Level[] CaptureDiagnosticsLevels(LOD[] source, string label,
+            List<string> limitations, ref bool complete)
+        {
+            var levels = new SceneDetailDiagnosticsSnapshot.Level[source != null ? source.Length : 0];
+            if (source == null)
+            {
+                complete = false;
+                limitations.Add(label + ": отсутствует массив уровней.");
+                return levels;
+            }
+            for (int i = 0; i < source.Length; i++)
+            {
+                Renderer[] sourceRenderers = source[i].renderers;
+                var renderers = new Renderer[sourceRenderers != null ? sourceRenderers.Length : 0];
+                if (sourceRenderers != null) Array.Copy(sourceRenderers, renderers, renderers.Length);
+                if (sourceRenderers == null || Array.Exists(renderers, renderer => renderer == null))
+                {
+                    complete = false;
+                    limitations.Add(label + ", уровень " + i + ": отсутствуют записи рендереров.");
+                }
+                levels[i] = new SceneDetailDiagnosticsSnapshot.Level
+                {
+                    screenRelativeTransitionHeight = source[i].screenRelativeTransitionHeight,
+                    fadeTransitionWidth = source[i].fadeTransitionWidth,
+                    renderers = renderers
+                };
+            }
+            return levels;
+        }
+
+        private static int[] CaptureDiagnosticsMapping(LOD[] original, LOD[] effective, int lodSkip, out string reason)
+        {
+            var mapping = new int[effective.Length];
+            for (int i = 0; i < mapping.Length; i++) mapping[i] = -1;
+            reason = "Исходный кэш уровней отсутствует или пуст.";
+            if (original == null || original.Length == 0) return mapping;
+            int skip = Mathf.Clamp(lodSkip, 0, original.Length - 1);
+            reason = "Текущий список LOD не соответствует исходному кэшу и правилу пропуска.";
+            if (effective.Length != original.Length - skip) return mapping;
+            for (int i = 0; i < effective.Length; i++)
+            {
+                LOD current = effective[i];
+                LOD baseline = original[i + skip];
+                if (current.screenRelativeTransitionHeight != baseline.screenRelativeTransitionHeight ||
+                    current.fadeTransitionWidth != baseline.fadeTransitionWidth || current.renderers == null ||
+                    baseline.renderers == null || current.renderers.Length != baseline.renderers.Length) return mapping;
+                for (int renderer = 0; renderer < current.renderers.Length; renderer++)
+                    if (current.renderers[renderer] == null || baseline.renderers[renderer] == null ||
+                        current.renderers[renderer] != baseline.renderers[renderer]) return mapping;
+            }
+            for (int i = 0; i < mapping.Length; i++) mapping[i] = i + skip;
+            reason = null;
+            return mapping;
+        }
+
         public void SetData(SceneDetailProfile profile, LodEntry[] lods, RendererEntry[] renderers)
         {
             _profile = profile;
@@ -159,6 +378,7 @@ namespace VrBattlegrounds.Maps.Detail
 
             for (int band = 0; band < BandEdges.Length; band++)
                 SetBandBias(band, RuleAt(BandEdges[band]).textureBias);
+            DiagnosticsRevision++;
         }
 
         private void Restore()
@@ -170,6 +390,7 @@ namespace VrBattlegrounds.Maps.Detail
             foreach (KeyValuePair<string, TextureMipmapLimitSettings> pair in _baseTextureSettings)
                 if (TextureMipmapLimitGroups.HasGroup(pair.Key))
                     QualitySettings.SetTextureMipmapLimitSettings(pair.Key, pair.Value);
+            DiagnosticsRevision++;
         }
 
         private void Remember(Renderer renderer)

@@ -2,11 +2,72 @@
   "task_id": "scene-detail",
   "owner": "level-design",
   "client": "codex",
-  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
-  "base_sha": "26129282b420936cf1e7a6a741383e09cf5cf390",
+  "worktree": "F:/CodexWorktrees/71af/Vr_Battlegrounds_ai",
+  "base_sha": "48d38b9b2885b771f9cc961b4b640eaa7f74ca9e",
   "doc_path": "tasks/scene-detail/Readme.md",
-  "title": "Профиль детализации сцены: средний и дальний планы, планшет, правила на префаб",
+  "title": "Детальная GPU-диагностика: машиночитаемый анализ сцены и Windows/Quest A/B",
   "continuation": {
+    "updated": "2026-10-20",
+    "status": "implementation_started_user_authorized",
+    "stage": "gpu-quest3-lod-evidence",
+    "implementer": "principal_current_checkout_claude_session_341520_route_epoch15",
+    "do_not_execute_tool_stages_here": false,
+    "plan": "tasks/scene-detail/gpu-diagnostics-completion-plan.md",
+    "ledger": "tasks/scene-detail/changelog/2026-10-18-execution.md",
+    "output": "machine_readable_json_jsonl_csv",
+    "html_required": false,
+    "source_report_status": "technically_verified_pending_user_acceptance",
+    "compile_input_sha": "9cc517aeaff8d42c50e4794c4e41ae20a603feda",
+    "compile_ticket": 827,
+    "experts": "final_review_only",
+    "runtime_windows_quest_validation": "windows_single_view_pilot_green_full_views_focus_rejected_quest_pending",
+    "windows_build_source": "d5db59eaf3f2e2f60994e279ccf20f7dba5ca495",
+    "windows_build_status": "unity_wrapper_exit0_errors0_warnings8_identity_discovery_green_paired_renderdoc_green",
+    "identity_compile_status": "fixed_build_runtime14802refs_unresolved51_same_scene_sha_prefab_fold_candidates_not_exact",
+    "discovery_bundle": "tasks/scene-detail/reports/windows-discovery-A-r2-20261019",
+    "windows_pilot_comparison": "tasks/scene-detail/reports/windows-pilot-ab-20261019/comparison.json",
+    "quest3_connection": "adb_2G0YC1ZFB203VH_link_closed_with_user_permission_detailed_off_verified_quest3_vulkan72hz_ffr075_cpu4_gpu2",
+    "build_root_preservation_request": 9822,
+    "worker_recovery_request": 9857,
+    "worker_recovery_response": 9872,
+    "renderdoc_status": "native_r11_paired_capture_export_exit0_195of660_asset_candidates_geometry_delta_verified_gpu_benefit_unknown",
+    "renderdoc_export": "tasks/scene-detail/reports/windows-identity-export-A-20261019",
+    "windows_identity_discovery": "Tools/e2e/results/20261019-035302-7d02819994144083bad12c62328ee40d",
+    "windows_renderdoc_run": "Tools/e2e/results/20261019-035737-17f33356e19d4c168cd5cb556756e1f3",
+    "windows_renderdoc_run_b": "Tools/e2e/results/20261019-035905-875859f3381a457d963ec07c4c7f7676",
+    "next_build_preservation_request": 9911,
+    "build_preservation_response": 9917,
+    "replay_comparison": "tasks/scene-detail/reports/windows-identity-replay-ab-r3-20261019/comparison.json",
+    "replay_join_a": "tasks/scene-detail/reports/windows-identity-joins-A-r4-20261019",
+    "replay_join_b": "tasks/scene-detail/reports/windows-identity-joins-B-r4-20261019",
+    "replay_audit": "noninstanced_multiplier_fixed_snapshot_consumed_bytes_hashed_actual_delta_minus38358_no_gpu_benefit_claim",
+    "quest_build_status": "d5db59ea_unity_wrapper_exit0_errors0_warnings134_apk_installed_sha256_2ce111192fef20bf9217d2b96ab9e777c3267033c024137da7ffb5a9af077abf",
+    "quest_discovery": "A_workload_focus_logs_green_harvest_maxpath_inconclusive_11raw_files_recovered_lifecycle_valid_B_running_after_flat_pull_fix",
+    "quest_retry_bundle": "tasks/scene-detail/reports/quest3-discovery-A-r2-20261019",
+    "quest_pending_user_decision": null,
+    "quest_link_permission": "user_explicitly_authorized_close_link_and_continue_quest_measurements_20261019",
+    "quest_discovery_a_result": "Tools/e2e/results/20261019-051853-quest-perf-stress-223b76ba4e1948cf98c62ff909fe366c",
+    "quest_discovery_a_recovered": "tasks/scene-detail/reports/qraw-051853-flat",
+    "quest_fingerprint_a": "c7571afb21492d918fc2fb37260a0a865c2d9e72b67b7d1026154803689e3849",
+    "runtime_applicability": "windows_mono_explicit_na_preserved_by_analyzer_no_quest_relaxation",
+    "source_kind_proof": "raw_builder_unknown_dirty_generated_lock_archived_technical_checkpoint_ref_recorded_separate_proof_pending",
+    "quest_normal_series": "center_north_AA_plus_3_counterbalanced_AB_all_green_p50_9p93ms_no_lod_gain_late_shift_10p82_cause_unknown",
+    "quest_full_views": "8_views_A_B_green_p50_A_4p55_to_10p93ms_no_systematic_gain",
+    "quest_stage_traces": "A_B_center_north_green_detailed_restored_off_main_pass_excl_preempt_10p353_vs_10p363_render_8p4_binning_1p4_fragment_bound",
+    "quest_stage_comparison": "tasks/scene-detail/reports/q3-stage-compare-20261019/comparison.json",
+    "next": "user_decide_production_planar_shader_for_S_VPWorldAligned_materials_and_floor_lighting_fix_then_next_targets_cliffs_firs_lit",
+    "quest_draw_discovery": "ovrgpuprofiler_x_t_no_drawcall_data_detailed_restored_off_tasks_scene-detail_reports_q3-draw-discovery-A-20261019",
+    "quest_per_draw_path": "meta_renderdoc_injection_capture_pil_session_verified_r7_but_startup_frame_0_draws",
+    "meta_renderdoc_adapter": "Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py_review_approved_r2_capture_works_restore_verified",
+    "meta_runner_integration": "run_queste2e_meta_params_review_approved_not_run_on_device_yet",
+    "quest_sleep_rule": "user_decision_20261020_keycode_sleep_after_tests_runner_and_adapter_docs_testing_md",
+    "quest_connection": "adb_wifi_192.168.1.234:5555_tcpip_until_reboot_sleep_behaviour_unverified",
+    "quest_per_draw_result": "tasks/scene-detail/reports/q3-meta-lobby-A-20261020/ranking.json_floor11_skybox8_cubeLit10_fir10_cliffs14_tower5_mirror5",
+    "render_diag": "PerfRenderDiagnosticControl_checkpoint_c03777aa_compile_pass_ticket856_build_pending_maintainer_root_save",
+    "render_diag_ab": "quest3_da78253b_14of14_green_floor_unlit_minus1p86ms_floor_basic_minus0p71ms_skybox_minus0p05ms_aa_0p01ms",
+    "render_diag_ab_b": "quest3_33406814_14of14_green_planar_lit_minus1p87ms_planar_unlit_minus1p9ms_basic_minus0p71ms_aa_0p006"
+  },
+  "legacy_continuation_2026_10_15": {
     "updated": "2026-10-15",
     "stage": "performance-handoff",
     "status": "waiting_for_performance_tools",
@@ -63,7 +124,13 @@
     "coordination": "Performance7220 static proof. После userauthorization UI7983 подтвердил Перф-анализ/GPU, полную замену legacy на Build/Snapshot и порядок core→UI. Pending718 отменён до аренды; MenuDebug остаётся UI-owned, grant4 отозван",
     "provider_checkpoint": "Accepted core74bd42f5760b5e3f04d2e886a5685a2f52ff3d1d опубликованFF04fc→74bd, ls-remoteподтверждён, localdevзеркалообновлено.154product+13taskfiles; oldWIP/foreigndocsнепубликовались, mainHEAD/indexсохранены. request-base719 подан; UI7993уведомлён. Отчёты reports/accepted-release/",
     "ui_placement": "Перф-анализ / GPU; Build/Snapshot без изменений, MenuDebug UI-owned",
-    "lobby_records": { "lod_groups": 690, "small_renderers": 361, "textures": 252, "protected_textures": 112, "migrated_texture_meta": 140 }
+    "lobby_records": {
+      "lod_groups": 690,
+      "small_renderers": 361,
+      "textures": 252,
+      "protected_textures": 112,
+      "migrated_texture_meta": 140
+    }
   },
   "stages": [
     {
@@ -346,6 +413,125 @@
           "task": "scene-detail",
           "stage": "lobby-apply",
           "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-source-report",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Tools/Perf/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/**",
+        "Assets/Editor/VR_Battlegrounds/Performance.meta",
+        "Assets/Scripts/Debug/StressTest/**",
+        "Assets/Scripts/Maps/Detail/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "gpu-runtime-integration",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Assets/Scripts/Debug/E2E/**",
+        "Assets/Scripts/Debug/StressTest/**",
+        "Assets/Scripts/Maps/Detail/SceneDetailApplier.cs",
+        "Tools/Perf/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-source-report",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-identity-normalization",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/**",
+        "Assets/Scripts/Debug/StressTest/**",
+        "Tools/Perf/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-runtime-integration",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-windows-evidence",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Tools/Perf/**",
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/E2ERenderDoc.psm1",
+        "Tools/e2e/.gitattributes",
+        "Tools/release/Build-Game.ps1",
+        "Assets/Scripts/Debug/E2E/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-identity-normalization",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-quest3-lod-evidence",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Tools/Perf/**",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Assets/Scripts/Debug/E2E/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-windows-evidence",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-attribution-calibration",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Tools/Perf/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-quest3-lod-evidence",
+          "state": "verified"
+        }
+      ],
+      "needs": []
+    },
+    {
+      "id": "gpu-scene-acceptance",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Art/Lobby/**",
+        "Assets/Scripts/Maps/Detail/**",
+        "Tools/Perf/**"
+      ],
+      "after": [
+        {
+          "task": "scene-detail",
+          "stage": "gpu-attribution-calibration",
+          "state": "verified"
         }
       ],
       "needs": []

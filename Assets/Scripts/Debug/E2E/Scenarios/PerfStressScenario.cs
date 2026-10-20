@@ -128,7 +128,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                                     out IReadOnlyList<E2EViewPoint> views, out int plannedPhases, out float planSeconds)
         {
             int skinCount = StressTestServer.CollectAvatarPrefabs().Count;
-            string error = StressTestArgs.Parse(context.Args, skinCount, out mode, out config);
+            string error = StressTestArgs.Parse(PerfSceneDetailRunControl.ScenarioArgs(context), skinCount, out mode, out config);
+            if (error == null) error = PerfSceneDetailRunControl.Validate(context);
+            if (error == null) error = PerfRenderDiagnosticControl.Validate(context);
             plannedPhases = 0;
             planSeconds = 0f;
             views = null;
@@ -233,6 +235,18 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunClient(E2EContext context, E2EResult result)
         {
+            // Legacy E2E не включает новый канал и не несёт его overhead.
+            if (context.Diagnostics == null)
+            {
+                yield return RunClientCore(context, result, null);
+                yield break;
+            }
+            using (var diagnostics = new PerfStressDiagnosticAdapter(context))
+                yield return RunClientCore(context, result, diagnostics);
+        }
+
+        private IEnumerator RunClientCore(E2EContext context, E2EResult result, PerfStressDiagnosticAdapter diagnostics)
+        {
             result.Declare(CheckArgs, CheckTimeout, CheckJoined, CheckWarmup, CheckStart, CheckCompleted, CheckReport, CheckFocus);
 
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий perf-stress");
@@ -282,6 +296,20 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 result.Summary = Summarize(result, conditions, null);
                 yield break;
+            }
+
+            if (diagnostics != null)
+            {
+                var mapReady = new E2EWaitOutcome();
+                yield return E2EWait.Until(mapReady, "canonical MapRun и локальный bootstrap", Remaining(startDeadline),
+                    () => PerfStressDiagnosticAdapter.MapReady(context, out _, out _), DescribeMode);
+                if (!mapReady.Succeeded)
+                {
+                    result.Summary = mapReady.Diagnosis;
+                    yield break;
+                }
+                // Тяжёлый detached snapshot снимается до разгона и замеров, IO — после остановки.
+                diagnostics.Prepare();
             }
 
             // ── старт: отказ сервера (гонка репликации разминки/аватара) повторяем до срока старта ──
@@ -335,6 +363,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 {
                     focus.Sample();
                     tour?.Step(StressTestClientSession.Current);
+                    if (diagnostics != null)
+                    {
+                        E2EViewPoint target = null;
+                        bool settled = false;
+                        if (tour != null) tour.TryGetMeasuredTarget(StressTestClientSession.Current?.PhaseName, out target, out settled);
+                        diagnostics.Step(target, settled);
+                    }
                     yield return null;
                 }
             }
@@ -595,6 +630,16 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 _outcome = null;
             }
 
+            public void TryGetMeasuredTarget(string phase, out E2EViewPoint point, out bool settled)
+            {
+                point = null; settled = false;
+                foreach (Record record in _records)
+                {
+                    if (record.Target.MeasuredPhase != phase) continue;
+                    point = record.Target.Point; settled = record.View.ok;
+                }
+            }
+
             /// <summary>Все переносы плана выполнены вовремя. Деталь — по точке: без кукол и с куклами, высота глаз, тангаж.</summary>
             public bool AllPassed(out string detail)
             {
@@ -689,6 +734,21 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 result.Summary = Summarize(result, conditions, null);
                 yield break;
+            }
+
+            if (context.Diagnostics != null)
+            {
+                if (!SceneManager.GetSceneByPath(context.DiagnosticInput.RequestedSceneId).isLoaded && MapLoader.Instance != null &&
+                    !MapLoader.Instance.IsLoading)
+                    MapLoader.Instance.LoadMap(Path.GetFileNameWithoutExtension(context.DiagnosticInput.RequestedSceneId));
+                var mapReady = new E2EWaitOutcome();
+                yield return E2EWait.Until(mapReady, "сервер загрузил canonical MapRun", Remaining(startDeadline),
+                    () => PerfStressDiagnosticAdapter.MapReady(context, out _, out _), DescribeServer);
+                if (!mapReady.Succeeded)
+                {
+                    result.Summary = mapReady.Diagnosis;
+                    yield break;
+                }
             }
 
             var started = new E2EWaitOutcome();

@@ -395,6 +395,10 @@ namespace VrBattlegrounds.DevTools.E2E
     {
         internal readonly string RunId, StageRoot, SpecHash, BuildHash, RequestedSceneId, WorkloadId,
             RequestedFingerprint, ViewsPath;
+        internal string Variant => (string)_spec["variant"];
+        internal string SourceSha => (string)_spec["sourceSha"];
+        internal string Mode => (string)_spec["mode"];
+        internal bool DiscoveryOnly => _spec["quality"]["discoveryOnly"]?.Value<bool>() ?? false;
         internal readonly bool HeadPoseEnabled;
         internal readonly float HeadPoseEye;
         private readonly JObject _spec;
@@ -470,12 +474,23 @@ namespace VrBattlegrounds.DevTools.E2E
                 if (DiagnosticJson.Integer(windows, "width", 1) > int.MaxValue || DiagnosticJson.Integer(windows, "height", 1) > int.MaxValue ||
                     windows["windowed"].Type != JTokenType.Boolean) throw new FormatException("Неверный windows.");
                 CheckWindow(args, windows);
-                JObject quality = DiagnosticJson.Object(spec, "quality"); DiagnosticJson.Keys(quality, "profileId", "requestedFingerprint");
+                JObject quality = DiagnosticJson.Object(spec, "quality");
+                bool qualityDiscovery = false;
+                if (quality.Property("discoveryOnly") != null)
+                {
+                    DiagnosticJson.Keys(quality, "profileId", "requestedFingerprint", "discoveryOnly");
+                    if (quality["discoveryOnly"].Type != JTokenType.Boolean) throw new FormatException("Неверный discoveryOnly.");
+                    qualityDiscovery = quality["discoveryOnly"].Value<bool>();
+                }
+                else DiagnosticJson.Keys(quality, "profileId", "requestedFingerprint");
                 DiagnosticJson.String(quality, "profileId");
-                if (!DiagnosticJson.Hash(DiagnosticJson.String(quality, "requestedFingerprint"))) throw new FormatException("Неверный requestedFingerprint.");
+                if (qualityDiscovery ? quality["requestedFingerprint"].Type != JTokenType.Null :
+                    !DiagnosticJson.Hash(DiagnosticJson.String(quality, "requestedFingerprint"))) throw new FormatException("Неверный requestedFingerprint.");
                 JObject capture = DiagnosticJson.Object(spec, "capture"); DiagnosticJson.Keys(capture, "kind", "minimumWindowSeconds");
                 string kind = DiagnosticJson.String(capture, "kind");
                 if (kind != "none" && kind != "stage" && kind != "draw") throw new FormatException("Неверный capture kind.");
+                if (qualityDiscovery && (kind != "none" || (string)spec["mode"] != "live"))
+                    throw new FormatException("Discovery требует live/capture none.");
                 DiagnosticJson.Number(capture, "minimumWindowSeconds", 0);
                 string viewsPath = null;
                 if (spec["views"].Type != JTokenType.Null)
@@ -631,6 +646,9 @@ namespace VrBattlegrounds.DevTools.E2E
         public long TickFrequency => Stopwatch.Frequency;
         public bool IsActive => _active && !_ioFailed;
 
+        /// <summary>Каталог этого процесса в уже зарегистрированном diagnostic artifact.</summary>
+        internal string ArtifactDirectory => _directory;
+
         private readonly E2EDiagnosticInput _input;
         private readonly E2EResult _result;
         private readonly int _threadId;
@@ -767,6 +785,7 @@ namespace VrBattlegrounds.DevTools.E2E
         public DiagnosticReportResult ReportWorkloadReady(WorkloadReadyObservation value)
         {
             if (!MainThread) return Rejected("wrong-thread");
+            if (_input.DiscoveryOnly) return Reject("missing-evidence: discovery-only session cannot publish workload.ready");
             if (value == null || !ReadyId(value.ReadyId) || !DiagnosticJson.Text(value.PhaseId) || value.PhaseGeneration < 1 ||
                 !DiagnosticJson.Hash(value.ActualFingerprint) || !DiagnosticJson.Finite(value.RemainingWindowSeconds) || value.RemainingWindowSeconds <= 0 ||
                 !OwnEvent(value.ConditionsEventId) || !OwnEvent(value.ViewEventId)) return Reject("invalid-input: ready");
@@ -787,7 +806,9 @@ namespace VrBattlegrounds.DevTools.E2E
             if (_view.Stamp.MonotonicTicks < _phase.Stamp.MonotonicTicks) return Reject("missing-evidence: view predates measured begin");
             foreach (string key in RequiredConditions)
                 if (!_conditions.Values.TryGetValue(key, out DiagnosticConditionValue condition) || condition.Value == null)
-                    return Reject("unknown-conditions: " + key);
+                {
+                    if (!WindowsNotApplicable(key, condition)) return Reject("unknown-conditions: " + key);
+                }
             if (!ConditionEquals("phaseId", value.PhaseId) || !ConditionEquals("viewId", _view.ViewId) || !ConditionEquals("role", Role) ||
                 !ConditionEquals("sceneId", _conditions.ActualSceneId) || !ConditionEquals("workloadId", _input.WorkloadId) ||
                 _conditions.ActualSceneId != _input.RequestedSceneId || !SceneLoaded(_conditions.ActualSceneId) ||
@@ -911,6 +932,17 @@ namespace VrBattlegrounds.DevTools.E2E
         private static bool Dimensions(IReadOnlyDictionary<string, object> value) => value.TryGetValue("width", out object width) && width is long w && w > 0 &&
             value.TryGetValue("height", out object height) && height is long h && h > 0;
         private bool ConditionEquals(string key, string value) => _conditions.Values.TryGetValue(key, out DiagnosticConditionValue condition) && Equals(condition.Value, value);
+
+        private bool WindowsNotApplicable(string key, DiagnosticConditionValue condition)
+        {
+            // Политика применяется по фактическому runtime, а не по заявлению caller.
+            if (key != "ffr" && key != "cpuLevel" && key != "gpuLevel") return false;
+            return Application.platform == RuntimePlatform.WindowsPlayer && !Application.isBatchMode &&
+                !UnityEngine.XR.XRSettings.enabled && Role.StartsWith("client-", StringComparison.Ordinal) &&
+                SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null &&
+                ConditionEquals("applicabilityPolicy", "vrb-gpu-platform-v1") &&
+                condition.Value == null && condition.Reason == "not-applicable: rendered Windows client with XR disabled";
+        }
         private static bool SameConditions(ConditionsObservation left, ConditionsObservation right) => DiagnosticJson.Encode(left.Values) == DiagnosticJson.Encode(right.Values);
         private bool OwnEvent(string value) => value != null && value.StartsWith(ProcessInstanceId + ":", StringComparison.Ordinal) &&
             long.TryParse(value.Substring(ProcessInstanceId.Length + 1), NumberStyles.None, CultureInfo.InvariantCulture, out long sequence) && sequence > 0;

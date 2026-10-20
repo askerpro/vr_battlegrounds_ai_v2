@@ -157,10 +157,21 @@ function Read-E2ERunSpec([string] $Path) {
     Assert-E2EFields $spec.windows @('width','height','windowed')
     foreach ($n in @('width','height')) { Assert-E2ENumber $spec.windows.$n $n 1 -Integer; if ($spec.windows.$n -gt [int]::MaxValue) { throw 'window dimension overflow' } }
     if ($spec.windows.windowed -isnot [bool]) { throw 'windowed должен быть bool' }
-    Assert-E2EFields $spec.quality @('profileId','requestedFingerprint')
-    foreach ($n in @('profileId','requestedFingerprint')) { if ($spec.quality.$n -isnot [string] -or [string]::IsNullOrWhiteSpace($spec.quality.$n)) { throw ('quality: неверный ' + $n) } }
+    Assert-E2EFields $spec.quality @('profileId','requestedFingerprint') @('discoveryOnly')
+    if ($spec.quality.profileId -isnot [string] -or [string]::IsNullOrWhiteSpace($spec.quality.profileId)) { throw 'quality: неверный profileId' }
+    $qualityDiscovery = $false
+    if ($null -ne $spec.quality.PSObject.Properties['discoveryOnly']) {
+        if ($spec.quality.discoveryOnly -isnot [bool]) { throw 'quality: неверный discoveryOnly' }
+        $qualityDiscovery = $spec.quality.discoveryOnly
+    }
+    if ($qualityDiscovery) {
+        if ($null -ne $spec.quality.requestedFingerprint) { throw 'discovery требует requestedFingerprint=null' }
+    } elseif ($spec.quality.requestedFingerprint -isnot [string] -or $spec.quality.requestedFingerprint -cnotmatch '^[0-9a-fA-F]{64}$') {
+        throw 'quality: неверный requestedFingerprint'
+    }
     Assert-E2EFields $spec.capture @('kind','minimumWindowSeconds')
     if ($spec.capture.kind -cnotin @('none','stage','draw')) { throw 'неизвестный capture kind' }
+    if ($qualityDiscovery -and ($spec.capture.kind -cne 'none' -or $spec.mode -cne 'live')) { throw 'discovery требует live/capture none' }
     Assert-E2ENumber $spec.capture.minimumWindowSeconds 'minimumWindowSeconds' 0
     $viewsPath = $null; $viewsInfo = $null
     if ($null -ne $spec.views) {

@@ -10,7 +10,7 @@
 # Дирижёр — единственный, кто работает с устройством через adb (выбор устройства, установка APK,
 # пробуждение и датчик приближения, am start, ожидание, force-stop, logcat, pull). Настройки шлема
 # меняются только на время прогона: KEYCODE_WAKEUP и prox_close перед стартом, automation_disable
-# в finally. Сам скрипт ничего не меняет в брандмауэре Windows: при отсутствии правила он отказывает
+# и KEYCODE_SLEEP (шлем обратно в сон, чтобы не разряжался) в finally. Сам скрипт ничего не меняет в брандмауэре Windows: при отсутствии правила он отказывает
 # и печатает команду, которую выполняет человек с правами администратора.
 #
 # Гасит дирижёр только то, что запустил сам: свой серверный PID и его потомков (как Run-E2E.ps1),
@@ -130,7 +130,21 @@ param(
 
     # Вердикт по логам: enforce — неожиданные ошибки в логах делают прогон RED (код 1); report — только отчёт.
     [ValidateSet('enforce', 'report')]
-    [string]   $LogVerdict = 'enforce'
+    [string]   $LogVerdict = 'enforce',
+
+    # Per-draw GPU-счётчики (instrumented): запуск приложения через Meta RenderDoc
+    # (Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py) вместо am start.
+    # Адаптер снимает снимок шлема, меняет его на время прогона и в finally откатывает со сверкой.
+    # Требует явного разрешения пользователя на изменения шлема. Перф-метрики такого прогона недействительны.
+    [string]   $MetaRenderDocCmd = '',
+    # Новая пустая папка журнала/кадра адаптера.
+    [string]   $MetaRenderDocOut = '',
+    # Точное имя фазы perf-stress, после начала которой снимается один кадр (например «база: center-north»).
+    [string]   $MetaCapturePhase = '',
+
+    # Не усыплять шлем в конце: только для серии прогонов, где вызывающий сам усыпляет его после
+    # последнего прогона (во сне Wi-Fi adb может пропасть до следующего прогона).
+    [switch]   $KeepAwake
 )
 
 $ErrorActionPreference = 'Stop'
@@ -1212,6 +1226,60 @@ if (-not $firewall.Ok) {
         ('  netsh advfirewall firewall add rule name="VR Battlegrounds e2e server" dir=in action=allow protocol=UDP program="' + $ServerPlayer + '" profile=any enable=yes'))
 }
 
+# ── Meta RenderDoc (per-draw, instrumented) ──
+$metaAdapter = $null
+if ($MetaRenderDocCmd -ne '' -or $MetaRenderDocOut -ne '' -or $MetaCapturePhase -ne '') {
+    if ($MetaRenderDocCmd -eq '' -or $MetaRenderDocOut -eq '') { Stop-Refused '-MetaRenderDocCmd и -MetaRenderDocOut задаются вместе' }
+    if (-not (Test-Path -LiteralPath $MetaRenderDocCmd -PathType Leaf)) { Stop-Refused ('renderdoccmd не найден: ' + $MetaRenderDocCmd) }
+    $MetaRenderDocCmd = (Resolve-Path -LiteralPath $MetaRenderDocCmd).Path
+    if ((Test-Path -LiteralPath $MetaRenderDocOut) -and @(Get-ChildItem -LiteralPath $MetaRenderDocOut -Force).Count -gt 0) {
+        Stop-Refused ('папка -MetaRenderDocOut должна быть новой или пустой: ' + $MetaRenderDocOut)
+    }
+    $MetaRenderDocOut = [IO.Path]::GetFullPath($MetaRenderDocOut)
+    $metaAdapter = Join-Path $PSScriptRoot '..\Perf\gpu_diagnostics\capture_adapters\meta_renderdoc_quest.py'
+    if (-not (Test-Path -LiteralPath $metaAdapter -PathType Leaf)) { Stop-Refused ('адаптер Meta RenderDoc не найден: ' + $metaAdapter) }
+    $pyCheck = Invoke-Tool 'python' @('-c', 'import sys; print(sys.version_info[0])') 30
+    if ($pyCheck.ExitCode -ne 0 -or $pyCheck.Out.Trim() -ne '3') { Stop-Refused 'для -MetaRenderDocCmd нужен рабочий python 3 в PATH' }
+    # renderdoccmd ищет adb через SDK root: тот же adb, что у дирижёра, иначе возможен kill-server.
+    if ((Split-Path -Leaf (Split-Path -Parent $AdbPath)) -ne 'platform-tools') {
+        Stop-Refused ('для -MetaRenderDocCmd adb должен лежать в <sdk>/platform-tools: ' + $AdbPath)
+    }
+}
+
+function Get-MetaAdapterArgs([string] $PhaseName) {
+    return @('-B', '-X', 'utf8', $metaAdapter, $PhaseName, '--renderdoccmd', $MetaRenderDocCmd, '--adb', $AdbPath,
+             '--serial', $Serial, '--package', $Package, '--activity', $Activity, '--out', $MetaRenderDocOut)
+}
+
+function Start-MetaPhase([string[]] $Arguments, [string] $Name) {
+    $quoted = @()
+    foreach ($a in $Arguments) { $quoted += (ConvertTo-CommandLineArg $a) }
+    $proc = Start-Process -FilePath 'python' -ArgumentList ($quoted -join ' ') -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput (Join-Path $runDir ('meta-' + $Name + '.out.txt')) `
+        -RedirectStandardError (Join-Path $runDir ('meta-' + $Name + '.err.txt'))
+    # PS 5.1: без открытого handle ExitCode быстро завершившегося процесса бывает $null.
+    $null = $proc.Handle
+    return $proc
+}
+
+# Дождаться фазы адаптера; по таймауту убить её дерево, кроме adb (adb-сервер общий для всех клиентов).
+function Wait-MetaPhase($Proc, [int] $Seconds, [string] $Name) {
+    if ($null -eq $Proc) { return $null }
+    if (-not $Proc.WaitForExit($Seconds * 1000)) {
+        $tree = @(Get-DescendantProcessIds @([int] $Proc.Id) $runStartedAt)
+        try { Stop-Process -Id $Proc.Id -Force -ErrorAction Stop } catch {}
+        foreach ($childId in $tree) {
+            try {
+                $child = Get-Process -Id $childId -ErrorAction Stop
+                if ($child.ProcessName -ne 'adb') { Stop-Process -Id $childId -Force -ErrorAction Stop }
+            } catch {}
+        }
+        Write-Host ('  Meta ' + $Name + ' остановлен по таймауту ' + $Seconds + ' с') -ForegroundColor Yellow
+        return $null
+    }
+    return $Proc.ExitCode
+}
+
 # ══════════════════════════════════════════════════════════════════════════
 #  2. Прогон: с этого места run.json пишется всегда (finally)
 # ══════════════════════════════════════════════════════════════════════════
@@ -1222,7 +1290,14 @@ $runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $runId)
 if ($null -ne $diagnosticInput) { $runDir = Join-Path $RepoRoot ('Tools/e2e/results/' + $runId + '-' + [guid]::NewGuid().ToString('N')) }
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 
-$deviceFilesDir = '/sdcard/Android/data/' + $Package + '/files'
+# Unity возвращает канонический external files path; /sdcard является Android symlink.
+# Проверка persistentDataPath в Player остаётся строгой, alias разрешает отправитель.
+$storageProbe = Invoke-AdbShell @('readlink', '-f', '/sdcard') 15
+$deviceStorage = $storageProbe.Out.Trim().TrimEnd('/')
+if ($storageProbe.ExitCode -ne 0 -or $storageProbe.TimedOut -or $deviceStorage -cnotin @('/storage/emulated/0', '/storage/self/primary')) {
+    Stop-Refused ('Не подтверждён канонический external storage: ' + $storageProbe.Out + ' ' + $storageProbe.Err)
+}
+$deviceFilesDir = $deviceStorage + '/Android/data/' + $Package + '/files'
 $deviceResult = $deviceFilesDir + '/e2e/' + $runId + '/client-1.json'
 $serverResult = Join-Path $runDir 'server.json'
 $serverLog = Join-Path $runDir 'server.log'
@@ -1388,6 +1463,10 @@ $logcatProc = $null
 $appPid = $null
 $failure = $null
 $deviceStarted = $false
+$metaLaunched = $false
+$metaCaptureProc = $null
+$metaLaunchProc = $null
+$deviceWoken = $false
 $runStartedAt = (Get-Date).AddSeconds(-1)
 $exitCode = 2
 $pairRevision = $null
@@ -1628,6 +1707,7 @@ try {
     # ── шлем ──
     Write-Section 'Готовлю шлем'
     $manifest.batteryBefore = Get-Battery
+    $deviceWoken = $true
     [void](Invoke-AdbShell @('input', 'keyevent', 'KEYCODE_WAKEUP') 20)
     [void](Invoke-AdbShell @('am', 'broadcast', '-a', 'com.oculus.vrpowermanager.prox_close') 20)
     [void](Invoke-Adb @('logcat', '-c') 20)
@@ -1642,6 +1722,26 @@ try {
     Write-Host ('  am start -n ' + $component)
     Write-Host ('  unity: ' + $unityArgs)
     $deviceStarted = $true
+    if ($null -ne $metaAdapter) {
+        # Запуск с инъекцией RenderDoc: renderdoccmd adb-launch делает am start -S с теми же Unity-аргументами.
+        Write-Host '  через Meta RenderDoc (adb-launch --intent-args)'
+        $manifest.launch.device.metaRenderDoc = [ordered]@{ out = $MetaRenderDocOut; launchExit = $null
+            captureExit = $null; finishExit = $null; finishOutput = $null; restoreOnlyExit = $null }
+        # До старта: при любом прерывании finally дождётся launch и вызовет finish (откат).
+        $metaLaunched = $true
+        $metaLaunchProc = Start-MetaPhase ((Get-MetaAdapterArgs 'launch') + @('--intent-args', ("-e unity '" + $unityArgs + "'"))) 'launch'
+        $launchExit = Wait-MetaPhase $metaLaunchProc 900 'launch'
+        $metaLaunchProc = $null
+        $manifest.launch.device.metaRenderDoc.launchExit = $launchExit
+        if ($launchExit -ne 0) {
+            throw ('Meta RenderDoc launch не удался (код ' + $launchExit + '), подробности: ' + (Join-Path $runDir 'meta-launch.out.txt'))
+        }
+        if ($MetaCapturePhase -ne '') {
+            $metaCaptureProc = Start-MetaPhase ((Get-MetaAdapterArgs 'capture') + @('--phase', $MetaCapturePhase, '--max-wait', [string] $Timeout)) 'capture'
+            Write-Host ('  захват кадра ждёт фазу «' + $MetaCapturePhase + '» (pid ' + $metaCaptureProc.Id + ')')
+        }
+    }
+    else {
     $start = Invoke-AdbShell @('am', 'start', '-S', '-W', '-n', $component, '-e', 'unity', ("'" + $unityArgs + "'")) 120
     $manifest.launch.device.amStartOutput = ($start.Out + $start.Err).Trim()
     if ($start.ExitCode -ne 0 -or $start.Out -match 'Error' -or $start.Out -notmatch 'Status:\s*ok') {
@@ -1661,6 +1761,7 @@ try {
             if ($shown -match 'ControllerRequired') { $hint = ' — система требует контроллеры: включи их (или сборка должна объявлять поддержку рук)' }
             throw ('вместо приложения шлем показал ' + $shown + $hint)
         }
+    }
     }
     for ($i = 0; $i -lt 20 -and $null -eq $appPid; $i++) {
         $appPid = Get-AppPid
@@ -1706,6 +1807,18 @@ catch {
 finally {
     # ══ 3. Уборка и сбор: всегда, в том числе при Ctrl+C и исключении ══
     Write-Section 'Гашу процессы и возвращаю шлем'
+    # Прерванный launch Meta (Ctrl+C/исключение) дорабатывает в своём процессе: дождаться его до отката.
+    if ($null -ne $metaLaunchProc) {
+        try { $manifest.launch.device.metaRenderDoc.launchExit = Wait-MetaPhase $metaLaunchProc 900 'launch' } catch {}
+    }
+    # Захват Meta идёт по живому приложению: дождаться его до force-stop.
+    if ($null -ne $metaCaptureProc) {
+        try {
+            $captureExit = Wait-MetaPhase $metaCaptureProc ($Timeout + 420) 'capture'
+            $manifest.launch.device.metaRenderDoc.captureExit = $captureExit
+            Write-Host ('  захват Meta: код ' + $captureExit)
+        } catch {}
+    }
     if ($deviceStarted) {
         try { [void](Invoke-AdbShell @('am', 'force-stop', $Package) 30); Write-Host '  am force-stop' } catch {}
     }
@@ -1719,6 +1832,44 @@ finally {
         } catch {}
     }
     try { [void](Invoke-AdbShell @('am', 'broadcast', '-a', 'com.oculus.vrpowermanager.automation_disable') 30); Write-Host '  automation_disable' } catch {}
+
+    # Meta RenderDoc: дождаться фонового захвата, затем PIL-сессия по кадру и обязательный откат шлема.
+    if ($metaLaunched) {
+        Write-Host '  Meta RenderDoc: сессия счётчиков и откат шлема'
+        $restoreVerified = $false
+        try {
+            # Бюджет: сессия ≤ 720 с внутри адаптера + откат; таймаут здесь заметно больше.
+            $finishProc = Start-MetaPhase (Get-MetaAdapterArgs 'finish') 'finish'
+            $finishExit = Wait-MetaPhase $finishProc 1500 'finish'
+            $finishOut = ''
+            try { $finishOut = (Get-Content -LiteralPath (Join-Path $runDir 'meta-finish.out.txt') -Raw -Encoding UTF8) } catch {}
+            $manifest.launch.device.metaRenderDoc.finishExit = $finishExit
+            $manifest.launch.device.metaRenderDoc.finishOutput = ([string] $finishOut).Trim()
+            $restoreVerified = ([string] $finishOut) -match '"restoreVerified":\s*true'
+            Write-Host ('  Meta finish: код ' + $finishExit + ', откат подтверждён: ' + $restoreVerified)
+        } catch { Write-Host ('  Meta finish не выполнен: ' + $_.Exception.Message) -ForegroundColor Red }
+        if (-not $restoreVerified) {
+            # restore идемпотентен: повторная попытка отката по снимку из журнала.
+            Write-Host '  Meta: откат не подтверждён — повторяю restore-only' -ForegroundColor Yellow
+            try {
+                $restoreProc = Start-MetaPhase (Get-MetaAdapterArgs 'restore-only') 'restore-only'
+                $restoreExit = Wait-MetaPhase $restoreProc 900 'restore-only'
+                $manifest.launch.device.metaRenderDoc.restoreOnlyExit = $restoreExit
+                if ($restoreExit -ne 0) {
+                    $hint = @()
+                    foreach ($a in (Get-MetaAdapterArgs 'restore-only')) { $hint += (ConvertTo-CommandLineArg $a) }
+                    Write-Host ('  Meta: шлем мог остаться изменённым — откат вручную: python ' + ($hint -join ' ')) -ForegroundColor Red
+                }
+            } catch { Write-Host ('  Meta restore-only не выполнен: ' + $_.Exception.Message) -ForegroundColor Red }
+        }
+    }
+
+    # Решение пользователя 2026-10-20: разбуженный для прогона шлем после теста возвращается в сон,
+    # чтобы не разряжался зря. adb (logcat, pull ниже) во сне продолжает работать.
+    if ($deviceWoken -and $KeepAwake) { Write-Host '  шлем оставлен бодрствующим (-KeepAwake: сон — после серии)' }
+    elseif ($deviceWoken) {
+        try { [void](Invoke-AdbShell @('input', 'keyevent', 'KEYCODE_SLEEP') 20); Write-Host '  шлем переведён в сон' } catch {}
+    }
 
     # Link закрыт нами по -StopLink. Автоматический возврат не делаем (решение пользователя 2026-10-12: перезапуск
     # Link-клиента со шлема не восстанавливает связь с ПК надёжно) — отмечаем в run.json и подсказываем человеку.
@@ -1764,7 +1915,8 @@ finally {
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
         $deviceReceipt = [ordered]@{ source = $diagnosticDeviceRoot; local = $dest; ok = $false; detail = $null; files = @() }
         try {
-            $pull = Invoke-Adb @('pull', $diagnosticDeviceRoot, $dest) 600
+            # Копируем содержимое stage без лишней GUID-папки: Windows adb ограничен MAX_PATH.
+            $pull = Invoke-Adb @('pull', ($diagnosticDeviceRoot + '/.'), $dest) 600
             if ($pull.ExitCode -ne 0) { throw (($pull.Out + $pull.Err).Trim()) }
             $deviceReceipt.files = @(Get-E2ERawInventory $dest)
             if ($deviceReceipt.files.Count -eq 0) { throw 'пустой diagnostic pull' }

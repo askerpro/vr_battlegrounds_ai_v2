@@ -1,0 +1,72 @@
+if(EditorApplication.isPlayingOrWillChangePlaymode)return new{deferred=true};
+string folder="tmp/weapon-sight-calibration/open-iron-sniper";System.IO.Directory.CreateDirectory(folder);
+var registry=AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponRegistry>(VrBattlegrounds.Editor.Weapons.Calibration.WeaponSightAudit.RegistryPath);
+var prefab=registry.GetById("SniperRifle").WeaponPrefab;string sourcePath=AssetDatabase.GetAssetPath(prefab),before=AssetDatabase.GetAssetDependencyHash(sourcePath).ToString();
+string donorPath="Assets/ThirdParty/KINEMATION/TacticalShooterPack/Prefabs/Attachments/IronSights.prefab";
+var donor=AssetDatabase.LoadAssetAtPath<GameObject>(donorPath);
+var preview=new PreviewRenderUtility();var root=new GameObject("OpenIronSniperPreview"){hideFlags=HideFlags.HideAndDontSave};preview.AddSingleGO(root);
+var kit=new GameObject("ProposedOpenIronKit");kit.transform.SetParent(root.transform,false);
+Material material=null;var images=new System.Collections.Generic.List<string>();var blocks=new System.Collections.Generic.List<object>();
+try{
+ foreach(var original in prefab.GetComponentsInChildren<MeshRenderer>(true)){
+  bool included=original.enabled;for(var t=original.transform;t!=null;t=t.parent){if(!t.gameObject.activeSelf||t.name.IndexOf("Highlight",System.StringComparison.OrdinalIgnoreCase)>=0||t.name.IndexOf("Decal",System.StringComparison.OrdinalIgnoreCase)>=0)included=false;if(t==prefab.transform)break;}
+  var filter=original.GetComponent<MeshFilter>();if(!included||filter==null||filter.sharedMesh==null)continue;
+  var go=new GameObject(original.name);go.transform.SetParent(root.transform,false);go.transform.SetPositionAndRotation(original.transform.position,original.transform.rotation);go.transform.localScale=original.transform.lossyScale;
+  go.AddComponent<MeshFilter>().sharedMesh=filter.sharedMesh;go.AddComponent<MeshRenderer>().sharedMaterials=original.sharedMaterials;
+ }
+ var shader=Shader.Find("Universal Render Pipeline/Lit");if(shader==null)throw new System.InvalidOperationException("Missing URP/Lit");
+ material=new Material(shader){hideFlags=HideFlags.HideAndDontSave};material.SetColor("_BaseColor",new Color(.045f,.05f,.055f));material.SetFloat("_Metallic",.65f);material.SetFloat("_Smoothness",.35f);
+ var source= prefab.GetComponent<UltimateXR.Mechanics.Weapons.UxrProjectileSource>();var muzzle=source.ShotTypes[0].ShotSource;
+ Vector3 target=muzzle.position+muzzle.forward*15;
+ // Опоры на планке измерены vertical triangle hit; в report сохранены индексы и barycentric weights.
+ // R — середина верхних внутренних углов прорези на задней (видимой глазу) грани blade.
+ double rearStation=.0485,frontStation=.48,frontRailY=.08345008651677234,rearRailY=.08354637907968732,adapterHeight=.003;
+ double frontTipLocalY=.03397912519131768,frontFootLocalY=-.009784432992917425,frontTipLocalZ=.02118376331608246,frontTipLocalX=(-.0007052744040265679+.0006977232405915856)/2;
+ Vector3 frontTranslation=new Vector3((float)-frontTipLocalX,(float)(frontRailY+adapterHeight-frontFootLocalY),(float)(frontStation-frontTipLocalZ));
+ Vector3 frontPoint=new Vector3(0,(float)(frontRailY+adapterHeight+frontTipLocalY-frontFootLocalY),(float)frontStation);
+ double k=(frontStation-rearStation)/(target.z-rearStation);
+ double rearY=(frontPoint.y-k*target.y)/(1-k);
+ Vector3 rearPoint=new Vector3(0,(float)rearY,(float)rearStation);
+ Renderer frontRenderer=null;foreach(var r in donor.GetComponentsInChildren<Renderer>(true))if(r.name=="SKM_TR15_FrontSight")frontRenderer=r;
+ if(frontRenderer==null)throw new System.InvalidOperationException("Missing native front sight");
+ Mesh mesh=frontRenderer is SkinnedMeshRenderer?((SkinnedMeshRenderer)frontRenderer).sharedMesh:frontRenderer.GetComponent<MeshFilter>().sharedMesh;
+ var frontObject=new GameObject("NativeFrontPostAndGuards");frontObject.transform.SetParent(kit.transform,false);
+ Matrix4x4 placement=Matrix4x4.Translate(frontTranslation)*frontRenderer.transform.localToWorldMatrix;
+ frontObject.transform.SetPositionAndRotation(placement.GetColumn(3),placement.rotation);frontObject.transform.localScale=placement.lossyScale;
+ frontObject.AddComponent<MeshFilter>().sharedMesh=mesh;var fr=frontObject.AddComponent<MeshRenderer>();var mats=new Material[mesh.subMeshCount];for(int i=0;i<mats.Length;i++)mats[i]=material;fr.sharedMaterials=mats;
+ System.Action<string,Vector3,Vector3> block=(name,pos,size)=>{var go=GameObject.CreatePrimitive(PrimitiveType.Cube);UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());go.name=name;go.transform.SetParent(kit.transform,false);go.transform.position=pos;go.transform.localScale=size;go.GetComponent<MeshRenderer>().sharedMaterial=material;blocks.Add(new{name,position=new[]{pos.x,pos.y,pos.z},dimensions=new[]{size.x,size.y,size.z}});};
+ float baseTop=(float)(rearRailY+adapterHeight),bladeBottom=rearPoint.y-.0065f;
+ block("RearRailFoot",new Vector3(0,(float)(rearRailY+adapterHeight/2),.05f),new Vector3(.030f,.003f,.020f));
+ block("RearUpright",new Vector3(0,(baseTop+bladeBottom)/2,.05f),new Vector3(.011f,bladeBottom-baseTop,.004f));
+ block("RearBladeBottom",new Vector3(0,bladeBottom+.00175f,.05f),new Vector3(.020f,.0035f,.003f));
+ float wingWidth=(.020f-.0035f)/2;
+ block("RearBladeLeft",new Vector3(-(.0035f/2+wingWidth/2),rearPoint.y-.0015f,.05f),new Vector3(wingWidth,.003f,.003f));
+ block("RearBladeRight",new Vector3((.0035f/2+wingWidth/2),rearPoint.y-.0015f,.05f),new Vector3(wingWidth,.003f,.003f));
+ block("FrontRailFoot",new Vector3(0,(float)(frontRailY+adapterHeight/2),.49f),new Vector3(.033f,.003f,.036f));
+ preview.lights[0].intensity=1.5f;preview.lights[0].transform.rotation=Quaternion.Euler(35,35,0);preview.lights[1].intensity=1;preview.lights[1].transform.rotation=Quaternion.Euler(340,215,0);preview.ambientColor=new Color(.35f,.35f,.35f);
+ var camera=preview.camera;camera.nearClipPlane=.003f;camera.farClipPlane=30;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.16f,.18f,.21f);
+ System.Action<string> save=(name)=>{preview.BeginStaticPreview(new Rect(0,0,1200,800));preview.Render(true);var texture=preview.EndStaticPreview();try{var p=folder+"/"+name+".png";System.IO.File.WriteAllBytes(p,texture.EncodeToPNG());images.Add(p);}finally{UnityEngine.Object.DestroyImmediate(texture);}};
+ camera.orthographic=true;camera.orthographicSize=.43f;Vector3 centre=new Vector3(0,.025f,.2544733f);
+ camera.transform.SetPositionAndRotation(centre+Vector3.right*2,Quaternion.LookRotation(Vector3.left,Vector3.up));kit.SetActive(false);save("SniperRifle-before");kit.SetActive(true);save("SniperRifle-open-iron-side");
+ centre=new Vector3(0,.111f,.255f);camera.orthographicSize=.18f;Vector3 direction=new Vector3(1,.25f,-.15f).normalized;
+ camera.transform.SetPositionAndRotation(centre+direction*2,Quaternion.LookRotation(-direction,Vector3.up));save("SniperRifle-open-iron-kit");
+ centre=new Vector3(0,.112f,.05f);camera.orthographicSize=.068f;camera.transform.SetPositionAndRotation(centre+direction*2,Quaternion.LookRotation(-direction,Vector3.up));save("SniperRifle-open-rear-detail");
+ centre=new Vector3(0,.112f,.485f);camera.transform.SetPositionAndRotation(centre+direction*2,Quaternion.LookRotation(-direction,Vector3.up));save("SniperRifle-front-detail");
+ camera.orthographic=false;camera.fieldOfView=30;camera.transform.SetPositionAndRotation(rearPoint-(target-rearPoint).normalized*.08f,Quaternion.LookRotation(target-rearPoint,Vector3.up));save("SniperRifle-open-iron-aim");
+ string guid;long localId;AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh,out guid,out localId);
+ var evaluation=VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Evaluate(
+ new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(muzzle.position.x,muzzle.position.y,muzzle.position.z),
+ new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(muzzle.forward.x,muzzle.forward.y,muzzle.forward.z),
+ new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(rearPoint.x,rearPoint.y,rearPoint.z),
+ new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(frontPoint.x,frontPoint.y,frontPoint.z),15);
+ var result=new{weaponId="SniperRifle",sightId="OpenNotchAndPost",status="VisualSketchNeedsMountAndReferenceReview",requestedMagnification=1,zeroDistance=15,
+ sourcePath,sourceHash=before,sourceUnchanged=before==AssetDatabase.GetAssetDependencyHash(sourcePath).ToString(),donorPath,donorHash=AssetDatabase.GetAssetDependencyHash(donorPath).ToString(),frontMeshGuid=guid,frontMeshLocalId=localId,
+ frontTranslation=new[]{frontTranslation.x,frontTranslation.y,frontTranslation.z},frontVertices=new[]{14,15},frontWeightEach=.5,
+ rearPoint=new[]{rearPoint.x,rearPoint.y,rearPoint.z},frontPoint=new[]{frontPoint.x,frontPoint.y,frontPoint.z},rearNotchWidth=.0035,rearNotchDepth=.003,
+ rearReferenceCorners=new[]{new[]{-.00175f,rearPoint.y,.0485f},new[]{.00175f,rearPoint.y,.0485f}},rearWeightEach=.5,
+ rearRailTriangle=new[]{16038,16036,16026},rearRailBarycentric=new[]{.5128487032381129,.0000012507836915516054,.48715004597819556},
+ frontRailTriangle=new[]{13035,13037,13026},frontRailBarycentric=new[]{.0000012507837620079343,.37151868531582855,.6284800639004094},
+ generatedBlocks=blocks,evaluation,images,mountAcceptance=false,referenceAcceptance=false,calibrationAccepted=false,actualSdkShotVerified=false,productionApplied=false};
+ string json=Newtonsoft.Json.JsonConvert.SerializeObject(result,Newtonsoft.Json.Formatting.Indented);System.IO.File.WriteAllText(folder+"/candidate.json",json);
+ return new{passedCapture=true,sourceUnchanged=result.sourceUnchanged,images=images.Count,zeroResidualMeters=evaluation.zeroResidualMeters,report=folder+"/candidate.json"};
+}finally{UnityEngine.Object.DestroyImmediate(root);preview.Cleanup();if(material!=null)UnityEngine.Object.DestroyImmediate(material);}

@@ -1,0 +1,19 @@
+{
+  "task_id": "weapon-sight-calibration",
+  "owner": "weapon-system",
+  "client": "claude",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "43332888b76611fb2299e4d9f2df0e3acd286791",
+  "doc_path": "tasks/weapon-sight-calibration/Readme.md",
+  "title": "Финальная калибровка прицелов оружия",
+  "stages": [
+    {
+      "id": "context",
+      "writes": [
+        "tasks/weapon-sight-calibration/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

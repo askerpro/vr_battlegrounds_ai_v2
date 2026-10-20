@@ -1,0 +1,1035 @@
+{
+ "meta": {
+  "date": "2026-10-12",
+  "source": "Assets/Art/Weapons/Kinemation/<Name>/Meshes/<Name>_<Part>.asset (выход KinemationWeapon.MeshOf: треугольники с большинством boneIndex0 == кость детали, вершины × toPart = Rigid(bone)^-1·bone.localToWorld·bindpose, метры)",
+  "coordinate_space": "координаты вершин mesh-ассета детали (до трансформа узла в префабе); острова 1:1 совпадают с подмножеством треугольников исходного sharedMesh пака (те же nv/nt), координаты отличаются жёстким toPart",
+  "island_algorithm": "сварка позиций: ключ = round(p/1e-6) по каждой оси; связь — общие сваренные вершины треугольника (union-find); nv = число различных индексов вершин Unity острова, welded = число различных ключей",
+  "centroid": "среднее по различным вершинам Unity острова",
+  "axes": {
+   "AK105_Body": "+Y к дулу, -Z вверх, X поперёк",
+   "Mk14_Body": "+Y к дулу, -Z вверх, X поперёк",
+   "Viper_Body": "+Y к дулу, +X вверх, Z поперёк",
+   "Viper_Bolt": "+Y к дулу, +X вверх, Z поперёк",
+   "R08_Body": "+Y к дулу, +Z вверх, X поперёк"
+  },
+  "asset_counts": {
+   "AK105_Body": {
+    "vertices": 24991,
+    "triangles": 22756,
+    "submeshes": 2,
+    "islands": 54
+   },
+   "Mk14_Body": {
+    "vertices": 28785,
+    "triangles": 30555,
+    "submeshes": 3,
+    "islands": 53
+   },
+   "Viper_Body": {
+    "vertices": 5831,
+    "triangles": 5892,
+    "submeshes": 1,
+    "islands": 21
+   },
+   "Viper_Bolt": {
+    "vertices": 3776,
+    "triangles": 2946,
+    "submeshes": 1,
+    "islands": 5
+   },
+   "R08_Body": {
+    "vertices": 9018,
+    "triangles": 10587,
+    "submeshes": 1,
+    "islands": 22
+   }
+  },
+  "aim_point_rule": "F (мушка) — середина верхней кромки столбика по ширине на грани к глазу; R (прорезь) — середина прорези на уровне плеч на грани к глазу; R (диоптр) — центр подогнанной окружности внутреннего обода отверстия на грани к глазу. Глаз — сторона min Y (во всех ассетах +Y к дулу)."
+ },
+ "weapons": {
+  "AK105": {
+   "parts": {
+    "RearSight": {
+     "asset": "AK105_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 14,
+       "role": "целик: пластина с прорезью на конце планки",
+       "unity_vertices": 100,
+       "welded_vertices": 38,
+       "triangles": 72,
+       "aabb_min": [
+        -0.010072,
+        0.204878,
+        -0.038206
+       ],
+       "aabb_max": [
+        0.012956,
+        0.209406,
+        -0.031464
+       ],
+       "centroid": [
+        0.001442,
+        0.207391,
+        -0.035023
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 100,
+        "triangles": 72,
+        "window_min": [
+         -0.010572,
+         0.204378,
+         -0.038706
+        ],
+        "window_max": [
+         0.013456,
+         0.209906,
+         -0.030964
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "прицельная планка",
+       "unity_vertices": 86,
+       "welded_vertices": 28,
+       "triangles": 52,
+       "aabb_min": [
+        -0.005442,
+        0.206878,
+        -0.034636
+       ],
+       "aabb_max": [
+        0.008326,
+        0.260777,
+        -0.031824
+       ],
+       "centroid": [
+        0.001442,
+        0.234432,
+        -0.033741
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 86,
+        "triangles": 52,
+        "window_min": [
+         -0.005942,
+         0.206378,
+         -0.035136
+        ],
+        "window_max": [
+         0.008826,
+         0.261277,
+         -0.031324
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 12,
+       "role": "хомутик, правая половина с кнопкой",
+       "unity_vertices": 213,
+       "welded_vertices": 97,
+       "triangles": 190,
+       "aabb_min": [
+        0.003779,
+        0.209956,
+        -0.037152
+       ],
+       "aabb_max": [
+        0.018187,
+        0.218625,
+        -0.028483
+       ],
+       "centroid": [
+        0.013575,
+        0.214312,
+        -0.032783
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 213,
+        "triangles": 190,
+        "window_min": [
+         0.003279,
+         0.209456,
+         -0.037652
+        ],
+        "window_max": [
+         0.018687,
+         0.219125,
+         -0.027983
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 13,
+       "role": "хомутик, левая половина с кнопкой",
+       "unity_vertices": 212,
+       "welded_vertices": 96,
+       "triangles": 188,
+       "aabb_min": [
+        -0.015302,
+        0.209956,
+        -0.037152
+       ],
+       "aabb_max": [
+        -0.000895,
+        0.218625,
+        -0.028483
+       ],
+       "centroid": [
+        -0.010678,
+        0.214307,
+        -0.032765
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 212,
+        "triangles": 188,
+        "window_min": [
+         -0.015802,
+         0.209456,
+         -0.037652
+        ],
+        "window_max": [
+         -0.000395,
+         0.219125,
+         -0.027983
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "высота (дистанция): планка с целиком поворачивается вокруг поперечной оси шарнира у переднего конца планки, подъём задаёт хомутик, скользящий по планке. Горизонтали у целика АК нет.",
+     "pivot_note": "Подвижная группа 14+2+12+13; aim_point R. Для поворота по-настоящему — ось шарнира legacy_pivot.hinge_axis_point/dir (остров 18 остаётся в корпусе).",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       0.001442,
+       0.204878,
+       -0.038206
+      ],
+      "method": "стенки прорези x=0.736/2.148 мм (вершины острова 14 на заднем торце y=204.878), плечи z=-38.206 (верх пластины, вверх = -Z), дно прорези z=-35.519; середина по x"
+     },
+     "legacy_pivot": {
+      "notch_bottom_rear_face": [
+       0.001442,
+       0.204878,
+       -0.035519
+      ],
+      "hinge_axis_point": [
+       0.001442,
+       0.255939,
+       -0.032892
+      ],
+      "hinge_axis_dir": [
+       1,
+       0,
+       0
+      ]
+     }
+    },
+    "FrontSight": {
+     "asset": "AK105_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 49,
+       "role": "мушка (столбик с квадратным основанием) в намушнике",
+       "unity_vertices": 60,
+       "welded_vertices": 16,
+       "triangles": 26,
+       "aabb_min": [
+        5e-05,
+        0.477057,
+        -0.036423
+       ],
+       "aabb_max": [
+        0.002834,
+        0.480296,
+        -0.028371
+       ],
+       "centroid": [
+        0.001442,
+        0.478714,
+        -0.031906
+       ],
+       "submeshes": [
+        1
+       ],
+       "selector": {
+        "unity_vertices": 60,
+        "triangles": 26,
+        "window_min": [
+         -0.00045,
+         0.476557,
+         -0.036923
+        ],
+        "window_max": [
+         0.003334,
+         0.480796,
+         -0.027871
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "высота — вкручивание мушки; горизонталь — сдвиг полозка/основания мушки в намушнике. Полозок не отдельный остров (слит с намушником/корпусом), поэтому горизонталь — сдвиг одной мушки.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.001442,
+       0.477916,
+       -0.036423
+      ],
+      "method": "4 вершины верхней грани острова 49 (min z); ребро на стороне глаза (min y) — 2 вершины; середина по x"
+     },
+     "legacy_pivot": {
+      "post_base_center": [
+       0.001442,
+       0.478676,
+       -0.028371
+      ]
+     }
+    }
+   }
+  },
+  "Mk14": {
+   "parts": {
+    "RearSight": {
+     "asset": "Mk14_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 13,
+       "role": "диоптр (диск с отверстием)",
+       "unity_vertices": 286,
+       "welded_vertices": 142,
+       "triangles": 282,
+       "aabb_min": [
+        -0.004577,
+        0.042082,
+        -0.047669
+       ],
+       "aabb_max": [
+        0.004577,
+        0.045054,
+        -0.035475
+       ],
+       "centroid": [
+        0.0,
+        0.043568,
+        -0.042512
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 286,
+        "triangles": 282,
+        "window_min": [
+         -0.005077,
+         0.041582,
+         -0.048169
+        ],
+        "window_max": [
+         0.005077,
+         0.045554,
+         -0.034975
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 11,
+       "role": "полудиск-основание перед диоптром (едет вместе с ним)",
+       "unity_vertices": 24,
+       "welded_vertices": 18,
+       "triangles": 16,
+       "aabb_min": [
+        -0.005824,
+        0.045091,
+        -0.038971
+       ],
+       "aabb_max": [
+        0.005824,
+        0.05095,
+        -0.033362
+       ],
+       "centroid": [
+        0.0,
+        0.046721,
+        -0.037544
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 24,
+        "triangles": 16,
+        "window_min": [
+         -0.006324,
+         0.044591,
+         -0.039471
+        ],
+        "window_max": [
+         0.006324,
+         0.05145,
+         -0.032862
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "высота и горизонталь — барабаны по бокам двигают диоптр; барабаны и ушки (острова 7/12, nv84) остаются в корпусе.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       0.0,
+       0.042082,
+       -0.043092
+      ],
+      "method": "внутренняя граничная петля 32 вершин грани y=min (42.0816 мм) острова 13; подгонка окружности (Kasa): r=1.7714 мм, невязка 0.0006 мм"
+     }
+    },
+    "FrontSight": {
+     "asset": "Mk14_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 48,
+       "role": "столбик мушки",
+       "unity_vertices": 62,
+       "welded_vertices": 32,
+       "triangles": 50,
+       "aabb_min": [
+        -0.003161,
+        0.664577,
+        -0.048576
+       ],
+       "aabb_max": [
+        0.003161,
+        0.670898,
+        -0.038034
+       ],
+       "centroid": [
+        0.0,
+        0.667839,
+        -0.042562
+       ],
+       "submeshes": [
+        2
+       ],
+       "selector": {
+        "unity_vertices": 62,
+        "triangles": 50,
+        "window_min": [
+         -0.003661,
+         0.664077,
+         -0.049076
+        ],
+        "window_max": [
+         0.003661,
+         0.671398,
+         -0.037534
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "у M14 мушка неподвижна по высоте; пристрелка по горизонтали — сдвиг мушки (в реальности со всем основанием-ушками, остров 46, nv474). Для калибровки достаточно столбика.",
+     "optional_islands": [
+      {
+       "island_index_in_asset_order": 46,
+       "role": "основание мушки с ушками (хомут на стволе)",
+       "unity_vertices": 474,
+       "welded_vertices": 202,
+       "triangles": 404,
+       "aabb_min": [
+        -0.010552,
+        0.659922,
+        -0.049749
+       ],
+       "aabb_max": [
+        0.010553,
+        0.675553,
+        -0.000171
+       ],
+       "centroid": [
+        -1.8e-05,
+        0.667383,
+        -0.024037
+       ],
+       "submeshes": [
+        2
+       ],
+       "selector": {
+        "unity_vertices": 474,
+        "triangles": 404,
+        "window_min": [
+         -0.011052,
+         0.659422,
+         -0.050249
+        ],
+        "window_max": [
+         0.011053,
+         0.676053,
+         0.000329
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.0,
+       0.667011,
+       -0.048577
+      ],
+      "method": "верхняя грань острова 48 (min z, 4 вершины), ребро min y (2 вершины), середина по x"
+     },
+     "legacy_pivot": {
+      "post_base_center": [
+       0.0,
+       0.667737,
+       -0.038034
+      ]
+     }
+    }
+   }
+  },
+  "Viper": {
+   "parts": {
+    "RearSight": {
+     "asset": "Viper_Bolt",
+     "islands": [
+      {
+       "island_index_in_asset_order": 3,
+       "role": "регулируемый целик (корпус + лопатка с прорезью — один остров)",
+       "unity_vertices": 350,
+       "welded_vertices": 142,
+       "triangles": 284,
+       "aabb_min": [
+        0.004667,
+        -0.037009,
+        -0.008487
+       ],
+       "aabb_max": [
+        0.015404,
+        -0.002536,
+        0.008487
+       ],
+       "centroid": [
+        0.01061,
+        -0.029257,
+        -2e-06
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 350,
+        "triangles": 284,
+        "window_min": [
+         0.004167,
+         -0.037509,
+         -0.008987
+        ],
+        "window_max": [
+         0.015904,
+         -0.002036,
+         0.008987
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 4,
+       "role": "винт высоты (сверху)",
+       "unity_vertices": 72,
+       "welded_vertices": 36,
+       "triangles": 54,
+       "aabb_min": [
+        0.010529,
+        -0.022804,
+        -0.002811
+       ],
+       "aabb_max": [
+        0.013268,
+        -0.017183,
+        0.002811
+       ],
+       "centroid": [
+        0.012455,
+        -0.01999,
+        -1e-06
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 72,
+        "triangles": 54,
+        "window_min": [
+         0.010029,
+         -0.023304,
+         -0.003311
+        ],
+        "window_max": [
+         0.013768,
+         -0.016683,
+         0.003311
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "винт горизонтали (сбоку)",
+       "unity_vertices": 84,
+       "welded_vertices": 44,
+       "triangles": 66,
+       "aabb_min": [
+        0.006036,
+        -0.035007,
+        0.007803
+       ],
+       "aabb_max": [
+        0.013075,
+        -0.027968,
+        0.009799
+       ],
+       "centroid": [
+        0.009555,
+        -0.031487,
+        0.00911
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 84,
+        "triangles": 66,
+        "window_min": [
+         0.005536,
+         -0.035507,
+         0.007303
+        ],
+        "window_max": [
+         0.013575,
+         -0.027468,
+         0.010299
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "регулируемый целик: высота — винт сверху, горизонталь — винт сбоку. Лопатка не отделена от корпуса целика, поэтому двигается весь остров 3 с винтами.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       0.015404,
+       -0.037009,
+       0.0
+      ],
+      "method": "стенки прорези z=±0.979 мм (остров 3, торец y=-37.009), плечи x=15.404 (верх, вверх = +X), дно x=13.66; середина по z"
+     },
+     "legacy_pivot": {
+      "notch_bottom_rear_face": [
+       0.01366,
+       -0.037009,
+       0.0
+      ]
+     }
+    },
+    "FrontSight": {
+     "asset": "Viper_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 5,
+       "role": "мушка (лопатка в пазу)",
+       "unity_vertices": 72,
+       "welded_vertices": 28,
+       "triangles": 52,
+       "aabb_min": [
+        0.042881,
+        0.128289,
+        -0.001036
+       ],
+       "aabb_max": [
+        0.047275,
+        0.144507,
+        0.001036
+       ],
+       "centroid": [
+        0.045532,
+        0.137264,
+        0.0
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 72,
+        "triangles": 52,
+        "window_min": [
+         0.042381,
+         0.127789,
+         -0.001536
+        ],
+        "window_max": [
+         0.047775,
+         0.145007,
+         0.001536
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 20,
+       "role": "световод мушки",
+       "unity_vertices": 44,
+       "welded_vertices": 24,
+       "triangles": 34,
+       "aabb_min": [
+        0.044594,
+        0.128505,
+        -0.000578
+       ],
+       "aabb_max": [
+        0.046743,
+        0.143458,
+        0.000578
+       ],
+       "centroid": [
+        0.045795,
+        0.133953,
+        1e-05
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 44,
+        "triangles": 34,
+        "window_min": [
+         0.044094,
+         0.128005,
+         -0.001078
+        ],
+        "window_max": [
+         0.047243,
+         0.143958,
+         0.001078
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "мушка в поперечном пазу «ласточкин хвост»: по высоте не регулируется, сдвиг по горизонтали только для пристрелки. Основная регулировка — целик.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.047275,
+       0.128955,
+       0.0
+      ],
+      "method": "верхняя кромка лопатки (остров 5, max x, 2 вершины на стороне min y)",
+      "alt_dot_point": [
+       0.046169,
+       0.128544,
+       0.0
+      ],
+      "alt_note": "центр заднего торца световода (остров 20, 12 вершин) — если целиться по точке, а не по верху мушки"
+     },
+     "legacy_pivot": {
+      "blade_base_center": [
+       0.042881,
+       0.136398,
+       0.0
+      ]
+     }
+    }
+   }
+  },
+  "R08": {
+   "parts": {
+    "RearSight": {
+     "asset": "R08_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 1,
+       "role": "регулируемая планка целика с лопаткой и прорезью",
+       "unity_vertices": 672,
+       "welded_vertices": 320,
+       "triangles": 644,
+       "aabb_min": [
+        -0.008244,
+        -0.038181,
+        0.010586
+       ],
+       "aabb_max": [
+        0.008226,
+        0.02228,
+        0.023967
+       ],
+       "centroid": [
+        0.003803,
+        -0.030883,
+        0.015725
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 672,
+        "triangles": 644,
+        "window_min": [
+         -0.008744,
+         -0.038681,
+         0.010086
+        ],
+        "window_max": [
+         0.008726,
+         0.02278,
+         0.024467
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 21,
+       "role": "винт высоты сверху",
+       "unity_vertices": 200,
+       "welded_vertices": 164,
+       "triangles": 306,
+       "aabb_min": [
+        -0.002521,
+        -0.029964,
+        0.017611
+       ],
+       "aabb_max": [
+        0.003365,
+        -0.024078,
+        0.020059
+       ],
+       "centroid": [
+        0.000422,
+        -0.027021,
+        0.018997
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 200,
+        "triangles": 306,
+        "window_min": [
+         -0.003021,
+         -0.030464,
+         0.017111
+        ],
+        "window_max": [
+         0.003865,
+         -0.023578,
+         0.020559
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 4
+       }
+      }
+     ],
+     "physical": "регулируемый целик револьвера: высота — винт сверху (поворот/подъём планки), горизонталь — боковой винт (смоделирован внутри острова 1). Лопатка с прорезью не отдельна — двигается весь остров 1 с винтом 21.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       0.0,
+       -0.034553,
+       0.023967
+      ],
+      "method": "стенки прорези x=±2.324 мм (остров 1, лопатка y=-34.553..-33.369), плечи z=23.967, дно z=22.284; середина по x"
+     },
+     "legacy_pivot": {
+      "notch_bottom_rear_face": [
+       0.0,
+       -0.034553,
+       0.022284
+      ]
+     }
+    },
+    "FrontSight": {
+     "asset": "R08_Body",
+     "islands": [
+      {
+       "island_index_in_asset_order": 5,
+       "role": "лопатка мушки",
+       "unity_vertices": 51,
+       "welded_vertices": 24,
+       "triangles": 42,
+       "aabb_min": [
+        -0.002526,
+        0.124452,
+        0.017042
+       ],
+       "aabb_max": [
+        0.002526,
+        0.141969,
+        0.024285
+       ],
+       "centroid": [
+        -4.9e-05,
+        0.137309,
+        0.021833
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 51,
+        "triangles": 42,
+        "window_min": [
+         -0.003026,
+         0.123952,
+         0.016542
+        ],
+        "window_max": [
+         0.003026,
+         0.142469,
+         0.024785
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 11,
+       "role": "вставка-точка на заднем торце мушки",
+       "unity_vertices": 64,
+       "welded_vertices": 41,
+       "triangles": 60,
+       "aabb_min": [
+        -0.001019,
+        0.12283,
+        0.020894
+       ],
+       "aabb_max": [
+        0.001019,
+        0.124452,
+        0.022932
+       ],
+       "centroid": [
+        4.3e-05,
+        0.123362,
+        0.021932
+       ],
+       "submeshes": [
+        0
+       ],
+       "selector": {
+        "unity_vertices": 64,
+        "triangles": 60,
+        "window_min": [
+         -0.001519,
+         0.12233,
+         0.020394
+        ],
+        "window_max": [
+         0.001519,
+         0.124952,
+         0.023432
+        ],
+        "rule": "остров целиком внутри окна и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "мушка неподвижная (не регулируется); выделена для симметрии и возможной ручной подгонки высоты.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.0,
+       0.124452,
+       0.024285
+      ],
+      "method": "верхняя грань острова 5 (max z, 4 вершины), ребро min y, середина по x",
+      "alt_dot_point": [
+       0.0,
+       0.12283,
+       0.021913
+      ],
+      "alt_note": "центр торца вставки-точки (остров 11, 21 вершина на грани min y)"
+     },
+     "legacy_pivot": {
+      "blade_base_center": [
+       0.0,
+       0.133211,
+       0.017042
+      ]
+     }
+    }
+   }
+  }
+ }
+}

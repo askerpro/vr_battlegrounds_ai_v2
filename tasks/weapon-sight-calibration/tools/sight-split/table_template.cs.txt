@@ -1,0 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using VrBattlegrounds.Weapons.Sights;
+
+namespace VrBattlegrounds.Editor.Gameplay.SightSplit
+{
+    /// <summary>
+    /// Game-owned спецификация разделения вшитых прицелов. Перенесено из разборов iron-split 2026-10-12 (islands.json —
+    /// AK105/Mk14/Viper/R08, меши Kinemation .asset; islands-2.json — стволы пака Hands и Herrington).
+    /// Точки и окна селекторов — в единицах меша узла; ход — метры мира (по умолчанию 3 мм: оценок хода в разборах нет).
+    /// Не входят: ShotgunReal (FABARM не калибруется), M16 (мушки нет — будет комплект),
+    /// SRM12 / SniperRifle / MKR9 (донорские половины пересаживаются комплектом; у островов нет отдельных GO).
+    /// Таблица сгенерирована из разборов (tasks/weapon-system/reports/sight-split/gen_table.py); правка — через разбор.
+    /// </summary>
+    public static class SightSplitTable
+    {
+        public static readonly IReadOnlyList<SightSplitSpec> All = new[]
+        {
+/*ENTRIES*/
+        };
+
+        public static SightSplitSpec Get(string weaponId) =>
+            All.FirstOrDefault(s => s.WeaponId == weaponId)
+            ?? throw new ArgumentException($"Нет спецификации разделения прицела для '{weaponId}'. Есть: {string.Join(", ", All.Select(s => s.WeaponId))}");
+
+        private static SightIslandSelector S(string role, int vertices, int triangles, Vector3 min, Vector3 max) =>
+            new SightIslandSelector(role, vertices, triangles, min, max);
+
+        private static SightSplitPartSpec P(SightPartRole role, string node, string meshPath, long meshLocalId, int vertices,
+                                            int triangles, bool movable, Vector3 point, Vector3? pointPrefab, float travelDown,
+                                            float travelUp, float? requiredShiftMm, params SightIslandSelector[] selectors) =>
+            new SightSplitPartSpec(role, node, meshPath, meshLocalId, vertices, triangles, movable, point, pointPrefab,
+                                   travelDown, travelUp, requiredShiftMm, selectors);
+
+        private static SightNodeRaise R(string node, Vector3 foldedPosition, Quaternion foldedRotation, Vector3 raisedPosition,
+                                        Quaternion raisedRotation, Vector3 axisPoint, Vector3 axisDir, float angle) =>
+            new SightNodeRaise(node, foldedPosition, foldedRotation, raisedPosition, raisedRotation, axisPoint, axisDir, angle);
+    }
+}

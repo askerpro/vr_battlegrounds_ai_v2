@@ -1,0 +1,5016 @@
+{
+ "meta": {
+  "date": "2026-10-12",
+  "task": "iron-split-2 (продолжение islands.json: AK105, Mk14, Viper, R08)",
+  "source": "вершины/треугольники мешей Unity: FBX пака Hands — из tmp/weapon-sight-calibration/visual-review/<W>/geometry.json основного checkout (дамп 2026-10-04; FBX после него не менялись, матрицы узлов сверены с текущими префабами, расхождение < 5e-7); Kinemation .asset — парсинг YAML m_VertexData/m_IndexBuffer из F:/UnityProjects/Vr_Battlegrounds_ai (совпадает с дампом побитно)",
+  "coordinate_space": "aabb/centroid/window/point — координаты вершин меша узла (Unity mesh, до трансформа узла). *_prefab_m — метры префаба (корень с его масштабом, без позиции корня), +Y вверх, +Z к дулу; rel_shot_mm — относительно ShotSource",
+  "island_algorithm": "сварка позиций: ключ = round(p/eps) по каждой оси (eps=1e-6 единиц меша; для SM_MKR9_IronSights eps=1e-8 из-за scale 100 — острова те же при 1e-6..1e-9); связь — общие сваренные вершины треугольника (union-find); nv — различные индексы вершин Unity острова, welded — различные ключи",
+  "island_order": "по минимальному индексу вершины острова",
+  "centroid": "среднее по различным вершинам Unity острова",
+  "selector_rule": "окно = AABB острова ± 0.5 мм в метрах префаба (переведено в единицы меша); остров целиком в окне и с теми же nv/nt",
+  "aim_point_rule": "F — середина верхней кромки столбика по ширине на грани к глазу (по силуэту от глаза: ширина на половине выступа, вершина в середине); бусина — центр; R прорези — середина прорези на уровне плеч на грани к глазу; R диоптра — центр окружности обода отверстия на грани к глазу. Глаз — сторона min Z префаба",
+  "zeroing_rule": "решатель ведёт ОДНУ подвижную деталь только по высоте так, чтобы линия R→F прошла через ShotSource + 15 м (decisions.md, «Автосведение», «Только высота»); required_height_shift_mm — нужный сдвиг подвижной детали при текущей геометрии",
+  "renders": "reports/iron-split/<Ствол>/ (целик красный, мушка синяя, жёлтые сферы — точки R/F = pivot подвижной детали)",
+  "blend": "reports/iron-split/iron-split-2.blend (сцена IronSplit2_Work, записана через bpy.data.libraries.write)"
+ },
+ "weapons": {
+  "MP5K": {
+   "prefab": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab",
+   "label": "MP5K (HK MP5K)",
+   "shot_source_prefab_m": [
+    -6.8e-05,
+    0.068159,
+    0.21299
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "MP5K/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle04/Mesh/Hands_Automatic_Rifle04_Mesh.FBX",
+      "mesh_local_file_id": 4300004,
+      "mesh_name": "Base",
+      "vertices": 8075,
+      "triangles": 9716,
+      "submeshes": 1,
+      "islands": 33,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 4.5333443,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        -4.533344304,
+        -0.0,
+        0.0,
+        2e-09
+       ],
+       [
+        0.0,
+        -2.41e-07,
+        4.533343802,
+        0.033407936
+       ],
+       [
+        -0.0,
+        4.533343802,
+        1.43e-07,
+        0.057989807
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 23,
+       "role": "поворотный барабан (кольцо с 4 прорезями, рабочая — к глазу)",
+       "unity_vertices": 558,
+       "welded_vertices": 344,
+       "triangles": 624,
+       "aabb_min": [
+        -0.001448815,
+        -0.02555115,
+        0.017284935
+       ],
+       "aabb_max": [
+        0.001463135,
+        -0.02226259,
+        0.020581724
+       ],
+       "centroid": [
+        6.708e-06,
+        -0.023861555,
+        0.019348496
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.006633,
+        0.111766,
+        -0.057842
+       ],
+       "prefab_m_aabb_max": [
+        0.006568,
+        0.126712,
+        -0.042934
+       ],
+       "dy_mm_range": [
+        43.61,
+        58.55
+       ],
+       "selector": {
+        "unity_vertices": 558,
+        "triangles": 624,
+        "window_min": [
+         -0.001559109,
+         -0.025661443,
+         0.017174641
+        ],
+        "window_max": [
+         0.001573429,
+         -0.022152296,
+         0.020692018
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 0,
+       "role": "корпус целика с защитными ушками (остаётся в корпусе)",
+       "unity_vertices": 334,
+       "welded_vertices": 182,
+       "triangles": 338,
+       "aabb_min": [
+        -0.001654745,
+        -0.028113889,
+        0.017079234
+       ],
+       "aabb_max": [
+        0.001649845,
+        -0.021881908,
+        0.020308247
+       ],
+       "centroid": [
+        4.0539e-05,
+        -0.026215488,
+        0.019316364
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.007479,
+        0.110834,
+        -0.06946
+       ],
+       "prefab_m_aabb_max": [
+        0.007502,
+        0.125472,
+        -0.041208
+       ],
+       "dy_mm_range": [
+        42.67,
+        57.31
+       ],
+       "selector": {
+        "unity_vertices": 334,
+        "triangles": 338,
+        "window_min": [
+         -0.001765039,
+         -0.028224182,
+         0.01696894
+        ],
+        "window_max": [
+         0.001760139,
+         -0.021771614,
+         0.020418541
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 15,
+       "role": "основание целика на ствольной коробке (остаётся)",
+       "unity_vertices": 111,
+       "welded_vertices": 71,
+       "triangles": 124,
+       "aabb_min": [
+        -0.001930275,
+        -0.028311588,
+        0.016108075
+       ],
+       "aabb_max": [
+        0.001943705,
+        -0.02189482,
+        0.018045396
+       ],
+       "centroid": [
+        6.717e-06,
+        -0.025348812,
+        0.017347457
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.008811,
+        0.106431,
+        -0.070356
+       ],
+       "prefab_m_aabb_max": [
+        0.008751,
+        0.115214,
+        -0.041267
+       ],
+       "dy_mm_range": [
+        38.27,
+        47.05
+       ],
+       "selector": {
+        "unity_vertices": 111,
+        "triangles": 124,
+        "window_min": [
+         -0.002040569,
+         -0.028421882,
+         0.015997781
+        ],
+        "window_max": [
+         0.002053999,
+         -0.021784526,
+         0.018155689
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "У HK MP5 барабан вращается вокруг вертикальной оси и выбирает прорезь/диоптр по дальности; горизонталь — винтом. В модели барабан — кольцо с прорезями без отверстий диоптра, прицеливание через прорезь на кромке к глазу.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       6.232e-06,
+       -0.025039529,
+       0.02058094
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -2.8e-05,
+       0.126708,
+       -0.055523
+      ],
+      "rel_shot_mm": {
+       "dx": 0.04,
+       "dy": 58.549,
+       "dz": -268.51
+      },
+      "method": "силуэт острова 23 от глаза (проекция вдоль Z): стенки прорези x=-1.280/1.360 мм от ShotSource, плечи dy=58.549, дно dy=56.715 (глубина 1.83 мм); середина по x; z — грань к глазу"
+     },
+     "movable": false,
+     "stays_in_body": [
+      0,
+      15
+     ]
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "MP5K/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle04/Mesh/Hands_Automatic_Rifle04_Mesh.FBX",
+      "mesh_local_file_id": 4300004,
+      "mesh_name": "Base",
+      "vertices": 8075,
+      "triangles": 9716,
+      "submeshes": 1,
+      "islands": 33,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 4.5333443,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        -4.533344304,
+        -0.0,
+        0.0,
+        2e-09
+       ],
+       [
+        0.0,
+        -2.41e-07,
+        4.533343802,
+        0.033407936
+       ],
+       [
+        -0.0,
+        4.533343802,
+        1.43e-07,
+        0.057989807
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 16,
+       "role": "столбик мушки с поперечной полкой-основанием (внутри кольца)",
+       "unity_vertices": 72,
+       "welded_vertices": 32,
+       "triangles": 54,
+       "aabb_min": [
+        -0.001448425,
+        0.03315315,
+        0.018504065
+       ],
+       "aabb_max": [
+        0.001449865,
+        0.03364078,
+        0.020559656
+       ],
+       "centroid": [
+        -6.74e-07,
+        0.033395547,
+        0.019458675
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.006573,
+        0.117293,
+        0.208284
+       ],
+       "prefab_m_aabb_max": [
+        0.006566,
+        0.126612,
+        0.210495
+       ],
+       "dy_mm_range": [
+        49.13,
+        58.45
+       ],
+       "selector": {
+        "unity_vertices": 72,
+        "triangles": 54,
+        "window_min": [
+         -0.001558719,
+         0.033042856,
+         0.018393771
+        ],
+        "window_max": [
+         0.001560159,
+         0.033751073,
+         0.020669949
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "У HK MP5 по высоте пристреливается мушка: столбик вкручивается/выкручивается специальным ключом. Подвижная деталь — столбик (остров 16).",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -3.86e-07,
+       0.033158388,
+       0.020557236
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       2e-06,
+       0.126601,
+       0.208308
+      ],
+      "rel_shot_mm": {
+       "dx": 0.07,
+       "dy": 58.442,
+       "dz": -4.68
+      },
+      "method": "силуэт острова 16 от глаза: ширина вершины 2.06 мм на половине выступа, середина по x, вершина dy=58.442; z — грань к глазу"
+     },
+     "optional_islands": [
+      {
+       "island_index_in_asset_order": 19,
+       "role": "кольцо намушника (остаётся в корпусе)",
+       "unity_vertices": 980,
+       "welded_vertices": 511,
+       "triangles": 1030,
+       "aabb_min": [
+        -0.003024095,
+        0.031258471,
+        0.004670266
+       ],
+       "aabb_max": [
+        0.003075045,
+        0.035511758,
+        0.023871856
+       ],
+       "centroid": [
+        2.5606e-05,
+        0.033540799,
+        0.014529438
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.01394,
+        0.05458,
+        0.199695
+       ],
+       "prefab_m_aabb_max": [
+        0.013709,
+        0.141627,
+        0.218977
+       ],
+       "dy_mm_range": [
+        -13.58,
+        73.47
+       ],
+       "selector": {
+        "unity_vertices": 980,
+        "triangles": 1030,
+        "window_min": [
+         -0.003134389,
+         0.031148177,
+         0.004559972
+        ],
+        "window_max": [
+         0.003185339,
+         0.035622052,
+         0.02398215
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 2,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "movable": true,
+     "height_travel": {
+      "up_clearance_to_hood_mm": null,
+      "note": "вверх — до внутренней кромки кольца намушника (остров 19); резьба не смоделирована"
+     }
+    }
+   },
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     16
+    ],
+    "axis": "только высота (+Y префаба)",
+    "why": "реальное MP5: высота — вкручивание столбика мушки; барабан целика только выбирает дальность"
+   },
+   "zeroing": {
+    "sight_radius_mm": 263.8,
+    "required_height_shift_mm": -0.904,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 52.3,
+     "dx": 1.8
+    },
+    "uncorrected_angle_mrad": 3.489,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — целик и мушка отдельные острова, подвижный столбик отделяется без разреза"
+  },
+  "Uzi": {
+   "prefab": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab",
+   "label": "Uzi (модель Tommy-Gun из пака Hands)",
+   "shot_source_prefab_m": [
+    -0.000983,
+    0.037468,
+    0.18635
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "Uzi/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Tommy_gun/Mesh/Tommy-Gun_Mesh.FBX",
+      "mesh_local_file_id": 4300010,
+      "mesh_name": "Base",
+      "vertices": 9710,
+      "triangles": 9891,
+      "submeshes": 1,
+      "islands": 33,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.2086745,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.20867454,
+        -0.0,
+        -0.0,
+        3e-09
+       ],
+       [
+        0.0,
+        0.20867454,
+        0.0,
+        0.042585975
+       ],
+       [
+        0.0,
+        -0.0,
+        0.20867454,
+        0.004098947
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 6,
+       "role": "задняя крышка ствольной коробки с прорезью целика на верхней кромке (два выступа)",
+       "unity_vertices": 395,
+       "welded_vertices": 212,
+       "triangles": 372,
+       "aabb_min": [
+        -0.101282403,
+        -0.13181816,
+        -0.683619082
+       ],
+       "aabb_max": [
+        0.090304032,
+        0.154510036,
+        -0.614892781
+       ],
+       "centroid": [
+        -0.004584883,
+        0.062093562,
+        -0.67101001
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.021135,
+        0.015079,
+        -0.138555
+       ],
+       "prefab_m_aabb_max": [
+        0.018844,
+        0.074828,
+        -0.124214
+       ],
+       "dy_mm_range": [
+        -22.39,
+        37.36
+       ],
+       "selector": {
+        "unity_vertices": 395,
+        "triangles": 372,
+        "window_min": [
+         -0.103678479,
+         -0.134214236,
+         -0.686015158
+        ],
+        "window_max": [
+         0.092700108,
+         0.156906112,
+         -0.612496705
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Прицеливание через прорезь в верхней кромке задней крышки; отдельной детали целика нет. Острова 22/24 (nv183/209) из предварительного разбора — винты на заднем торце, не целик; остров 21 — пластина с отверстием (антабка), 23 — звёздочка.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       -0.00480789,
+       0.154510036,
+       -0.671060264
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.001003,
+       0.074828,
+       -0.135934
+      ],
+      "rel_shot_mm": {
+       "dx": -0.02,
+       "dy": 37.361,
+       "dz": -322.28
+      },
+      "method": "силуэт острова 6 от глаза: стенки x=-1.400/1.360 мм, плечи dy=37.361, дно dy=36.252 (глубина 1.11 мм); середина по x"
+     },
+     "movable": false,
+     "note": "целик — часть большой крышки (nv395), двигать её нельзя по смыслу"
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "Uzi/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Tommy_gun/Mesh/Tommy-Gun_Mesh.FBX",
+      "mesh_local_file_id": 4300010,
+      "mesh_name": "Base",
+      "vertices": 9710,
+      "triangles": 9891,
+      "submeshes": 1,
+      "islands": 33,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.2086745,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.20867454,
+        -0.0,
+        -0.0,
+        3e-09
+       ],
+       [
+        0.0,
+        0.20867454,
+        0.0,
+        0.042585975
+       ],
+       [
+        0.0,
+        -0.0,
+        0.20867454,
+        0.004098947
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 10,
+       "role": "мушка: столбик на трапециевидном основании между защитными ушками (один остров)",
+       "unity_vertices": 342,
+       "welded_vertices": 184,
+       "triangles": 362,
+       "aabb_min": [
+        -0.067519777,
+        0.076394729,
+        0.197722167
+       ],
+       "aabb_max": [
+        0.061868541,
+        0.167263106,
+        0.282256991
+       ],
+       "centroid": [
+        -0.003582271,
+        0.132150908,
+        0.245882984
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.01409,
+        0.058528,
+        0.045359
+       ],
+       "prefab_m_aabb_max": [
+        0.01291,
+        0.07749,
+        0.062999
+       ],
+       "dy_mm_range": [
+        21.06,
+        40.02
+       ],
+       "selector": {
+        "unity_vertices": 342,
+        "triangles": 362,
+        "window_min": [
+         -0.069915852,
+         0.073998654,
+         0.195326091
+        ],
+        "window_max": [
+         0.064264617,
+         0.169659181,
+         0.284653066
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "У реального Uzi по высоте регулируется мушка (столбик вкручивается). В модели столбик и ушки — один остров 10: двигать весь блок (ушки поедут вместе на те же мм) или резать столбик (разрез не выполнялся).",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -0.002843108,
+       0.156582415,
+       0.255283713
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.000593,
+       0.075261,
+       0.05737
+      ],
+      "rel_shot_mm": {
+       "dx": 0.39,
+       "dy": 37.793,
+       "dz": -128.98
+      },
+      "method": "силуэт острова 10 (окно ±4 мм вокруг ShotSource.x): вершина столбика dy=37.793, ширина 2.78 мм, середина по x"
+     },
+     "optional_islands": [
+      {
+       "island_index_in_asset_order": 9,
+       "role": "U-кронштейн с ушками и боковыми отверстиями между целиком и мушкой (z .008–.028); не столбик и не рукоять взвода (она — Slide/Reload_frame справа); вероятно, защитные ушки без диоптра",
+       "unity_vertices": 531,
+       "welded_vertices": 278,
+       "triangles": 568,
+       "aabb_min": [
+        -0.086872846,
+        0.103581846,
+        0.019731054
+       ],
+       "aabb_max": [
+        0.085151918,
+        0.210653067,
+        0.114254832
+       ],
+       "centroid": [
+        -0.001004164,
+        0.149545876,
+        0.07869108
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.018128,
+        0.064201,
+        0.008216
+       ],
+       "prefab_m_aabb_max": [
+        0.017769,
+        0.086544,
+        0.027941
+       ],
+       "dy_mm_range": [
+        26.73,
+        49.08
+       ],
+       "selector": {
+        "unity_vertices": 531,
+        "triangles": 568,
+        "window_min": [
+         -0.089268922,
+         0.10118577,
+         0.017334978
+        ],
+        "window_max": [
+         0.087547994,
+         0.213049142,
+         0.116650908
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 2,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 32,
+       "role": "диск в кронштейне 9",
+       "unity_vertices": 45,
+       "welded_vertices": 45,
+       "triangles": 72,
+       "aabb_min": [
+        -0.025501108,
+        0.107879028,
+        0.036988184
+       ],
+       "aabb_max": [
+        0.020269142,
+        0.121225052,
+        0.082758427
+       ],
+       "centroid": [
+        -0.002615987,
+        0.11357592,
+        0.059873304
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.005321,
+        0.065098,
+        0.011817
+       ],
+       "prefab_m_aabb_max": [
+        0.00423,
+        0.067883,
+        0.021369
+       ],
+       "dy_mm_range": [
+        27.63,
+        30.41
+       ],
+       "selector": {
+        "unity_vertices": 45,
+        "triangles": 72,
+        "window_min": [
+         -0.027897184,
+         0.105482952,
+         0.034592108
+        ],
+        "window_max": [
+         0.022665218,
+         0.123621127,
+         0.085154502
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "movable": true,
+     "not_separate": "столбик не отделён от ушек"
+    }
+   },
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     10
+    ],
+    "axis": "только высота",
+    "why": "реальный Uzi: высота — столбик мушки; в модели столбик слит с ушками → двигается весь остров 10"
+   },
+   "zeroing": {
+    "sight_radius_mm": 193.3,
+    "required_height_shift_mm": -0.904,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 71.6,
+     "dx": 32.5
+    },
+    "uncorrected_angle_mrad": 4.776,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "B — мушка отделяется островом только вместе с ушками; роль кронштейна 9 под вопросом"
+  },
+  "Herrington": {
+   "prefab": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab",
+   "label": "Herrington (Remington 11-87, ружейные прицелы)",
+   "shot_source_prefab_m": [
+    -0.0,
+    0.03215,
+    0.61568
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "Herrington/MeshContainer/Herrington_1187_Skeleton",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Herrington_1187_Skeleton.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "Herrington_Herrington_1187_Skeleton",
+      "vertices": 1199,
+      "triangles": 1140,
+      "submeshes": 1,
+      "islands": 9,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.0,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        1.0,
+        -0.0,
+        -0.0,
+        -1e-08
+       ],
+       [
+        0.0,
+        2.3e-07,
+        1.000000053,
+        0.007401812
+       ],
+       [
+        -0.0,
+        -1.000000053,
+        2.3e-07,
+        0.16232353
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 0,
+       "role": "лопатка целика с пологой V-прорезью",
+       "unity_vertices": 262,
+       "welded_vertices": 126,
+       "triangles": 248,
+       "aabb_min": [
+        -0.007242338,
+        -0.135600269,
+        0.045360912
+       ],
+       "aabb_max": [
+        0.007242338,
+        -0.122592442,
+        0.052147292
+       ],
+       "centroid": [
+        -0.0,
+        -0.12993132,
+        0.047893994
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.007242,
+        0.052763,
+        0.284916
+       ],
+       "prefab_m_aabb_max": [
+        0.007242,
+        0.059549,
+        0.297924
+       ],
+       "dy_mm_range": [
+        20.61,
+        27.4
+       ],
+       "selector": {
+        "unity_vertices": 262,
+        "triangles": 248,
+        "window_min": [
+         -0.007742338,
+         -0.136100269,
+         0.044860912
+        ],
+        "window_max": [
+         0.007742338,
+         -0.122092442,
+         0.052647292
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 2,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 3,
+       "role": "основание целика",
+       "unity_vertices": 98,
+       "welded_vertices": 48,
+       "triangles": 92,
+       "aabb_min": [
+        -0.005242907,
+        -0.13631919,
+        0.039456636
+       ],
+       "aabb_max": [
+        0.005242907,
+        -0.116641358,
+        0.04588424
+       ],
+       "centroid": [
+        7.0194e-05,
+        -0.1257739,
+        0.043111875
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.005243,
+        0.046858,
+        0.278965
+       ],
+       "prefab_m_aabb_max": [
+        0.005243,
+        0.053286,
+        0.298643
+       ],
+       "dy_mm_range": [
+        14.71,
+        21.14
+       ],
+       "selector": {
+        "unity_vertices": 98,
+        "triangles": 92,
+        "window_min": [
+         -0.005742907,
+         -0.13681919,
+         0.038956636
+        ],
+        "window_max": [
+         0.005742907,
+         -0.116141358,
+         0.04638424
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      },
+      {
+       "island_index_in_asset_order": 5,
+       "role": "поперечный штифт",
+       "unity_vertices": 98,
+       "welded_vertices": 48,
+       "triangles": 92,
+       "aabb_min": [
+        -0.005832509,
+        -0.121787623,
+        0.040573254
+       ],
+       "aabb_max": [
+        0.005832509,
+        -0.118319638,
+        0.044041246
+       ],
+       "centroid": [
+        -0.0,
+        -0.120053632,
+        0.042271863
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.005833,
+        0.047975,
+        0.280643
+       ],
+       "prefab_m_aabb_max": [
+        0.005832,
+        0.051443,
+        0.284111
+       ],
+       "dy_mm_range": [
+        15.82,
+        19.29
+       ],
+       "selector": {
+        "unity_vertices": 98,
+        "triangles": 92,
+        "window_min": [
+         -0.006332509,
+         -0.122287623,
+         0.040073254
+        ],
+        "window_max": [
+         0.006332509,
+         -0.117819638,
+         0.044541246
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      },
+      {
+       "island_index_in_asset_order": 8,
+       "role": "вставка-точка на верхней грани лопатки",
+       "unity_vertices": 96,
+       "welded_vertices": 72,
+       "triangles": 118,
+       "aabb_min": [
+        -0.001901224,
+        -0.134484679,
+        0.047044106
+       ],
+       "aabb_max": [
+        0.001901224,
+        -0.130682275,
+        0.048192181
+       ],
+       "centroid": [
+        -0.0,
+        -0.132583477,
+        0.047750451
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.001901,
+        0.054446,
+        0.293006
+       ],
+       "prefab_m_aabb_max": [
+        0.001901,
+        0.055594,
+        0.296808
+       ],
+       "dy_mm_range": [
+        22.3,
+        23.44
+       ],
+       "selector": {
+        "unity_vertices": 96,
+        "triangles": 118,
+        "window_min": [
+         -0.002401224,
+         -0.134984679,
+         0.046544106
+        ],
+        "window_max": [
+         0.002401224,
+         -0.130182275,
+         0.048692181
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Это не средняя бусина, а целик ружейного типа (лопатка с пологой V-прорезью) на основании. Неподвижный по решению пользователя.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       -4.8e-08,
+       -0.125680938,
+       0.052147239
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.059549,
+       0.288004
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 27.399,
+       "dz": -327.68
+      },
+      "method": "силуэт острова 0 от глаза: V-прорезь, плечи x=±6.52 мм, dy=27.399, дно dy=26.209 (глубина 1.19 мм); R — середина на уровне плеч"
+     },
+     "movable": false
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "Herrington/MeshContainer/Herrington_1187_Skeleton",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Herrington_1187_Skeleton.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "Herrington_Herrington_1187_Skeleton",
+      "vertices": 1199,
+      "triangles": 1140,
+      "submeshes": 1,
+      "islands": 9,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.0,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        1.0,
+        -0.0,
+        -0.0,
+        -1e-08
+       ],
+       [
+        0.0,
+        2.3e-07,
+        1.000000053,
+        0.007401812
+       ],
+       [
+        -0.0,
+        -1.000000053,
+        2.3e-07,
+        0.16232353
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 1,
+       "role": "мушка-лопатка (рампа) — «передняя бусина» из разбора",
+       "unity_vertices": 130,
+       "welded_vertices": 56,
+       "triangles": 108,
+       "aabb_min": [
+        -0.003008605,
+        -0.441584349,
+        0.042262014
+       ],
+       "aabb_max": [
+        0.003008605,
+        -0.425169379,
+        0.049959768
+       ],
+       "centroid": [
+        0.0,
+        -0.434026963,
+        0.046520489
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.003009,
+        0.049664,
+        0.587493
+       ],
+       "prefab_m_aabb_max": [
+        0.003009,
+        0.057361,
+        0.603908
+       ],
+       "dy_mm_range": [
+        17.51,
+        25.21
+       ],
+       "selector": {
+        "unity_vertices": 130,
+        "triangles": 108,
+        "window_min": [
+         -0.003508605,
+         -0.442084349,
+         0.041762014
+        ],
+        "window_max": [
+         0.003508605,
+         -0.424669379,
+         0.050459768
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "фрагмент основания (ласточкин хвост), едет с лопаткой",
+       "unity_vertices": 16,
+       "welded_vertices": 8,
+       "triangles": 6,
+       "aabb_min": [
+        -0.003087399,
+        -0.440965533,
+        0.036270577
+       ],
+       "aabb_max": [
+        0.003087319,
+        -0.430212349,
+        0.044378642
+       ],
+       "centroid": [
+        0.000385879,
+        -0.435221821,
+        0.041777659
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.003087,
+        0.043672,
+        0.592536
+       ],
+       "prefab_m_aabb_max": [
+        0.003087,
+        0.05178,
+        0.603289
+       ],
+       "dy_mm_range": [
+        11.52,
+        19.63
+       ],
+       "selector": {
+        "unity_vertices": 16,
+        "triangles": 6,
+        "window_min": [
+         -0.003587399,
+         -0.441465533,
+         0.035770577
+        ],
+        "window_max": [
+         0.003587319,
+         -0.429712349,
+         0.044878642
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Передняя деталь — лопатка на рампе, а не бусина. Подвижной сделана по решению пользователя (у 11-87 с ружейными прицелами по высоте обычно регулируется целик).",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -4.8e-08,
+       -0.426644057,
+       0.04995976
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.057361,
+       0.588968
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 25.211,
+       "dz": -26.71
+      },
+      "method": "силуэт острова 1: верхняя кромка — ребро (2 вершины), середина по x, dy=25.211; z — точка ребра со стороны глаза"
+     }
+    }
+   },
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     1,
+     2
+    ],
+    "axis": "только высота",
+    "why": "решение пользователя: подвижная — передняя (лопатка)"
+   },
+   "zeroing": {
+    "sight_radius_mm": 301.0,
+    "required_height_shift_mm": 1.65,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": -84.0,
+     "dx": -0.0
+    },
+    "uncorrected_angle_mrad": -5.601,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "mesh_note": "меш — game-owned .asset из Kinemation (KinemationWeapon.MeshOf), острова совпадают с подмножеством исходного skinned-меша",
+   "difficulty": "A — все детали отдельные острова отдельного узла Herrington_1187_Skeleton"
+  },
+  "ShotgunReal": {
+   "prefab": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab",
+   "label": "FABARM SDASS (ShotgunReal)",
+   "shot_source_prefab_m": [
+    -0.0,
+    0.066191,
+    0.575885
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "FrontSight": {
+     "mesh": {
+      "node": "FabarmSDASS/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Shotgun/Mesh/Shotgun_Mesh.FBX",
+      "mesh_local_file_id": 4300006,
+      "mesh_name": "Base",
+      "vertices": 6199,
+      "triangles": 7054,
+      "submeshes": 1,
+      "islands": 14,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.1892963,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        1.189296329,
+        0.0,
+        0.0,
+        -3e-09
+       ],
+       [
+        -0.0,
+        -4e-07,
+        1.189296582,
+        -0.007503472
+       ],
+       [
+        0.0,
+        -1.189296582,
+        -4e-07,
+        0.225884861
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 3,
+       "role": "бусина (низкополигональная, 8 сваренных вершин)",
+       "unity_vertices": 14,
+       "welded_vertices": 8,
+       "triangles": 10,
+       "aabb_min": [
+        -0.001214,
+        -0.266775995,
+        0.074893996
+       ],
+       "aabb_max": [
+        0.001214,
+        -0.257842004,
+        0.077819996
+       ],
+       "centroid": [
+        0.0,
+        -0.262044575,
+        0.076565996
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.001444,
+        0.081568,
+        0.532535
+       ],
+       "prefab_m_aabb_max": [
+        0.001444,
+        0.085048,
+        0.543161
+       ],
+       "dy_mm_range": [
+        15.38,
+        18.86
+       ],
+       "selector": {
+        "unity_vertices": 14,
+        "triangles": 10,
+        "window_min": [
+         -0.001634417,
+         -0.267196412,
+         0.074473579
+        ],
+        "window_max": [
+         0.001634417,
+         -0.257421588,
+         0.078240412
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "У FABARM SDASS бусина неподвижна; другой прицельной детали нет — подвижной может быть только она.",
+     "aim_point": {
+      "type": "F_bead",
+      "point": [
+       -0.0,
+       -0.262309,
+       0.076356995
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.083308,
+       0.537848
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 17.116,
+       "dz": -38.04
+      },
+      "method": "центр бусины = центр AABB острова 3 (8 вершин, сферу подогнать нельзя)",
+      "alt_top_point_prefab_m": [
+       -0.0,
+       0.085048,
+       0.537848
+      ],
+      "alt_note": "вершина бусины (max y) — если целиться по верху"
+     },
+     "movable": true
+    },
+    "RearSight": {
+     "exists": false,
+     "proposal": {
+      "type": "R_proposed",
+      "point": [
+       -0.0,
+       0.189511038,
+       0.078649309
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.086034,
+       0.0005
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 19.842,
+       "dz": -575.38
+      },
+      "method": "предложение по соглашению: верх ствольной коробки (остров 1) по центру (x=ShotSource.x), задний конец ровного верха (контур в пределах 0.5 мм от максимума dy=20.24), z=0.0005"
+     },
+     "needs_user_decision": true,
+     "island_of_receiver": {
+      "island_index_in_asset_order": 1,
+      "role": "ствольная коробка с пистолетной рукоятью (один остров)",
+      "unity_vertices": 1300,
+      "welded_vertices": 818,
+      "triangles": 1636,
+      "aabb_min": [
+       -0.01506,
+       0.033664998,
+       -0.078981996
+      ],
+      "aabb_max": [
+       0.01506,
+       0.302699983,
+       0.078981996
+      ],
+      "centroid": [
+       0.000994025,
+       0.189138684,
+       0.01038333
+      ],
+      "submeshes": [
+       0
+      ],
+      "prefab_m_aabb_min": [
+       -0.017911,
+       -0.101437,
+       -0.134115
+      ],
+      "prefab_m_aabb_max": [
+       0.017911,
+       0.08643,
+       0.185847
+      ],
+      "dy_mm_range": [
+       -167.63,
+       20.24
+      ],
+      "selector": {
+       "unity_vertices": 1300,
+       "triangles": 1636,
+       "window_min": [
+        -0.015480417,
+        0.033244581,
+        -0.079402412
+       ],
+       "window_max": [
+        0.015480417,
+        0.3031204,
+        0.079402412
+       ],
+       "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+       "unique_by_counts": true,
+       "matches_in_window": 1,
+       "islands_in_window_any_counts": 3,
+       "islands_with_same_counts": 1
+      }
+     }
+    }
+   },
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     3
+    ],
+    "axis": "только высота",
+    "why": "единственная прицельная деталь — бусина"
+   },
+   "zeroing": {
+    "sight_radius_mm": 537.3,
+    "required_height_shift_mm": 2.042,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": -59.2,
+     "dx": 0.0
+    },
+    "uncorrected_angle_mrad": -3.945,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "C — нет целика: нужна договорённость о точке R (предложение дано)"
+  },
+  "Revolver": {
+   "prefab": "Assets/Prefabs/Weapons/Revolver/Revolver.prefab",
+   "label": "Revolver (Hands_Gun_03)",
+   "shot_source_prefab_m": [
+    0.000282,
+    0.132356,
+    0.165584
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "Revolver/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun_03/Mesh/Hands_Gun_03.FBX",
+      "mesh_local_file_id": 4300024,
+      "mesh_name": "Base",
+      "vertices": 3403,
+      "triangles": 4410,
+      "submeshes": 1,
+      "islands": 7,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.7058332,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.7058332,
+        0.0,
+        -0.0,
+        -7e-09
+       ],
+       [
+        0.0,
+        -2.37e-07,
+        0.705833308,
+        -0.0
+       ],
+       [
+        0.0,
+        -0.705833308,
+        -2.37e-07,
+        -8.4e-08
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 2,
+       "role": "лопатка целика с прорезью",
+       "unity_vertices": 96,
+       "welded_vertices": 49,
+       "triangles": 94,
+       "aabb_min": [
+        -0.010888782,
+        0.128229856,
+        0.206133947
+       ],
+       "aabb_max": [
+        0.011421871,
+        0.131004497,
+        0.22041522
+       ],
+       "centroid": [
+        0.000394188,
+        0.129710518,
+        0.214379664
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.007686,
+        0.145496,
+        -0.092467
+       ],
+       "prefab_m_aabb_max": [
+        0.008062,
+        0.155576,
+        -0.090509
+       ],
+       "dy_mm_range": [
+        13.14,
+        23.22
+       ],
+       "selector": {
+        "unity_vertices": 96,
+        "triangles": 94,
+        "window_min": [
+         -0.011597165,
+         0.127521474,
+         0.205425564
+        ],
+        "window_max": [
+         0.012130254,
+         0.13171288,
+         0.221123602
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 4,
+       "role": "планка целика в канале рамки (едет вместе)",
+       "unity_vertices": 107,
+       "welded_vertices": 56,
+       "triangles": 108,
+       "aabb_min": [
+        -0.008016432,
+        0.083849944,
+        0.206062108
+       ],
+       "aabb_max": [
+        0.008356975,
+        0.128215507,
+        0.213525325
+       ],
+       "centroid": [
+        1.7954e-05,
+        0.109234416,
+        0.209492746
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.005658,
+        0.145445,
+        -0.090499
+       ],
+       "prefab_m_aabb_max": [
+        0.005899,
+        0.150713,
+        -0.059184
+       ],
+       "dy_mm_range": [
+        13.09,
+        18.36
+       ],
+       "selector": {
+        "unity_vertices": 107,
+        "triangles": 108,
+        "window_min": [
+         -0.008724814,
+         0.083141562,
+         0.205353726
+        ],
+        "window_max": [
+         0.009065358,
+         0.128923889,
+         0.214233708
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Регулируемый целик револьвера: высота — винтом (поднимается планка с лопаткой). Подвижная группа 2+4.",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       0.000271947,
+       0.130936965,
+       0.220386015
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.000192,
+       0.155556,
+       -0.09242
+      ],
+      "rel_shot_mm": {
+       "dx": -0.09,
+       "dy": 23.2,
+       "dz": -258.0
+      },
+      "method": "силуэт острова 2 от глаза: стенки x=-2.360/2.180 мм, плечи dy=23.200, дно dy=20.689 (глубина 2.51 мм); середина по x"
+     },
+     "movable": true
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "Revolver/MeshContainer/Base",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun_03/Mesh/Hands_Gun_03.FBX",
+      "mesh_local_file_id": 4300024,
+      "mesh_name": "Base",
+      "vertices": 3403,
+      "triangles": 4410,
+      "submeshes": 1,
+      "islands": 7,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.7058332,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.7058332,
+        0.0,
+        -0.0,
+        -7e-09
+       ],
+       [
+        0.0,
+        -2.37e-07,
+        0.705833308,
+        -0.0
+       ],
+       [
+        0.0,
+        -0.705833308,
+        -2.37e-07,
+        -8.4e-08
+       ]
+      ]
+     },
+     "islands": [],
+     "not_separate": {
+      "island": {
+       "island_index_in_asset_order": 3,
+       "role": "ствол с мушкой-рампой (мушка слита со стволом)",
+       "unity_vertices": 1001,
+       "welded_vertices": 717,
+       "triangles": 1391,
+       "aabb_min": [
+        -0.014314339,
+        -0.248760849,
+        0.150628164
+       ],
+       "aabb_max": [
+        0.015117561,
+        0.014370378,
+        0.220408052
+       ],
+       "centroid": [
+        0.000111684,
+        -0.156938762,
+        0.186587654
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.010104,
+        0.106318,
+        -0.010143
+       ],
+       "prefab_m_aabb_max": [
+        0.01067,
+        0.155571,
+        0.175584
+       ],
+       "dy_mm_range": [
+        -26.04,
+        23.22
+       ],
+       "selector": {
+        "unity_vertices": 1001,
+        "triangles": 1391,
+        "window_min": [
+         -0.015022721,
+         -0.249469232,
+         0.149919782
+        ],
+        "window_max": [
+         0.015825944,
+         0.015078761,
+         0.221116435
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      "note": "мушка — гребень на рампе в конце ствола, часть острова 3 (nv1001); отделять не нужно — неподвижна"
+     },
+     "physical": "мушка неподвижная (рампа)",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.000300283,
+       -0.214232281,
+       0.220408052
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.000212,
+       0.155571,
+       0.151212
+      ],
+      "rel_shot_mm": {
+       "dx": -0.07,
+       "dy": 23.215,
+       "dz": -14.37
+      },
+      "method": "силуэт треугольников острова 3 с z>0.12 (рампа мушки), окно ±3 мм: вершина гребня dy=23.215, ширина 1.78 мм, середина по x; z — передний край ровного верха со стороны глаза"
+     },
+     "movable": false
+    }
+   },
+   "movable": {
+    "part": "RearSight",
+    "islands": [
+     2,
+     4
+    ],
+    "axis": "только высота",
+    "why": "у револьверов с регулируемым целиком высота — винт целика; мушка слита со стволом"
+   },
+   "zeroing": {
+    "sight_radius_mm": 243.6,
+    "required_height_shift_mm": 0.392,
+    "moved_part": "целик (R)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 24.2,
+     "dx": 1.2
+    },
+    "uncorrected_angle_mrad": 1.612,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — целик отдельные острова; F — точка на стволе"
+  },
+  "Gun": {
+   "prefab": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab",
+   "label": "Gun (Browning Hi-Power)",
+   "shot_source_prefab_m": [
+    -0.0,
+    0.035466,
+    0.105903
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "BrowningHiPower/Slide/Gate",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun/Mesh/Gun_Mesh.FBX",
+      "mesh_local_file_id": 4300006,
+      "mesh_name": "Gate",
+      "vertices": 1118,
+      "triangles": 1165,
+      "submeshes": 1,
+      "islands": 5,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.6800001,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.680000068,
+        1.41e-07,
+        1.11e-07,
+        0.000163744
+       ],
+       [
+        -1.11e-07,
+        -3.6e-08,
+        0.680000036,
+        0.029948587
+       ],
+       [
+        1.41e-07,
+        -0.680000104,
+        -3.6e-08,
+        0.022525379
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 1,
+       "role": "целик в пазу затвора (прямоугольная прорезь)",
+       "unity_vertices": 68,
+       "welded_vertices": 36,
+       "triangles": 62,
+       "aabb_min": [
+        -0.012712267,
+        0.106241263,
+        0.017353153
+       ],
+       "aabb_max": [
+        0.012230771,
+        0.120437279,
+        0.027741641
+       ],
+       "centroid": [
+        -0.000240749,
+        0.113571217,
+        0.023499063
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.008481,
+        0.041749,
+        -0.059372
+       ],
+       "prefab_m_aabb_max": [
+        0.008481,
+        0.048813,
+        -0.049719
+       ],
+       "dy_mm_range": [
+        6.28,
+        13.35
+       ],
+       "selector": {
+        "unity_vertices": 68,
+        "triangles": 62,
+        "window_min": [
+         -0.013447561,
+         0.105505969,
+         0.016617859
+        ],
+        "window_max": [
+         0.012966065,
+         0.121172573,
+         0.028476935
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Неподвижный целик (у Hi-Power дрейф в пазу только по горизонтали).",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       -0.000240838,
+       0.117417925,
+       0.027741641
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.048813,
+       -0.057319
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 13.347,
+       "dz": -163.22
+      },
+      "method": "силуэт острова 1: стенки x=-1.600/1.600 мм, плечи dy=13.347, дно dy=10.446 (глубина 2.90 мм)"
+     },
+     "movable": false
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "BrowningHiPower/Slide/Gate",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun/Mesh/Gun_Mesh.FBX",
+      "mesh_local_file_id": 4300006,
+      "mesh_name": "Gate",
+      "vertices": 1118,
+      "triangles": 1165,
+      "submeshes": 1,
+      "islands": 5,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.6800001,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.680000068,
+        1.41e-07,
+        1.11e-07,
+        0.000163744
+       ],
+       [
+        -1.11e-07,
+        -3.6e-08,
+        0.680000036,
+        0.029948587
+       ],
+       [
+        1.41e-07,
+        -0.680000104,
+        -3.6e-08,
+        0.022525379
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 2,
+       "role": "мушка (столбик) на затворе",
+       "unity_vertices": 74,
+       "welded_vertices": 38,
+       "triangles": 62,
+       "aabb_min": [
+        -0.009858842,
+        -0.134830341,
+        0.019510269
+       ],
+       "aabb_max": [
+        0.009377345,
+        -0.120844692,
+        0.02780981
+       ],
+       "centroid": [
+        -0.000240749,
+        -0.127887727,
+        0.022879744
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.00654,
+        0.043216,
+        0.1047
+       ],
+       "prefab_m_aabb_max": [
+        0.00654,
+        0.048859,
+        0.11421
+       ],
+       "dy_mm_range": [
+        7.75,
+        13.39
+       ],
+       "selector": {
+        "unity_vertices": 74,
+        "triangles": 62,
+        "window_min": [
+         -0.010594136,
+         -0.135565635,
+         0.018774975
+        ],
+        "window_max": [
+         0.010112639,
+         -0.120109398,
+         0.028545104
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "У Hi-Power высота меняется заменой мушки другой высоты; подвижной выбрана мушка. Обе детали — в затворе (Slide/Gate): подвижная мушка должна остаться дочерней Slide, чтобы ездить с затвором.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -0.000240788,
+       -0.121954351,
+       0.02780981
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.048859,
+       0.105454
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 13.393,
+       "dz": -0.45
+      },
+      "method": "силуэт острова 2: верхняя грань, середина по x, dy=13.393, ширина 3.12 мм; z — грань к глазу"
+     },
+     "movable": true
+    }
+   },
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     2
+    ],
+    "axis": "только высота",
+    "why": "по реальному оружию высота — подбор высоты мушки; целик только сдвигается вбок"
+   },
+   "zeroing": {
+    "sight_radius_mm": 162.8,
+    "required_height_shift_mm": -0.19,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 17.7,
+     "dx": 0.0
+    },
+    "uncorrected_angle_mrad": 1.178,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — оба острова отдельные; учесть, что они в затворе (Slide)"
+  },
+  "PPK": {
+   "prefab": "Assets/Prefabs/Weapons/PPK/PPK.prefab",
+   "label": "PPK (Walther)",
+   "shot_source_prefab_m": [
+    0.0,
+    0.050057,
+    0.101441
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "PPK/Slide/Gun02_Detail_01",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun02/Mesh/Hands_Gun_02_Mesh.FBX",
+      "mesh_local_file_id": 4300006,
+      "mesh_name": "Gun02_Detail_01",
+      "vertices": 2328,
+      "triangles": 3084,
+      "submeshes": 1,
+      "islands": 3,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.6545659,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.654565919,
+        1.2e-08,
+        -3.14e-07,
+        7.1e-08
+       ],
+       [
+        3.14e-07,
+        -2.2e-07,
+        0.65456615,
+        -0.003828824
+       ],
+       [
+        1.2e-08,
+        -0.65456615,
+        -2.2e-07,
+        0.011140854
+       ]
+      ]
+     },
+     "islands": [],
+     "not_separate": {
+      "island": {
+       "island_index_in_asset_order": 0,
+       "role": "оболочка затвора (одна, nv2139) — целик и мушка вылеплены в ней",
+       "unity_vertices": 2139,
+       "welded_vertices": 1398,
+       "triangles": 2800,
+       "aabb_min": [
+        -0.019259626,
+        -0.152919769,
+        0.055405874
+       ],
+       "aabb_max": [
+        0.019253461,
+        0.125560924,
+        0.107928216
+       ],
+       "centroid": [
+        0.002982197,
+        -0.03180411,
+        0.082975568
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.012607,
+        0.032438,
+        -0.071047
+       ],
+       "prefab_m_aabb_max": [
+        0.012603,
+        0.066817,
+        0.111237
+       ],
+       "dy_mm_range": [
+        -17.62,
+        16.76
+       ],
+       "selector": {
+        "unity_vertices": 2139,
+        "triangles": 2800,
+        "window_min": [
+         -0.020023491,
+         -0.153683634,
+         0.054642009
+        ],
+        "window_max": [
+         0.020017326,
+         0.126324789,
+         0.108692081
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      "note": "отделить целик без разреза нельзя: прорезь — часть оболочки затвора"
+     },
+     "physical": "у PPK прицелы неподвижные (целик дрейфуется вбок)",
+     "aim_point": {
+      "type": "R_notch",
+      "point": [
+       1.5221e-05,
+       0.091928937,
+       0.107895893
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       1e-05,
+       0.066796,
+       -0.049033
+      ],
+      "rel_shot_mm": {
+       "dx": 0.01,
+       "dy": 16.739,
+       "dz": -150.47
+      },
+      "method": "силуэт треугольников острова 0 с z∈[-0.052,-0.043] (выступы целика): стенки x=-1.480/1.500 мм, плечи dy=16.739, дно dy=13.949 (глубина 2.79 мм)"
+     },
+     "movable": false
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "PPK/Slide/Gun02_Detail_01",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Gun02/Mesh/Hands_Gun_02_Mesh.FBX",
+      "mesh_local_file_id": 4300006,
+      "mesh_name": "Gun02_Detail_01",
+      "vertices": 2328,
+      "triangles": 3084,
+      "submeshes": 1,
+      "islands": 3,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.6545659,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.654565919,
+        1.2e-08,
+        -3.14e-07,
+        7.1e-08
+       ],
+       [
+        3.14e-07,
+        -2.2e-07,
+        0.65456615,
+        -0.003828824
+       ],
+       [
+        1.2e-08,
+        -0.65456615,
+        -2.2e-07,
+        0.011140854
+       ]
+      ]
+     },
+     "islands": [],
+     "not_separate": {
+      "note": "мушка — выступ оболочки затвора (тот же остров 0), z .100–.108"
+     },
+     "physical": "неподвижная мушка",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -5.2e-08,
+       -0.136892572,
+       0.10786551
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.0,
+       0.066776,
+       0.100746
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 16.719,
+       "dz": -0.69
+      },
+      "method": "силуэт треугольников острова 0 с z∈[0.099,0.110]: вершина dy=16.719, ширина 2.28 мм, середина по x"
+     },
+     "movable": false
+    }
+   },
+   "movable": {
+    "part": null,
+    "islands": [],
+    "proposal": "неподвижные точки F/R без подвижной детали (ошибка ниже) либо разрез оболочки сборщиком (мушка — простой выступ, разрез по плоскости y=верх затвора)",
+    "needs_user_decision": true
+   },
+   "zeroing": {
+    "sight_radius_mm": 149.8,
+    "required_height_shift_mm": -0.146,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 14.7,
+     "dx": -1.0
+    },
+    "uncorrected_angle_mrad": 0.982,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "fixed_points_error": {
+    "poi_at_15m_mm": {
+     "dy": 14.7,
+     "dx": -1.0
+    },
+    "angle_mrad": 0.982,
+    "equivalent_front_shift_mm": -0.146
+   },
+   "difficulty": "C — прицел не отдельный остров; нужно решение: неподвижные точки или разрез"
+  },
+  "Scar": {
+   "prefab": "Assets/Prefabs/Weapons/Scar/Scar.prefab",
+   "label": "SCAR-L",
+   "shot_source_prefab_m": [
+    -0.004489,
+    0.057184,
+    0.363575
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "Scar/MeshContainer/Scar_Detail_02",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle01/Mesh/Hands_Automatic_Rifle01.FBX",
+      "mesh_local_file_id": 1854231415305027722,
+      "mesh_name": "Scar_Detail_02",
+      "vertices": 1569,
+      "triangles": 1574,
+      "submeshes": 1,
+      "islands": 6,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.696006,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.696005995,
+        -4.37e-07,
+        3.15e-07,
+        -0.004381284
+       ],
+       [
+        -4.37e-07,
+        -0.696006103,
+        1.36e-07,
+        0.105076026
+       ],
+       [
+        3.15e-07,
+        -1.36e-07,
+        -0.696005995,
+        -0.062139135
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 3,
+       "role": "кольцо диоптра на конце рамки",
+       "unity_vertices": 224,
+       "welded_vertices": 108,
+       "triangles": 220,
+       "aabb_min": [
+        -0.003942708,
+        -0.008714218,
+        0.035221938
+       ],
+       "aabb_max": [
+        0.00400548,
+        0.001774635,
+        0.045884684
+       ],
+       "centroid": [
+        2.7739e-05,
+        -0.002264103,
+        0.03927775
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.007125,
+        0.103841,
+        -0.094075
+       ],
+       "prefab_m_aabb_max": [
+        -0.001593,
+        0.111141,
+        -0.086654
+       ],
+       "dy_mm_range": [
+        46.66,
+        53.96
+       ],
+       "selector": {
+        "unity_vertices": 224,
+        "triangles": 220,
+        "window_min": [
+         -0.004661093,
+         -0.009432602,
+         0.034503553
+        ],
+        "window_max": [
+         0.004723865,
+         0.00249302,
+         0.046603068
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 0,
+       "role": "рамка целика",
+       "unity_vertices": 320,
+       "welded_vertices": 194,
+       "triangles": 384,
+       "aabb_min": [
+        -0.00733952,
+        -0.007557592,
+        -0.009628105
+       ],
+       "aabb_max": [
+        0.00734055,
+        0.007122488,
+        0.029387377
+       ],
+       "centroid": [
+        -2.0519e-05,
+        -0.000196486,
+        0.013291332
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.00949,
+        0.100119,
+        -0.082593
+       ],
+       "prefab_m_aabb_max": [
+        0.000728,
+        0.110336,
+        -0.055438
+       ],
+       "dy_mm_range": [
+        42.93,
+        53.15
+       ],
+       "selector": {
+        "unity_vertices": 320,
+        "triangles": 384,
+        "window_min": [
+         -0.008057905,
+         -0.008275977,
+         -0.01034649
+        ],
+        "window_max": [
+         0.008058935,
+         0.007840872,
+         0.030105762
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "рамка, задняя часть",
+       "unity_vertices": 143,
+       "welded_vertices": 67,
+       "triangles": 130,
+       "aabb_min": [
+        -0.006278594,
+        -0.006231184,
+        0.02945528
+       ],
+       "aabb_max": [
+        0.006278597,
+        0.006326008,
+        0.045742683
+       ],
+       "centroid": [
+        1.2e-07,
+        0.000135735,
+        0.036879344
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.008751,
+        0.100673,
+        -0.093976
+       ],
+       "prefab_m_aabb_max": [
+        -1.1e-05,
+        0.109413,
+        -0.08264
+       ],
+       "dy_mm_range": [
+        43.49,
+        52.23
+       ],
+       "selector": {
+        "unity_vertices": 143,
+        "triangles": 130,
+        "window_min": [
+         -0.006996979,
+         -0.006949568,
+         0.028736895
+        ],
+        "window_max": [
+         0.006996981,
+         0.007044392,
+         0.046461068
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 1,
+       "role": "втулка/барабан на оси",
+       "unity_vertices": 342,
+       "welded_vertices": 192,
+       "triangles": 336,
+       "aabb_min": [
+        -0.01020844,
+        -0.00591423,
+        -0.005534668
+       ],
+       "aabb_max": [
+        0.010208443,
+        0.004804096,
+        0.005183678
+       ],
+       "centroid": [
+        1.48e-07,
+        -0.000473782,
+        -0.000186371
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.011486,
+        0.101732,
+        -0.065747
+       ],
+       "prefab_m_aabb_max": [
+        0.002724,
+        0.109192,
+        -0.058287
+       ],
+       "dy_mm_range": [
+        44.55,
+        52.01
+       ],
+       "selector": {
+        "unity_vertices": 342,
+        "triangles": 336,
+        "window_min": [
+         -0.010926825,
+         -0.006632615,
+         -0.006253053
+        ],
+        "window_max": [
+         0.010926827,
+         0.005522481,
+         0.005902062
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 4,
+       "role": "маховик правый (на оси шарнира)",
+       "unity_vertices": 270,
+       "welded_vertices": 128,
+       "triangles": 252,
+       "aabb_min": [
+        0.014055967,
+        -0.010808277,
+        -0.0108115
+       ],
+       "aabb_max": [
+        0.024189804,
+        0.0109237,
+        0.010812435
+       ],
+       "centroid": [
+        0.018960292,
+        0.000156772,
+        4.52e-07
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.005402,
+        0.097473,
+        -0.069665
+       ],
+       "prefab_m_aabb_max": [
+        0.012455,
+        0.112599,
+        -0.054614
+       ],
+       "dy_mm_range": [
+        40.29,
+        55.41
+       ],
+       "selector": {
+        "unity_vertices": 270,
+        "triangles": 252,
+        "window_min": [
+         0.013337583,
+         -0.011526662,
+         -0.011529885
+        ],
+        "window_max": [
+         0.024908188,
+         0.011642085,
+         0.01153082
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      },
+      {
+       "island_index_in_asset_order": 5,
+       "role": "маховик левый (на оси шарнира)",
+       "unity_vertices": 270,
+       "welded_vertices": 128,
+       "triangles": 252,
+       "aabb_min": [
+        -0.024189804,
+        -0.010808277,
+        -0.0108115
+       ],
+       "aabb_max": [
+        -0.014055965,
+        0.0109237,
+        0.010812435
+       ],
+       "centroid": [
+        -0.018959825,
+        0.000156787,
+        4.52e-07
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.021218,
+        0.097473,
+        -0.069665
+       ],
+       "prefab_m_aabb_max": [
+        -0.014164,
+        0.112599,
+        -0.054614
+       ],
+       "dy_mm_range": [
+        40.29,
+        55.41
+       ],
+       "selector": {
+        "unity_vertices": 270,
+        "triangles": 252,
+        "window_min": [
+         -0.024908188,
+         -0.011526662,
+         -0.011529885
+        ],
+        "window_max": [
+         -0.01333758,
+         0.011642085,
+         0.01153082
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      }
+     ],
+     "physical": "Складной диоптр SCAR: высота/горизонталь — барабанами. Неподвижный в нашей схеме; поднимается поворотом всего узла Scar_Detail_02 вокруг оси маховиков.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       9.886e-06,
+       0.001774637,
+       0.041673966
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.004374,
+       0.134041,
+       -0.063334
+      ],
+      "rel_shot_mm": {
+       "dx": 0.115,
+       "dy": 76.857,
+       "dz": -426.91
+      },
+      "method": "в поднятом положении: проекция острова 3 вдоль Z, отверстие найдено растром, центр — окружность Kasa по 13 вершинам обода на грани к глазу (r=1.714 мм, невязка 0.0272 мм)"
+     },
+     "movable": false,
+     "raise": {
+      "node": "Scar/MeshContainer/Scar_Detail_02",
+      "why": "целик сложен назад; ось — центр барабанов-маховиков (острова 4/5 Scar_Detail_02)",
+      "axis_point_prefab_m": [
+       -0.004381,
+       0.105036,
+       -0.062139
+      ],
+      "axis_dir_prefab": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "angle_deg": 90.0,
+      "convention": "поворот в пространстве префаба: Quaternion.AngleAxis(angle_deg, axis_dir) вокруг axis_point",
+      "current_local": {
+       "position": "{x: -0.006117362, y: 0.14671227, z: -0.08676169}",
+       "rotation": "{x: 1, y: -0.00000031391653, z: 0.00000022649368, w: -0.00000009777372}",
+       "scale": "{x: 0.9717975, y: 0.97179765, z: 0.9717975}"
+      },
+      "raised_local": {
+       "position": [
+        -0.006117362,
+        0.14665573,
+        -0.086706059
+       ],
+       "rotation_xyzw": [
+        -0.707106712,
+        3.82e-07,
+        6.2e-08,
+        0.70710685
+       ],
+       "scale": [
+        0.971798,
+        0.971798,
+        0.971798
+       ]
+      }
+     },
+     "base_node_stays": "Scar/MeshContainer/Scar_Detail_01"
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "Scar/MeshContainer/Scar_Detail_03",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle01/Mesh/Hands_Automatic_Rifle01.FBX",
+      "mesh_local_file_id": -8593926231563432924,
+      "mesh_name": "Scar_Detail_03",
+      "vertices": 744,
+      "triangles": 704,
+      "submeshes": 1,
+      "islands": 5,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.6960062,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.696006181,
+        -4.37e-07,
+        -3.15e-07,
+        -0.004659674
+       ],
+       [
+        4.37e-07,
+        0.696006103,
+        -5.3e-08,
+        0.098050122
+       ],
+       [
+        3.15e-07,
+        5.3e-08,
+        0.696005995,
+        0.274576017
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 2,
+       "role": "столбик мушки (внутри кольца-намушника)",
+       "unity_vertices": 113,
+       "welded_vertices": 57,
+       "triangles": 100,
+       "aabb_min": [
+        -0.003750982,
+        -0.00497364,
+        0.036834314
+       ],
+       "aabb_max": [
+        0.004187915,
+        0.003460235,
+        0.052226502
+       ],
+       "centroid": [
+        0.00025956,
+        -0.000853837,
+        0.044250747
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.00727,
+        0.094588,
+        0.300213
+       ],
+       "prefab_m_aabb_max": [
+        -0.001745,
+        0.100458,
+        0.310926
+       ],
+       "dy_mm_range": [
+        37.4,
+        43.27
+       ],
+       "selector": {
+        "unity_vertices": 113,
+        "triangles": 100,
+        "window_min": [
+         -0.004469367,
+         -0.005692025,
+         0.03611593
+        ],
+        "window_max": [
+         0.004906299,
+         0.00417862,
+         0.052944887
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 1,
+       "role": "рамка мушки с кольцом-намушником",
+       "unity_vertices": 462,
+       "welded_vertices": 222,
+       "triangles": 448,
+       "aabb_min": [
+        -0.010499687,
+        -0.010354404,
+        -0.008515186
+       ],
+       "aabb_max": [
+        0.011134325,
+        0.008713426,
+        0.060550936
+       ],
+       "centroid": [
+        0.000248531,
+        -0.000509763,
+        0.029840509
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.011968,
+        0.090843,
+        0.268649
+       ],
+       "prefab_m_aabb_max": [
+        0.00309,
+        0.104115,
+        0.31672
+       ],
+       "dy_mm_range": [
+        33.66,
+        46.93
+       ],
+       "selector": {
+        "unity_vertices": 462,
+        "triangles": 448,
+        "window_min": [
+         -0.011218071,
+         -0.011072789,
+         -0.00923357
+        ],
+        "window_max": [
+         0.011852709,
+         0.00943181,
+         0.06126932
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 3,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 0,
+       "role": "винт/штифт слева",
+       "unity_vertices": 39,
+       "welded_vertices": 25,
+       "triangles": 36,
+       "aabb_min": [
+        -0.011134325,
+        -0.003113155,
+        0.007154827
+       ],
+       "aabb_max": [
+        -0.01004002,
+        0.003011598,
+        0.013279591
+       ],
+       "centroid": [
+        -0.010769556,
+        -0.000207828,
+        0.010217046
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.012409,
+        0.095883,
+        0.279556
+       ],
+       "prefab_m_aabb_max": [
+        -0.011648,
+        0.100146,
+        0.283819
+       ],
+       "dy_mm_range": [
+        38.7,
+        42.96
+       ],
+       "selector": {
+        "unity_vertices": 39,
+        "triangles": 36,
+        "window_min": [
+         -0.011852709,
+         -0.00383154,
+         0.006436443
+        ],
+        "window_max": [
+         -0.009321635,
+         0.003729983,
+         0.013997975
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 3,
+       "role": "шарнирная шайба справа",
+       "unity_vertices": 65,
+       "welded_vertices": 37,
+       "triangles": 60,
+       "aabb_min": [
+        0.010310879,
+        -0.002607918,
+        -0.002584915
+       ],
+       "aabb_max": [
+        0.011881654,
+        0.002575283,
+        0.002598286
+       ],
+       "centroid": [
+        0.011253892,
+        -1.5882e-05,
+        6.28e-06
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.002517,
+        0.096235,
+        0.272777
+       ],
+       "prefab_m_aabb_max": [
+        0.00361,
+        0.099843,
+        0.276384
+       ],
+       "dy_mm_range": [
+        39.05,
+        42.66
+       ],
+       "selector": {
+        "unity_vertices": 65,
+        "triangles": 60,
+        "window_min": [
+         0.009592495,
+         -0.003326302,
+         -0.0033033
+        ],
+        "window_max": [
+         0.012600039,
+         0.003293667,
+         0.00331667
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      },
+      {
+       "island_index_in_asset_order": 4,
+       "role": "шарнирная шайба слева",
+       "unity_vertices": 65,
+       "welded_vertices": 37,
+       "triangles": 60,
+       "aabb_min": [
+        -0.011881655,
+        -0.004357262,
+        -0.004334259
+       ],
+       "aabb_max": [
+        -0.010310877,
+        0.004324627,
+        0.004347629
+       ],
+       "centroid": [
+        -0.011253891,
+        -1.6072e-05,
+        6.467e-06
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.012929,
+        0.095017,
+        0.271559
+       ],
+       "prefab_m_aabb_max": [
+        -0.011836,
+        0.10106,
+        0.277602
+       ],
+       "dy_mm_range": [
+        37.83,
+        43.88
+       ],
+       "selector": {
+        "unity_vertices": 65,
+        "triangles": 60,
+        "window_min": [
+         -0.01260004,
+         -0.005075646,
+         -0.005052643
+        ],
+        "window_max": [
+         -0.009592493,
+         0.005043011,
+         0.005066014
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": false,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 2
+       }
+      }
+     ],
+     "physical": "Складная мушка SCAR: высота — вкручивание столбика. Подвижная деталь — столбик (остров 2) после подъёма узла Scar_Detail_03.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.000316833,
+       0.000377283,
+       0.052226502
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.004439,
+       0.134384,
+       0.274307
+      ],
+      "rel_shot_mm": {
+       "dx": 0.05,
+       "dy": 77.2,
+       "dz": -89.27
+      },
+      "method": "в поднятом положении: силуэт острова 2 от глаза, вершина dy=77.200, ширина 1.50 мм, середина по x; z — грань к глазу"
+     },
+     "movable": true,
+     "raise": {
+      "node": "Scar/MeshContainer/Scar_Detail_03",
+      "why": "мушка сложена вперёд; ось — центр шарнирных шайб (острова 3/4 Scar_Detail_03), совпадает с блоком-шарниром Base#27",
+      "axis_point_prefab_m": [
+       -0.00466,
+       0.098039,
+       0.274581
+      ],
+      "axis_dir_prefab": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "angle_deg": -90.0,
+      "convention": "поворот в пространстве префаба: Quaternion.AngleAxis(angle_deg, axis_dir) вокруг axis_point",
+      "current_local": {
+       "position": "{x: -0.0065060635, y: 0.13690236, z: 0.38337642}",
+       "rotation": "{x: 0.000000037807528, y: -0.00000022649368, z: 0.0000003139166, w: 1}",
+       "scale": "{x: 0.97179776, y: 0.97179765, z: 0.9717975}"
+      },
+      "raised_local": {
+       "position": [
+        -0.006506064,
+        0.136880006,
+        0.38336706
+       ],
+       "rotation_xyzw": [
+        -0.707106754,
+        6.2e-08,
+        3.82e-07,
+        0.707106808
+       ],
+       "scale": [
+        0.971798,
+        0.971798,
+        0.971798
+       ]
+      }
+     },
+     "base_island_note": "Base#27 (nv108, z .268–.282) — блок-шарнир основания мушки на газоблоке, не мушка; остаётся в корпусе. Настоящая мушка — Scar_Detail_03 (сложена)."
+    }
+   },
+   "prefab_note": "целик и мушка в префабе СЛОЖЕНЫ; точки даны в поднятом положении",
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     2
+    ],
+    "node": "Scar/MeshContainer/Scar_Detail_03",
+    "axis": "только высота (после подъёма)",
+    "why": "SCAR: высота — столбик мушки; столбик — отдельный остров"
+   },
+   "zeroing": {
+    "sight_radius_mm": 337.6,
+    "required_height_shift_mm": -2.025,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 92.5,
+     "dx": -2.8
+    },
+    "uncorrected_angle_mrad": 6.169,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "B — отдельные GO и острова, но обе рамки сложены: сначала поднять (поворот 90° вокруг оси шарнира)"
+  },
+  "SRM12": {
+   "prefab": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+   "label": "SRM12 (Desert Tech SRS)",
+   "shot_source_prefab_m": [
+    0.0,
+    0.039059,
+    0.522563
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "SRM12/MeshContainer/Switch",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Switch.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SRM12_Switch",
+      "vertices": 524,
+      "triangles": 496,
+      "submeshes": 1,
+      "islands": 2,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.0,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        -7.73e-07,
+        -0.999999998,
+        1.936e-06,
+        0.01819447
+       ],
+       [
+        0.999996007,
+        -7.79e-07,
+        -0.00282532,
+        0.10068384
+       ],
+       [
+        0.00282532,
+        1.934e-06,
+        0.999996009,
+        -0.09350232
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 0,
+       "role": "откидная пластина с двумя диоптрами (рабочий — верхний)",
+       "unity_vertices": 376,
+       "welded_vertices": 190,
+       "triangles": 356,
+       "aabb_min": [
+        -0.007914029,
+        0.01456773,
+        -0.002559515
+       ],
+       "aabb_max": [
+        0.008874672,
+        0.021828795,
+        0.004905847
+       ],
+       "centroid": [
+        0.000618538,
+        0.018198262,
+        0.000991999
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.003634,
+        0.092758,
+        -0.096061
+       ],
+       "prefab_m_aabb_max": [
+        0.003627,
+        0.109557,
+        -0.088617
+       ],
+       "dy_mm_range": [
+        53.7,
+        70.5
+       ],
+       "selector": {
+        "unity_vertices": 376,
+        "triangles": 356,
+        "window_min": [
+         -0.008414029,
+         0.01406773,
+         -0.003059515
+        ],
+        "window_max": [
+         0.009374672,
+         0.022328795,
+         0.005405847
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 1,
+       "role": "маховик горизонтали",
+       "unity_vertices": 148,
+       "welded_vertices": 72,
+       "triangles": 140,
+       "aabb_min": [
+        -0.004445057,
+        0.004374547,
+        -0.004445036
+       ],
+       "aabb_max": [
+        0.004445051,
+        0.007739759,
+        0.004445079
+       ],
+       "centroid": [
+        -0.000116736,
+        0.005657391,
+        2.3e-08
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.010455,
+        0.096239,
+        -0.097947
+       ],
+       "prefab_m_aabb_max": [
+        0.01382,
+        0.105129,
+        -0.089057
+       ],
+       "dy_mm_range": [
+        57.18,
+        66.07
+       ],
+       "selector": {
+        "unity_vertices": 148,
+        "triangles": 140,
+        "window_min": [
+         -0.004945057,
+         0.003874547,
+         -0.004945036
+        ],
+        "window_max": [
+         0.004945051,
+         0.008239759,
+         0.004945079
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Апертура откидного целика (две апертуры, рабочая — поднятая). Корпус целика — узел SKM_TR15_FrontSight.Sight/SightFrame (донор TR15, стоит сзади). Неподвижный.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       0.005650757,
+       0.01819826,
+       -0.000532886
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -4e-06,
+       0.106336,
+       -0.094019
+      ],
+      "rel_shot_mm": {
+       "dx": -0.004,
+       "dy": 67.277,
+       "dz": -616.58
+      },
+      "method": "проекция острова 0 вдоль Z, отверстие найдено растром, центр — окружность Kasa по 26 вершинам обода (r=2.289 мм, невязка 0.3419 мм)"
+     },
+     "movable": false,
+     "housing_nodes": [
+      "SRM12/MeshContainer/SKM_TR15_FrontSight.Sight",
+      "SRM12/MeshContainer/SKM_TR15_FrontSight.SightFrame"
+     ]
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "SRM12/MeshContainer/Sight",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Sight.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SRM12_Sight",
+      "vertices": 754,
+      "triangles": 666,
+      "submeshes": 1,
+      "islands": 4,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.0000001,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        2.13e-07,
+        -5.98e-07,
+        1.000000069,
+        -3.818e-06
+       ],
+       [
+        0.002825082,
+        0.999996009,
+        5.97e-07,
+        0.07699956
+       ],
+       [
+        -0.999996078,
+        0.002825082,
+        2.15e-07,
+        0.36769092
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 0,
+       "role": "столбик мушки",
+       "unity_vertices": 58,
+       "welded_vertices": 24,
+       "triangles": 38,
+       "aabb_min": [
+        -0.00062035,
+        0.022741791,
+        -0.001712396
+       ],
+       "aabb_max": [
+        0.002804409,
+        0.032512408,
+        0.001712361
+       ],
+       "centroid": [
+        0.00109203,
+        0.02759473,
+        -5.9066e-05
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.001716,
+        0.09974,
+        0.364951
+       ],
+       "prefab_m_aabb_max": [
+        0.001709,
+        0.109517,
+        0.368386
+       ],
+       "dy_mm_range": [
+        60.68,
+        70.46
+       ],
+       "selector": {
+        "unity_vertices": 58,
+        "triangles": 38,
+        "window_min": [
+         -0.00112035,
+         0.022241791,
+         -0.002212396
+        ],
+        "window_max": [
+         0.003304409,
+         0.033012408,
+         0.002212361
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Мушка AR-типа: высота — вкручивание столбика (фиксатор-шайба — остров 3, остаётся). Подвижный — столбик.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.001793524,
+       0.032512408,
+       -6.043e-06
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -1e-05,
+       0.109517,
+       0.365989
+      ],
+      "rel_shot_mm": {
+       "dx": -0.01,
+       "dy": 70.458,
+       "dz": -156.57
+      },
+      "method": "силуэт острова 0 от глаза, вершина dy=70.458, ширина 1.38 мм, середина по x; z — грань к глазу"
+     },
+     "movable": true,
+     "stays": {
+      "islands": [
+       1,
+       2,
+       3
+      ],
+      "roles": [
+       "корпус с ушками",
+       "боковой винт",
+       "шайба-фиксатор у основания столбика"
+      ]
+     },
+     "frame_node": "SRM12/MeshContainer/SightFrame"
+    }
+   },
+   "prefab_note": "в префабе стоят и Switch/Sight, и узлы SKM_TR15_FrontSight.* (корпус целика сзади) — проверить после этапа sight-arsenal-dedupe",
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     0
+    ],
+    "node": "SRM12/MeshContainer/Sight",
+    "axis": "только высота",
+    "why": "у мушки AR-типа высота регулируется вкручиванием столбика; целик — горизонталь"
+   },
+   "zeroing": {
+    "sight_radius_mm": 460.0,
+    "required_height_shift_mm": -5.163,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 175.3,
+     "dx": -0.2
+    },
+    "uncorrected_angle_mrad": 11.684,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — отдельные GO, подвижный столбик — отдельный остров"
+  },
+  "SniperRifle": {
+   "prefab": "Assets/Prefabs/Weapons/SightReview/SniperRifle_SightReview.prefab",
+   "label": "SniperRifle (AX-50) · SightReview",
+   "shot_source_prefab_m": [
+    -0.0,
+    0.059789,
+    0.819473
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "SniperRifle_SightReview/SightReview_SniperRifle/Switch",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Switch.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SRM12_Switch",
+      "vertices": 524,
+      "triangles": 496,
+      "submeshes": 1,
+      "islands": 2,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.095996,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        -8.48e-07,
+        -1.095995898,
+        2.122e-06,
+        0.019945226
+       ],
+       [
+        1.095991633,
+        -8.54e-07,
+        -0.003096539,
+        0.131802078
+       ],
+       [
+        0.003096539,
+        2.12e-06,
+        1.095991526,
+        0.055360579
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 0,
+       "role": "откидная пластина с двумя диоптрами (рабочий — верхний)",
+       "unity_vertices": 376,
+       "welded_vertices": 190,
+       "triangles": 356,
+       "aabb_min": [
+        -0.007914029,
+        0.01456773,
+        -0.002559515
+       ],
+       "aabb_max": [
+        0.008874672,
+        0.021828795,
+        0.004905847
+       ],
+       "centroid": [
+        0.000618538,
+        0.018198262,
+        0.000991999
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.003979,
+        0.123116,
+        0.052556
+       ],
+       "prefab_m_aabb_max": [
+        0.003979,
+        0.141527,
+        0.060714
+       ],
+       "dy_mm_range": [
+        63.33,
+        81.74
+       ],
+       "selector": {
+        "unity_vertices": 376,
+        "triangles": 356,
+        "window_min": [
+         -0.008370235,
+         0.014111524,
+         -0.003015721
+        ],
+        "window_max": [
+         0.009330878,
+         0.022285001,
+         0.005362053
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 1,
+       "role": "маховик горизонтали",
+       "unity_vertices": 148,
+       "welded_vertices": 72,
+       "triangles": 140,
+       "aabb_min": [
+        -0.004445057,
+        0.004374547,
+        -0.004445036
+       ],
+       "aabb_max": [
+        0.004445051,
+        0.007739759,
+        0.004445079
+       ],
+       "centroid": [
+        -0.000116736,
+        0.005657391,
+        2.3e-08
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.011462,
+        0.12693,
+        0.050489
+       ],
+       "prefab_m_aabb_max": [
+        0.015151,
+        0.136674,
+        0.060232
+       ],
+       "dy_mm_range": [
+        67.14,
+        76.88
+       ],
+       "selector": {
+        "unity_vertices": 148,
+        "triangles": 140,
+        "window_min": [
+         -0.004901263,
+         0.003918341,
+         -0.004901242
+        ],
+        "window_max": [
+         0.004901257,
+         0.008195965,
+         0.004901285
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Апертура откидного целика (две апертуры, рабочая — поднятая). Корпус целика — узел SKM_TR15_FrontSight.Sight/SightFrame (донор TR15, стоит сзади). Неподвижный.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       0.005650757,
+       0.01819826,
+       -0.000532886
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.0,
+       0.137997,
+       0.054794
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 78.208,
+       "dz": -764.68
+      },
+      "method": "проекция острова 0 вдоль Z, отверстие найдено растром, центр — окружность Kasa по 26 вершинам обода (r=2.509 мм, невязка 0.3748 мм)"
+     },
+     "movable": false,
+     "housing_nodes": [
+      "SniperRifle_SightReview/SightReview_SniperRifle/SKM_TR15_FrontSight.Sight",
+      "SniperRifle_SightReview/SightReview_SniperRifle/SKM_TR15_FrontSight.SightFrame"
+     ]
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "SniperRifle_SightReview/SightReview_SniperRifle/Sight",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Sight.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SRM12_Sight",
+      "vertices": 754,
+      "triangles": 666,
+      "submeshes": 1,
+      "islands": 4,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 1.0959961,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        2.34e-07,
+        -6.55e-07,
+        1.095995975,
+        4.1e-08
+       ],
+       [
+        0.003096278,
+        1.095991526,
+        6.54e-07,
+        0.107163553
+       ],
+       [
+        -1.095991711,
+        0.003096278,
+        2.36e-07,
+        0.527943022
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 0,
+       "role": "столбик мушки",
+       "unity_vertices": 58,
+       "welded_vertices": 24,
+       "triangles": 38,
+       "aabb_min": [
+        -0.00062035,
+        0.022741791,
+        -0.001712396
+       ],
+       "aabb_max": [
+        0.002804409,
+        0.032512408,
+        0.001712361
+       ],
+       "centroid": [
+        0.00109203,
+        0.02759473,
+        -5.9066e-05
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.001877,
+        0.132086,
+        0.52494
+       ],
+       "prefab_m_aabb_max": [
+        0.001877,
+        0.142802,
+        0.528705
+       ],
+       "dy_mm_range": [
+        72.3,
+        83.01
+       ],
+       "selector": {
+        "unity_vertices": 58,
+        "triangles": 38,
+        "window_min": [
+         -0.001076556,
+         0.022285585,
+         -0.002168602
+        ],
+        "window_max": [
+         0.003260615,
+         0.032968614,
+         0.002168567
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Мушка AR-типа: высота — вкручивание столбика (фиксатор-шайба — остров 3, остаётся). Подвижный — столбик.",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       0.001793524,
+       0.032512408,
+       -2.1e-08
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.0,
+       0.142802,
+       0.526078
+      ],
+      "rel_shot_mm": {
+       "dx": 0.0,
+       "dy": 83.013,
+       "dz": -293.4
+      },
+      "method": "силуэт острова 0 от глаза, вершина dy=83.013, ширина 1.52 мм, середина по x; z — грань к глазу"
+     },
+     "movable": true,
+     "stays": {
+      "islands": [
+       1,
+       2,
+       3
+      ],
+      "roles": [
+       "корпус с ушками",
+       "боковой винт",
+       "шайба-фиксатор у основания столбика"
+      ]
+     },
+     "frame_node": "SniperRifle_SightReview/SightReview_SniperRifle/SightFrame"
+    }
+   },
+   "prefab_note": "прицел только в SightReview: доноры SRM12 (Switch/Sight/SightFrame/SKM_TR15_FrontSight.*) + кубы RearAdapter_DRAFT/FrontAdapter_DRAFT (черновые проставки на планку)",
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     0
+    ],
+    "node": "SniperRifle_SightReview/SightReview_SniperRifle/Sight",
+    "axis": "только высота",
+    "why": "у мушки AR-типа высота регулируется вкручиванием столбика; целик — горизонталь"
+   },
+   "zeroing": {
+    "sight_radius_mm": 471.3,
+    "required_height_shift_mm": -7.144,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 239.0,
+     "dx": -0.0
+    },
+    "uncorrected_angle_mrad": 15.93,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — донорские детали SRM12, те же острова; при переносе в оригинал заменить DRAFT-проставки"
+  },
+  "MKR9": {
+   "prefab": "Assets/Prefabs/Weapons/SightReview/MKR9_SightReview.prefab",
+   "label": "MKR9 · SightReview (комплект SM_MKR9_IronSights = MX68)",
+   "shot_source_prefab_m": [
+    0.000824,
+    0.031058,
+    0.267691
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "MKR9_SightReview/SightReview_MKR9/SM_MKR9_IronSights/SM_MKR9_IronSights_Rear",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/MKR9/Meshes/SM_MKR9_IronSights_Rear.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SM_MKR9_IronSights_Rear",
+      "vertices": 3841,
+      "triangles": 3686,
+      "submeshes": 1,
+      "islands": 10,
+      "weld_eps_mesh_units": 1e-08,
+      "mesh_to_prefab_scale": 99.999985,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        99.999985,
+        -3.1193e-05,
+        -1.4901e-05,
+        0.00245784
+       ],
+       [
+        1.4901e-05,
+        -5.321e-06,
+        99.999991179,
+        0.094573462
+       ],
+       [
+        -3.1193e-05,
+        -99.999991179,
+        -5.321e-06,
+        -0.027389162
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 4,
+       "role": "откидная пластина диоптра",
+       "unity_vertices": 434,
+       "welded_vertices": 210,
+       "triangles": 420,
+       "aabb_min": [
+        -5.7108e-05,
+        4.3906e-05,
+        6.4794e-05
+       ],
+       "aabb_max": [
+        2.2296e-05,
+        0.000146475,
+        0.000244803
+       ],
+       "centroid": [
+        -1.7419e-05,
+        0.000102529,
+        0.000160834
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.003253,
+        0.101053,
+        -0.042037
+       ],
+       "prefab_m_aabb_max": [
+        0.004687,
+        0.119054,
+        -0.03178
+       ],
+       "dy_mm_range": [
+        69.99,
+        88.0
+       ],
+       "selector": {
+        "unity_vertices": 434,
+        "triangles": 420,
+        "window_min": [
+         -6.2108e-05,
+         3.8906e-05,
+         5.9794e-05
+        ],
+        "window_max": [
+         2.7296e-05,
+         0.000151475,
+         0.000249803
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 0,
+       "role": "корпус с ушками",
+       "unity_vertices": 1060,
+       "welded_vertices": 494,
+       "triangles": 992,
+       "aabb_min": [
+        -0.000160715,
+        2.0969e-05,
+        -0.000193083
+       ],
+       "aabb_max": [
+        0.000125904,
+        0.000169362,
+        0.000268537
+       ],
+       "centroid": [
+        -1.2533e-05,
+        9.4926e-05,
+        4.2474e-05
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.013614,
+        0.075265,
+        -0.044325
+       ],
+       "prefab_m_aabb_max": [
+        0.015048,
+        0.121427,
+        -0.029486
+       ],
+       "dy_mm_range": [
+        44.21,
+        90.37
+       ],
+       "selector": {
+        "unity_vertices": 1060,
+        "triangles": 992,
+        "window_min": [
+         -0.000165715,
+         1.5969e-05,
+         -0.000198083
+        ],
+        "window_max": [
+         0.000130904,
+         0.000174362,
+         0.000273537
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 4,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 5,
+       "role": "маховик горизонтали",
+       "unity_vertices": 515,
+       "welded_vertices": 306,
+       "triangles": 580,
+       "aabb_min": [
+        0.000122714,
+        2.5427e-05,
+        4.6278e-05
+       ],
+       "aabb_max": [
+        0.000180639,
+        0.000164904,
+        0.00018596
+       ],
+       "centroid": [
+        0.000162077,
+        9.6188e-05,
+        0.000115084
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.014729,
+        0.099201,
+        -0.04388
+       ],
+       "prefab_m_aabb_max": [
+        0.020522,
+        0.113169,
+        -0.029932
+       ],
+       "dy_mm_range": [
+        68.14,
+        82.11
+       ],
+       "selector": {
+        "unity_vertices": 515,
+        "triangles": 580,
+        "window_min": [
+         0.000117714,
+         2.0427e-05,
+         4.1278e-05
+        ],
+        "window_max": [
+         0.000185639,
+         0.000169904,
+         0.00019096
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "ось",
+       "unity_vertices": 62,
+       "welded_vertices": 60,
+       "triangles": 60,
+       "aabb_min": [
+        -0.000105266,
+        7.7384e-05,
+        9.8311e-05
+       ],
+       "aabb_max": [
+        7.0455e-05,
+        0.000112947,
+        0.000133926
+       ],
+       "centroid": [
+        -1.7406e-05,
+        9.5042e-05,
+        0.000116132
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.008069,
+        0.104405,
+        -0.038684
+       ],
+       "prefab_m_aabb_max": [
+        0.009503,
+        0.107966,
+        -0.035128
+       ],
+       "dy_mm_range": [
+        73.35,
+        76.91
+       ],
+       "selector": {
+        "unity_vertices": 62,
+        "triangles": 60,
+        "window_min": [
+         -0.000110266,
+         7.2384e-05,
+         9.3311e-05
+        ],
+        "window_max": [
+         7.5455e-05,
+         0.000117947,
+         0.000138926
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 3,
+       "role": "фиксатор",
+       "unity_vertices": 104,
+       "welded_vertices": 50,
+       "triangles": 94,
+       "aabb_min": [
+        -3.3844e-05,
+        5.7135e-05,
+        2.2727e-05
+       ],
+       "aabb_max": [
+        -9.68e-07,
+        0.000133218,
+        0.000154347
+       ],
+       "centroid": [
+        -1.7406e-05,
+        9.5184e-05,
+        0.000117218
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.000927,
+        0.096846,
+        -0.040711
+       ],
+       "prefab_m_aabb_max": [
+        0.002361,
+        0.110008,
+        -0.033103
+       ],
+       "dy_mm_range": [
+        65.79,
+        78.95
+       ],
+       "selector": {
+        "unity_vertices": 104,
+        "triangles": 94,
+        "window_min": [
+         -3.8844e-05,
+         5.2135e-05,
+         1.7727e-05
+        ],
+        "window_max": [
+         4.032e-06,
+         0.000138218,
+         0.000159347
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Целик MX68: диоптр, горизонталь — маховиком; по решению пользователя горизонтали нет. Неподвижный.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       -1.7406e-05,
+       0.000119987,
+       0.000201064
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.000717,
+       0.11468,
+       -0.039388
+      ],
+      "rel_shot_mm": {
+       "dx": -0.106,
+       "dy": 83.622,
+       "dz": -307.08
+      },
+      "method": "проекция острова 4 вдоль Z, отверстие найдено растром, центр — окружность Kasa по 29 вершинам обода (r=2.687 мм, невязка 0.0000 мм)"
+     },
+     "movable": false
+    },
+    "FrontSight": {
+     "mesh": {
+      "node": "MKR9_SightReview/SightReview_MKR9/SM_MKR9_IronSights/SM_MKR9_IronSights_Front",
+      "mesh_asset": "Assets/Art/Weapons/Kinemation/MKR9/Meshes/SM_MKR9_IronSights_Front.asset",
+      "mesh_local_file_id": 4300000,
+      "mesh_name": "SM_MKR9_IronSights_Front",
+      "vertices": 2720,
+      "triangles": 2508,
+      "submeshes": 1,
+      "islands": 9,
+      "weld_eps_mesh_units": 1e-08,
+      "mesh_to_prefab_scale": 99.999985,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        99.999985,
+        -3.1193e-05,
+        -1.4901e-05,
+        0.000717305
+       ],
+       [
+        1.4901e-05,
+        -5.321e-06,
+        99.999991179,
+        0.094573473
+       ],
+       [
+        -3.1193e-05,
+        -99.999991179,
+        -5.321e-06,
+        0.196112519
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 7,
+       "role": "столбик мушки",
+       "unity_vertices": 94,
+       "welded_vertices": 40,
+       "triangles": 72,
+       "aabb_min": [
+        -2.107e-05,
+        8.1647e-05,
+        0.000153247
+       ],
+       "aabb_max": [
+        2.107e-05,
+        0.000118141,
+        0.000225852
+       ],
+       "centroid": [
+        0.0,
+        9.9894e-05,
+        0.000189145
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.00139,
+        0.109898,
+        0.184298
+       ],
+       "prefab_m_aabb_max": [
+        0.002824,
+        0.117159,
+        0.187948
+       ],
+       "dy_mm_range": [
+        78.84,
+        86.1
+       ],
+       "selector": {
+        "unity_vertices": 94,
+        "triangles": 72,
+        "window_min": [
+         -2.607e-05,
+         7.6647e-05,
+         0.000148247
+        ],
+        "window_max": [
+         2.607e-05,
+         0.000123141,
+         0.000230852
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 2,
+       "role": "барабан-основание столбика (цилиндр под столбиком)",
+       "unity_vertices": 122,
+       "welded_vertices": 60,
+       "triangles": 116,
+       "aabb_min": [
+        -5.9714e-05,
+        3.8696e-05,
+        3.259e-06
+       ],
+       "aabb_max": [
+        5.9364e-05,
+        0.000158037,
+        0.000121259
+       ],
+       "centroid": [
+        9.73e-07,
+        9.6559e-05,
+        6.2259e-05
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.005254,
+        0.094899,
+        0.180309
+       ],
+       "prefab_m_aabb_max": [
+        0.006654,
+        0.106699,
+        0.192243
+       ],
+       "dy_mm_range": [
+        63.84,
+        75.64
+       ],
+       "selector": {
+        "unity_vertices": 122,
+        "triangles": 116,
+        "window_min": [
+         -6.4714e-05,
+         3.3696e-05,
+         -1.741e-06
+        ],
+        "window_max": [
+         6.4364e-05,
+         0.000163037,
+         0.000126259
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Мушка MX68 AR-типа: высота — вкручивание столбика. Подвижный — столбик 7 (барабан 2 — опционально вместе).",
+     "aim_point": {
+      "type": "F_post",
+      "point": [
+       -3.6e-08,
+       0.000109024,
+       0.000225852
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       0.000714,
+       0.117159,
+       0.18521
+      ],
+      "rel_shot_mm": {
+       "dx": -0.11,
+       "dy": 86.1,
+       "dz": -82.48
+      },
+      "method": "силуэт острова 7 от глаза, вершина dy=86.100, ширина 1.82 мм, середина по x; z — грань к глазу"
+     },
+     "movable": true
+    }
+   },
+   "prefab_note": "контейнер SM_MKR9_IronSights со scale 100 — меш в единицах ×0.01; окна селекторов в единицах меша",
+   "movable": {
+    "part": "FrontSight",
+    "islands": [
+     7
+    ],
+    "node": "MKR9_SightReview/SightReview_MKR9/SM_MKR9_IronSights/SM_MKR9_IronSights_Front",
+    "axis": "только высота",
+    "why": "MX68 как у реального: сведение по высоте ходом столбика мушки"
+   },
+   "zeroing": {
+    "sight_radius_mm": 224.6,
+    "required_height_shift_mm": -3.706,
+    "moved_part": "мушка (F)",
+    "uncorrected_line_at_15m_mm": {
+     "dy": 252.6,
+     "dx": -0.4
+    },
+    "uncorrected_angle_mrad": 16.837,
+    "lateral_note": "dx не исправляется (решение «Только высота»); показан для контроля",
+    "zero_target": "ShotSource + 15 м по +Z префаба"
+   },
+   "difficulty": "A — донорский комплект, отдельные острова; учесть scale 100 контейнера"
+  },
+  "M16": {
+   "prefab": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+   "label": "M16 (AR15.prefab, Hands_Automatic_Rifle03)",
+   "shot_source_prefab_m": [
+    -0.003425,
+    0.061301,
+    0.535892
+   ],
+   "shot_forward_prefab": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "parts": {
+    "RearSight": {
+     "mesh": {
+      "node": "AR15/MeshContainer/Rifle_Detail_04",
+      "mesh_asset": "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle03/Mesh/Hands_Automatic_Rifle03.FBX",
+      "mesh_local_file_id": 6248209372943964978,
+      "mesh_name": "Rifle_Detail_04",
+      "vertices": 550,
+      "triangles": 440,
+      "submeshes": 1,
+      "islands": 5,
+      "weld_eps_mesh_units": 1e-06,
+      "mesh_to_prefab_scale": 0.840616,
+      "node_to_prefab_m_matrix_rows": [
+       [
+        0.840616,
+        -4e-09,
+        3.42e-07,
+        -0.003014291
+       ],
+       [
+        -4.11e-07,
+        -0.008125227,
+        0.699952918,
+        0.092368437
+       ],
+       [
+        0.0,
+        -0.699952918,
+        -0.008125227,
+        -0.035168534
+       ]
+      ]
+     },
+     "islands": [
+      {
+       "island_index_in_asset_order": 2,
+       "role": "диоптр (пластина с отверстием)",
+       "unity_vertices": 126,
+       "welded_vertices": 50,
+       "triangles": 98,
+       "aabb_min": [
+        -0.004681263,
+        0.021283627,
+        0.003191833
+       ],
+       "aabb_max": [
+        0.00339611,
+        0.03299465,
+        0.008652038
+       ],
+       "centroid": [
+        -0.000661897,
+        0.028333715,
+        0.005583667
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.006949,
+        0.094394,
+        -0.058294
+       ],
+       "prefab_m_aabb_max": [
+        -0.000159,
+        0.098252,
+        -0.050136
+       ],
+       "dy_mm_range": [
+        33.09,
+        36.95
+       ],
+       "selector": {
+        "unity_vertices": 126,
+        "triangles": 98,
+        "window_min": [
+         -0.005276065,
+         0.020688825,
+         0.002597031
+        ],
+        "window_max": [
+         0.003990912,
+         0.033589452,
+         0.00924684
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 0,
+       "role": "рамка BUIS с ушками",
+       "unity_vertices": 298,
+       "welded_vertices": 112,
+       "triangles": 220,
+       "aabb_min": [
+        -0.018247709,
+        -0.011680756,
+        -0.009196777
+       ],
+       "aabb_max": [
+        0.017039165,
+        0.037628077,
+        0.009196624
+       ],
+       "centroid": [
+        -0.000604265,
+        0.009465281,
+        -0.000175726
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.018354,
+        0.085977,
+        -0.061464
+       ],
+       "prefab_m_aabb_max": [
+        0.011309,
+        0.098633,
+        -0.027048
+       ],
+       "dy_mm_range": [
+        24.68,
+        37.33
+       ],
+       "selector": {
+        "unity_vertices": 298,
+        "triangles": 220,
+        "window_min": [
+         -0.018842511,
+         -0.012275558,
+         -0.009791579
+        ],
+        "window_max": [
+         0.017633967,
+         0.038222879,
+         0.009791426
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 3,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 1,
+       "role": "маховик горизонтали",
+       "unity_vertices": 36,
+       "welded_vertices": 25,
+       "triangles": 40,
+       "aabb_min": [
+        0.014485702,
+        0.011343594,
+        -0.007115326
+       ],
+       "aabb_max": [
+        0.018921681,
+        0.026392344,
+        0.007933349
+       ],
+       "centroid": [
+        0.017526739,
+        0.018291494,
+        0.000396943
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        0.009163,
+        0.087233,
+        -0.053647
+       ],
+       "prefab_m_aabb_max": [
+        0.012892,
+        0.097769,
+        -0.043111
+       ],
+       "dy_mm_range": [
+        25.93,
+        36.47
+       ],
+       "selector": {
+        "unity_vertices": 36,
+        "triangles": 40,
+        "window_min": [
+         0.0138909,
+         0.010748792,
+         -0.007710128
+        ],
+        "window_max": [
+         0.019516483,
+         0.026987146,
+         0.008528151
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 3,
+       "role": "ось шарнира",
+       "unity_vertices": 34,
+       "welded_vertices": 16,
+       "triangles": 28,
+       "aabb_min": [
+        -0.018921684,
+        -0.001534634,
+        -0.001937485
+       ],
+       "aabb_max": [
+        0.018143538,
+        0.001906891,
+        0.001504059
+       ],
+       "centroid": [
+        -0.000389073,
+        0.000186192,
+        -0.000317928
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.01892,
+        0.091011,
+        -0.036502
+       ],
+       "prefab_m_aabb_max": [
+        0.012237,
+        0.09342,
+        -0.034093
+       ],
+       "dy_mm_range": [
+        29.71,
+        32.12
+       ],
+       "selector": {
+        "unity_vertices": 34,
+        "triangles": 28,
+        "window_min": [
+         -0.019516486,
+         -0.002129435,
+         -0.002532287
+        ],
+        "window_max": [
+         0.01873834,
+         0.002501693,
+         0.002098861
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 2,
+        "islands_with_same_counts": 1
+       }
+      },
+      {
+       "island_index_in_asset_order": 4,
+       "role": "втулка на оси",
+       "unity_vertices": 56,
+       "welded_vertices": 36,
+       "triangles": 54,
+       "aabb_min": [
+        -0.005752859,
+        -0.001996555,
+        -0.002340317
+       ],
+       "aabb_max": [
+        0.003886433,
+        0.002389965,
+        0.002042389
+       ],
+       "centroid": [
+        -0.000921809,
+        -3.4928e-05,
+        -0.000301476
+       ],
+       "submeshes": [
+        0
+       ],
+       "prefab_m_aabb_min": [
+        -0.00785,
+        0.090728,
+        -0.03684
+       ],
+       "prefab_m_aabb_max": [
+        0.000253,
+        0.093797,
+        -0.03377
+       ],
+       "dy_mm_range": [
+        29.43,
+        32.5
+       ],
+       "selector": {
+        "unity_vertices": 56,
+        "triangles": 54,
+        "window_min": [
+         -0.006347661,
+         -0.002591357,
+         -0.002935119
+        ],
+        "window_max": [
+         0.004481235,
+         0.002984767,
+         0.002637191
+        ],
+        "rule": "остров целиком внутри окна (координаты меша) и с этими nv/nt",
+        "unique_by_counts": true,
+        "matches_in_window": 1,
+        "islands_in_window_any_counts": 1,
+        "islands_with_same_counts": 1
+       }
+      }
+     ],
+     "physical": "Откидной целик BUIS (рамка Rifle_Detail_04 на основании Rifle_Detail_03 с защёлкой). В префабе сложен назад.",
+     "aim_point": {
+      "type": "R_aperture",
+      "point": [
+       -0.000642578,
+       0.028513942,
+       0.00322548
+      ],
+      "point_space": "координаты меша узла (Unity mesh, до трансформа узла)",
+      "point_prefab_m": [
+       -0.003554,
+       0.112071,
+       -0.033118
+      ],
+      "rel_shot_mm": {
+       "dx": -0.13,
+       "dy": 50.77,
+       "dz": -569.01
+      },
+      "method": "в поднятом положении (поворот +90° вокруг оси острова 3): проекция острова 2 вдоль Z, центр — окружность Kasa по 12 вершинам (r=2.045 мм, невязка 0.0221 мм)"
+     },
+     "movable": false,
+     "raise": {
+      "node": "AR15/MeshContainer/Rifle_Detail_04",
+      "why": "рамка BUIS сложена назад; ось — поперечная ось острова 3 Rifle_Detail_04",
+      "axis_point_prefab_m": [
+       -0.003341,
+       0.092215,
+       -0.035297
+      ],
+      "axis_dir_prefab": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "angle_deg": 90.0,
+      "convention": "поворот в пространстве префаба: Quaternion.AngleAxis(angle_deg, axis_dir) вокруг axis_point",
+      "current_local": {
+       "position": "{x: -0.00430613, y: 0.13195491, z: -0.050240763}",
+       "rotation": "{x: -0.7111988, y: 0.00000017380354, z: -0.00000017179777, w: 0.70299095}",
+       "scale": "{x: 1.20088, y: 1.0000001, z: 1.0000001}"
+      },
+      "raised_local": {
+       "position": [
+        -0.00430613,
+        0.131552461,
+        -0.050205515
+       ],
+       "rotation_xyzw": [
+        -0.005803831,
+        2.44e-07,
+        1e-09,
+        0.999983158
+       ],
+       "scale": [
+        1.20088,
+        1.0,
+        1.0
+       ]
+      }
+     },
+     "base_node": "AR15/MeshContainer/Rifle_Detail_03",
+     "raise_check": "ось взята по геометрии острова 3 (стержень Ø2.4 мм поперёк); проверить подъём глазами в Unity"
+    },
+    "FrontSight": {
+     "exists": false,
+     "confirmed": "мушки нет: на газоблоке (Rifle_Body_Mesh остров 4) только короткая планка Picatinny, на дульном тормозе (остров 5) прицельных деталей нет",
+     "mount_options": [
+      {
+       "where": "передний конец планки цевья (остров 23)",
+       "rail": {
+        "island": 23,
+        "z_range_prefab_m": [
+         0.1115,
+         0.25
+        ],
+        "teeth_top_dy_mm": 25.84,
+        "base_dy_mm": 24.12
+       },
+       "note": "та же высота, что планка ствольной коробки → откидная мушка BUIS (комплект TR15/MX68) встаёт без проставок"
+      },
+      {
+       "where": "планка газоблока (остров 4)",
+       "rail": {
+        "island": 4,
+        "z_range_prefab_m": [
+         0.257,
+         0.301
+        ],
+        "teeth_top_dy_mm": 19.99,
+        "base_dy_mm": 17.31
+       },
+       "note": "на 5.9 мм ниже планки ствольной коробки — нужна высокая мушка (тип A2/FSB) или проставка"
+      }
+     ],
+     "top_rail_for_TR15_kit": {
+      "present": true,
+      "upper_receiver": {
+       "island": 1,
+       "z_range_prefab_m": [
+        -0.069,
+        0.1015
+       ],
+       "teeth_top_dy_mm": 25.88,
+       "base_dy_mm": 22.62
+      },
+      "handguard": {
+       "island": 23,
+       "z_range_prefab_m": [
+        0.1115,
+        0.25
+       ],
+       "teeth_top_dy_mm": 25.84,
+       "base_dy_mm": 24.12
+      },
+      "note": "сплошная верхняя планка от ствольной коробки до конца цевья (стык z≈0.100–0.112); родной целик стоит на ней же"
+     }
+    }
+   },
+   "prefab_note": "целик в префабе СЛОЖЕН; мушки нет",
+   "movable": {
+    "part": "FrontSight",
+    "islands": [],
+    "axis": "только высота",
+    "why": "мушки нет; при установке донорской мушки AR-типа подвижный — её столбик"
+   },
+   "difficulty": "C — нет мушки (нужен донор), целик сложен"
+  }
+ }
+}

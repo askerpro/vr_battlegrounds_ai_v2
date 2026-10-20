@@ -1,0 +1,78 @@
+AK105 (Assets/Prefabs/Weapons/AK105/AK105.prefab): AK-105: высота сводится мушкой (столбик, остров 49); целик-планка — неподвижная опорная точка
+  узел MeshContainer/Base: меш AK105_Body, островов 54, треугольников 22756
+    вынос Front: остров 49 nv60/nt26 [0,00005, 0,477057, -0,036423]…[0,002834, 0,480296, -0,028371] → меш nv60/nt26, подмеши [1]; ассеты: деталь Assets/Art/Weapons/Kinemation/AK105/Meshes/AK105_SightFront.asset, корпус Assets/Art/Weapons/Kinemation/AK105/Meshes/AK105_Body.asset
+    контроль Rear: остров 14 nv100/nt72 [-0,010072, 0,204878, -0,038206]…[0,012956, 0,209406, -0,031464] + остров 2 nv86/nt52 [-0,005442, 0,206878, -0,034636]…[0,008326, 0,260777, -0,031824] + остров 12 nv213/nt190 [0,003779, 0,209956, -0,037152]…[0,018187, 0,218625, -0,028483] + остров 13 nv212/nt188 [-0,015302, 0,209956, -0,037152]…[-0,000895, 0,218625, -0,028483] (остаётся в корпусе)
+  MeshContainer/Base/SightRearFrame/SightRear: неподвижная (только точка), точка (1,442, 73,642, 136,647) мм префаба
+  MeshContainer/Base/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (1,442, 71,859, 409,685) мм префаба
+
+Mk14 (Assets/Prefabs/Weapons/Mk14/Mk14.prefab): Mk14: высота — диоптр целика (острова 13+11); мушка M14 по высоте неподвижна
+  узел MeshContainer/Base: меш Mk14_Body, островов 53, треугольников 30555
+    вынос Rear: остров 13 nv286/nt282 [-0,004577, 0,042082, -0,047669]…[0,004577, 0,045054, -0,035475] + остров 11 nv24/nt16 [-0,005824, 0,045091, -0,038971]…[0,005824, 0,05095, -0,033362] → меш nv310/nt298, подмеши [0]; ассеты: деталь Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_SightRear.asset, корпус Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Body.asset
+    контроль Front: остров 48 nv62/nt50 [-0,003161, 0,664577, -0,048576]…[0,003161, 0,670898, -0,038034] (остаётся в корпусе)
+  MeshContainer/Base/SightRearFrame/SightRear: подвижная, ход −3,0…+3,0 мм, точка (0,000, 76,502, 9,585) мм префаба
+  MeshContainer/Base/SightFrontFrame/SightFront: неподвижная (только точка), точка (0,000, 81,986, 634,514) мм префаба
+
+Viper (Assets/Prefabs/Weapons/Viper/Viper.prefab): Viper: регулируемый целик на затворе (острова 3+4+2, едет с Slide/Bolt); мушка в пазу неподвижна по высоте
+  узел Slide/Bolt: меш Viper_Bolt, островов 5, треугольников 2946
+    вынос Rear: остров 3 nv350/nt284 [0,004667, -0,037009, -0,008487]…[0,015404, -0,002536, 0,008487] + остров 4 nv72/nt54 [0,010529, -0,022804, -0,002811]…[0,013268, -0,017183, 0,002811] + остров 2 nv84/nt66 [0,006036, -0,035007, 0,007803]…[0,013075, -0,027968, 0,009799] → меш nv506/nt404, подмеши [0]; ассеты: деталь Assets/Art/Weapons/Kinemation/Viper/Meshes/Viper_SightRear.asset, корпус Assets/Art/Weapons/Kinemation/Viper/Meshes/Viper_Bolt.asset
+  узел MeshContainer/Base: меш Viper_Body, островов 21, треугольников 5892
+    контроль Front: остров 5 nv72/nt52 [0,042881, 0,128289, -0,001036]…[0,047275, 0,144507, 0,001036] + остров 20 nv44/nt34 [0,044594, 0,128505, -0,000578]…[0,046743, 0,143458, 0,000578] (остаётся в корпусе)
+  Slide/Bolt/SightRearFrame/SightRear: подвижная, ход −3,0…+3,0 мм, точка (0,000, 59,047, -41,565) мм префаба
+  MeshContainer/Base/SightFrontFrame/SightFront: неподвижная (только точка), точка (0,000, 55,823, 116,940) мм префаба
+
+R08 (Assets/Prefabs/Weapons/R08/R08.prefab): R08: регулируемый целик (острова 1+21); мушка неподвижна
+  узел MeshContainer/Base: меш R08_Body, островов 22, треугольников 10587
+    вынос Rear: остров 1 nv672/nt644 [-0,008244, -0,038181, 0,010586]…[0,008226, 0,02228, 0,023967] + остров 21 nv200/nt306 [-0,002521, -0,029964, 0,017611]…[0,003365, -0,024078, 0,020059] → меш nv872/nt950, подмеши [0]; ассеты: деталь Assets/Art/Weapons/Kinemation/R08/Meshes/R08_SightRear.asset, корпус Assets/Art/Weapons/Kinemation/R08/Meshes/R08_Body.asset
+    контроль Front: остров 5 nv51/nt42 [-0,002526, 0,124452, 0,017042]…[0,002526, 0,141969, 0,024285] + остров 11 nv64/nt60 [-0,001019, 0,12283, 0,020894]…[0,001019, 0,124452, 0,022932] (остаётся в корпусе)
+  MeshContainer/Base/SightRearFrame/SightRear: подвижная, ход −3,0…+3,0 мм, точка (0,000, 71,135, -20,303) мм префаба
+  MeshContainer/Base/SightFrontFrame/SightFront: неподвижная (только точка), точка (0,000, 71,453, 138,702) мм префаба
+
+MP5K (Assets/Prefabs/Weapons/MP5K/MP5K.prefab): MP5K: высота — столбик мушки (остров 16); барабан целика неподвижен
+  узел MeshContainer/Base: меш Rifle04_Body_Mesh, островов 33, треугольников 9716; скин-атрибуты FBX в выходные меши не переносятся
+    вынос Front: остров 16 nv72/nt54 [-0,001448, 0,033153, 0,018504]…[0,00145, 0,033641, 0,02056] → меш nv72/nt54, подмеши [0]; ассеты: деталь Assets/Art/Weapons/HandsPack/MP5K/Meshes/MP5K_SightFront.asset, корпус Assets/Art/Weapons/HandsPack/MP5K/Meshes/MP5K_Base_SightSplit.asset
+    контроль Rear: остров 23 nv558/nt624 [-0,001449, -0,025551, 0,017285]…[0,001463, -0,022263, 0,020582] (остаётся в корпусе)
+  MeshContainer/Base/SightRearFrame/SightRear: неподвижная (только точка), точка (-0,028, 126,709, -55,523) мм префаба, разбор (-0,028, 126,708, -55,523) (Δ 0,001 мм)
+  MeshContainer/Base/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (0,002, 126,601, 208,308) мм префаба, разбор (0,002, 126,601, 208,308) (Δ 0,000 мм)
+
+Uzi (Assets/Prefabs/Weapons/Uzi/Uzi.prefab): Uzi: мушка двигается целым островом 10 вместе с защитными ушками (решение пользователя)
+  узел MeshContainer/Base: меш body_Mesh, островов 33, треугольников 9891; скин-атрибуты FBX в выходные меши не переносятся
+    вынос Front: остров 10 nv342/nt362 [-0,06752, 0,076395, 0,197722]…[0,061869, 0,167263, 0,282257] → меш nv342/nt362, подмеши [0]; ассеты: деталь Assets/Art/Weapons/HandsPack/Uzi/Meshes/Uzi_SightFront.asset, корпус Assets/Art/Weapons/HandsPack/Uzi/Meshes/Uzi_Base_SightSplit.asset
+    контроль Rear: остров 6 nv395/nt372 [-0,101282, -0,131818, -0,683619]…[0,090304, 0,15451, -0,614893] (остаётся в корпусе)
+  MeshContainer/Base/SightRearFrame/SightRear: неподвижная (только точка), точка (-1,003, 74,828, -135,934) мм префаба, разбор (-1,003, 74,828, -135,934) (Δ 0,000 мм)
+  MeshContainer/Base/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (-0,593, 75,261, 57,370) мм префаба, разбор (-0,593, 75,261, 57,370) (Δ 0,000 мм)
+
+Herrington (Assets/Prefabs/Weapons/Herrington/Herrington.prefab): Remington 11-87: подвижная передняя лопатка (острова 1+2), V-целик неподвижен (решение пользователя)
+  узел MeshContainer/Herrington_1187_Skeleton: меш Herrington_Herrington_1187_Skeleton, островов 9, треугольников 1140
+    вынос Front: остров 1 nv130/nt108 [-0,003009, -0,441584, 0,042262]…[0,003009, -0,425169, 0,04996] + остров 2 nv16/nt6 [-0,003087, -0,440966, 0,036271]…[0,003087, -0,430212, 0,044379] → меш nv146/nt114, подмеши [0]; ассеты: деталь Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_SightFront.asset, корпус Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Herrington_1187_Skeleton.asset
+    контроль Rear: остров 0 nv262/nt248 [-0,007242, -0,1356, 0,045361]…[0,007242, -0,122592, 0,052147] + остров 3 nv98/nt92 [-0,005243, -0,136319, 0,039457]…[0,005243, -0,116641, 0,045884] + остров 5 nv98/nt92 [-0,005833, -0,121788, 0,040573]…[0,005833, -0,11832, 0,044041] + остров 8 nv96/nt118 [-0,001901, -0,134485, 0,047044]…[0,001901, -0,130682, 0,048192] (остаётся в корпусе)
+  MeshContainer/Herrington_1187_Skeleton/SightRearFrame/SightRear: неподвижная (только точка), точка (0,000, 59,549, 288,005) мм префаба, разбор (0,000, 59,549, 288,004) (Δ 0,000 мм)
+  MeshContainer/Herrington_1187_Skeleton/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (0,000, 57,361, 588,968) мм префаба, разбор (0,000, 57,361, 588,968) (Δ 0,001 мм)
+
+Revolver (Assets/Prefabs/Weapons/Revolver/Revolver.prefab): Revolver: подвижный целик (острова 2+4); мушка — гребень ствола, только точка
+  узел MeshContainer/Base: меш Gun_03_Body_Mesh, островов 7, треугольников 4410; скин-атрибуты FBX в выходные меши не переносятся
+    вынос Rear: остров 2 nv96/nt94 [-0,010889, 0,12823, 0,206134]…[0,011422, 0,131005, 0,220415] + остров 4 nv107/nt108 [-0,008016, 0,08385, 0,206062]…[0,008357, 0,128216, 0,213525] → меш nv203/nt202, подмеши [0]; ассеты: деталь Assets/Art/Weapons/HandsPack/Revolver/Meshes/Revolver_SightRear.asset, корпус Assets/Art/Weapons/HandsPack/Revolver/Meshes/Revolver_Base_SightSplit.asset
+  MeshContainer/Base/SightRearFrame/SightRear: подвижная, ход −3,0…+3,0 мм, точка (0,192, 155,556, -92,420) мм префаба, разбор (0,192, 155,556, -92,420) (Δ 0,000 мм)
+  MeshContainer/Base/SightFrontFrame/SightFront: неподвижная (только точка), точка (0,212, 155,571, 151,212) мм префаба, разбор (0,212, 155,571, 151,212) (Δ 0,000 мм)
+
+Gun (Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab): Browning Hi-Power: подвижная мушка (остров 2), обе половины в затворе Slide/Gate
+  узел Slide/Gate: меш Gate_mesh, островов 5, треугольников 1165; скин-атрибуты FBX в выходные меши не переносятся
+    вынос Front: остров 2 nv74/nt62 [-0,009859, -0,13483, 0,01951]…[0,009377, -0,120845, 0,02781] → меш nv74/nt62, подмеши [0]; ассеты: деталь Assets/Art/Weapons/HandsPack/BrowningHiPower/Meshes/BrowningHiPower_SightFront.asset, корпус Assets/Art/Weapons/HandsPack/BrowningHiPower/Meshes/BrowningHiPower_Gate_SightSplit.asset
+    контроль Rear: остров 1 nv68/nt62 [-0,012712, 0,106241, 0,017353]…[0,012231, 0,120437, 0,027742] (остаётся в корпусе)
+  Slide/Gate/SightRearFrame/SightRear: неподвижная (только точка), точка (0,000, 48,813, -57,319) мм префаба, разбор (0,000, 48,813, -57,319) (Δ 0,000 мм)
+  Slide/Gate/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (0,000, 48,859, 105,454) мм префаба, разбор (0,000, 48,859, 105,454) (Δ 0,001 мм)
+
+PPK (Assets/Prefabs/Weapons/PPK/PPK.prefab): PPK: прицел — одна оболочка с затвором; без подвижной детали, только точки (решение пользователя)
+  Slide/Gun02_Detail_01/SightRearFrame/SightRear: неподвижная (только точка), точка (0,010, 66,796, -49,033) мм префаба, разбор (0,010, 66,796, -49,033) (Δ 0,000 мм)
+  Slide/Gun02_Detail_01/SightFrontFrame/SightFront: неподвижная (только точка), точка (0,000, 66,776, 100,746) мм префаба, разбор (0,000, 66,776, 100,746) (Δ 0,000 мм)
+  ВНИМАНИЕ: подвижной детали нет — «Свести» только покажет ошибку
+
+Scar (Assets/Prefabs/Weapons/Scar/Scar.prefab): SCAR-L: сначала подъём рамок целика и мушки, затем подвижный столбик мушки (остров 2)
+  подъём MeshContainer/Scar_Detail_02: +90° вокруг оси (1.00, 0.00, 0.00) через (0.00, 0.11, -0.06) (префаб, м)
+  подъём MeshContainer/Scar_Detail_03: -90° вокруг оси (1.00, 0.00, 0.00) через (0.00, 0.10, 0.27) (префаб, м)
+  узел MeshContainer/Scar_Detail_02: меш Scar_Detail_02_mesh, островов 6, треугольников 1574; скин-атрибуты FBX в выходные меши не переносятся
+    контроль Rear: остров 3 nv224/nt220 [-0,003943, -0,008714, 0,035222]…[0,004005, 0,001775, 0,045885] + остров 0 nv320/nt384 [-0,00734, -0,007558, -0,009628]…[0,007341, 0,007122, 0,029387] + остров 2 nv143/nt130 [-0,006279, -0,006231, 0,029455]…[0,006279, 0,006326, 0,045743] + остров 1 nv342/nt336 [-0,010208, -0,005914, -0,005535]…[0,010208, 0,004804, 0,005184] + остров 4 nv270/nt252 [0,014056, -0,010808, -0,010812]…[0,02419, 0,010924, 0,010812] + остров 5 nv270/nt252 [-0,02419, -0,010808, -0,010812]…[-0,014056, 0,010924, 0,010812] (остаётся в корпусе)
+  узел MeshContainer/Scar_Detail_03: меш Scar_Detail_03_mesh, островов 5, треугольников 704; скин-атрибуты FBX в выходные меши не переносятся
+    вынос Front: остров 2 nv113/nt100 [-0,003751, -0,004974, 0,036834]…[0,004188, 0,00346, 0,052227] → меш nv113/nt100, подмеши [0]; ассеты: деталь Assets/Art/Weapons/HandsPack/Scar/Meshes/Scar_SightFront.asset, корпус Assets/Art/Weapons/HandsPack/Scar/Meshes/Scar_Scar_Detail_03_SightSplit.asset
+  MeshContainer/Scar_Detail_02/SightRearFrame/SightRear: неподвижная (только точка), точка (-4,374, 134,041, -63,334) мм префаба, разбор (-4,374, 134,041, -63,334) (Δ 0,001 мм)
+  MeshContainer/Scar_Detail_03/SightFrontFrame/SightFront: подвижная, ход −3,0…+3,0 мм, точка (-4,439, 134,384, 274,307) мм префаба, разбор (-4,439, 134,384, 274,307) (Δ 0,000 мм)
+

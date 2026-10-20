@@ -1,0 +1,96 @@
+if(EditorApplication.isPlayingOrWillChangePlaymode) return new { deferred=true,reason="Shared Play Mode" };
+string folder="tmp/weapon-sight-calibration/srs-sniper-candidate"; System.IO.Directory.CreateDirectory(folder);
+var registry=AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponRegistry>(VrBattlegrounds.Editor.Weapons.Calibration.WeaponSightAudit.RegistryPath);
+var reports=new System.Collections.Generic.List<object>();
+foreach(string id in new[]{"SniperRifle"}){
+ var prefab=registry.GetById(id).WeaponPrefab; string path=AssetDatabase.GetAssetPath(prefab),before=AssetDatabase.GetAssetDependencyHash(path).ToString();
+ var preview=new PreviewRenderUtility(); var root=new GameObject(id+"DonorPreview"){hideFlags=HideFlags.HideAndDontSave};preview.AddSingleGO(root);
+ var donorRoot=new GameObject("ProposedSight"); donorRoot.transform.SetParent(root.transform,false);
+ var adapterRoot=new GameObject("ProposedAdapter");adapterRoot.transform.SetParent(donorRoot.transform,false);
+ Vector3 draftRear=Vector3.zero,draftFront=Vector3.zero; var moduleRecords=new System.Collections.Generic.List<object>(); string donorPath=""; var images=new System.Collections.Generic.List<string>(); var createdMaterials=new System.Collections.Generic.List<Material>();
+ System.Func<Transform,bool> included=(t)=>{for(var a=t;a!=null;a=a.parent){if(!a.gameObject.activeSelf||a.name.IndexOf("Highlight",System.StringComparison.OrdinalIgnoreCase)>=0||a.name.IndexOf("Decal",System.StringComparison.OrdinalIgnoreCase)>=0)return false;if(a==prefab.transform)return true;}return false;};
+ System.Action<MeshRenderer,Matrix4x4,Transform> copy=(original,m,parent)=>{var f=original.GetComponent<MeshFilter>();if(f==null||f.sharedMesh==null)return;var go=new GameObject(original.name);go.transform.SetParent(parent,false);go.transform.SetPositionAndRotation(m.GetColumn(3),m.rotation);go.transform.localScale=m.lossyScale;go.AddComponent<MeshFilter>().sharedMesh=f.sharedMesh;go.AddComponent<MeshRenderer>().sharedMaterials=original.sharedMaterials;};
+ try{
+  foreach(var r in prefab.GetComponentsInChildren<MeshRenderer>(true))if(r.enabled&&included(r.transform))copy(r,r.transform.localToWorldMatrix,root.transform);
+  Vector3 donorPosition=Vector3.zero;Quaternion donorRotation=Quaternion.identity;Vector3 donorScale=Vector3.one;
+  if(id=="MKR9"){
+   donorPath="Assets/ThirdParty/KINEMATION/TacticalShooterPack/Prefabs/Weapons/W_MKR9.prefab";
+   var donor=AssetDatabase.LoadAssetAtPath<GameObject>(donorPath);
+   Transform body=null,sight=null,gameBase=null;
+   foreach(var t in donor.GetComponentsInChildren<Transform>(true)){if(t.name=="Body")body=t;if(t.name=="SM_MKR9_IronSights")sight=t;}
+   foreach(var t in prefab.GetComponentsInChildren<Transform>(true))if(t.name=="Base"&&t.GetComponent<MeshFilter>()!=null)gameBase=t;
+   if(body==null||sight==null||gameBase==null)throw new System.InvalidOperationException("Native mapping missing");
+   var rigidBody=Matrix4x4.TRS(body.position,body.rotation,Vector3.one);
+   Matrix4x4 placement=gameBase.localToWorldMatrix*rigidBody.inverse*sight.localToWorldMatrix;
+   donorPosition=placement.GetColumn(3);donorRotation=placement.rotation;donorScale=placement.lossyScale;
+   copy(sight.GetComponent<MeshRenderer>(),placement,donorRoot.transform);
+  }else{
+   donorPath="Assets/Prefabs/Weapons/SRM12/SRM12.prefab";
+   var donor=AssetDatabase.LoadAssetAtPath<GameObject>(donorPath);
+   var container=donor.transform.Find("MeshContainer");
+   var frontBase=container.Find("SightFrame");var rearBase=container.Find("SKM_TR15_FrontSight.SightFrame");
+   System.Func<Transform,float> minY=(t)=>{
+    Mesh mesh=t.GetComponent<MeshFilter>().sharedMesh;float value=float.PositiveInfinity;
+    using(var data=Mesh.AcquireReadOnlyMeshData(mesh)){
+     var vertices=new Unity.Collections.NativeArray<Vector3>(mesh.vertexCount,Unity.Collections.Allocator.Temp);
+     try{data[0].GetVertices(vertices);for(int i=0;i<vertices.Length;i++)value=Mathf.Min(value,t.TransformPoint(vertices[i]).y);}finally{vertices.Dispose();}
+    }return value;
+   };
+   System.Func<Transform,int[],Vector3> mark=(t,indices)=>{
+    Mesh mesh=t.GetComponent<MeshFilter>().sharedMesh;Vector3 value=Vector3.zero;
+    using(var data=Mesh.AcquireReadOnlyMeshData(mesh)){
+     var vertices=new Unity.Collections.NativeArray<Vector3>(mesh.vertexCount,Unity.Collections.Allocator.Temp);
+     try{data[0].GetVertices(vertices);foreach(int index in indices)value+=t.TransformPoint(vertices[index])/indices.Length;}finally{vertices.Dispose();}
+    }return value;
+   };
+   Vector3 originalFront=mark(container.Find("Sight"),new[]{0,1});
+   Vector3 originalRear=mark(container.Find("Switch"),new[]{24,27,140,142});
+   Vector3 frontShift=new Vector3(-originalFront.x,.0834500865f+.003f-minY(frontBase),.48f-originalFront.z);
+   Vector3 rearShift=new Vector3(-originalRear.x,.0835463791f+.003f-minY(rearBase),.05f-originalRear.z);
+   draftFront=originalFront+frontShift;draftRear=originalRear+rearShift;
+   foreach(string name in new[]{"SightFrame","Sight","SKM_TR15_FrontSight.SightFrame","SKM_TR15_FrontSight.Sight","Switch"}){
+    Transform part=container.Find(name);if(part==null)throw new System.InvalidOperationException("Missing SRS sight module "+name);
+    bool isFront=name=="SightFrame"||name=="Sight";Vector3 shift=isFront?frontShift:rearShift;
+    var renderer=part.GetComponent<MeshRenderer>();var mesh=part.GetComponent<MeshFilter>().sharedMesh;
+    copy(renderer,Matrix4x4.Translate(shift)*part.localToWorldMatrix,donorRoot.transform);
+    string guid;long localId;AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh,out guid,out localId);
+    moduleRecords.Add(new{name,meshGuid=guid,meshLocalFileId=localId,meshHash=AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(mesh)).ToString(),translation=new[]{shift.x,shift.y,shift.z}});
+   }
+   var donorMaterial=container.Find("Sight").GetComponent<MeshRenderer>().sharedMaterial;
+   foreach(bool front in new[]{true,false}){
+    var go=GameObject.CreatePrimitive(PrimitiveType.Cube);UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
+    go.name=front?"FrontRailAdapter":"RearRailAdapter";go.transform.SetParent(adapterRoot.transform,false);
+    float z=front?.4919f:.0628f;float y=front?.0834500865f:.0835463791f;
+    go.transform.position=new Vector3(0,y+.0015f,z);go.transform.localScale=new Vector3(.034f,.003f,.035f);
+    go.GetComponent<MeshRenderer>().sharedMaterial=donorMaterial;
+   }
+  }
+  Bounds bounds=default(Bounds);bool first=true;foreach(var r in root.GetComponentsInChildren<MeshRenderer>()){if(first){bounds=r.bounds;first=false;}else bounds.Encapsulate(r.bounds);}
+  preview.lights[0].intensity=1.5f;preview.lights[0].transform.rotation=Quaternion.Euler(35,35,0);preview.lights[1].intensity=1;preview.lights[1].transform.rotation=Quaternion.Euler(340,215,0);preview.ambientColor=new Color(.35f,.35f,.35f);
+  var camera=preview.camera;camera.orthographic=true;camera.nearClipPlane=.001f;camera.farClipPlane=20;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.16f,.18f,.21f);
+  System.Action<string,Vector3,Vector3,Vector3,float,int,int> render=(name,c,direction,up,size,w,h)=>{
+   camera.transform.SetPositionAndRotation(c+direction*2,Quaternion.LookRotation(-direction,up));camera.orthographicSize=size;
+   preview.BeginStaticPreview(new Rect(0,0,w,h));preview.Render(true);var texture=preview.EndStaticPreview();try{string image=folder+"/"+id+"-"+name+".png";System.IO.File.WriteAllBytes(image,texture.EncodeToPNG());images.Add(image);}finally{UnityEngine.Object.DestroyImmediate(texture);}
+  };
+  donorRoot.SetActive(false);render("before",bounds.center,Vector3.right,Vector3.up,Mathf.Max(bounds.size.y,bounds.size.z*.5f)*.72f,1024,512);
+  donorRoot.SetActive(true);render("after",bounds.center,Vector3.right,Vector3.up,Mathf.Max(bounds.size.y,bounds.size.z*.5f)*.72f,1024,512);
+  render("top",bounds.center,Vector3.up,Vector3.left,Mathf.Max(bounds.size.x,bounds.size.z*.5f)*.72f,1024,512);
+  Vector3 detail=id=="MKR9"?new Vector3(.001f,.061f,.04f):new Vector3(0,.11f,.27f);
+  render("mount-detail",detail,new Vector3(1,.3f,-.2f).normalized,Vector3.up,id=="MKR9"?.145f:.23f,1024,768);
+  camera.orthographic=true;camera.orthographicSize=.07f;
+  Vector3 detailDirection=new Vector3(1,.3f,-.2f).normalized;
+  camera.transform.SetPositionAndRotation(new Vector3(0,.11f,.063f)+detailDirection*2,Quaternion.LookRotation(-detailDirection,Vector3.up));
+  render("rear-detail",new Vector3(0,.11f,.063f),detailDirection,Vector3.up,.07f,1024,768);
+  render("front-detail",new Vector3(0,.11f,.49f),detailDirection,Vector3.up,.07f,1024,768);
+  camera.orthographic=false;camera.fieldOfView=30;
+  camera.transform.SetPositionAndRotation(draftRear-(draftFront-draftRear).normalized*.08f,Quaternion.LookRotation(draftFront-draftRear,Vector3.up));
+  preview.BeginStaticPreview(new Rect(0,0,1024,768));preview.Render(true);var aimTexture=preview.EndStaticPreview();
+  try{string aimImage=folder+"/"+id+"-SRS-aim.png";System.IO.File.WriteAllBytes(aimImage,aimTexture.EncodeToPNG());images.Add(aimImage);}finally{UnityEngine.Object.DestroyImmediate(aimTexture);}
+    reports.Add(new{weaponId=id,sightId="SRSModularIron",modules=moduleRecords,rearReference=new[]{draftRear.x,draftRear.y,draftRear.z},frontReference=new[]{draftFront.x,draftFront.y,draftFront.z},requestedMagnification=1,zeroDistance=15,source=path,sourceHash=before,sourceUnchanged=before==AssetDatabase.GetAssetDependencyHash(path).ToString(),donor=donorPath,donorHash=AssetDatabase.GetAssetDependencyHash(donorPath).ToString(),
+   position=new[]{donorPosition.x,donorPosition.y,donorPosition.z},rotation=new[]{donorRotation.x,donorRotation.y,donorRotation.z,donorRotation.w},sourceScale=new[]{donorScale.x,donorScale.y,donorScale.z},
+   opticalAcceptance=false,calibrationAccepted=false,mountAcceptance=false,productionApplied=false,status="VisualAndMountReviewNeedsCalibration",images=images});
+ }finally{UnityEngine.Object.DestroyImmediate(root);preview.Cleanup();foreach(var m in createdMaterials)UnityEngine.Object.DestroyImmediate(m);}
+}
+string json=Newtonsoft.Json.JsonConvert.SerializeObject(reports,Newtonsoft.Json.Formatting.Indented);
+System.IO.File.WriteAllText(folder+"/candidates.json",json);
+return new{passedCapture=true,count=reports.Count,report=folder+"/candidates.json"};

@@ -1,0 +1,28 @@
+if(EditorApplication.isPlayingOrWillChangePlaymode)return new{deferred=true};
+var registry=AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponRegistry>(VrBattlegrounds.Editor.Weapons.Calibration.WeaponSightAudit.RegistryPath);
+var records=new System.Collections.Generic.List<object>();
+foreach(string id in new[]{"Viper","SRM12"}){
+ var model=VrBattlegrounds.Editor.Weapons.Calibration.SightVisualReview.CaptureModel(id,registry.GetById(id).WeaponPrefab);
+ var rear=model.surfaces.Find(s=>s.nodePath.EndsWith(id=="Viper"?"/Bolt[0]":"/Switch[9]",System.StringComparison.Ordinal));
+ var front=model.surfaces.Find(s=>s.nodePath.EndsWith(id=="Viper"?"/Base[0]":"/Sight[6]",System.StringComparison.Ordinal));
+ int[] ri=id=="Viper"?new[]{94,76}:new[]{24,27,140,142};int[] fi=id=="Viper"?new[]{160,161}:new[]{0,1};
+ System.Func<VrBattlegrounds.Editor.Weapons.Calibration.SightVisualReview.Surface,int[],VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point> mark=(s,indices)=>{
+  double x=0,y=0,z=0;foreach(int index in indices){Vector3 v=s.vertices[index];Matrix4x4 m=s.localToPrefabMeters;
+   x+=((double)m.m00*v.x+(double)m.m01*v.y+(double)m.m02*v.z+m.m03)/indices.Length;
+   y+=((double)m.m10*v.x+(double)m.m11*v.y+(double)m.m12*v.z+m.m13)/indices.Length;
+   z+=((double)m.m20*v.x+(double)m.m21*v.y+(double)m.m22*v.z+m.m23)/indices.Length;
+  }return new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(x,y,z);
+ };
+ var r=mark(rear,ri);var f=mark(front,fi);var origin=model.shotOriginMeters;var u=model.shotForward;
+ var mpoint=new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(origin.x,origin.y,origin.z);var upoint=new VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Point(u.x,u.y,u.z);
+ var result=VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Evaluate(mpoint,upoint,r,f,15);
+ var proposed=VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.Evaluate(mpoint,upoint,r,result.proposedFrontPoint,15);
+ var samples=new System.Collections.Generic.List<object>();foreach(double d in new[]{0,1,3,5,10,12.5,15,20})samples.Add(new{distanceMeters=d,currentErrorMeters=VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.ErrorAt(result,d),proposedErrorMeters=VrBattlegrounds.Editor.Weapons.Calibration.SightGeometrySolver.ErrorAt(proposed,d)});
+ records.Add(new{weaponId=id,model.assetPath,model.dependencyHash,zeroDistance=15,referenceStatus="DraftNeedsVisualAcceptance",physicalApproval=false,productionApplied=false,
+  rear=new{rear.nodePath,rear.meshGuid,rear.meshLocalFileId,meshHash=AssetDatabase.GetAssetDependencyHash(rear.meshPath).ToString(),vertices=ri,weightEach=1.0/ri.Length,point=r,meaning=id=="Viper"?"Midpoint of rear notch inner top corners":"Centre of eye-facing inner aperture rim"},
+  front=new{front.nodePath,front.meshGuid,front.meshLocalFileId,meshHash=AssetDatabase.GetAssetDependencyHash(front.meshPath).ToString(),vertices=fi,weightEach=1.0/fi.Length,point=f,meaning="Midpoint of front post top edge"},
+  result,proposed,samples,reason=id=="Viper"?"Front post is integrated in Base. Whole-body translation forbidden; separate reviewed mesh/detail or rear mechanism required.":"Front post lowering is geometric proposal only. Adjustment mechanism/travel and mount contact not accepted."});
+}
+string json=Newtonsoft.Json.JsonConvert.SerializeObject(records,Newtonsoft.Json.Formatting.Indented);
+System.IO.File.WriteAllText("tmp/weapon-sight-calibration/reference-drafts.json",json);
+return new{captured=records.Count,referenceAccepted=false,physicalApproval=false,report="tmp/weapon-sight-calibration/reference-drafts.json"};

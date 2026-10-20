@@ -352,7 +352,10 @@ namespace VrBattlegrounds.Editor.Performance
             m.EnableKeyword("_RECEIVE_SHADOWS_OFF");
             if (c.Target == SimpleLitName && emissive)
             {
-                m.SetFloat("_SpecularHighlights", 0f);
+                // SimpleLitGUI.SpecularSource: 0 — блики (текстура/цвет), 1 — NoSpecular.
+                m.SetFloat("_SpecularHighlights", 1f);
+                m.DisableKeyword("_SPECULAR_COLOR");
+                m.DisableKeyword("_SPECGLOSSMAP");
                 m.SetTexture("_EmissionMap", emissionMap);
                 m.SetColor("_EmissionColor", emissionColor);
                 m.EnableKeyword("_EMISSION");

@@ -30,6 +30,20 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "docs-1",
+      "writes": [
+        "tasks/e2e-regression/**"
+      ],
+      "after": [
+        {
+          "task": "e2e-regression",
+          "stage": "uid-fix",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

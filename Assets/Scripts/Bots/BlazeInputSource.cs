@@ -48,7 +48,13 @@ namespace VrBattlegrounds.Bots
         private const int TriggerPressFrames = 3;
         private const int SeesIntervalFrames = BotPlayerFlowSettings.SeesIntervalFrames;
         private const float HoldForward = 0.40f, HoldDown = 0.12f, HoldSide = 0.12f;
-        private const float AimGain = 0.7f;
+        private const float AimGain = 0.4f;
+        /// <summary>Поправка наведения за кадр не больше, градусы: рука человека не дёргается 30 раз в секунду.</summary>
+        private const float AimMaxStepDeg = 4f;
+        /// <summary>Ошибка дула меньше — не поправлять (мёртвая зона против дрожания), градусы.</summary>
+        private const float AimDeadbandDeg = 0.3f;
+        /// <summary>Сглаживание точки цели, 1/с (цель качается, разброс ИИ меняется между выстрелами).</summary>
+        private const float AimTargetSmoothing = 8f;
         private static readonly Vector3 LowReadyFromEye = new Vector3(0.1f, -1.2f, 3f);
 
         private readonly AvatarPilot _pilot = new AvatarPilot();
@@ -64,6 +70,8 @@ namespace VrBattlegrounds.Bots
         private int _releasedFrames;  // сколько кадров курок отпущен
         private bool _aiming;
         private Quaternion _aimRotation;
+        private Vector3 _aimTarget;
+        private bool _hold;           // тянемся к предмету: стоим, ноги мозга — у головы
         private bool _approach;       // идём к предмету: ходьба головой к нему, а не к ногам мозга
         private Vector3 _approachFloor;
         private bool _crouch;
@@ -124,9 +132,11 @@ namespace VrBattlegrounds.Bots
             if (_gunner != null && alive && (Time.frameCount + _seesPhase) % SeesIntervalFrames == 0) _gunner.RefreshSees();
             _approach = false;
             _crouch = false;
+            _hold = false;
             Hands(alive);
             // Ходьба после рук: подход к предмету заменяет шаг к ногам мозга (одна ходьба на кадр).
             if (_approach) Approach(dt);
+            else if (_hold) HoldPosition();
             else Walk(dt);
             if (_crouch) _pilot.CrouchTowards(_crouchEye, dt);
             else _pilot.StandUp(dt);
@@ -142,6 +152,17 @@ namespace VrBattlegrounds.Bots
             _pilot.StepTowards(_approachFloor, AvatarPilot.MaxWalkSpeed, dt, ApproachDistance * 0.5f);
             _body.Place(_pilot.FloorPosition, _pilot.Yaw);
             if (_combat != null) _combat.ResyncLegs(_pilot.FloorPosition);
+        }
+
+        /// <summary>Стоять: ноги мозга и прокси Blaze — у головы, шага нет.</summary>
+        private void HoldPosition()
+        {
+            Vector3 floor = _pilot.FloorPosition;
+            Vector3 drift = _body.Feet - floor;
+            drift.y = 0f;
+            _body.Place(floor, _pilot.Yaw);
+            // Прокси переносится, только если ушёл заметно (Warp каждый кадр сбивал бы Blaze).
+            if (_combat != null && drift.magnitude > 0.3f) _combat.ResyncLegs(floor);
         }
 
         private void Walk(float dt)
@@ -238,6 +259,8 @@ namespace VrBattlegrounds.Bots
                     _crouchEye = snap.y - _pilot.FloorPosition.y + CrouchAboveItem;
                 }
 
+                // Тянемся к рукояти: стоим на месте (иначе шаг к ногам мозга уводит от предмета — прогон iter2-9).
+                _hold = true;
                 _pilot.ReachGrabber(UxrHandSide.Right, snap, snapRotation);
                 _rightAtTarget = inHand || _pilot.GrabberAtTarget(UxrHandSide.Right, ReachTolerance) ? _rightAtTarget + 1 : 0;
                 _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, inHand || _rightAtTarget >= ReachStableFrames);
@@ -304,6 +327,9 @@ namespace VrBattlegrounds.Bots
         {
             Transform hand = grabber.transform;
             Vector3 hold = eye + yaw * new Vector3(HoldSide, -HoldDown, HoldForward);
+            // Сглаженная точка цели: прогон iter2-9 — ствол дрожал 20–30 раз в секунду рядом с противником.
+            _aimTarget = _aiming ? Vector3.Lerp(_aimTarget, target, 1f - Mathf.Exp(-AimTargetSmoothing * Time.deltaTime)) : target;
+            target = _aimTarget;
             if (!_aiming)
             {
                 Quaternion handInverse = Quaternion.Inverse(hand.rotation);
@@ -320,8 +346,14 @@ namespace VrBattlegrounds.Bots
             }
             else
             {
-                Quaternion correction = Quaternion.FromToRotation(muzzle.forward, target - muzzle.position);
-                _aimRotation = Quaternion.Slerp(Quaternion.identity, correction, AimGain) * _aimRotation;
+                Vector3 wanted = target - muzzle.position;
+                float error = Vector3.Angle(muzzle.forward, wanted);
+                if (error > AimDeadbandDeg)
+                {
+                    Quaternion correction = Quaternion.FromToRotation(muzzle.forward, wanted);
+                    float step = Mathf.Min(error * AimGain, AimMaxStepDeg);
+                    _aimRotation = Quaternion.RotateTowards(Quaternion.identity, correction, step) * _aimRotation;
+                }
             }
 
             _pilot.ReachGrabber(UxrHandSide.Right, hold, _aimRotation);

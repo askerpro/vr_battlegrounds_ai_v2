@@ -37,7 +37,8 @@
     {
       "id": "journal",
       "writes": [
-        "experts/launch-infra/journal/2026-10-20-e2e-heavy-editor.md"
+        "experts/launch-infra/journal/2026-10-20-e2e-heavy-editor.md",
+        "tasks/e2e-heavy-editor/**"
       ],
       "after": [],
       "needs": []

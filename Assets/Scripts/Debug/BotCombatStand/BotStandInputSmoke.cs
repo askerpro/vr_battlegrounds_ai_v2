@@ -149,13 +149,18 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             SpawnTarget(_bot, headStart, _pilot.Yaw);
             yield return null;
 
-            // ── Ходьба головой: 2 м вперёд, поворот 90°, 1 м, разворот к цели ──
+            // ── Ходьба головой по свободной полосе к цели: 2 м, осмотр (голова на 90° вправо и обратно), ещё 1 м ──
+            // Вбок не идём: голова в препятствии стенда — штраф WallPass, как у человека (прогон 1: смерть по таймауту).
             Phase("Walk");
             Quaternion course = Quaternion.Euler(0f, _pilot.Yaw, 0f);
             Vector3 floor = _pilot.FloorPosition;
             Vector3 p1 = floor + course * Vector3.forward * 2f;
-            Vector3 p2 = p1 + course * Vector3.right * 1f;
+            Vector3 p2 = p1 + course * Vector3.forward * 1f;
             yield return Walk(p1);
+            until = Time.time + 3f;
+            while (!_pilot.TurnTowards(course * Vector3.right, Time.deltaTime) && Time.time < until) yield return null;
+            until = Time.time + 3f;
+            while (!_pilot.TurnTowards(course * Vector3.forward, Time.deltaTime) && Time.time < until) yield return null;
             yield return Walk(p2);
             Vector3 targetPoint = TargetAim();
             until = Time.time + 3f;

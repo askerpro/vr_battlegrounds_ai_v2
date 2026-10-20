@@ -38,7 +38,7 @@ namespace VrBattlegrounds.Bots
 
         private const float ReachTolerance = 0.02f;
         /// <summary>Рукоять уже в ладони (покупка у кисти) — Grip сразу, не ждать, пока предмет упадёт, м.</summary>
-        private const float InHandTolerance = 0.005f;
+        private const float InHandTolerance = 0.05f;
         /// <summary>Предмет дальше этого по горизонтали от головы — сначала подойти, м.</summary>
         private const float ApproachDistance = 0.45f;
         /// <summary>Глаза над предметом при наклоне к нему, м (рука тянется вниз).</summary>

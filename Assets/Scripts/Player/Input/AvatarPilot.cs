@@ -40,8 +40,8 @@ namespace VrBattlegrounds.Player.Input
         /// <summary>Сенсор контроллера не дальше этого от головы, м: рука человека не тянется через комнату.</summary>
         public const float MaxReach = 0.85f;
 
-        /// <summary>Ниже этой высоты глаз не приседает, м.</summary>
-        public const float MinCrouchEyeHeight = 0.9f;
+        /// <summary>Ниже этой высоты глаз не приседает (на колено), м.</summary>
+        public const float MinCrouchEyeHeight = 0.6f;
 
         private const float TurnSpeed = 180f;
         private const float CrouchSpeed = 1.2f;

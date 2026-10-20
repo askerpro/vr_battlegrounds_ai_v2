@@ -13,12 +13,13 @@ namespace VrBattlegrounds.Tests.DevTools
 {
     /// <summary>
     /// Скриптовый ввод сетевого клиента (контракт tasks/bots-control-modes/contracts/xr-input.md), принятая веха 1.
-    /// Поведение в сети проверяют e2e-сценарии <c>scripted-input-smoke</c> и <c>scripted-wall-purchase</c> на стенде;
-    /// здесь — статические инварианты: встроенные сценарии, кадр «покоя», защита релиза и состав префабов.
+    /// Поведение в сети проверяют e2e-сценарии <c>scripted-input-smoke</c>, <c>scripted-wall-purchase</c> и
+    /// <c>scripted-combat-hit</c> (этап 2 эпика e2e-regression, итерация 1 принята 2026-10-20) на стенде; здесь —
+    /// статические инварианты: встроенные сценарии, шаги по клиентам, кадр «покоя», защита релиза и состав префабов.
     /// </summary>
     public class ScriptedInputTests
     {
-        private static readonly string[] BuiltInScripts = { "input-smoke", "wall-purchase" };
+        private static readonly string[] BuiltInScripts = { "input-smoke", "wall-purchase", "combat-hit" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -66,6 +67,80 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(missing, Does.Contain("не найден"));
         }
 
+        [TestCase("{\"op\":\"grab-wall-item\",\"item\":\"rifle\"}", "rifle")]
+        [TestCase("{\"op\":\"hold\",\"client\":-1}", "client")]
+        public void Load_RejectsUnknownItemFilterAndNegativeClient(string step, string expected)
+        {
+            string file = Path.Combine(Path.GetTempPath(), "scripted-input-bad-step.json");
+            File.WriteAllText(file, "{\"name\":\"x\",\"steps\":[{\"op\":\"activate\"}," + step + "]}");
+            try
+            {
+                Assert.That(InputScript.Load(null, file, out string error), Is.Null);
+                Assert.That(error, Does.Contain(expected));
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Test]
+        public void Step_ForClientRunsOnlyThere_ZeroRunsEverywhere()
+        {
+            var shared = new InputStep { op = "hold" };
+            var shooter = new InputStep { op = "shoot-enemy", client = 1 };
+
+            Assert.That(shared.AppliesTo(1) && shared.AppliesTo(2), Is.True);
+            Assert.That(shooter.AppliesTo(1), Is.True);
+            Assert.That(shooter.AppliesTo(2), Is.False);
+        }
+
+        [Test]
+        public void CombatHit_OnlyClientOneShoots_BothBuyPistolsAndReportShot()
+        {
+            InputScript script = InputScript.Load("combat-hit", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int shooters = 0, purchases = 0, shotSteps = 0;
+            foreach (InputStep step in script.steps)
+            {
+                if (step.op == "shoot-enemy")
+                {
+                    shooters++;
+                    Assert.That(step.client, Is.EqualTo(1), "стрелок — клиент 1, жертва — клиент 2 (оракул сервера)");
+                    Assert.That(step.shots, Is.GreaterThan(0));
+                }
+                else
+                {
+                    Assert.That(step.client, Is.Zero, $"{step.op}: остальные шаги — у обоих клиентов (барьер ждёт всех)");
+                }
+
+                if (step.op == "grab-wall-item")
+                {
+                    purchases++;
+                    Assert.That(step.item, Is.EqualTo("pistol"), "пистолет: одна пуля на выстрел, не очередь");
+                }
+
+                if (step.op == "step" && step.name == "shot") shotSteps++;
+            }
+
+            Assert.That(shooters, Is.EqualTo(1));
+            Assert.That(purchases, Is.EqualTo(1));
+            Assert.That(shotSteps, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ShootingSummary_FitsBarrierStepData()
+        {
+            var outcome = new ScriptedGunner.Outcome
+            {
+                Hit = true, Presses = int.MaxValue, Shots = int.MaxValue,
+                HealthBefore = float.MaxValue, HealthAfter = float.MinValue, Distance = float.MaxValue
+            };
+
+            Assert.That(E2EStepRules.ValidateStep("shot", outcome.StepData()), Is.Null);
+        }
+
         [Test]
         public void RestFrame_StandsAtEyeHeightWithEverythingReleased()
         {
@@ -98,6 +173,7 @@ namespace VrBattlegrounds.Tests.DevTools
         {
             Assert.That(E2ERunner.IsRegistered("scripted-input-smoke"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-wall-purchase"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-combat-hit"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

@@ -7,25 +7,27 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Editor.Weapons;
 using Object = UnityEngine.Object;
 using TMPro;
 
 namespace VrBattlegrounds.Editor.Arsenal
 {
     /// <summary>
-    ///     Стенд ручной раскладки слота. Restore показывает каждое оружие пресета над панелью слота того вида, в ряд
-    ///     которого оно стоит, по действующей раскладке (<see cref="ArsenalSlotLayout" />): своей у оружия или умолчанию
+    ///     Стенд раскладки одного ствола. <see cref="OpenPrepared" /> строит над панелью слота выбранного вида
+    ///     выбранное оружие по действующей раскладке (<see cref="ArsenalSlotLayout" />): своей у оружия или умолчанию
     ///     слота. Ручки: оружие, магазин, карточка, опоры, коробка приёма (поза ручки — центр и поворот, размер — её
     ///     <see cref="BoxCollider" />). Bake записывает ручки в действующий ассет раскладки; его могут разделять
-    ///     несколько стволов. «Отдельная раскладка» копирует ассет и назначает копию стволу.
+    ///     несколько стволов. «Отдельная раскладка» копирует ассет и назначает копию стволу. Проекция временная
+    ///     (<see cref="HideFlags.DontSaveInEditor" />): сцена стенда хранит только carrier.
     /// </summary>
     public static class ArsenalLayoutAuthoring
     {
         private const string DemoPath = "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab";
         public const string LayoutFolder = "Assets/Data/Arsenal/SlotLayouts";
 
-        /// <summary>Первичная сборка собственной fixture под внешней агентской lease; сцена не включается в build.</summary>
-        public static ArsenalLayoutAuthoringStand PopulatePrepared(Scene scene, ArsenalPreset preset, ArsenalPresentationStyle style)
+        /// <summary>Первичная сборка собственной fixture (carrier и свет, без слота); сцена не включается в build.</summary>
+        public static ArsenalLayoutAuthoringStand PopulatePrepared(Scene scene, ArsenalPresentationStyle style)
         {
             if (!scene.isLoaded || scene.path != ArsenalLayoutAuthoringStand.ScenePath || scene.GetRootGameObjects().Length != 1)
                 throw new InvalidOperationException("Не собственная initial authoring fixture.");
@@ -34,8 +36,10 @@ namespace VrBattlegrounds.Editor.Arsenal
                 throw new InvalidOperationException("Initial root уже имеет контент; ничего не заменяем.");
             var stand = root.AddComponent<ArsenalLayoutAuthoringStand>();
             if (stand == null) throw new InvalidOperationException("Data carrier не прикрепился: проверьте runtime assembly boundary.");
-            WriteSources(stand, preset, style);
-            RestorePrepared(stand, false); ValidateStand(stand);
+            var input = new SerializedObject(stand);
+            input.FindProperty("_style").objectReferenceValue = style;
+            input.ApplyModifiedPropertiesWithoutUndo();
+            ValidateOwnership(stand);
             var lightObject = new GameObject("Authoring light (owned)"); lightObject.transform.SetParent(root.transform, false);
             lightObject.transform.localRotation = Quaternion.Euler(25, -25, 0);
             var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional; light.intensity = 2.2f;
@@ -43,59 +47,36 @@ namespace VrBattlegrounds.Editor.Arsenal
         }
 
         // Единственный Editor writer сериализуемого derived cache. Carrier не содержит editor API/setters.
-        private static void WriteSources(ArsenalLayoutAuthoringStand stand, ArsenalPreset preset, ArsenalPresentationStyle style)
+        private static void WriteBaselines(ArsenalLayoutAuthoringStand stand)
         {
             var input = new SerializedObject(stand);
-            input.FindProperty("_preset").objectReferenceValue = preset;
-            input.FindProperty("_style").objectReferenceValue = style;
+            input.FindProperty("_sourceBaseline").stringValue = stand.HasSlot ? SourceFingerprint(stand) : null;
+            input.FindProperty("_stagedBaseline").stringValue = stand.HasSlot ? StagedFingerprint(stand) : null;
             input.ApplyModifiedPropertiesWithoutUndo();
         }
-        private static void WriteBaselines(ArsenalLayoutAuthoringStand stand, int selected)
+        private static void WriteSlot(ArsenalLayoutAuthoringStand stand, ArsenalLayoutAuthoringStand.SlotHandles source)
         {
-            var stamps = stand.Slots.Select((slot, index) => selected < 0 || selected == index ? SlotFingerprint(slot) : slot.CommittedBaseline).ToArray();
-            var input = new SerializedObject(stand); var slots = input.FindProperty("_slots");
-            for (int i = 0; i < stamps.Length; i++) slots.GetArrayElementAtIndex(i).FindPropertyRelative("CommittedBaseline").stringValue = stamps[i];
-            input.FindProperty("_sourceBaseline").stringValue = SourceFingerprint(stand);
-            input.FindProperty("_stagedBaseline").stringValue = Hash(string.Join("|", stamps));
-            input.ApplyModifiedPropertiesWithoutUndo();
-        }
-        private static void WriteSlots(ArsenalLayoutAuthoringStand stand, List<ArsenalLayoutAuthoringStand.SlotHandles> cache)
-        {
-            var input = new SerializedObject(stand); var slots = input.FindProperty("_slots"); slots.arraySize = cache.Count;
-            for (int i = 0; i < cache.Count; i++)
+            var input = new SerializedObject(stand); var row = input.FindProperty("_slot");
+            row.FindPropertyRelative("Weapon").objectReferenceValue = source.Weapon;
+            row.FindPropertyRelative("Zone").enumValueIndex = (int)source.Zone;
+            row.FindPropertyRelative("Frame").objectReferenceValue = source.Frame;
+            row.FindPropertyRelative("Item").objectReferenceValue = source.Item;
+            row.FindPropertyRelative("Magazine").objectReferenceValue = source.Magazine;
+            row.FindPropertyRelative("Card").objectReferenceValue = source.Card;
+            row.FindPropertyRelative("PlaceZone").objectReferenceValue = source.PlaceZone;
+            var supports = row.FindPropertyRelative("Supports"); supports.arraySize = source.Supports.Count;
+            for (int j = 0; j < source.Supports.Count; j++)
             {
-                var source = cache[i]; var row = slots.GetArrayElementAtIndex(i);
-                row.FindPropertyRelative("Weapon").objectReferenceValue = source.Weapon;
-                row.FindPropertyRelative("Zone").enumValueIndex = (int)source.Zone;
-                row.FindPropertyRelative("Frame").objectReferenceValue = source.Frame;
-                row.FindPropertyRelative("Item").objectReferenceValue = source.Item;
-                row.FindPropertyRelative("Magazine").objectReferenceValue = source.Magazine;
-                row.FindPropertyRelative("Card").objectReferenceValue = source.Card;
-                row.FindPropertyRelative("PlaceZone").objectReferenceValue = source.PlaceZone;
-                row.FindPropertyRelative("CommittedBaseline").stringValue = source.CommittedBaseline;
-                var supports = row.FindPropertyRelative("Supports"); supports.arraySize = source.Supports.Count;
-                for (int j = 0; j < source.Supports.Count; j++)
-                {
-                    var support = supports.GetArrayElementAtIndex(j); var data = source.Supports[j];
-                    support.FindPropertyRelative("Role").stringValue = data.Role;
-                    support.FindPropertyRelative("AnchorKind").enumValueIndex = (int)data.AnchorKind;
-                    support.FindPropertyRelative("Handle").objectReferenceValue = data.Handle;
-                }
+                var support = supports.GetArrayElementAtIndex(j); var data = source.Supports[j];
+                support.FindPropertyRelative("Role").stringValue = data.Role;
+                support.FindPropertyRelative("AnchorKind").enumValueIndex = (int)data.AnchorKind;
+                support.FindPropertyRelative("Handle").objectReferenceValue = data.Handle;
             }
             input.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // ── Источники: ряды корпуса лобби, раскладки ─────────────────────
+        // ── Источники: вид слота, корпус лобби, раскладки ────────────────
 
-        /// <summary>Ряд корпуса лобби по ключу записи пресета.</summary>
-        private static ArsenalSlotRow RowOf(string rowKey)
-        {
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>(DemoPath);
-            if (source == null) throw new InvalidOperationException("Нет корпуса станции лобби: " + DemoPath);
-            var row = source.GetComponentsInChildren<ArsenalSlotRow>(true).FirstOrDefault(r => r.RowKey == rowKey);
-            if (row == null || row.SlotPrefab == null) throw new InvalidOperationException("В корпусе лобби нет ряда «" + rowKey + "» с префабом слота.");
-            return row;
-        }
         /// <summary>Префаб слота вида: префаб первого ряда этого вида в корпусе лобби.</summary>
         private static ArsenalSlotController SlotPrefabOf(ArsenalPresentationZone kind)
         {
@@ -104,7 +85,23 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (row == null) throw new InvalidOperationException("В корпусе лобби нет ряда слотов вида " + kind + ".");
             return row.SlotPrefab;
         }
-        private static ArsenalPresentationZone KindOf(ArsenalPreset.Entry entry) => RowOf(entry.Row).Zone;
+        /// <summary>
+        ///     Виды слота, в которых стоит оружие: ряды его записей во всех ассортиментах проекта (ключ ряда → вид по
+        ///     корпусу лобби); нет ни одной записи — виды его собственных раскладок.
+        /// </summary>
+        public static IReadOnlyList<ArsenalPresentationZone> KindsOf(WeaponInfo weapon)
+        {
+            if (weapon == null) return Array.Empty<ArsenalPresentationZone>();
+            var corpus = AssetDatabase.LoadAssetAtPath<GameObject>(DemoPath);
+            var rows = corpus != null ? corpus.GetComponentsInChildren<ArsenalSlotRow>(true) : Array.Empty<ArsenalSlotRow>();
+            var kinds = AssetDatabase.FindAssets("t:ArsenalPreset")
+                .Select(g => AssetDatabase.LoadAssetAtPath<ArsenalPreset>(AssetDatabase.GUIDToAssetPath(g))).Where(p => p != null)
+                .SelectMany(p => p.Entries).Where(e => e.Weapon == weapon)
+                .SelectMany(e => rows.Where(r => r.RowKey == e.Row).Select(r => r.Zone)).Distinct().ToList();
+            if (kinds.Count == 0) kinds = weapon.SlotLayouts.Where(l => l != null).Select(l => l.SlotKind).Distinct().ToList();
+            kinds.Sort();
+            return kinds;
+        }
         /// <summary>Действующее представление: своя раскладка оружия или умолчание слота.</summary>
         private static ArsenalPresentationSnapshot Layout(WeaponInfo weapon, ArsenalPresentationZone kind, ArsenalPresentationStyle style) =>
             ArsenalPresentationResolver.Resolve(weapon, kind, style, SlotPrefabOf(kind).DefaultLayout);
@@ -121,17 +118,16 @@ namespace VrBattlegrounds.Editor.Arsenal
 
         public static string SourceFingerprint(ArsenalLayoutAuthoringStand stand)
         {
-            string entries = string.Join("|", stand.Preset.Entries.Select(e => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(e.Weapon)) + ":" + e.Row + ":" +
-                AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(e.Weapon))));
-            string layouts = string.Join("|", stand.Slots.Select(s => Layout(s.Weapon, s.Zone, stand.Style).Layout)
-                .Distinct().Select(l => EditorJsonUtility.ToJson(l)));
-            return Hash(entries + layouts + EditorJsonUtility.ToJson(stand.Style) + AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(stand.Style)));
+            var slot = stand.Slot; string weaponPath = AssetDatabase.GetAssetPath(slot.Weapon);
+            string weapon = AssetDatabase.AssetPathToGUID(weaponPath) + ":" + slot.Zone + ":" + AssetDatabase.GetAssetDependencyHash(weaponPath);
+            string layout = EditorJsonUtility.ToJson(Layout(slot.Weapon, slot.Zone, stand.Style).Layout);
+            return Hash(weapon + layout + EditorJsonUtility.ToJson(stand.Style) + AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(stand.Style)));
         }
-        private static void RequireCleanInputs(ArsenalLayoutAuthoringStand stand)
+        private static void RequireCleanInputs(ArsenalLayoutAuthoringStand stand, WeaponInfo weapon)
         {
-            var paths = stand.Preset.Entries.Select(e => AssetDatabase.GetAssetPath(e.Weapon)).Concat(new[] {
-                AssetDatabase.GetAssetPath(stand.Style), AssetDatabase.GetAssetPath(stand.Preset), AssetDatabase.GetAssetPath(stand.Style.SupportModule),
-                AssetDatabase.GetAssetPath(stand.Style.ReturnReadyMaterial), DemoPath });
+            var paths = new[] { AssetDatabase.GetAssetPath(weapon),
+                AssetDatabase.GetAssetPath(stand.Style), AssetDatabase.GetAssetPath(stand.Style.SupportModule),
+                AssetDatabase.GetAssetPath(stand.Style.ReturnReadyMaterial), DemoPath }.AsEnumerable();
             if (stand.Style.SupportModule != null) paths = paths.Concat(stand.Style.SupportModule.GetComponentsInChildren<Renderer>(true).SelectMany(r => r.sharedMaterials).Where(m => m != null).Select(AssetDatabase.GetAssetPath));
             ArsenalEditorActions.RequireCleanAssets(paths.Where(p => !string.IsNullOrEmpty(p)));
         }
@@ -164,14 +160,20 @@ namespace VrBattlegrounds.Editor.Arsenal
             text.Append(JsonUtility.ToJson(Zone(slot.PlaceZone, slot.Frame)));
             return Hash(text.ToString());
         }
-        public static string StagedFingerprint(ArsenalLayoutAuthoringStand stand) => Hash(string.Join("|", stand.Slots.Select(SlotFingerprint)));
-        public static bool HasStagedChanges(ArsenalLayoutAuthoringStand stand) => StagedFingerprint(stand) != stand.StagedBaseline;
+        public static string StagedFingerprint(ArsenalLayoutAuthoringStand stand) => stand.HasSlot ? SlotFingerprint(stand.Slot) : "";
+        public static bool HasStagedChanges(ArsenalLayoutAuthoringStand stand) => stand.HasSlot && StagedFingerprint(stand) != stand.StagedBaseline;
         public static void ValidateStand(ArsenalLayoutAuthoringStand stand)
+        {
+            ValidateOwnership(stand);
+            ValidateProjection(stand);
+        }
+        /// <summary>Свой стенд в своей сцене вне build, свободный EditMode — без этого никакая запись не допускается.</summary>
+        private static void ValidateOwnership(ArsenalLayoutAuthoringStand stand)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)
                 throw new InvalidOperationException("Authoring доступен только в свободном EditMode.");
             if (stand == null || stand.Owner != ArsenalLayoutAuthoringStand.OwnerId || stand.gameObject.scene.path != ArsenalLayoutAuthoringStand.ScenePath ||
-                stand.transform.parent != null || !stand.gameObject.scene.isLoaded || stand.Preset == null || stand.Style == null)
+                stand.transform.parent != null || !stand.gameObject.scene.isLoaded || stand.Style == null)
                 throw new InvalidOperationException("Не собственный persistent authoring стенд.");
             if (stand.gameObject.scene.GetRootGameObjects().Length != 1 ||
                 stand.gameObject.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalLayoutAuthoringStand>(true)).Count() != 1)
@@ -181,59 +183,48 @@ namespace VrBattlegrounds.Editor.Arsenal
             if ((stand.transform.lossyScale - Vector3.one).sqrMagnitude > 1e-12f)
                 throw new InvalidOperationException("Authoring root не масштабируется: физические размеры предметов сохраняются.");
             ArsenalPresentationResolver.ValidateStyle(stand.Style);
-            int count = stand.Preset.Entries.Count;
-            if (stand.Slots.Count != count || stand.Slots.Select(s => s.Weapon).Distinct().Count() != count)
-                throw new InvalidOperationException("Ручки стенда не соответствуют записям пресета: сначала Restore.");
-            foreach (var slot in stand.Slots)
-            {
-                if (!stand.Preset.Entries.Any(e => e.Weapon == slot.Weapon && KindOf(e) == slot.Zone) || slot.Frame == null || slot.Frame.parent != stand.transform)
-                    throw new InvalidOperationException("Ручки слота не соответствуют записи пресета.");
-                if ((slot.Frame.localScale - Vector3.one).sqrMagnitude > 1e-12f) throw new InvalidOperationException("Slot frame не масштабируется.");
-                foreach (var handle in new[] { slot.Item, slot.Magazine, slot.Card }.Concat(slot.Supports.Select(s => s.Handle))) Pose(handle, slot.Frame);
-                Zone(slot.PlaceZone, slot.Frame);
-                if (slot.Supports.Select(s => s.Role).Distinct().Count() != slot.Supports.Count) throw new InvalidOperationException("Дубли support roles.");
-            }
         }
-        private static void SetPose(SerializedProperty property, ArsenalPresentationPose value)
+        /// <summary>Слот выбранного ствола построен этим стендом, ручки на месте и не масштабированы.</summary>
+        private static void ValidateProjection(ArsenalLayoutAuthoringStand stand)
         {
-            property.FindPropertyRelative("Position").vector3Value = value.Position;
-            property.FindPropertyRelative("EulerAngles").vector3Value = value.EulerAngles;
+            if (!stand.HasSlot) throw new InvalidOperationException("Стенд пуст: откройте ствол из окна «Настройка оружия» → «Раскладка в слоте».");
+            var slot = stand.Slot;
+            if (slot.Frame.parent != stand.transform) throw new InvalidOperationException("Слот стенда перенесён из корня стенда.");
+            if ((slot.Frame.localScale - Vector3.one).sqrMagnitude > 1e-12f) throw new InvalidOperationException("Slot frame не масштабируется.");
+            foreach (var handle in new[] { slot.Item, slot.Magazine, slot.Card }.Concat(slot.Supports.Select(s => s.Handle))) Pose(handle, slot.Frame);
+            Zone(slot.PlaceZone, slot.Frame);
+            if (slot.Supports.Select(s => s.Role).Distinct().Count() != slot.Supports.Count) throw new InvalidOperationException("Дубли support roles.");
+        }
+        /// <summary>Незапечённые позы исправного слота; слот пуст или не проходит проверку — false (его нечего запекать).</summary>
+        private static bool HasBakeableStagedChanges(ArsenalLayoutAuthoringStand stand)
+        {
+            try { ValidateProjection(stand); return HasStagedChanges(stand); }
+            catch (Exception) { return false; }
+        }
+        private static void SetPose(SerializedProperty property, ArsenalPresentationPose value) => SetPose(property, "Position", value);
+        private static void SetPose(SerializedProperty property, string positionName, ArsenalPresentationPose value)
+        {
+            // Ручка хранит кватернион: обратный перевод в Эйлер даёт шум (280 → 279.99994). Ту же позу не переписываем.
+            var position = property.FindPropertyRelative(positionName);
+            var euler = property.FindPropertyRelative("EulerAngles");
+            if ((position.vector3Value - value.Position).sqrMagnitude <= 1e-12f && Quaternion.Angle(Quaternion.Euler(euler.vector3Value), value.Rotation) < 1e-3f) return;
+            position.vector3Value = value.Position;
+            euler.vector3Value = value.EulerAngles;
         }
 
         // ── Bake ─────────────────────────────────────────────────────────
 
-        /// <summary>Ручки выбранного слота (или всех) — в действующие ассеты раскладки.</summary>
-        public static string BakePrepared(ArsenalLayoutAuthoringStand stand, int selected = -1)
+        /// <summary>Ручки слота — в действующий ассет раскладки (свой у оружия или умолчание слота).</summary>
+        public static string BakePrepared(ArsenalLayoutAuthoringStand stand)
         {
             ValidateStand(stand);
-            RequireCleanInputs(stand);
-            if (SourceFingerprint(stand) != stand.SourceBaseline) throw new InvalidOperationException("Раскладки или ассортимент изменились после Restore; staged изменения сначала сопоставьте с новым источником.");
-            if (selected < -1 || selected >= stand.Slots.Count) throw new ArgumentOutOfRangeException(nameof(selected));
-            var targets = stand.Slots.Where((s, index) => selected < 0 || index == selected).ToArray();
-            // Один ассет — одни ручки: разные позы для общего ассета в одном bake — неоднозначно.
-            foreach (var group in targets.GroupBy(s => Layout(s.Weapon, s.Zone, stand.Style).Layout))
-                if (group.Select(SlotFingerprintContent).Distinct().Count() > 1)
-                    throw new InvalidOperationException("У стволов с общей раскладкой " + group.Key.name + " разные позы на стенде: запеките по одному или сделайте отдельную раскладку.");
-            var changed = new List<string>();
-            foreach (var slot in targets)
-            {
-                var layout = Layout(slot.Weapon, slot.Zone, stand.Style).Layout;
-                if (WriteLayout(layout, slot)) changed.Add(layout.name);
-            }
-            if (changed.Count == 0) return "Нет изменений раскладки.";
-            WriteBaselines(stand, selected);
-            EditorUtility.SetDirty(stand);
-            return "Сохранены раскладки: " + string.Join(", ", changed.Distinct()) + ".";
-        }
-        private static string SlotFingerprintContent(ArsenalLayoutAuthoringStand.SlotHandles slot)
-        {
-            var copy = new ArsenalLayoutAuthoringStand.SlotHandles { Weapon = slot.Weapon, Zone = slot.Zone, Frame = slot.Frame, Item = slot.Item,
-                Magazine = slot.Magazine, Card = slot.Card, PlaceZone = slot.PlaceZone, Supports = slot.Supports };
-            var text = new StringBuilder();
-            foreach (var handle in new[] { copy.Item, copy.Magazine, copy.Card }.Concat(copy.Supports.Select(s => s.Handle)))
-                text.Append(JsonUtility.ToJson(Pose(handle, copy.Frame)));
-            text.Append(JsonUtility.ToJson(Zone(copy.PlaceZone, copy.Frame)));
-            return Hash(text.ToString());
+            var slot = stand.Slot;
+            RequireCleanInputs(stand, slot.Weapon);
+            if (SourceFingerprint(stand) != stand.SourceBaseline) throw new InvalidOperationException("Раскладка или оружие изменились после открытия стенда; staged изменения сначала сопоставьте с новым источником.");
+            var layout = Layout(slot.Weapon, slot.Zone, stand.Style).Layout;
+            if (!WriteLayout(layout, slot)) return "Нет изменений раскладки.";
+            WriteBaselines(stand);
+            return "Сохранена раскладка " + layout.name + ".";
         }
         private static bool WriteLayout(ArsenalSlotLayout layout, ArsenalLayoutAuthoringStand.SlotHandles slot)
         {
@@ -252,9 +243,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             }
             var zone = Zone(slot.PlaceZone, slot.Frame);
             var zoneProperty = so.FindProperty("_placeZone");
-            zoneProperty.FindPropertyRelative("Center").vector3Value = zone.Center;
+            SetPose(zoneProperty, "Center", new ArsenalPresentationPose(zone.Center, zone.Rotation));
             zoneProperty.FindPropertyRelative("Size").vector3Value = zone.Size;
-            zoneProperty.FindPropertyRelative("EulerAngles").vector3Value = zone.EulerAngles;
             Undo.RecordObject(layout, "Bake Arsenal Slot Layout");
             so.ApplyModifiedProperties();
             if (EditorJsonUtility.ToJson(layout) == before) return false;
@@ -262,12 +252,12 @@ namespace VrBattlegrounds.Editor.Arsenal
             return true;
         }
 
-        /// <summary>Копия действующей раскладки выбранного ствола — его собственная; затем его ручки пишутся в неё.</summary>
-        public static string SeparateLayoutPrepared(ArsenalLayoutAuthoringStand stand, int selected)
+        /// <summary>Копия действующей раскладки ствола — его собственная; затем его ручки пишутся в неё.</summary>
+        public static string SeparateLayoutPrepared(ArsenalLayoutAuthoringStand stand)
         {
             ValidateStand(stand);
-            RequireCleanInputs(stand);
-            var slot = stand.Slots[selected];
+            var slot = stand.Slot;
+            RequireCleanInputs(stand, slot.Weapon);
             var current = Layout(slot.Weapon, slot.Zone, stand.Style);
             if (current.FromWeapon && !AssetDatabase.FindAssets("t:WeaponInfo").Select(g => AssetDatabase.LoadAssetAtPath<WeaponInfo>(AssetDatabase.GUIDToAssetPath(g)))
                     .Any(w => w != null && w != slot.Weapon && w.SlotLayouts.Contains(current.Layout)))
@@ -289,11 +279,87 @@ namespace VrBattlegrounds.Editor.Arsenal
             Undo.RecordObject(slot.Weapon, "Separate Arsenal Slot Layout");
             weapon.ApplyModifiedProperties(); EditorUtility.SetDirty(slot.Weapon); AssetDatabase.SaveAssetIfDirty(slot.Weapon);
             WriteLayout(copy, slot);
-            WriteBaselines(stand, selected);
+            WriteBaselines(stand);
             return "Создана отдельная раскладка " + path + " для " + slot.Weapon.WeaponId + ".";
         }
 
-        // ── Restore ──────────────────────────────────────────────────────
+        // ── Открытие ствола / Restore ────────────────────────────────────
+
+        /// <summary>
+        ///     Решение человека перед пересборкой: спрашивает только при незапечённых позах текущего исправного слота.
+        ///     Пустой или устаревший слот пересобирается без вопроса — его ручки запечь нельзя.
+        /// </summary>
+        public static bool ConfirmRebuild(ArsenalLayoutAuthoringStand stand, string action) =>
+            !HasBakeableStagedChanges(stand) || EditorUtility.DisplayDialog("Незапечённые позы",
+                "На стенде незапечённые позы " + stand.Slot.Weapon.WeaponId + ". " + action + " заменит их сохранённой раскладкой. " +
+                "Запеките их, если хотите сохранить.", "Заменить рабочие позы", "Отмена");
+
+        /// <summary>Пересобирает слот текущего ствола из его действующей раскладки.</summary>
+        public static string RestorePrepared(ArsenalLayoutAuthoringStand stand, bool discardStaged)
+        {
+            if (stand.Slot == null || stand.Slot.Weapon == null) throw new InvalidOperationException("Стенд пуст: откройте ствол из окна «Настройка оружия».");
+            return OpenPrepared(stand, stand.Slot.Weapon, stand.Slot.Zone, discardStaged);
+        }
+
+        /// <summary>
+        ///     Строит на стенде только <paramref name="weapon" /> в слоте вида <paramref name="kind" /> по действующей
+        ///     раскладке. Прежний слот удаляется; его незапечённые позы требуют <paramref name="discardStaged" />.
+        ///     Ассеты не создаются и не меняются; объекты слота не сохраняются в сцену.
+        /// </summary>
+        public static string OpenPrepared(ArsenalLayoutAuthoringStand stand, WeaponInfo weapon, ArsenalPresentationZone kind, bool discardStaged)
+        {
+            ValidateOwnership(stand);
+            if (weapon == null || weapon.WeaponPrefab == null || weapon.MagazinePrefab == null)
+                throw new InvalidOperationException("Нет оружия или его префабов оружия/магазина.");
+            if (!discardStaged && HasBakeableStagedChanges(stand)) throw new InvalidOperationException("Есть незапечённые staged позы; смена ствола требует явного решения.");
+            RequireCleanInputs(stand, weapon);
+            var resolved = Layout(weapon, kind, stand.Style);
+            var template = SlotPrefabOf(kind);
+            var panelSource = template.transform.Find("PegboardSection");
+            var card = template.GetComponentInChildren<ArsenalPriceTag>(true);
+            if (panelSource == null || card == null) throw new InvalidOperationException("Префаб слота вида " + kind + " без панели или карточки.");
+
+            ClearProjection(stand);
+            var frame = new GameObject(weapon.WeaponId + " / " + kind + " / " + resolved.Layout.name).transform; frame.SetParent(stand.transform, false);
+            bool isShelf = kind == ArsenalPresentationZone.Shelf;
+            frame.localPosition = new Vector3(0, isShelf ? .35f : 1.05f, isShelf ? .3f : 0);
+            var panel = new GameObject("Panel (derived)").transform; panel.SetParent(frame, false);
+            panel.SetLocalPositionAndRotation(panelSource.localPosition, panelSource.localRotation); panel.localScale = panelSource.localScale; CopyGeometry(panelSource, panel);
+            var staged = new ArsenalLayoutAuthoringStand.SlotHandles { Weapon = weapon, Zone = kind, Frame = frame };
+            staged.Item = Handle(frame, "ItemTarget — move/rotate", resolved.ItemTarget); ItemVisual(weapon.WeaponPrefab, staged.Item);
+            staged.Magazine = Handle(frame, "MagazineTarget — move/rotate", resolved.MagazineTarget); ItemVisual(weapon.MagazinePrefab, staged.Magazine);
+            staged.Card = Handle(frame, "CardTarget — move/rotate", resolved.CardTarget);
+            CopyGeometry(card.transform, staged.Card);
+            foreach (var support in resolved.Supports)
+            {
+                var handle = Handle(frame, support.Role + " support — move/rotate", support.SlotPose);
+                CopyGeometry(stand.Style.SupportModule.transform, handle);
+                staged.Supports.Add(new ArsenalLayoutAuthoringStand.SupportHandle { Role = support.Role, AnchorKind = support.AnchorKind, Handle = handle });
+            }
+            // Коробка приёма: Edit Collider меняет размер, Move/Rotate — центр и поворот. Не задана — куб у позы оружия.
+            var zone = resolved.PlaceZone.IsSet ? resolved.PlaceZone
+                : new ArsenalPlaceZone { Center = resolved.ItemTarget.Position, Size = Vector3.one * .2f };
+            staged.PlaceZone = Handle(frame, "PlaceZone — move/rotate, Edit Collider", new ArsenalPresentationPose(zone.Center, zone.Rotation));
+            var box = staged.PlaceZone.gameObject.AddComponent<BoxCollider>(); box.isTrigger = true; box.size = zone.Size; box.enabled = false;
+            // Проекция временная: сохранение сцены стенда не пишет слот, в Git остаётся только carrier.
+            foreach (var part in frame.GetComponentsInChildren<Transform>(true)) part.gameObject.hideFlags |= HideFlags.DontSaveInEditor;
+            WriteSlot(stand, staged); WriteBaselines(stand);
+            return "Стенд показывает " + weapon.WeaponId + " в слоте " + kind + " (раскладка " + resolved.Layout.name + ").";
+        }
+
+        /// <summary>Пустой стенд: удаляет слот, построенный этим стендом. Состояние, которое хранит сцена в Git.</summary>
+        public static void ClearPrepared(ArsenalLayoutAuthoringStand stand)
+        {
+            ValidateOwnership(stand);
+            ClearProjection(stand);
+            WriteSlot(stand, new ArsenalLayoutAuthoringStand.SlotHandles());
+            WriteBaselines(stand);
+        }
+        // Только созданный этим стендом projection root, не чужие siblings.
+        private static void ClearProjection(ArsenalLayoutAuthoringStand stand)
+        {
+            if (stand.Slot != null && stand.Slot.Frame != null && stand.Slot.Frame.parent == stand.transform) Object.DestroyImmediate(stand.Slot.Frame.gameObject);
+        }
 
         private static Transform Handle(Transform frame, string name, ArsenalPresentationPose pose)
         {
@@ -336,68 +402,28 @@ namespace VrBattlegrounds.Editor.Arsenal
             CopyGeometry(prefab.transform, visual);
             visual.gameObject.hideFlags |= HideFlags.NotEditable;
         }
-        public static void RestorePrepared(ArsenalLayoutAuthoringStand stand, bool discardStaged)
-        {
-            if (stand.Slots.Count > 0) { ValidateStand(stand); if (HasStagedChanges(stand) && !discardStaged) throw new InvalidOperationException("Есть незапечённые staged позы; Restore требует явного решения."); }
-            if (stand.Preset == null || stand.Style == null) throw new InvalidOperationException("Нет пресета или стиля арсенала стенда.");
-            RequireCleanInputs(stand);
-            foreach (var entry in stand.Preset.Entries)
-            {
-                Layout(entry.Weapon, KindOf(entry), stand.Style);
-                var template = RowOf(entry.Row).SlotPrefab;
-                if (template.transform.Find("PegboardSection") == null || template.GetComponentInChildren<ArsenalPriceTag>(true) == null)
-                    throw new InvalidOperationException("Префаб слота ряда «" + entry.Row + "» без панели или карточки.");
-            }
-            // Только созданные этим стендом projection roots, не чужие siblings.
-            foreach (var slot in stand.Slots) if (slot.Frame != null) Object.DestroyImmediate(slot.Frame.gameObject);
-            var cache = new List<ArsenalLayoutAuthoringStand.SlotHandles>(); int peg = 0, shelf = 0;
-            foreach (var entry in stand.Preset.Entries)
-            {
-                var kind = KindOf(entry);
-                var resolved = Layout(entry.Weapon, kind, stand.Style);
-                var template = RowOf(entry.Row).SlotPrefab;
-                var frame = new GameObject(entry.Weapon.WeaponId + " / " + kind + " / " + resolved.Layout.name).transform; frame.SetParent(stand.transform, false);
-                bool isShelf = kind == ArsenalPresentationZone.Shelf;
-                frame.localPosition = new Vector3((isShelf ? shelf++ - 4 : peg++ - 5) * .43f, isShelf ? .35f : 1.05f, isShelf ? .3f : 0);
-                var panelSource = template.transform.Find("PegboardSection"); var panel = new GameObject("Panel (derived)").transform; panel.SetParent(frame, false);
-                panel.SetLocalPositionAndRotation(panelSource.localPosition, panelSource.localRotation); panel.localScale = panelSource.localScale; CopyGeometry(panelSource, panel);
-                var staged = new ArsenalLayoutAuthoringStand.SlotHandles { Weapon = entry.Weapon, Zone = kind, Frame = frame };
-                staged.Item = Handle(frame, "ItemTarget — move/rotate", resolved.ItemTarget); ItemVisual(entry.Weapon.WeaponPrefab, staged.Item);
-                staged.Magazine = Handle(frame, "MagazineTarget — move/rotate", resolved.MagazineTarget); ItemVisual(entry.Weapon.MagazinePrefab, staged.Magazine);
-                staged.Card = Handle(frame, "CardTarget — move/rotate", resolved.CardTarget);
-                var card = template.GetComponentInChildren<ArsenalPriceTag>(true); CopyGeometry(card.transform, staged.Card);
-                foreach (var support in resolved.Supports)
-                {
-                    var handle = Handle(frame, support.Role + " support — move/rotate", support.SlotPose);
-                    CopyGeometry(stand.Style.SupportModule.transform, handle);
-                    staged.Supports.Add(new ArsenalLayoutAuthoringStand.SupportHandle { Role = support.Role, AnchorKind = support.AnchorKind, Handle = handle });
-                }
-                // Коробка приёма: Edit Collider меняет размер, Move/Rotate — центр и поворот. Не задана — куб у позы оружия.
-                var zone = resolved.PlaceZone.IsSet ? resolved.PlaceZone
-                    : new ArsenalPlaceZone { Center = resolved.ItemTarget.Position, Size = Vector3.one * .2f };
-                staged.PlaceZone = Handle(frame, "PlaceZone — move/rotate, Edit Collider", new ArsenalPresentationPose(zone.Center, zone.Rotation));
-                var box = staged.PlaceZone.gameObject.AddComponent<BoxCollider>(); box.isTrigger = true; box.size = zone.Size; box.enabled = false;
-                staged.CommittedBaseline = SlotFingerprint(staged); cache.Add(staged);
-            }
-            WriteSlots(stand, cache); WriteBaselines(stand, -1); EditorUtility.SetDirty(stand);
-        }
     }
 
     [CustomEditor(typeof(ArsenalLayoutAuthoringStand))]
     public sealed class ArsenalLayoutAuthoringStandEditor : UnityEditor.Editor
     {
-        private int selected;
         private string report;
         public override void OnInspectorGUI()
         {
             var stand = (ArsenalLayoutAuthoringStand)target;
             EditorGUILayout.ObjectField("Стиль арсенала (вид опор)", stand.Style, typeof(ArsenalPresentationStyle), false);
-            EditorGUILayout.ObjectField("Ассортимент (source)", stand.Preset, typeof(ArsenalPreset), false);
-            EditorGUILayout.HelpBox("Выберите ручку в Hierarchy и двигайте Move/Rotate; размер коробки приёма — Edit Collider. Масштаб ручек не меняйте. " +
+            if (!stand.HasSlot)
+            {
+                EditorGUILayout.HelpBox("Стенд пуст. Ствол открывается из окна «Настройка оружия» → «Раскладка в слоте»: стенд строит " +
+                                        "только его слот.", MessageType.Info);
+                if (GUILayout.Button("Открыть «Настройка оружия»")) WeaponSetupWindow.Open(WeaponSetupWindow.Tab.SlotLayout, stand.Slot?.Weapon);
+                return;
+            }
+            var slot = stand.Slot;
+            EditorGUILayout.ObjectField("Оружие", slot.Weapon, typeof(WeaponInfo), false);
+            EditorGUILayout.LabelField("Вид слота", slot.Zone.ToString());
+            EditorGUILayout.HelpBox("Выберите ручку и двигайте Move/Rotate; размер коробки приёма — Edit Collider. Масштаб ручек не меняйте. " +
                                     "Bake пишет в действующую раскладку слота (своя у оружия или умолчание слота); Restore читает её.", MessageType.Info);
-            if (stand.Slots.Count == 0) return;
-            selected = EditorGUILayout.Popup("Слот", Mathf.Clamp(selected, 0, stand.Slots.Count - 1), stand.Slots.Select(s => s.Weapon.WeaponId + " / " + s.Zone).ToArray());
-            var slot = stand.Slots[selected];
             ArsenalSlotLayout layout = null;
             try { layout = ArsenalPresentationResolver.Resolve(slot.Weapon, slot.Zone, stand.Style, null).Layout; } catch (InvalidOperationException) { }
             if (layout == null)
@@ -412,17 +438,13 @@ namespace VrBattlegrounds.Editor.Arsenal
             }
             foreach (var pair in new[] { new { Name = "Оружие", Handle = slot.Item }, new { Name = "Магазин", Handle = slot.Magazine },
                          new { Name = "Карточка", Handle = slot.Card }, new { Name = "Коробка приёма", Handle = slot.PlaceZone } })
-                if (GUILayout.Button("Выбрать: " + pair.Name)) { Selection.activeGameObject = pair.Handle.gameObject; SceneView.lastActiveSceneView?.FrameSelected(); }
+                if (pair.Handle != null && GUILayout.Button("Выбрать: " + pair.Name)) { Selection.activeGameObject = pair.Handle.gameObject; SceneView.lastActiveSceneView?.FrameSelected(); }
             foreach (var support in slot.Supports)
-                if (GUILayout.Button("Выбрать опору: " + support.Role)) { Selection.activeGameObject = support.Handle.gameObject; SceneView.lastActiveSceneView?.FrameSelected(); }
-            if (GUILayout.Button("Запечь выбранный → его раскладка")) Run(stand, () => ArsenalLayoutAuthoring.BakePrepared(stand, selected));
-            if (GUILayout.Button("Запечь все → их раскладки")) Run(stand, () => ArsenalLayoutAuthoring.BakePrepared(stand));
-            if (GUILayout.Button("Отдельная раскладка для выбранного ствола")) Run(stand, () => ArsenalLayoutAuthoring.SeparateLayoutPrepared(stand, selected));
-            if (GUILayout.Button("Восстановить из раскладок"))
-            {
-                bool discard = !ArsenalLayoutAuthoring.HasStagedChanges(stand) || EditorUtility.DisplayDialog("Незапечённые позы", "Restore заменит рабочие позы сохранёнными раскладками. Запеките их перед Restore, если хотите сохранить.", "Заменить рабочие позы", "Отмена");
-                if (discard) Run(stand, () => { ArsenalLayoutAuthoring.RestorePrepared(stand, true); return "Проекция восстановлена из раскладок."; });
-            }
+                if (support.Handle != null && GUILayout.Button("Выбрать опору: " + support.Role)) { Selection.activeGameObject = support.Handle.gameObject; SceneView.lastActiveSceneView?.FrameSelected(); }
+            if (GUILayout.Button("Запечь → действующая раскладка")) Run(stand, () => ArsenalLayoutAuthoring.BakePrepared(stand));
+            if (GUILayout.Button("Отдельная раскладка для этого ствола")) Run(stand, () => ArsenalLayoutAuthoring.SeparateLayoutPrepared(stand));
+            if (GUILayout.Button("Восстановить из раскладки") && ArsenalLayoutAuthoring.ConfirmRebuild(stand, "Restore"))
+                Run(stand, () => ArsenalLayoutAuthoring.RestorePrepared(stand, true));
             if (!string.IsNullOrEmpty(report)) EditorGUILayout.HelpBox(report, MessageType.Info);
         }
         private void Run(ArsenalLayoutAuthoringStand stand, Func<string> action)

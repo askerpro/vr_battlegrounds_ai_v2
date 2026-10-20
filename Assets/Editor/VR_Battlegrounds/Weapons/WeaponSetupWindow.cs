@@ -40,6 +40,8 @@ namespace VrBattlegrounds.Editor.Weapons
         [SerializeField] private string _message = "";
         [NonSerialized] private WeaponInfo[] _weapons = Array.Empty<WeaponInfo>();
         [NonSerialized] private SerializedObject _balance;
+        [NonSerialized] private WeaponInfo _kindsFor;
+        [NonSerialized] private System.Collections.Generic.IReadOnlyList<ArsenalPresentationZone> _kinds = Array.Empty<ArsenalPresentationZone>();
 
         [MenuItem("Tools/VR Battlegrounds/Weapons/Настройка оружия", false, 0)]
         public static void Open() => Open(Tab.Sight, null);
@@ -138,24 +140,51 @@ namespace VrBattlegrounds.Editor.Weapons
                     EditorGUILayout.ObjectField(layout.SlotKind.ToString(), layout, typeof(ArsenalSlotLayout), false);
                 EditorGUILayout.LabelField("Используется: " + ArsenalLayoutAuthoring.Usage(layout), EditorStyles.wordWrappedMiniLabel);
             }
-            EditorGUILayout.HelpBox("Позы оружия, магазина, карточки, опор и коробки приёма правятся на стенде раскладки: Move/Rotate " +
-                                    "ручек, затем «Запечь» в его инспекторе. «Отдельная раскладка» там же заводит стволу свою.", MessageType.Info);
+            if (_kindsFor != _weapon) { _kinds = ArsenalLayoutAuthoring.KindsOf(_weapon); _kindsFor = _weapon; }
+            EditorGUILayout.HelpBox("Стенд строит только этот ствол в слоте выбранного вида. Позы оружия, магазина, карточки, опор и " +
+                                    "коробки приёма — Move/Rotate ручек, затем «Запечь» в инспекторе стенда. «Отдельная раскладка» там же " +
+                                    "заводит стволу свою.", MessageType.Info);
+            if (_kinds.Count == 0)
+                EditorGUILayout.HelpBox("Ствола нет ни в одном ассортименте и своих раскладок нет: вид слота неизвестен.", MessageType.Warning);
             using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
-                if (GUILayout.Button("Открыть стенд раскладки с этим оружием")) Run(OpenLayoutStand);
+                foreach (var kind in _kinds)
+                    if (GUILayout.Button(_kinds.Count == 1 ? "Открыть стенд раскладки с этим оружием" : "Открыть стенд раскладки: слот " + kind))
+                        Run(() => OpenLayoutStand(kind));
         }
 
-        private string OpenLayoutStand()
+        /// <summary>
+        /// Стенд раскладки с одним выбранным оружием в слоте вида <paramref name="kind"/> (<see cref="ArsenalLayoutAuthoring.OpenPrepared"/>).
+        /// Уже открытый стенд не перечитывается с диска; спрашивает только о незапечённых позах текущего ствола.
+        /// </summary>
+        private string OpenLayoutStand(ArsenalPresentationZone kind)
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return "Открытие стенда отменено.";
-            Scene scene = EditorSceneManager.OpenScene(ArsenalLayoutAuthoringStand.ScenePath, OpenSceneMode.Single);
+            Scene scene = SceneManager.GetSceneByPath(ArsenalLayoutAuthoringStand.ScenePath);
+            if (!scene.isLoaded || SceneManager.sceneCount != 1)
+            {
+                if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return "Открытие стенда отменено.";
+                scene = EditorSceneManager.OpenScene(ArsenalLayoutAuthoringStand.ScenePath, OpenSceneMode.Single);
+            }
             var stand = scene.GetRootGameObjects().Select(g => g.GetComponentInChildren<ArsenalLayoutAuthoringStand>(true)).FirstOrDefault(s => s != null);
             if (stand == null) return "На сцене стенда нет ArsenalLayoutAuthoringStand: " + ArsenalLayoutAuthoringStand.ScenePath;
-            var slot = stand.Slots.FirstOrDefault(s => s.Weapon == _weapon);
-            Selection.activeGameObject = slot != null && slot.Item != null ? slot.Item.gameObject : stand.gameObject;
-            SceneView.lastActiveSceneView?.FrameSelected();
-            return slot != null
-                ? $"Стенд открыт, выбрана ручка оружия {_weapon.WeaponId}. Слот выберите в инспекторе стенда."
-                : $"{_weapon.WeaponId} нет в ассортименте стенда ({(stand.Preset != null ? stand.Preset.name : "без ассортимента")}).";
+            if (!ArsenalLayoutAuthoring.ConfirmRebuild(stand, "Открытие " + _weapon.WeaponId)) return "Стенд оставлен на прежнем стволе.";
+            string report;
+            using (var lease = ArsenalEditorActions.AcquireAuthoringLease("Раскладка слота: " + _weapon.WeaponId, stand))
+            {
+                lease.RequireActive();
+                report = ArsenalLayoutAuthoring.OpenPrepared(stand, _weapon, kind, true);
+            }
+            Selection.activeGameObject = stand.gameObject;
+            FrameSlot(stand.Slot.Frame);
+            return report + " Ручки и «Запечь» — в инспекторе стенда.";
+        }
+
+        private static void FrameSlot(Transform frame)
+        {
+            var renderers = frame.GetComponentsInChildren<Renderer>(true);
+            if (SceneView.lastActiveSceneView == null || renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+            SceneView.lastActiveSceneView.Frame(bounds, false);
         }
 
         // ── Урон и разброс ───────────────────────────────────────────

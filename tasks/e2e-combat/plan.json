@@ -21,6 +21,31 @@
       "needs": []
     },
     {
+      "id": "round",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "tasks/e2e-combat/**",
+        "Assets/Scripts/Arsenal/ArsenalSlotController.cs",
+        "Assets/Scripts/Arsenal/ArsenalWallController.cs",
+        "Assets/Scripts/Network/NetworkStateRelay.cs",
+        "Assets/Scripts/Network/AvatarRootEventAdmission.cs",
+        "Assets/Tests/EditMode/Network/ItemEventAdmissionTests.cs",
+        "Assets/Tests/EditMode/Network/ItemEventAdmissionTests.cs.meta",
+        "Assets/Tests/EditMode/Network/RemoteCallHashTests.cs"
+      ],
+      "after": [
+        {
+          "task": "e2e-combat",
+          "stage": "hit",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "work",
       "writes": [
         "tasks/e2e-combat/**"

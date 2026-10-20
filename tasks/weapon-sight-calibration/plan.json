@@ -14,6 +14,36 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "cleanup-old-stand",
+      "writes": [
+        "Assets/Editor/VR_Battlegrounds/Weapons/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponSystemAuthoring.cs",
+        "Assets/Scenes/Tools/WeaponSight*",
+        "Assets/Scripts/Weapons/Sights/**",
+        "Assets/Scripts/Debug/SightCalibrationBench.cs*",
+        "Assets/Prefabs/Weapons/SightReview/**",
+        "Assets/Prefabs/Weapons/SightCalibrationDrafts/**",
+        "Assets/Data/Weapons/SightCalibration/Review/**",
+        "Assets/Art/Weapons/Sights/**",
+        "Assets/Art/Weapons/Kinemation/MKR9/Meshes/SM_MKR9_IronSights_*",
+        "Assets/Data/Weapons/Resources/WeaponRegistry.asset",
+        "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+        "Assets/Scenes/Debug/BotCombatStand.unity",
+        "Tools/Checkpoints/WeaponSightCalibration/**",
+        "Docs/weapons/**",
+        "tasks/weapon-sight-calibration/**"
+      ],
+      "after": [
+        {
+          "task": "weapon-sight-calibration",
+          "stage": "context",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

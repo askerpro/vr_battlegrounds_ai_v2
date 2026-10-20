@@ -226,6 +226,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (weapon != null)
             {
                 EditorGUILayout.LabelField("ID: " + weapon.WeaponId + " · GUID: " + AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(weapon)), EditorStyles.miniLabel);
+                if (GUILayout.Button("Настройка оружия: прицел, аксессуары, раскладка, урон"))
+                    VrBattlegrounds.Editor.Weapons.WeaponSetupWindow.Open(VrBattlegrounds.Editor.Weapons.WeaponSetupWindow.Tab.Sight, weapon);
                 EditorGUILayout.LabelField($"Баланс: урон {weapon.Damage}; темп {weapon.FireRate}; магазин {weapon.MagazineSize}; цена {weapon.Price}");
                 EditorGUILayout.LabelField("В ассортиментах: " + string.Join(", ", presets.Where(p => p.Entries.Any(e => e.Weapon == weapon)).Select(p => p.PresetId)));
                 EditorGUILayout.HelpBox("Данные и смещения WeaponInfo общие для всех станций и карт этого предмета.", MessageType.Info);

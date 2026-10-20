@@ -10,7 +10,7 @@
 
 ## Подход (уточнение пользователя 2026-10-20)
 
-- Действующий стенд — окно `Tools/VR Battlegrounds/Weapons/Sight Auto-Zero`, три варианта прицела:
+- Действующий стенд — Sight Auto-Zero, теперь вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия`; три варианта прицела:
   **SightKit_MX68**, **SightKit_TR15**, **Родной прицел**.
 - Родной прицел: целик и мушка ствола отделены от меша корпуса в отдельные подвижные объекты с pivot на точке
   прицеливания. Острова определены в Blender (`blender/iron-split*.blend` → `tools/sight-split/islands*.json` →
@@ -18,6 +18,37 @@
 - Ствол без своего прицела получает готовый комплект TR15 или MX68, вырезанный в Blender (`blender/iron-kits.blend`).
 - Ручной стенд `WeaponSightManualCalibration` и подход первого агента (маркеры, копии Sight Review, доноры)
   **устарели**. В силе остаются модель zero, инварианты ShotSource и коллиматор TR15.
+
+## Решения 2026-10-20
+
+- Единый стенд «Настройка оружия» из модулей (прицел, аксессуары, баланс/паспорт `WeaponInfo`, ссылка на стенд
+  раскладки слота); каждый модуль пишет в свой источник данных, префаб собирает один писатель. Первый модуль —
+  калибровка (эта задача), остальные — следующими задачами.
+- Без копий: правка оружия либо применяется к игровому префабу, либо отклоняется; копия — только до коммита для
+  сравнения side by side.
+- Старый ручной стенд и копии `*_SightReview` удаляются в этой задаче; витрина аксессуаров сохраняется.
+
+## Этап `cleanup-old-stand` (2026-10-20, ждёт проверки в Unity)
+
+Удалено: сцены `Scenes/Tools/WeaponSightManualCalibration.unity` и `WeaponSightReview.unity`,
+`Editor/VR_Battlegrounds/Weapons/Calibration/*`, `SightAlignmentMarker`, `ManualSightCalibrationSession`,
+`Debug/SightCalibrationBench`, префабы `Prefabs/Weapons/SightReview/*` и `SightCalibrationDrafts/*`, WeaponInfo
+`Data/Weapons/SightCalibration/Review/*`, материалы стенда `Art/Weapons/Sights/Review/*` (кроме `MonitorPicture`/
+`MonitorShell` — их использует стрельбище Lobby), `SniperRifle_SRS_Iron.mat`, меши `SM_MKR9_IronSights_{Front,Rear}`,
+`Tools/Checkpoints/WeaponSightCalibration/`. Строки копий убраны из `WeaponSystemAuthoring.Weapons`, `ClipOverrides`
+и ключей окон выброса; ссылки — из `WeaponRegistry`, `ArsenalCompositionCatalog`, списка spawnable `--- MANAGERS ---`
+и списка оружия `BotCombatStand.unity`. Витрина: `Editor/VR_Battlegrounds/Weapons/Accessories/SightAccessoryShowcase.cs`,
+вызывается вкладкой «Аксессуары» окна «Настройка оружия» (строит в активной сцене). Механические прицелы паков
+(IronSights TR15, MX68, MKR9) из витрины убраны — в ряду механики только готовые `SightKit_*`.
+
+Устаревшие ожидания тестов (обновить после приёмки): `WeaponEjectionTests` (TestCase `MKR9/SniperRifle/SRM12_SightReview`),
+`WeaponSystemWavePrefabTests` (`SRM12_SightReview`), `WeaponShotSoundTests` (семейства `*_SightReview`),
+`WeaponScaleTests` (ветка `PublishedSightFamilies`/`DraftRoot`, теперь мёртвая), `ManipulationFeedbackCoverageTests`
+(фильтр `NotInGame`).
+
+Не правились (чужие индексы и задачи, упоминания устарели): `Docs/README.md`, `Docs/CHANGELOG.md`,
+`tasks/arsenal-generator/plan.json`, `tasks/weapon-system/*`, `experts/weapon-system/backlog.md` п.5 и п.15,
+`Docs/gameplay.md` (стена лобби).
 
 ## Состояние
 
@@ -39,10 +70,9 @@
 
 1. Где делать постоянное разделение родных прицелов: в сборщиках `KinemationWeaponBuilder`/`HandsPackWeaponBuilder`
    (решение 2026-10-12) — подтвердить, куда сохранять меши детали и корпуса.
-2. Writer прицелов: `WeaponSightAuthoring` или шаг внутри `WeaponSystemAuthoring` (инвариант «один writer»).
+2. Writer прицелов: `WeaponSightAuthoring` или шаг внутри `WeaponSystemAuthoring` (инвариант «один writer»);
+   с решением «единый стенд, один писатель префаба» — шаг writer'а, собирающего префаб из записей модулей.
 3. Комплект для SRM12 и SniperRifle (TR15 или MX68); стволы без решения: SDKGun, SDK ShotGun, Machinegun.
-4. Объём уборки первого этапа: ручной стенд, `Weapons/Calibration/*`, копии Sight Review (+ записи в
-   `WeaponRegistry`/`ArsenalCompositionCatalog`, зона gameplay).
 
 ## Зависимости
 
@@ -52,6 +82,19 @@
 
 ## Следующий шаг
 
-Получить решения 1–4, затем: постоянное разделение в сборщиках → включить Save/Apply → по стволам свести,
+Принять уборку старого стенда; получить решения 1–3, затем: оболочка окна «Настройка оружия» с модулем прицела → постоянное разделение в сборщиках → включить Save/Apply → по стволам свести,
 записать в таблицу, применить (порядок — быстрый результат) → проверка в шлеме на стрельбище Lobby.
 Тесты новой логики — после приёмки пользователем.
+
+## Этап `weapon-setup-window` (2026-10-20, ждёт проверки в Unity)
+
+Окно `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`Assets/Editor/VR_Battlegrounds/Weapons/WeaponSetupWindow.cs`):
+общий выбор оружия из `WeaponRegistry`, кнопка «В Редакторе арсенала»; вкладки:
+- «Калибровка прицела» — прежнее окно Sight Auto-Zero, вынесенное в панель `Weapons/Sights/SightAutoZeroPanel.cs`
+  (меню Sight Auto-Zero убрано, логика не менялась);
+- «Аксессуары» — постройка витрины в активной сцене; запись аксессуаров в префаб — следующий модуль;
+- «Раскладка в слоте» — свои раскладки `WeaponInfo` и их использование, открытие стенда `ArsenalLayoutAuthoring`
+  с выбором ручки этого оружия (правка и Bake — в инспекторе стенда);
+- «Урон и разброс» — поля паспорта и баланса `WeaponInfo` + «Применить баланс к префабу» (`WeaponBalanceApplier`).
+Обратная ссылка: кнопка «Настройка оружия…» на вкладке «Каталог» Редактора арсенала (`ArsenalEditorWindow`, зона gameplay,
++2 строки). Новых писателей префабов нет.

@@ -122,7 +122,8 @@ SDK           UxrFirearmWeapon(.Readiness/.AmmoAdmission), UxrFirearmMag, UxrPro
 | F4 | SDKGun, Machinegun | без Action, досылание при вставке |
 | F5 (не переведены) | Revolver, R08, SDK Shotgun | legacy; развилка (roadmap) |
 
-Обзорные копии стены лобби (`Prefabs/Weapons/SightReview/*`) переводятся вместе со своим стволом.
+Обзорных копий `*_SightReview` больше нет (удалены 2026-10-20): правка оружия либо применяется к игровому префабу,
+либо отклоняется ([decisions.md](decisions.md), «Без копий»).
 Категории: дробовик — Herrington, FABARM, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi, SDKGun, Revolver, R08;
 снайперская винтовка — SniperRifle (в арсенале AX-50), SRM12 (в арсенале Desert Tech SRS — снайперская, не дробовик);
 остальное — автомат. Имя префаба не равно названию в арсенале: категорию сверять по `WeaponInfo._displayName`.

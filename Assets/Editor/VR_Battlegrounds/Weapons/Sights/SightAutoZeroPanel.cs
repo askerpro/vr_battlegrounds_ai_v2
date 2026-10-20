@@ -22,11 +22,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// «Свести» двигает подвижную деталь только по её локальной Y. Решение «Только инструменты» (2026-10-12):
     /// «Сохранить в таблицу» и «Применить к префабу» выключены — финальная калибровка отдельной задачей; код их
     /// сохранён (<see cref="WeaponSightTable"/>, <see cref="WeaponSightAuthoring"/>).
+    /// Панель вкладки «Калибровка прицела» окна «Настройка оружия»: оружие выбирает окно, панель хранит стенд.
     /// </summary>
-    public sealed class SightAutoZeroWindow : EditorWindow
+    [Serializable]
+    public sealed class SightAutoZeroPanel
     {
         private const string SettingsPath = WeaponSightAuthoring.SettingsPath;
-        private const string RegistryPath = "Assets/Data/Weapons/Resources/WeaponRegistry.asset";
         private const string NativeOption = "Родной прицел";
         private const string LockedHint = "Финальная калибровка — отдельная задача (решение 2026-10-12 «Только инструменты»)";
         // Запись таблицы и применение к префабам выключены в этой задаче; включит отдельная задача калибровки.
@@ -35,37 +36,29 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         private const float RailTolerance = .00001f; // 0,01 мм
         private const float ViewDistance = .18f;
 
-        private WeaponInfo[] _weapons = Array.Empty<WeaponInfo>();
-        private GameObject[] _kits = Array.Empty<GameObject>();
-        [SerializeField] private int _weaponIndex, _kitIndex;
+        [NonSerialized] private GameObject[] _kits = Array.Empty<GameObject>();
+        [SerializeField] private int _kitIndex;
         [SerializeField] private GameObject _standWeapon, _standKit, _standKitPrefab;
         [SerializeField] private WeaponInfo _standInfo;
         [SerializeField] private bool _standNative;
         [SerializeField] private string _message = "";
-        [SerializeField] private Vector2 _scroll;
-        private SightAutoZeroResult _last;
-        private NativeSightStand _native;
+        [NonSerialized] private SightAutoZeroResult _last;
+        [NonSerialized] private NativeSightStand _native;
+        [NonSerialized] private Action _repaint;
 
-        [MenuItem("Tools/VR Battlegrounds/Weapons/Sight Auto-Zero")]
-        public static void ShowWindow()
+        /// <summary>Вызывает окно-хозяин в своём OnEnable; <paramref name="repaint"/> перерисовывает окно.</summary>
+        public void Enable(Action repaint)
         {
-            var window = GetWindow<SightAutoZeroWindow>("Sight Auto-Zero");
-            window.minSize = new Vector2(380, 460);
-        }
-
-        private void OnEnable()
-        {
-            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>(RegistryPath);
-            _weapons = registry != null ? registry.Weapons.Where(w => w != null && w.WeaponPrefab != null).ToArray() : Array.Empty<WeaponInfo>();
+            _repaint = repaint;
             _kits = AssetDatabase.FindAssets("t:Prefab SightKit_", new[] { SightKitBuilder.PrefabFolder })
                 .Select(AssetDatabase.GUIDToAssetPath).Where(p => System.IO.Path.GetFileName(p).StartsWith("SightKit_", StringComparison.Ordinal))
                 .Select(AssetDatabase.LoadAssetAtPath<GameObject>).Where(g => g != null).ToArray();
             SceneView.duringSceneGui += DrawLines;
         }
 
-        private void OnDisable() => SceneView.duringSceneGui -= DrawLines;
+        public void Disable() => SceneView.duringSceneGui -= DrawLines;
 
-        private void OnDestroy() => DisposeNative();
+        public void Dispose() => DisposeNative();
 
         /// <summary>Объект, внутри которого ищутся половины: комплект или (в режиме родного прицела) копия ствола.</summary>
         private GameObject Scope => _standNative ? _standWeapon : _standKit;
@@ -73,9 +66,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         private bool StandAlive => _standWeapon != null && _standInfo != null
             && (_standNative ? _standWeapon.GetComponentsInChildren<SightAdjustablePart>(true).Length == 2 : _standKit != null && _standKitPrefab != null);
 
-        private void OnGUI()
+        /// <summary>Рисует вкладку для оружия, выбранного в окне (null — оружие не выбрано).</summary>
+        public void Draw(WeaponInfo selected)
         {
-            _scroll = EditorGUILayout.BeginScrollView(_scroll);
             EditorGUILayout.LabelField("Автосведение механического прицела", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Стенд — временная сцена, не сохраняйте её. Комплект: поставьте корень на планку, раздвиньте " +
                 "Rear/Front только вдоль планки (локальная Z корня). «Родной прицел»: вшитый прицел ствола уже разделён на копии. " +
@@ -85,10 +78,6 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
 
             using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling))
             {
-                if (_weapons.Length > 0)
-                    _weaponIndex = EditorGUILayout.Popup("Оружие", Mathf.Clamp(_weaponIndex, 0, _weapons.Length - 1), _weapons.Select(w => w.DisplayName).ToArray());
-                else EditorGUILayout.HelpBox("В реестре нет оружия: " + RegistryPath, MessageType.Warning);
-                WeaponInfo selected = _weapons.Length > 0 ? _weapons[Mathf.Clamp(_weaponIndex, 0, _weapons.Length - 1)] : null;
                 SightSplitSpec nativeSpec = selected != null ? NativeSightStand.SpecFor(selected.WeaponPrefab) : null;
                 WeaponSightTable table = WeaponSightTable.Load();
                 var entry = selected != null && table != null ? table.Find(selected) : null;
@@ -139,7 +128,6 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 }
             }
             if (!string.IsNullOrEmpty(_message)) EditorGUILayout.HelpBox(_message, MessageType.None);
-            EditorGUILayout.EndScrollView();
         }
 
         private void DrawResult()
@@ -161,7 +149,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         {
             try { action(); }
             catch (Exception e) { _message = e.Message; }
-            Repaint();
+            _repaint?.Invoke();
             SceneView.RepaintAll();
         }
 
@@ -187,14 +175,14 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             GameObject stand = NewStandScene();
             if (stand == null) return;
             // Обычные копии, не экземпляры префабов: со стенда нельзя применить overrides в оружие или комплект.
-            GameObject weapon = Instantiate(info.WeaponPrefab, stand.transform, false);
+            GameObject weapon = UnityEngine.Object.Instantiate(info.WeaponPrefab, stand.transform, false);
             weapon.name = info.WeaponPrefab.name;
             Transform container = WeaponSightAuthoring.FindContainer(weapon.transform);
             foreach (Transform child in container.Cast<Transform>().ToArray())
-                if (child.name.StartsWith("SightKit_", StringComparison.Ordinal)) DestroyImmediate(child.gameObject); // прежний комплект заменяется
+                if (child.name.StartsWith("SightKit_", StringComparison.Ordinal)) UnityEngine.Object.DestroyImmediate(child.gameObject); // прежний комплект заменяется
             if (weapon.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0)
                 throw new InvalidOperationException($"{weapon.name}: у оружия уже есть детали прицела вне комплекта — стенд комплекта не открыт");
-            GameObject kit = Instantiate(kitPrefab, container, false);
+            GameObject kit = UnityEngine.Object.Instantiate(kitPrefab, container, false);
             kit.name = kitPrefab.name;
             SightKitScale.Apply(kit.transform); // реальный размер при любом масштабе корня оружия
             Transform muzzle = SightParts.FindShotSource(weapon);
@@ -381,7 +369,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             Vector3 forward = front - rear;
             if (forward.sqrMagnitude < 1e-10f || Vector3.Dot(forward, muzzle.forward) <= 0)
                 throw new InvalidOperationException("Мушка не впереди целика вдоль оси выстрела");
-            var view = SceneView.lastActiveSceneView ?? GetWindow<SceneView>();
+            var view = SceneView.lastActiveSceneView ?? EditorWindow.GetWindow<SceneView>();
             view.orthographic = false;
             // Камера Scene View — на ViewDistance позади R по линии R→F; пивот орбиты — точка R.
             view.LookAtDirect(rear, Quaternion.LookRotation(forward.normalized, muzzle.up), .1f);

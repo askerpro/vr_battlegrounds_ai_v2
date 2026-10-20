@@ -26,10 +26,9 @@
 `SpentBefore`) из `_last`; фиксация в кадре загрузки снимка до `Drain` даст пропуск одного патрона/гильзы. Защита —
 доверять `_last` только при `_last.Revision == commit.ExpectedRevision`. Отдельной правкой.
 
-Риск (найдено 2026-10-09, `sight-calibration.md` п. 8): у обзорных копий `SightReview/*` три писателя —
-`WeaponSystemAuthoring`, `ManualSightCalibrationAuthoring.Save` и `SightGameplayReviewBuilder`. Нарушает инвариант
-«один writer префабов». Решить вместе с вопросом «как вписать сведение в WeaponSystemAuthoring»; до решения ручной
-стенд Save/Apply не выполнять.
+Риск 2026-10-09 «три писателя копий `SightReview/*`» снят 2026-10-20: копии, ручной стенд и его писатели удалены
+(задача `weapon-sight-calibration`). Остаётся вопрос, как вписать запись прицела (`WeaponSightAuthoring`) в единственный
+writer префабов.
 
 Наблюдать: рука у кармана рядом с пистолетом может взять его за поддержку вместо магазина; если мешает —
 приоритет предмету в кармане (правило в `GrabRules`).

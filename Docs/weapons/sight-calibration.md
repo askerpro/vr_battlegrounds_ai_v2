@@ -20,7 +20,10 @@
 Обновлено 2026-10-20. **Действующий подход — стенд Sight Auto-Zero**, [раздел 9](#9-конвейер-sight-auto-zero-2026-10-12)
 (решение пользователя 2026-10-20). Разделы 1–3 (назначение, модель zero, инварианты ShotSource) и коллиматор TR15
 остаются в силе. Ручной стенд `WeaponSightManualCalibration`, маркеры R/F, копии Sight Review и доноры первого
-этапа (разделы 4, 5 кроме «В игре», 6, 8) **устарели** и оставлены как история;
+этапа (разделы 4, 5 кроме «В игре», 6, 8) **устарели и удалены из проекта 2026-10-20** (задача
+`weapon-sight-calibration`: сцены `Scenes/Tools/WeaponSight*`, `Editor/…/Weapons/Calibration/*`, маркеры и сессия стенда,
+`SightCalibrationBench`, копии `*_SightReview` с записями в реестре, каталоге, MANAGERS и BotCombatStand); описание оставлено
+как история. Точка входа — окно `Tools/VR Battlegrounds/Weapons/Настройка оружия` (вкладки «Калибровка прицела», «Аксессуары» с витриной, «Раскладка в слоте», «Урон и разброс»);
 где лежат Blender-исходники, генераторы, отчёты и доказательства — [раздел 10](#10-материалы-и-где-их-искать).
 Финальная калибровка стволов ведётся задачей [`tasks/weapon-sight-calibration/`](../../tasks/weapon-sight-calibration/Readme.md).
 
@@ -224,7 +227,7 @@ Viper −4 мм, остальные ±3 мм.
 | Комплекты | `Assets/Art/Weapons/Sights/IronKits/*.fbx`, `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68}.prefab`; сборщик — меню `…/Weapons/Sights/Build Iron Sight Kits` (`SightKitBuilder`) | Нарезаны в Blender из пака. TR15: R→F 300 мм, F выше R на 4,44 мм; MX68: R→F 365,9 мм. Комплект — один объект на планке, масштаб через `SightKitScale` |
 | Подвижная деталь | `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` | Ход только по локальной Y (travelDown/Up) |
 | Решатель | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/SightAutoZeroSolver.cs` | Аналитическое «Свести» |
-| Окно | `Tools/VR Battlegrounds/Weapons/Sight Auto-Zero` (`SightAutoZeroWindow`) | Режимы «комплект на планке» и «Родной прицел»; стенд — несохраняемая сцена. `SaveUnlocked`/`ApplyUnlocked` = false до задачи калибровки; у «Родного прицела» Apply не написан |
+| Окно | вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`WeaponSetupWindow` + `SightAutoZeroPanel`; до 2026-10-20 — отдельное окно Sight Auto-Zero) | Режимы «комплект на планке» и «Родной прицел»; стенд — несохраняемая сцена. `SaveUnlocked`/`ApplyUnlocked` = false до задачи калибровки; у «Родного прицела» Apply не написан |
 | Таблица | `Assets/Data/WeaponSystem/Sights/WeaponSightTable.asset` | Пуста (`_entries: []`) |
 | Writer комплекта | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/WeaponSightAuthoring.cs` | Вставка nested `SightKit_*` под `MeshContainer`, компенсация масштаба корня, канонический `_assetId`. Третий писатель префабов — см. инвариант 6 |
 | Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, `SightSplitTable` …) | Выносит подвижный остров вшитого прицела на копии ствола (меши в памяти), 11 стволов. Таблица **генерируется** (раздел 10), привязана к GUID/localFileId и числу вершин меша. Встроить в `KinemationWeaponBuilder`/`HandsPackWeaponBuilder` — не сделано |

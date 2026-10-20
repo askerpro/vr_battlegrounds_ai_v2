@@ -67,6 +67,18 @@ namespace VrBattlegrounds.Bots
 
         public BlazeAI Brain => _blaze;
 
+        /// <summary>
+        /// Бот на вводе устройства (bot-input): прокси Blaze — навигация мозга, правда — голова тела. Голова отстала
+        /// (упёрлась, предел ходьбы) — прокси переносится к ней (<c>NavMeshAgent.Warp</c>), чтобы Blaze решал из места,
+        /// где бот действительно стоит. Только сервер; вне боя прокси нет — ничего не делает.
+        /// </summary>
+        public void ResyncLegs(Vector3 feet)
+        {
+            NavMeshAgent agent = CombatActive ? _blaze.navmeshAgent : null;
+            if (agent == null || !agent.isOnNavMesh) return;
+            if (NavMesh.SamplePosition(feet, out NavMeshHit hit, 1f, agent.areaMask)) agent.Warp(hit.position);
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {

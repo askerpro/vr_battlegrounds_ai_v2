@@ -45,11 +45,19 @@ namespace VrBattlegrounds.Bots
         /// <summary>Комплект пассивный (<see cref="BotKitKind.Passive"/>).</summary>
         public bool Passive { get; }
 
+        /// <summary>
+        /// Тело на вводе устройства (bot-input): вместо писателей прежнего пути (<see cref="Driver"/>, <see cref="Hands"/>,
+        /// <see cref="Aim"/>, <see cref="Runtime"/> — null) — <see cref="BotInputKit"/> с источником Blaze.
+        /// </summary>
+        public BotInputKit Input { get; }
+
         public BotKitKind Kind => Passive ? BotKitKind.Passive : BotKitKind.Live;
 
         internal BotKitRefs(PlayerController avatar, BotBody body, BotNavigator legs, BotGunner gunner, BotCombatDriver combat,
-                            BotAvatarDriver driver, BotHands hands, BotWeaponAim aim, BotRuntimeController runtime, bool passive)
+                            BotAvatarDriver driver, BotHands hands, BotWeaponAim aim, BotRuntimeController runtime, bool passive,
+                            BotInputKit input = null)
         {
+            Input = input;
             Avatar = avatar;
             Body = body;
             Legs = legs;
@@ -121,11 +129,42 @@ namespace VrBattlegrounds.Bots
             if (kit == null || !kit.Passive || kit.Avatar == null) return kit;
             GameObject go = kit.Avatar.gameObject;
             bool reused = false;
+            if (kit.Input != null)
+            {
+                // Тело на вводе: у живого добавляется только Blaze; хват и прицел — ввод (источник берёт их из тела).
+                BotCombatDriver inputCombat = GetOrAdd<BotCombatDriver>(go, ref reused);
+                return new BotKitRefs(kit.Avatar, kit.Body, kit.Legs, kit.Gunner, inputCombat, null, null, null, null, false, kit.Input);
+            }
             BotCombatDriver combat = GetOrAdd<BotCombatDriver>(go, ref reused);
             BotHands hands = GetOrAdd<BotHands>(go, ref reused);
             BotWeaponAim aim = GetOrAdd<BotWeaponAim>(go, ref reused);
             kit.Runtime.SetKit(false);
             return new BotKitRefs(kit.Avatar, kit.Body, kit.Legs, kit.Gunner, combat, kit.Driver, hands, aim, kit.Runtime, false);
+        }
+
+        /// <summary>
+        /// Комплект тела на вводе устройства (bot-input): мозг прежний — <see cref="BotBody"/>, <see cref="BotNavigator"/>,
+        /// <see cref="BotGunner"/>, [живой: <see cref="BotCombatDriver"/>], а вместо писателей прежнего пути — один
+        /// <see cref="BotInputKit"/> с источником <paramref name="source"/> (общий для всех тел бота). null — тела нет.
+        /// </summary>
+        public static BotKitRefs AttachInput(PlayerController avatar, BotKitKind kind, BlazeInputSource source, bool keepHead)
+        {
+            if (avatar == null || source == null) return null;
+            GameObject go = avatar.gameObject;
+            bool passive = kind == BotKitKind.Passive;
+            bool reused = false;
+
+            BotBody body = GetOrAdd<BotBody>(go, ref reused);
+            BotNavigator legs = GetOrAdd<BotNavigator>(go, ref reused);
+            BotGunner gunner = GetOrAdd<BotGunner>(go, ref reused);
+            BotCombatDriver combat = passive ? null : GetOrAdd<BotCombatDriver>(go, ref reused);
+            // Устройство — последним: источник при привязке берёт мозг тела (ноги, стрелок, Blaze).
+            BotInputKit input = BotInputKit.Attach(avatar, source, keepHead);
+
+            if (reused)
+                GameLog.Player.Warning($"[BotKit] {avatar.name}: на теле уже были бот-компоненты — комплект собран повторно.", avatar);
+
+            return new BotKitRefs(avatar, body, legs, gunner, combat, null, null, null, null, passive, input);
         }
 
         private static T GetOrAdd<T>(GameObject go, ref bool reused) where T : Component

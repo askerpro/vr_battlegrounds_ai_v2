@@ -59,7 +59,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 Equipment = null;
                 DirectorEquip = new BotStandDirectorEquipJournal();
             }
-            Subject = director.AddBot(new BotAddOptions { AutoEquip = directorEquip });
+            // Замеры стенда — прежнего тела player-flow (до его удаления, bot-input итерация 2).
+            Subject = director.AddBot(new BotAddOptions { AutoEquip = directorEquip, LegacyBody = true });
             if (Subject != null) _ownedBots.Add(Subject);
             if (Subject == null || Subject.ActiveAvatar == null) throw new InvalidOperationException("Бот не создан.");
             if (directorEquip)
@@ -76,7 +77,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
             if (id == BotStandScenarioId.T02)
             {
-                var other = director.AddBot(new BotAddOptions { AutoEquip = false });
+                var other = director.AddBot(new BotAddOptions { AutoEquip = false, LegacyBody = true });
                 if(other!=null) _ownedBots.Add(other);
                 if(other?.ActiveAvatar==null) throw new InvalidOperationException("Нет второго бота.");
                 Place(other, Lane(new Vector3(0f, 0f, 5f)), 180f);

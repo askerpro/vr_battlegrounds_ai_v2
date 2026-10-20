@@ -23,6 +23,12 @@ namespace VrBattlegrounds.Bots
         public VrBattlegrounds.DevTools.E2E.Input.IAvatarInputSource InputSource;
 
         /// <summary>
+        /// Ввод с мозгом Blaze (bot-input): один источник на все тела бота — голова продолжается через смену тела. null —
+        /// прежнее тело player-flow (<see cref="BotAddOptions.LegacyBody"/>) или сценарий (<see cref="InputSource"/>).
+        /// </summary>
+        public BlazeInputSource Blaze;
+
+        /// <summary>
         /// Комплект бот-компонентов текущего тела (<see cref="BotKit"/>): один раз на тело, ссылки без поиска в тике.
         /// Пишет только директор (по <c>AvatarSpawned</c>, повышение пассивного — в тике).
         /// </summary>

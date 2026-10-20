@@ -227,7 +227,8 @@ namespace VrBattlegrounds.Bots
             _bots.Add(session);
             // Источник ввода — до SpawnBody: AvatarSpawned (сборка комплекта) приходит внутри спавна.
             _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, AutoEquip = options?.AutoEquip ?? true,
-                                            InputSource = options?.InputSource };
+                                            InputSource = options?.InputSource,
+                                            Blaze = options?.InputSource == null && !(options?.LegacyBody ?? false) ? new BlazeInputSource() : null };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
@@ -591,6 +592,19 @@ namespace VrBattlegrounds.Bots
                 bool sameScene = mind.SceneHandle == SceneManager.GetActiveScene().handle;
                 BotInputKit.Attach(avatar, mind.InputSource, keepHead: sameScene);
                 mind.SceneHandle = SceneManager.GetActiveScene().handle;
+                return;
+            }
+
+            if (mind.Blaze != null)
+            {
+                // Ввод с мозгом Blaze: голова продолжается с прежней позы на той же карте (источник ставит ноги мозга).
+                if (mind.Kit != null && ReferenceEquals(mind.Kit.Avatar, avatar))
+                {
+                    if (mind.Kit.Passive && avatar.IsAlive) mind.Kit = BotKit.Upgrade(mind.Kit);
+                    return;
+                }
+                bool keepHead = mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle;
+                mind.Kit = BotKit.AttachInput(avatar, avatar.IsAlive ? BotKitKind.Live : BotKitKind.Passive, mind.Blaze, keepHead);
                 return;
             }
 

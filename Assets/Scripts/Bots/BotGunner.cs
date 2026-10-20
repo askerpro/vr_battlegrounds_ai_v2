@@ -535,6 +535,34 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
+        /// Бот на вводе устройства (bot-input): решение мозга «нажать курок сейчас» по запросу Blaze — те же гейты, что у
+        /// <see cref="ExecuteRequestedShot"/> (директор, бой, ствол в руке, наведение ≤ допуска, путь пули свободен), но без
+        /// действий SDK: выстрел делает штатный <c>UxrFirearmWeapon</c> по курку руки. Запрос гасится при любом исходе;
+        /// <see cref="BotShotOutcome.Fired"/> — жать.
+        /// </summary>
+        public BotShotOutcome DecideTriggerPress()
+        {
+            _lastGateAimError = float.NaN;
+            _lastBlocker = null;
+            if (!_shotRequested) return BotShotOutcome.None;
+            _shotRequested = false;
+            if (!DirectorAllowsShot()) return BotShotOutcome.None;
+            if (!CanFightNow()) return BotShotOutcome.Blocked;
+            Transform muzzle = Muzzle;
+            if (muzzle == null) return BotShotOutcome.Blocked;
+
+            Vector3 toAim = _aimPoint - muzzle.position;
+            float distance = toAim.magnitude;
+            if (distance < 1e-3f) return BotShotOutcome.Blocked;
+            _lastGateAimError = Vector3.Angle(muzzle.forward, toAim);
+            if (_lastGateAimError > BotPlayerFlowSettings.MaxShotAimErrorDegrees) return BotShotOutcome.NotAimed;
+            if (IsPathBlocked(muzzle.position, muzzle.forward, distance, out _lastBlocker)) return BotShotOutcome.Occluded;
+
+            PickAimOffset();
+            return BotShotOutcome.Fired;
+        }
+
+        /// <summary>
         /// Путь пули перекрыт: первое попадание луча маской выстрела (без триггеров) до <paramref name="distance"/> — не
         /// коллайдер цели. Ничего не задето — путь свободен (промах мимо силуэта допустим).
         /// </summary>

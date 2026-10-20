@@ -144,15 +144,26 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             Note($"в кобуре {_firearm.name} (якорь {holster.name})");
             _firearm.ProjectileShot += OnShot;
 
-            // ── Контрольная цель на 10 м по курсу ──
+            // ── Курс — к центру арены стенда: корень бота стоит у края зоны спавна лицом к стене (прогон 2: голова вошла
+            // в южную стену, WallPass). Сначала поворот головы на курс, потом цель на 10 м по нему. ──
             Phase("Target");
-            SpawnTarget(_bot, headStart, _pilot.Yaw);
+            // Раскладка стенда — вокруг начала координат (полоса T07: бот z=−5, цель z=+5).
+            Vector3 toCenter = Vector3.ProjectOnPlane(Vector3.zero - headStart, Vector3.up);
+            if (toCenter.sqrMagnitude < 1f) toCenter = Vector3.ProjectOnPlane(-uxr.transform.forward, Vector3.up);
+            float courseYaw = Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg;
+            Quaternion course = Quaternion.Euler(0f, courseYaw, 0f);
+            until = Time.time + 3f;
+            while (!_pilot.TurnTowards(course * Vector3.forward, Time.deltaTime) && Time.time < until) yield return null;
+            SpawnTarget(_bot, headStart, courseYaw);
             yield return null;
+            if (Physics.SphereCast(_pilot.HeadPosition, 0.15f, course * Vector3.forward, out RaycastHit block, 3.5f, ~0, QueryTriggerInteraction.Ignore) &&
+                !block.collider.transform.IsChildOf(uxr.transform))
+                Note($"на пути головы препятствие {block.collider.name} в {block.distance:0.00} м — WallPass остановит бота, как человека");
+            else Note($"путь головы 3,5 м по курсу {courseYaw:0}° свободен");
 
             // ── Ходьба головой по свободной полосе к цели: 2 м, осмотр (голова на 90° вправо и обратно), ещё 1 м ──
             // Вбок не идём: голова в препятствии стенда — штраф WallPass, как у человека (прогон 1: смерть по таймауту).
             Phase("Walk");
-            Quaternion course = Quaternion.Euler(0f, _pilot.Yaw, 0f);
             Vector3 floor = _pilot.FloorPosition;
             Vector3 p1 = floor + course * Vector3.forward * 2f;
             Vector3 p2 = p1 + course * Vector3.forward * 1f;

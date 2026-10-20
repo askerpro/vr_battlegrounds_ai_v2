@@ -354,7 +354,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             VrBattlegrounds.Weapons.WeaponSystem system = _firearm.GetComponent<VrBattlegrounds.Weapons.WeaponSystem>();
             return $"ledger={_firearm.UsesReadinessLedger(0)}, init={state?.ReadinessInitialized}, chamber={state?.ChamberRound}, " +
                    $"actionOpen={state?.ActionOpen}, ammo={_firearm.GetAmmoLeft(0)}, loaded={_firearm.IsLoaded(0)}, " +
-                   $"row={(system != null ? system.LastRowId : "-")}, machine={(system != null ? system.MachineState.ToString() : "-")}";
+                   // MachineState — тип сборки Weapons.Core, на которую asmdef стенда не ссылается (CS0012): только строка машины.
+                   $"row={(system != null ? system.LastRowId : "-")}";
         }
 
         // ── Наблюдение ───────────────────────────────────────────────────────

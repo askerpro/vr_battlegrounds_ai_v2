@@ -74,7 +74,9 @@ These sections preserve the detailed project policy during the startup-context r
 
 **Изолированные worktree.** В режиме worktree агент пишет только в свой linked worktree. Единственный инструмент
 доступа к редактору — `Tools/agents/editor-broker.py`:
-checkpoint → request → watch-ticket → claim → begin → guard перед MCP → finish → receive.
+checkpoint → request → claim --wait --out <файл> → begin → guard перед MCP → finish → receive.
+`claim --wait` запускать фоном: ожидание оффера (60 с) и захват одним процессом, токен — только в `--out`
+(scratchpad или ignored каталог задачи). Коды выхода и брошенное ожидание — [`unity_sharing.md`](unity_sharing.md).
 `unityMCP` подключён через прокси брокера: чтение доступно всегда, изменяющий вызов без своей
 аренды RUNNING отклоняется, в аренде вызов автоматически идёт в worker (`F:/UnityProjects/agent-infra/docs/unity-mcp-proxy.md`).
 **Основной worktree для агента в режиме worktree — только чтение.** Запрещено прямо изменять в нём

@@ -85,9 +85,11 @@ clones; для native сценария без главного Play исполь
 
 ## Порядок работы агента
 
-В linked worktree: fetch/rebase → checkpoint → request/watch-ticket → claim/begin → guard,
-затем MCP из своего worktree. Перед операциями проверить фактический worker root, idle,
-отсутствие чужого request/Play, dirty scenes и prefab stage. Допуск этапа хаба не заменяет lease.
+В linked worktree: fetch/rebase → checkpoint → request → claim --wait --out <файл> → begin → guard,
+затем MCP из своего worktree. `claim --wait` — фоном, токен только в файле `--out`; коды выхода и
+брошенное ожидание — [unity_sharing.md](../.agents/rules/unity_sharing.md). Перед операциями проверить
+фактический worker root, idle, отсутствие чужого request/Play, dirty scenes и prefab stage.
+Допуск этапа хаба не заменяет lease.
 Полный JSON и логи сохранять в ignored `tasks/<task-id>/reports/`; выводить компактный итог.
 
 ### Как агенту включить Play (через Offline)

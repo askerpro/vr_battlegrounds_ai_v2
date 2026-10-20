@@ -40,9 +40,11 @@
 
 ## Unity (linked worktree)
 
-- Мутации — только в своей аренде: checkpoint → request (`--base` = опубликованная база) → watch-ticket →
-  claim → begin → guard → MCP → finish → receive. Request с базой, которой нет в публикации, отказывает —
-  `request-base` для принятого SHA.
+- Мутации — только в своей аренде: checkpoint → request (`--base` = опубликованная база) →
+  claim --wait --out <файл> → begin → guard → MCP → finish → receive. Request с базой, которой нет
+  в публикации, отказывает — `request-base` для принятого SHA.
+- `claim --wait` запускать фоном: ждёт оффер (60 с) и забирает его одним процессом; токен только в `--out`.
+  Коды выхода и брошенное ожидание — [unity_sharing.md](../../.agents/rules/unity_sharing.md).
 - Первый MCP-вызов после переключения воркера часто «session disconnected»: guard и повтор.
 - Во время EditMode-тестов Unity не отвечает MCP — это не зависание; смотреть Editor.log и CPU.
 - Сразу после тестов открыть сцену Offline (иначе модальное окно вешает главный поток → RECOVERY_REQUIRED).

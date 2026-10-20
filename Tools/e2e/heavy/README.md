@@ -9,7 +9,8 @@ python Tools/e2e/heavy.py --profile editor --suite default
 ## Профиль editor
 
 Editor-стенд (MPPM) в worker. heavy о брокере не знает: агент сам держит свою RUNNING аренду
-(checkpoint → request → watch-ticket → claim → begin → guard), запускает heavy из своего linked worktree,
+(checkpoint → request → фоновый claim --wait --out <файл> → begin → guard; коды выхода —
+`.agents/rules/unity_sharing.md`), запускает heavy из своего linked worktree,
 затем finish/receive. Unity вызывается через штатный MCP-прокси этого worktree
 (`uv run Tools/agents/unity_mcp_proxy.py`); без своей аренды прокси отказывает, heavy возвращает код 2.
 MCP SDK heavy ставит сам через `uv run --with mcp`.

@@ -1,7 +1,8 @@
 # Unity MCP — Правила и Известные Проблемы
 
 > Агенты используют постоянный worker через `Tools/agents/editor-broker.py`:
-> request/watch-ticket/claim/begin, guard перед MCP, finish после пакета.
+> request/`claim --wait --out <файл>` (фоном, токен только в файле)/begin, guard перед MCP,
+> finish после пакета.
 > Правила — [`unity_sharing.md`](unity_sharing.md). Редактор человека не прерывать.
 
 ## При инфраструктурном отказе

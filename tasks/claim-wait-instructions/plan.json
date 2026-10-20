@@ -1,0 +1,27 @@
+{
+  "task_id": "claim-wait-instructions",
+  "owner": "coordination-maintenance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/claim-wait-instructions",
+  "base_sha": "83d38b5e8659b6cdd9d29d5a3517c50d63b19210",
+  "doc_path": "tasks/claim-wait-instructions/Readme.md",
+  "title": "Инструкции агентов: claim --wait --out вместо watch-ticket → claim",
+  "branch": "task/claim-wait-instructions",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/claim-wait-instructions/**",
+        "AGENTS.md",
+        ".agents/rules/unity_sharing.md",
+        ".agents/rules/project-workflows.md",
+        ".agents/rules/unity_mcp.md",
+        "Docs/test-stand.md",
+        "Docs/weapons/workflow.md",
+        "Tools/e2e/heavy/README.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

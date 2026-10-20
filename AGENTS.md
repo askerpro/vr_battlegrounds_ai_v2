@@ -153,7 +153,8 @@ and user communication. Keep detailed execution traces in task artifacts, outsid
 Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=absolute --git-common-dir`.
 - **Same: main checkout.** Work directly with the user's checkout/Editor, without a worker lease. Do not manage worker, queue or .agent-state unless assigned.
 - **Different: linked worktree.** Write only there; the main checkout is read-only. Unity mutations require your RUNNING broker lease and guard. The proxy must run from your worktree.
-- Before a worker request prepare exact actions/release conditions and fetch/rebase origin/dev. Route: checkpoint → request → watch-ticket → claim → begin → guard → execute/wait → finish → receive.
+- Before a worker request prepare exact actions/release conditions and fetch/rebase origin/dev. Route: checkpoint → request → claim --wait --out <file> → begin → guard → execute/wait → finish → receive.
+- `claim --wait --out <file>` waits for the 60 s offer and claims it in one process: run it in the background (Claude: Bash `run_in_background`; Codex: keep the turn active), put `--out` in your scratchpad or ignored task reports and never print or forward the token. Renew coordination admission before waiting. Readiness is process exit: 0 LEASED (begin now), 3 ticket closed (new request from current base), 4 queue in recovery (notify the maintainer, place kept), 5 `--timeout`. Abandoned wait: stop the process and run `cancel --ticket <id> --owner <owner>` (also frees your unstarted LEASED); an unstarted lease expires as CANCELLED `lease_unused`. Details: [editor-broker.md](F:/UnityProjects/agent-infra/docs/editor-broker.md).
 - Finish immediately after your prepared package and cleanup, including failed checks, before diagnosis, edits or waiting for a person. Do not finish during an active operation. Renew only for ongoing Unity work. If your own lease expired (`RECOVERY_REQUIRED`) after a known completed operation, use `recover --ticket <id> --token <token>` (saves `R`) or `recover --ticket <id> --token <token> --force` (discards worker changes/dirty scenes/Prefab Stage and resets to `baseline_sha` without `R`).
 - Never interrupt human Play Mode, dirty scenes, prefab stages or others' tests.
 - При ремонте инфраструктуры очередь продолжает работать: сопровождающий отключает coordination-проверки через штатный mode off, сохраняет FIFO, аренды, результаты и guards живой операции. После подготовки, тестов и ревью сопровождающий ставит доставку исправления в конец очереди. Не отменять чужие заявки и не требовать повторной постановки из-за обслуживания.
@@ -168,7 +169,7 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
 
 Задача, меняющая игровой код или ассеты (`Assets/**`, `Packages/**`, `ProjectSettings/**`), перед merge-request
 прогоняет набор e2e-сценариев на Editor-стенде. Только документы/инструменты — по желанию.
-1. Rebase на свежую origin/dev, затем своя аренда worker: checkpoint → request → watch-ticket → claim → begin → guard.
+1. Rebase на свежую origin/dev, затем своя аренда worker: checkpoint → request → claim --wait --out <файл> (фоном) → begin → guard.
 2. Из своего worktree: `python Tools/e2e/heavy.py --profile editor --suite default` (около 7 мин на набор).
    heavy о брокере не знает: Unity — через MCP-прокси этого worktree; без своей аренды прокси отказывает.
    Аренда — 15 мин вместе с begin: запускать heavy в фоне и продлевать `editor-broker.py renew` каждые ~4 мин.

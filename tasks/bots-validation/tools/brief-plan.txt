@@ -1,0 +1,25 @@
+- [x] Сверить остаток плана, актуальные тела/оружие и два разных отказа808 по архивам и source.
+- [x] Выполнить AndroidCompileGate на fresh input817; сохранить raw MCP disconnect и отдельное доказательство PASS из Editor.log; finish/receive.
+- [x] Проверить terminal/receive818 и raw99/99; перенести минимальный Floor diff без дублирующих операций.
+- [x] Получить bots/gameplay approve технического input3d24; сохранить APK/Server и выяснить причину wrapper exit1 без повторной сборки.
+- [x] Исправить culture-sensitive разбор дат provenance и выполнить проверяемую повторную агрегацию без новой Unity build на PS5.1/PS7.
+- [ ] Получить userQA helper/Floor; исходный failed manifest и UNKNOWN сохраняются.
+- [x] Выделить технические Floor-only и helper-only кандидаты без trace, подготовить краткую передачу исследования следующему агенту.
+- [x] По явному исключению пользователя выпустить пол080f137aa и helper48d38b9b2 без QA через новые review/ACK и штатные merge-execute; remote SHA проверены.
+- [x] Продолжить исследование с read-only субагентом: сравнить main/clones и разобрать общий startup contract; role-swap не является acceptance.
+- [x] Подтвердить DONE832; broker baseline ужеa62039a26, workeridle; QA пола/helper остаётся открытой.
+- [x] Сохранить dirty и обновить checkout48d38b9b2 от новой origin/deva62039a26 (FF, backup refs/backup/bots-validation/pre-ff-a620-20261019).
+- [x] Рестарт матча («Играть заново»): исправить застрявший признак зоны спавна (TeamSpawnZone) и бесплатную покупку со стены (ArsenalWallController.InstallSlots без подписки); userQA пройдена (аренда 838), тесты +5 (аренда 839).
+- [x] Ревью gameplay/level-design этапа restart-match-fix и FF в origin/dev (5a066921c); request-base 840.
+- [x] Боты по тем же правилам, что клиенты (Blaze и скрипт-кукловод, tasks/bots-fix/control-modes-plan.md): решение пользователя — отдельной задачей после bots-validation.
+- [x] Продолжить в Desktop-чате из bots-validation с собственной native route; выполнить external bot0/bot8 discovery/localhost, штатные finish/receive824.
+- [x] Дополнить raw временные метки startup/scene/KCP и выполнить discovery8/localhost8 без изменений timeout/readiness/retry; AndroidCompileGate и штатные finish/receive829.
+- [x] Согласовать startup contract (contracts/startup-lifecycle-design.md): S1 порт после готовности карты, S2 первое подключение 180 с, S3 только замер.
+- [x] S1+S2: прогоны 844 Ready, userQA 847 пройдена, тесты +13 (849), коммиты 59baff564/1aadb3dc3.
+- [x] Ревью network/launch-infra этапа startup-lifecycle, Android PASS, FF в origin/dev 1aadb3dc3; request-base 852.
+- [x] Хвосты ревью старта влиты (2a5931352): connect/disconnect начальной фазы, PlayLaunch ready=Published и фазы, TeamSpawnZone.OnDisable; остаток — квитанция отложенной загрузки MapLoader (gameplay), Failed публикации → StartupError.
+- [ ] Медленный вход в Play: причина — зависание OculusXRPlugin в Editor (main и клоны); infra_issue 10064 сопровождающему; кандидат — без XR у участников без шлема.
+- [x] Эпик bots-epic заведён (синхронизация с e2e-regression 10212/10216); эта задача — его этап 1.
+- [ ] Внешние Spectator/Player с ботами; бой, урон с автором, смерть/призрак/возрождение, реестр SDK (покупка/готовность/команда — на флоу клиента в эпике).
+- [x] Perf и Quest перенесены в этапы 5–6 эпика bots-epic.
+- [ ] После соответствующей userQA — регрессии изменённого поведения, зональные review, FF origin/dev, task-close.

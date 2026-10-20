@@ -1,0 +1,32 @@
+{
+  "execution": "Повтор причинного пакета через штатный PlayLaunch; только дополнительная пассивная диагностика, без новых ожиданий.",
+  "common": {
+    "SchemaVersion": 1,
+    "Enabled": true,
+    "SceneSource": "scene",
+    "ScenePath": "Assets/Scenes/Maps/TestMap1.unity",
+    "Role": "server",
+    "NetworkPortPolicy": "auto",
+    "ClientCount": 2,
+    "AdditionalPlayerRoles": ["client", "client"],
+    "HostIsAdmin": false,
+    "DeviceType": "PC",
+    "GameRole": "Spectator",
+    "ModeId": "elimination",
+    "AutoGoLive": true,
+    "MinPlayers": 8,
+    "BotCount": 8,
+    "UseRandomSeed": true,
+    "RandomSeed": 20261018,
+    "PauseOnFocusLoss": false,
+    "ScreenshotOnButtonB": false,
+    "AllowUnmarked": false,
+    "Readiness": "map-playable",
+    "TimeoutSeconds": 180,
+    "NetworkStartupDiagnostics": true
+  },
+  "cases": [
+    {"id": "discovery-bot8", "ClientAddress": ""},
+    {"id": "localhost-bot8", "ClientAddress": "127.0.0.1"}
+  ]
+}

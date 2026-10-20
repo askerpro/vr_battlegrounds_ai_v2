@@ -1,0 +1,40 @@
+{
+  "base_sha": "2e1b6a2fc342e894d4b8526287b804fa5e3093b0",
+  "execution": "Только через штатный PlayLaunch после собственного begin/guard; этот файл не исполнитель и не результат проверки.",
+  "common": {
+    "SchemaVersion": 1,
+    "Enabled": true,
+    "SceneSource": "scene",
+    "ScenePath": "Assets/Scenes/Maps/TestMap1.unity",
+    "Role": "server",
+    "NetworkPortPolicy": "auto",
+    "ClientCount": 2,
+    "AdditionalPlayerRoles": ["client", "client"],
+    "HostIsAdmin": false,
+    "DeviceType": "PC",
+    "GameRole": "Spectator",
+    "ModeId": "elimination",
+    "AutoGoLive": true,
+    "MinPlayers": 8,
+    "UseRandomSeed": true,
+    "RandomSeed": 20261018,
+    "PauseOnFocusLoss": false,
+    "ScreenshotOnButtonB": false,
+    "AllowUnmarked": false,
+    "Readiness": "map-playable",
+    "TimeoutSeconds": 180
+  },
+  "cases": [
+    {"id": "discovery-bot0", "BotCount": 0, "ClientAddress": ""},
+    {"id": "discovery-bot8", "BotCount": 8, "ClientAddress": ""},
+    {"id": "localhost-bot0", "BotCount": 0, "ClientAddress": "127.0.0.1"},
+    {"id": "localhost-bot8", "BotCount": 8, "ClientAddress": "127.0.0.1"}
+  ],
+  "notes": [
+    "Разрешённые поля common и override объединяются в один PlayLaunchConfiguration; метаданные этого файла в JsonUtility не передавать.",
+    "Фактические PlanHash и NetworkPort/DiscoveryPort сохранять после Plan: auto фиксирует пару для всех участников каждого запуска.",
+    "При bot0 MinPlayers8 не даёт Combat: это контроль подключения и загрузки карты, не performance baseline и не матчевый PASS.",
+    "Сырые статусы и полные per-process logs обязательны. Исход причины не выводить только из Ready/timeout.",
+    "После каждого случая Stop, подтверждённый cleanup и архив логов. Новое действие не повторять при неизвестном исходе."
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "task_id": "bots-validation",
+  "owner": "bots-validation",
+  "client": "codex",
+  "worktree": "F:/CodexWorktrees/bots-validation",
+  "base_sha": "48d38b9b2885b771f9cc961b4b640eaa7f74ca9e",
+  "doc_path": "tasks/bots-validation/Readme.md",
+  "title": "Проверки ботов и запуск внешних клиентов",
+  "branch": "task/bots-validation",
+  "stages": [
+    {
+      "id": "floor-release",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Scenes/Debug/BotCombatStand.unity",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "experts/bots/journal/2026-10-19-bots-validation-floor.md",
+        "experts/gameplay/journal/2026-10-19-bots-validation-floor.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "build-helper-release",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Tools/release/Build-Game.ps1",
+        "experts/launch-infra/journal/2026-10-19-bots-validation-helper.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "restart-match-fix",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Scripts/Maps/TeamSpawnZone.cs",
+        "Assets/Scripts/Arsenal/ArsenalWallController.cs",
+        "Assets/Tests/EditMode/Maps/SpawnZoneOwnershipTests.cs",
+        "Assets/Tests/EditMode/Arsenal/ArsenalWallSlotInstallTests.cs",
+        "experts/gameplay/journal/2026-10-19-bots-validation-restart-match.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "startup-lifecycle",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Scripts/Network/GameNetworkManager.cs",
+        "Assets/Scripts/Network/GameNetworkDiscovery.cs",
+        "Assets/Scripts/Debug/DebugBootstrapGate.cs",
+        "Assets/Scripts/Debug/Bootstrap/PlayLaunchConfiguration.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunchNetworkDiagnostics.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunchNetworkDiagnostics.cs.meta",
+        "Assets/Tests/EditMode/Network/StartupConnectLifecycleTests.cs",
+        "Assets/Tests/EditMode/Network/StartupConnectLifecycleTests.cs.meta",
+        "experts/network/journal/2026-10-20-bots-validation-startup.md",
+        "experts/launch-infra/journal/2026-10-20-bots-validation-startup.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "startup-review-tails",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Scripts/Network/GameNetworkDiscovery.cs",
+        "Assets/Tests/EditMode/Network/StartupConnectLifecycleTests.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunch.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/StandManifest.cs",
+        "Assets/Scripts/Maps/TeamSpawnZone.cs"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "task-docs",
+      "writes": [
+        "tasks/bots-validation/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "external-diagnostics",
+      "writes": [
+        "tasks/bots-validation/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "external-runtime",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Scripts/Network/GameNetworkDiscovery.cs",
+        "Assets/Scripts/Network/GameNetworkManager.cs",
+        "Assets/Scripts/Network/HeadlessPrecacheGuard.cs",
+        "Assets/Scripts/Debug/DebugBootstrapGate.cs",
+        "Assets/Scripts/Debug/Bootstrap/PlayLaunchConfiguration.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunch.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunchNetworkDiagnostics.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunchNetworkDiagnostics.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeTestStand.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayModeStandParticipant.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/StandProtocol.cs"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "runtime-matrix",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandBuilder.cs",
+        "Assets/Scenes/Debug/BotCombatStand.unity",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "performance",
+      "writes": [
+        "tasks/bots-validation/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "quest",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Tools/release/Build-Game.ps1"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "regression-release",
+      "writes": [
+        "tasks/bots-validation/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

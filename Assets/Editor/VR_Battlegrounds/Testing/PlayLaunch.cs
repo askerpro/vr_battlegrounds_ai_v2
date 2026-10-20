@@ -299,7 +299,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 error = backend.Participants.FirstOrDefault(p => p.RunId == run.RunId && !string.IsNullOrEmpty(p.StartupError))?.StartupError;
             bool ready = run != null && run.Phase == "running" && backend.Participants.Length == run.Participants.Length &&
                 backend.Participants.All(p => p.LastSeenAgeSeconds <= 5 && p.Active && p.Playing && (run.SceneKind != "Game" ? !p.Server && !p.Client :
-                    ResolveParticipantConfiguration(run, p.ParticipantId).Role == "server" ? p.Server && !p.Client : p.Client && p.Connected));
+                    ResolveParticipantConfiguration(run, p.ParticipantId).Role == "server" ? p.Server && !p.Client : p.Client && p.Connected) &&
+                    // Сервер (и хост) готов, только когда открыл порт: active без сокета — ещё старт (S1).
+                    (run.SceneKind != "Game" || !p.Server || p.ServerAvailability == "Published"));
             if (ready && run.Configuration.Readiness == "map-playable") ready = backend.Participants.All(p => p.MapPlayable &&
                 p.MapRunValid && (!run.ExpectTargetScene || p.Scene == Path.GetFileNameWithoutExtension(run.TargetScenePath)));
             if (ready && run.Configuration.Readiness == "map-playable" && run.Configuration.HasOwnedServer)
@@ -313,7 +315,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
             string archive = string.IsNullOrEmpty(runId) ? null : PlayModeStandParticipant.LogArchiveDirectory(runId);
             // Архивы появляются только при Release/Leave; в running каталог не читаем — Tick вызывает Status каждый кадр.
             string[] archives = archive != null && (run == null || run.Phase != "running") && Directory.Exists(archive)
-                ? Directory.GetFiles(archive, "*.log").Select(p => p.Replace('\\', '/')).OrderBy(p => p, StringComparer.Ordinal).ToArray()
+                // Логи процессов и startup JSONL диагностики (NetworkStartupDiagnostics) лежат рядом.
+                ? Directory.GetFiles(archive).Where(p => p.EndsWith(".log", StringComparison.OrdinalIgnoreCase) ||
+                        p.EndsWith(".jsonl", StringComparison.OrdinalIgnoreCase))
+                    .Select(p => p.Replace('\\', '/')).OrderBy(p => p, StringComparer.Ordinal).ToArray()
                 : Array.Empty<string>();
             var participants = ReadRequest() != null && run == null ? Array.Empty<StandParticipantState>() : backend.Participants;
             var seedParticipant = participants.FirstOrDefault(p => p.Server) ?? participants.FirstOrDefault(p => p.RandomSeedApplied);

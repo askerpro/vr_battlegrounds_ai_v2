@@ -183,6 +183,11 @@ namespace VrBattlegrounds.EditorTools.TestStand
         public uint SessionNetId;
         public int ServerSessions;
         public bool ClientManagerReady;
+        /// <summary>Доступность сервера (<c>GameNetworkManager.Availability</c>): порт открыт только в Published.</summary>
+        public string ServerAvailability;
+        /// <summary>Фаза первого подключения клиента по явному адресу (<c>GameNetworkDiscovery.InitialPhase</c>).</summary>
+        public string InitialConnectPhase;
+        public int InitialConnectAttempt;
         public string DeviceToken;
         public string E2EStatus;
         public bool E2EFinished;

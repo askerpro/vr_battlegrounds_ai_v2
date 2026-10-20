@@ -94,3 +94,22 @@
 - Без владельца в expert.json: ArsenalItemGrab, SessionRecovery, ConnectPlaceAcrossMap, E2EKitSelfTest, DeviceSmoke,
   ScriptedClient, `E2E/Input/**`.
 - Нет host-топологии и мультишлемных прогонов на Quest; нет CI и gate «heavy перед merge».
+
+## uid-fix — UniqueId скриптового ввода в Unused-префабах (2026-10-20)
+
+- Причина: при вливании 43a771bcf (ScriptedInput в PlayerBase/GhostAvatar) Unity пересохранил варианты
+  `Assets/Prefabs/Player/Unused/*` с новыми `__prefabGuid` у ScriptedControllerInput, пересохранения не взяты;
+  UxrUniqueIdOnDiskTests красный (сообщение bots-validation 10166).
+- Аренда worker 862 (ключ `e2e-regression-uid-fix-2`; тикет 859 с ключом `-1` ранее завершился пустым).
+  До правки UxrUniqueIdOnDiskTests: Failed, 7 префабов (MEF_Base_Avatar, MEF_sdk_hands_Base/_Player,
+  Optimized_MEF_Player/_Black/_VRIK, PlayerBase_SdkHands).
+- `UxrUniqueIdPersister.Normalize(path)` для 10 префабов Unused (базы раньше вариантов): 7 сохранены, 3 в порядке.
+- После: группа EditMode `VrBattlegrounds.Tests.Prefabs` 634 = 604 passed / 24 failed / 6 skipped;
+  UxrUniqueIdOnDiskTests passed; 24 failed совпадают с красными базы
+  `bots-control-modes/reports/editmode-baseline-1` (GrabPoseCoverage cyborg ×21, KinemationWeapon R08,
+  ShotgunPellets, WeaponShotSound); skipped — Ignored «семья NonSdkHands не зарегистрирована». Новых красных нет.
+  Отчёт: `tasks/e2e-regression/reports/uid-fix/prefabs-after.json` (вне Git).
+- Diff (+374/−3): `__prefabGuid` ScriptedControllerInput (по 2 на префаб); в базах MEF_Base_Avatar и
+  MEF_sdk_hands_Base — пересчитанный `_rigInfo` UxrAvatar и его stripped-заглушка; поля NetworkTransform
+  `keyframeInterval/keyframeWarmup` по умолчанию; в _VRIK удалены `turnStartAngle/turnStopAngle/turnReleaseSpeed`,
+  которых нет в коде FinalIK. GUID, `_assetId` и ссылки не тронуты. Коммит a4d9a8db9 (после rebase на 2a5931352; новые коммиты dev префабы не трогают).

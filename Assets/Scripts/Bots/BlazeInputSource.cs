@@ -37,6 +37,12 @@ namespace VrBattlegrounds.Bots
         public const float ResyncDistance = 0.6f;
 
         private const float ReachTolerance = 0.02f;
+        /// <summary>Рукоять уже в ладони (покупка у кисти) — Grip сразу, не ждать, пока предмет упадёт, м.</summary>
+        private const float InHandTolerance = 0.005f;
+        /// <summary>Предмет дальше этого по горизонтали от головы — сначала подойти, м.</summary>
+        private const float ApproachDistance = 0.45f;
+        /// <summary>Глаза над предметом при наклоне к нему, м (рука тянется вниз).</summary>
+        private const float CrouchAboveItem = 0.55f;
         private const int ReachStableFrames = 3;
         private const int TriggerReleaseFrames = 2;
         private const int TriggerPressFrames = 3;
@@ -58,6 +64,10 @@ namespace VrBattlegrounds.Bots
         private Quaternion _aimRotation;
         private int _triggerFrames;   // > 0 — курок нажат ещё столько кадров
         private int _releasedFrames;  // сколько кадров курок отпущен
+        private bool _approach;       // идём к предмету: ходьба головой к нему, а не к ногам мозга
+        private Vector3 _approachFloor;
+        private bool _crouch;
+        private float _crouchEye;
 
         /// <summary>Общий пилот (только чтение: стенд, диагностика).</summary>
         public AvatarPilot Pilot => _pilot;
@@ -104,11 +114,28 @@ namespace VrBattlegrounds.Bots
             // Призрак ожил на месте (BotKit.Upgrade) — Blaze добавлен телу после привязки.
             if (_combat == null && _player != null && _player.IsAlive) _avatar.TryGetComponent(out _combat);
             _body.PrepareFrame();
-            Walk(dt);
             bool alive = _player != null && _player.IsAlive;
             if (_gunner != null && alive && (Time.frameCount + _seesPhase) % SeesIntervalFrames == 0) _gunner.RefreshSees();
+            _approach = false;
+            _crouch = false;
             Hands(alive);
+            // Ходьба после рук: подход к предмету заменяет шаг к ногам мозга (одна ходьба на кадр).
+            if (_approach) Approach(dt);
+            else Walk(dt);
+            if (_crouch) _pilot.CrouchTowards(_crouchEye, dt);
+            else _pilot.StandUp(dt);
             Trigger(alive);
+        }
+
+        /// <summary>
+        /// Подход к предмету, который дальше вытянутой руки: голова идёт к нему (≤ предела ходьбы), ноги мозга и прокси
+        /// Blaze — за головой. Как человек, который хочет взять своё оружие.
+        /// </summary>
+        private void Approach(float dt)
+        {
+            _pilot.StepTowards(_approachFloor, AvatarPilot.MaxWalkSpeed, dt, ApproachDistance * 0.5f);
+            _body.Place(_pilot.FloorPosition, _pilot.Yaw);
+            if (_combat != null) _combat.ResyncLegs(_pilot.FloorPosition);
         }
 
         private void Walk(float dt)
@@ -177,10 +204,36 @@ namespace VrBattlegrounds.Bots
                 }
 
                 // Кисть к снапу рукояти (кобура едет с корпусом — цель каждый кадр), Grip по прибытии.
-                if (grip.ComputeRequiredGrabberTransform(right, primary, out Vector3 snap, out Quaternion snapRotation, false))
-                    _pilot.ReachGrabber(UxrHandSide.Right, snap, snapRotation);
-                _rightAtTarget = _pilot.GrabberAtTarget(UxrHandSide.Right, ReachTolerance) ? _rightAtTarget + 1 : 0;
-                _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, _rightAtTarget >= ReachStableFrames);
+                if (!grip.ComputeRequiredGrabberTransform(right, primary, out Vector3 snap, out Quaternion snapRotation, false))
+                {
+                    Rest();
+                    return;
+                }
+
+                bool inHand = (right.transform.position - snap).magnitude <= InHandTolerance;
+                Vector3 toSnap = snap - _pilot.HeadPosition;
+                toSnap.y = 0f;
+                if (!inHand && toSnap.magnitude > ApproachDistance)
+                {
+                    // Дальше вытянутой руки — сначала подойти (руки опущены).
+                    _approach = true;
+                    _approachFloor = new Vector3(snap.x, _pilot.FloorPosition.y, snap.z);
+                    _rightAtTarget = 0;
+                    _pilot.Rest(UxrHandSide.Right);
+                    _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, false);
+                    return;
+                }
+
+                // Низкий предмет (лежит на полу) — присесть так, чтобы рука дотянулась.
+                if (snap.y < _pilot.FloorPosition.y + _pilot.EyeHeight - AvatarPilot.MaxReach * 0.8f)
+                {
+                    _crouch = true;
+                    _crouchEye = snap.y - _pilot.FloorPosition.y + CrouchAboveItem;
+                }
+
+                _pilot.ReachGrabber(UxrHandSide.Right, snap, snapRotation);
+                _rightAtTarget = inHand || _pilot.GrabberAtTarget(UxrHandSide.Right, ReachTolerance) ? _rightAtTarget + 1 : 0;
+                _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, inHand || _rightAtTarget >= ReachStableFrames);
                 return;
             }
 

@@ -36,7 +36,15 @@ namespace VrBattlegrounds.Player.Input
     {
         public const float MaxWalkSpeed = 1.2f;
         public const float DefaultEyeHeight = 1.6f;
+
+        /// <summary>Сенсор контроллера не дальше этого от головы, м: рука человека не тянется через комнату.</summary>
+        public const float MaxReach = 0.85f;
+
+        /// <summary>Ниже этой высоты глаз не приседает, м.</summary>
+        public const float MinCrouchEyeHeight = 0.9f;
+
         private const float TurnSpeed = 180f;
+        private const float CrouchSpeed = 1.2f;
 
         private enum HandMode { Rest, Target }
 
@@ -52,6 +60,7 @@ namespace VrBattlegrounds.Player.Input
         private Vector3 _headWorld;          // мировая точка головы (пол корня + рост)
         private float _yaw;                  // курс головы, градусы в мире
         private float _pitch;                // тангаж взгляда, градусы (вниз — плюс)
+        private float _eye;                  // текущая высота глаз над полом (присед ниже EyeHeight)
         private bool _placed;
         private HandState _left;
         private HandState _right;
@@ -66,7 +75,10 @@ namespace VrBattlegrounds.Player.Input
         public Vector3 HeadPosition => _headWorld;
 
         /// <summary>Мировая точка пола под головой.</summary>
-        public Vector3 FloorPosition => _avatar != null ? _headWorld - _avatar.transform.up * EyeHeight : _headWorld;
+        public Vector3 FloorPosition => _avatar != null ? _headWorld - _avatar.transform.up * CurrentEyeHeight : _headWorld;
+
+        /// <summary>Текущая высота глаз над полом (ниже <see cref="EyeHeight"/> — присел).</summary>
+        public float CurrentEyeHeight => _eye > 0f ? _eye : EyeHeight;
 
         public float Yaw => _yaw;
 
@@ -92,6 +104,7 @@ namespace VrBattlegrounds.Player.Input
             AvatarCalibrationApplier applier = avatar.GetComponent<AvatarCalibrationApplier>();
             EyeHeight = applier != null && applier.Applied.HasEyeHeight ? applier.Applied.EyeHeight : DefaultEyeHeight;
             if (continueHead) return;
+            _eye = EyeHeight;
 
             Transform root = avatar.transform;
             _headWorld = root.position + root.up * EyeHeight;
@@ -123,6 +136,26 @@ namespace VrBattlegrounds.Player.Input
             _headWorld += delta / distance * step;
             return distance - step <= tolerance;
         }
+
+        /// <summary>
+        /// Присесть или встать: высота глаз над полом движется к <paramref name="eyeHeight"/> (не ниже
+        /// <see cref="MinCrouchEyeHeight"/>, не выше роста) со скоростью человека. Пол под головой не меняется.
+        /// </summary>
+        public void CrouchTowards(float eyeHeight, float deltaTime)
+        {
+            if (_avatar == null || !_placed) return;
+            float target = Mathf.Clamp(eyeHeight, MinCrouchEyeHeight, EyeHeight);
+            float current = CurrentEyeHeight;
+            float next = Mathf.MoveTowards(current, target, CrouchSpeed * deltaTime);
+            _headWorld += _avatar.transform.up * (next - current);
+            _eye = next;
+        }
+
+        /// <summary>Встать в полный рост.</summary>
+        public void StandUp(float deltaTime) => CrouchTowards(EyeHeight, deltaTime);
+
+        /// <summary>Мировая точка в пределах вытянутой руки от головы.</summary>
+        public bool CanReach(Vector3 worldPoint) => (worldPoint - _headWorld).magnitude <= MaxReach;
 
         /// <summary>Поворачивает курс головы к мировому направлению (без тангажа). true — повернул.</summary>
         public bool TurnTowards(Vector3 worldDirection, float deltaTime, float toleranceDeg = 1f)
@@ -213,6 +246,10 @@ namespace VrBattlegrounds.Player.Input
                 sensorPosition = _headWorld + bodyRotation * (restHand.Position - rest.HeadPosition);
                 sensorRotation = bodyRotation * restHand.Rotation;
             }
+
+            // Рука человека не длиннее руки: цель дальше — контроллер на вытянутой руке в её сторону.
+            Vector3 fromHead = sensorPosition - _headWorld;
+            if (fromHead.magnitude > MaxReach) sensorPosition = _headWorld + fromHead.normalized * MaxReach;
 
             return new DeviceHand
             {

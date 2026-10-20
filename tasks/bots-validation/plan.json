@@ -94,6 +94,15 @@
       "needs": []
     },
     {
+      "id": "task-close-docs",
+      "writes": [
+        "tasks/bots-validation/**",
+        "experts/bots/journal/2026-10-20-bots-validation-close.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "cprime-probes",
       "writes": [
         "tasks/bots-validation/**",

@@ -88,3 +88,11 @@ reports/boxuv-apply-20261020/*.png (временная камера, не вид
 у Link/Cartridge — от загрузки префабов ленты при сканировании, к BoxUv не относятся (не разбирались).
 Коммит 3cc74cf59 (технический). Дальше: Windows e2e для показа, затем APK и normal A/B на Quest.
 Слои R/G по vertex paint, нормали, краевой шум и насыщенность не переносятся (это и есть экономия).
+
+## Манифест производительности Quest (задача quest-perf-manifest, влита 7d0b86b15)
+
+`Docs/quest-performance-manifest.md` в origin/dev ссылается на находки этой задачи. При вливании scene-detail
+в том же изменении: дописать цены финального A/B (box-UV + Baked Lit, 91 материал, свет шатра) в QPM-SHADER-001/
+LIGHT-002/REFL-001, перевести BoxUv, LobbyTentFloorLightmap, render_diag и meta_renderdoc_quest.py в «Статус
+инструментов» как влитые, поправить источник чисел LOD башни в QPM-LOD-001 (аудит в Unity субагента, тикеты
+896/905, а не аудит UV 888). Ревью performance и level-design.

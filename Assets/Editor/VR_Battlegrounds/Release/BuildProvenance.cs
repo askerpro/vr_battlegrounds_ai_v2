@@ -198,7 +198,8 @@ namespace VrBattlegrounds.EditorTools.Release
                     "Assets/Editor/VR_Battlegrounds/Release/BuildRevisionStamp.cs",
                     "Assets/Editor/VR_Battlegrounds/Release/BuildSceneResolver.cs",
                     "Assets/Editor/VR_Battlegrounds/Release/XrBuildSettingsScope.cs",
-                    "Tools/release/Build-Game.ps1", "Tools/e2e/Run-E2E.ps1", "Tools/e2e/Run-QuestE2E.ps1"
+                    "Tools/release/Build-Game.ps1", "Tools/release/BuildCheckoutGenerated.ps1",
+                    "Tools/e2e/Run-E2E.ps1", "Tools/e2e/Run-QuestE2E.ps1"
                 }));
                 _actual["capturedUtc"] = Utc(DateTime.UtcNow);
             }

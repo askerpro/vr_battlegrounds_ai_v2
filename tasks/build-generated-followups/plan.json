@@ -1,0 +1,26 @@
+{
+  "task_id": "build-generated-followups",
+  "owner": "build-generated-followups",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/build-generated-followups",
+  "base_sha": "d4cb9c51928f4fb8a32dc61c857f768855600350",
+  "doc_path": "tasks/build-generated-followups/Readme.md",
+  "title": "Доработки generated-файлов сборочных checkout",
+  "branch": "task/build-generated-followups",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/build-generated-followups/**",
+        "Tools/release/Build-Game.ps1",
+        "Tools/release/BuildCheckoutGenerated.ps1",
+        "Tools/release/tests/test_build_checkout_generated.py",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Assets/Editor/VR_Battlegrounds/Release/BuildProvenance.cs",
+        "experts/launch-infra/journal/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

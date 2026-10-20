@@ -65,8 +65,11 @@ function Test-GeneratedPrefilterChange([string] $WorktreePath, [string] $Rel) {
     if ($LASTEXITCODE -ne 0) { return 'git diff не выполнился' }
     $removed = New-Object System.Collections.Generic.List[string]
     $added = New-Object System.Collections.Generic.List[string]
+    # Заголовок diff — только до первого hunk: внутри hunk '--- '/'+++ ' — удалённые/добавленные строки файла.
+    $inHunk = $false
     foreach ($line in $diff) {
-        if ($line -cmatch '^(diff --git |index |--- |\+\+\+ |@@ )') { continue }
+        if ($line -cmatch '^@@ ') { $inHunk = $true; continue }
+        if (-not $inHunk -and $line -cmatch '^(diff --git |index |--- |\+\+\+ )') { continue }
         if ($line -cmatch '^([-+])  (m_Prefilter[A-Za-z0-9]*): -?\d+$') {
             if ($Matches[1] -ceq '-') { $removed.Add($Matches[2]) } else { $added.Add($Matches[2]) }
             continue

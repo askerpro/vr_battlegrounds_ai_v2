@@ -973,13 +973,20 @@ if ($Build) {
                 'Выровняй оба сборочных worktree на один коммит перед парной сборкой.')
         }
         # Известные generated-файлы Unity (Tools/release/BuildCheckoutGenerated.ps1) не мешают: их возвращаем
-        # к индексу; любые другие правки по-прежнему отменяют парную сборку.
+        # к индексу; любые другие правки по-прежнему отменяют парную сборку. Текущий проект ($RepoRoot), указанный
+        # явным -Win64BuildWorktree/-AndroidBuildWorktree, не выделенный сборочный checkout: как в Build-Game.ps1,
+        # в нём мешает любое изменение и ничего не возвращается.
         . (Join-Path $RepoRoot 'Tools\release\BuildCheckoutGenerated.ps1')
+        $repoRootFull = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd('\', '/')
         $generatedByWt = @{}
         foreach ($buildWt in $buildWorktreesToCheck) {
             try { $changes = Get-BuildCheckoutChanges $buildWt } catch { Stop-Refused ('-Build: ' + $_.Exception.Message) }
-            if ($changes.Unexpected.Count -gt 0) {
-                Stop-Refused ('-Build: в сборочном worktree ' + $buildWt + ' есть незакоммиченные правки в Assets/Packages/ProjectSettings; парная сборка из двух worktree требует чистых копий на одном SHA.') @($changes.Unexpected | Select-Object -First 10)
+            $blocking = @($changes.Unexpected)
+            if ([System.IO.Path]::GetFullPath($buildWt).TrimEnd('\', '/') -ieq $repoRootFull) {
+                $blocking += @($changes.Generated | ForEach-Object { $_ + ' — generated-файл, но в текущем проекте не возвращается к индексу' })
+            }
+            if ($blocking.Count -gt 0) {
+                Stop-Refused ('-Build: в сборочном worktree ' + $buildWt + ' есть незакоммиченные правки в Assets/Packages/ProjectSettings; парная сборка из двух worktree требует чистых копий на одном SHA.') @($blocking | Select-Object -First 10)
             }
             $generatedByWt[$buildWt] = $changes.Generated
         }

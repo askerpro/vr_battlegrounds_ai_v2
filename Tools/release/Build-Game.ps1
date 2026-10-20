@@ -263,7 +263,9 @@ function Read-ValidatedBuildProfile([string] $ManifestPath, [string] $ArtifactRo
     return [pscustomobject]@{ Manifest = $manifest; Record = $record }
 }
 
-function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed, $Recovery = $null) {
+# $Generated: checkout -> @{ путь -> sha256 } generated-файлов, классифицированных BuildCheckoutGenerated.ps1 после
+# сборки. Запись dirty builder manifest с тем же путём и sha256 помечается generated и не делает пару dirty.
+function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed, $Recovery = $null, $Generated = @{}) {
     $profiles = New-Object System.Collections.Generic.List[object]
     $origins = New-Object System.Collections.Generic.List[object]
     $dirtyEntries = New-Object System.Collections.Generic.List[object]
@@ -290,11 +292,17 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
                     $record = $validated.Record
                     if ($null -ne $Recovery) { $record.outputRoot = $artifactRoot }
                     $origins.Add([ordered]@{ path = $manifestPath; sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant() })
-                    if ($manifest.dirty.value -isnot [bool]) { $dirtyKnown = $false }
-                    elseif ($manifest.dirty.value) { $dirtyValue = $true }
-                    foreach ($entry in @($manifest.dirty.entries)) {
-                        $dirtyEntries.Add([ordered]@{ checkout = $run.ProjectPath; evidence = $entry })
+                    $generatedHashes = $Generated[$run.ProjectPath]
+                    $entries = @($manifest.dirty.entries)
+                    $sourceDirty = $entries.Count -eq 0
+                    foreach ($entry in $entries) {
+                        $isGenerated = $null -ne $generatedHashes -and $entry.status -ceq ' M' -and
+                            $null -ne $entry.sha256 -and $generatedHashes[[string]$entry.path] -ceq $entry.sha256
+                        if (-not $isGenerated) { $sourceDirty = $true }
+                        $dirtyEntries.Add([ordered]@{ checkout = $run.ProjectPath; evidence = $entry; generated = $isGenerated })
                     }
+                    if ($manifest.dirty.value -isnot [bool]) { $dirtyKnown = $false }
+                    elseif ($manifest.dirty.value -and $sourceDirty) { $dirtyValue = $true }
                 } catch {
                     $record = $null
                     $reason = $_.Exception.Message
@@ -324,7 +332,10 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
     $pair = [ordered]@{
         schemaVersion = 1; sourceSha = $Heads[$Runs[0].ProjectPath]; sourceShaReason = $null
         sourceKind = 'unknown'; sourceKindReason = 'Подтверждённый accepted/checkpoint proof не передан; Git HEAD не доказывает приёмку'
-        dirty = @{ value = $dirty; entries = $dirtyEntries.ToArray(); reason = $(if (-not $dirtyKnown) { 'Часть builder manifests не предоставила dirty evidence' } else { $null }) }
+        dirty = @{
+            value = $dirty; entries = $dirtyEntries.ToArray(); reason = $(if (-not $dirtyKnown) { 'Часть builder manifests не предоставила dirty evidence' } else { $null })
+            generatedRule = 'generated=true: известный generated-файл сборочного checkout (Tools/release/BuildCheckoutGenerated.ps1) с тем же sha256 после сборки; value его не учитывает'
+        }
         profiles = $profiles.ToArray(); sourceManifests = $origins.ToArray(); success = $passed
         generatedUtc = [DateTimeOffset]::UtcNow.ToString('o')
     }
@@ -780,6 +791,8 @@ $pairRunSuccess = $true
 } finally {
     # Unity переписала generated-файлы при запуске и сборке; возвращаем их, чтобы checkout остался чистым.
     # Неожиданные изменения не трогаем: следующий -Ref на них откажет. Ошибка здесь не меняет итог сборки.
+    # sha256 generated-файлов до возврата — доказательство для пометки dirty-записей builder manifests.
+    $generatedAfterBuild = @{}
     if ($buildTerminal.Count -gt 0) {
         foreach ($wt in $dedicatedWorktrees) {
             try {
@@ -789,6 +802,11 @@ $pairRunSuccess = $true
                 }
                 $after = Get-BuildCheckoutChanges $wt
                 if ($after.Generated.Count -gt 0) {
+                    $hashes = @{}
+                    foreach ($path in $after.Generated) {
+                        $hashes[$path] = (Get-FileHash -LiteralPath (Join-Path $wt $path) -Algorithm SHA256).Hash.ToLowerInvariant()
+                    }
+                    $generatedAfterBuild[$wt] = $hashes
                     Restore-GeneratedBuildChanges $wt $after.Generated (Join-Path $logDir ('build-' + $stamp + '-generated-after-' + (Get-BuildCheckoutLabel $wt) + '.patch'))
                 }
                 if ($after.Unexpected.Count -gt 0) {
@@ -801,7 +819,7 @@ $pairRunSuccess = $true
         }
     }
     try {
-        $pairManifest = Write-BuildPairManifest $runs $worktreeHeads $buildTerminal $pairRunSuccess
+        $pairManifest = Write-BuildPairManifest $runs $worktreeHeads $buildTerminal $pairRunSuccess $null $generatedAfterBuild
         Write-Host ('Build manifest: ' + $pairManifest.Path)
         if ($pairRunSuccess -and -not $pairManifest.Passed) {
             Write-Host 'Provenance не подтверждает текущие успешные builder artifacts; смотри pair manifest.' -ForegroundColor Red

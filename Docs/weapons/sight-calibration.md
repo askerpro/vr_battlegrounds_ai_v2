@@ -17,6 +17,11 @@
 `d6c0fded0` (2026-10-06) дополнил [H]/[M]: разделение мушки/целика MKR9, назначение маркеров, витрина аксессуаров.
 Текущие версии лежат в `Docs/tasks/weapon-sight-*.md`.
 
+Обновлено 2026-10-20: разделы 1–8 описывают первый этап (ручной стенд, 2026-10-04/09). Действующий конвейер
+2026-10-12 (комплекты, разделитель, Sight Auto-Zero, оптика TR15) — [раздел 9](#9-конвейер-sight-auto-zero-2026-10-12);
+где лежат Blender-исходники, генераторы, отчёты и доказательства — [раздел 10](#10-материалы-и-где-их-искать).
+Финальная калибровка стволов ведётся задачей [`tasks/weapon-sight-calibration/`](../../tasks/weapon-sight-calibration/Readme.md).
+
 ## 1. Назначение
 
 Сделать так, чтобы на выбранной дистанции сведения точка, на которую указывает прицел, математически совпадала с
@@ -74,7 +79,7 @@ SightType с eye relief, exit pupil, zoom и фокусом. Вид ассета
 | Адресный zero | `WeaponSightCalibrationProfile`: WeaponInfo + SightId + trigger/shotType index. Ручной стенд пишет в `…/SightCalibration/Manual/` |
 | Опоры R/F | `SightAlignmentMarker` (роль Rear/Front) на Empty внутри детали целика/мушки, в префабе проверочной копии |
 | Сессия стенда | `ManualSightCalibrationSession` (сцена `Assets/Scenes/Tools/WeaponSightManualCalibration.unity`, вне Build Settings) |
-| Оптика | `WeaponOpticView` на линзе (сейчас только `TR15_SightReview`, `_sightId: XPS2`, 15 м) + `Assets/Art/Weapons/Sights/FiniteFocusReticle.shader` |
+| Оптика | `WeaponOpticView` на линзе (`TR15_SightReview` и с 2026-10-12 основной `TR15` через `Tr15OpticBuilder`, `_sightId: XPS2`, 15 м) + `Assets/Art/Weapons/Sights/FiniteFocusReticle.shader` |
 | Проверочные копии | `Assets/Prefabs/Weapons/SightReview/*_SightReview.prefab` (5 шт.), черновики — `…/SightCalibrationDrafts/` |
 
 ## 3. Инварианты
@@ -198,3 +203,55 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
 - Ни одного ассета `WeaponSightCalibrationProfile` нет; папки `…/SightCalibration/Manual/` нет. `Review/*.asset` — это
   `WeaponInfo` копий, а не профили. Save жёстко пишет `_sightId = "ManualIron"` и всегда включает override.
 - `MKR9_NativeProbe_b1bbb91d.prefab` (неуспешная проба Save, не игровое оружие) всё ещё в репозитории.
+
+## 9. Конвейер Sight Auto-Zero (2026-10-12)
+
+Этапы weapon-system `sight-tr15-optic` (`5fc162060`), `sight-iron-kits` (`a3b06c637`), `sight-arsenal-dedupe`
+(`b624fdb3c`); решения — [decisions.md](decisions.md) (2026-10-11/12), журнал —
+`experts/weapon-system/journal/2026-10-12-sight-tools.md`. Пользователь 2026-10-12: «пока только инструменты,
+финальная калибровка — отдельной задачей».
+
+**Механика (решения 2026-10-12).** Регулировочные детали (столбик мушки, блок целика) — отдельные статические
+объекты, не skinned; pivot ровно на точке прицеливания (F — вершина мушки, R — центр отверстия/прорези). Сведение —
+одной деталью и только по высоте: решатель двигает деталь, чтобы линия R→F прошла через ShotSource + Z (Z = 15 м);
+боковая ошибка показывается, но не исправляется. Рамки только в поднятом положении. Ход: TR15 −8/+3 мм, Mk14 +8 мм,
+Viper −4 мм, остальные ±3 мм.
+
+| Часть | Где | Что |
+|---|---|---|
+| Комплекты | `Assets/Art/Weapons/Sights/IronKits/*.fbx`, `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68}.prefab`; сборщик — меню `…/Weapons/Sights/Build Iron Sight Kits` (`SightKitBuilder`) | Нарезаны в Blender из пака. TR15: R→F 300 мм, F выше R на 4,44 мм; MX68: R→F 365,9 мм. Комплект — один объект на планке, масштаб через `SightKitScale` |
+| Подвижная деталь | `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` | Ход только по локальной Y (travelDown/Up) |
+| Решатель | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/SightAutoZeroSolver.cs` | Аналитическое «Свести» |
+| Окно | `Tools/VR Battlegrounds/Weapons/Sight Auto-Zero` (`SightAutoZeroWindow`) | Режимы «комплект на планке» и «Родной прицел»; стенд — несохраняемая сцена. `SaveUnlocked`/`ApplyUnlocked` = false до задачи калибровки; у «Родного прицела» Apply не написан |
+| Таблица | `Assets/Data/WeaponSystem/Sights/WeaponSightTable.asset` | Пуста (`_entries: []`) |
+| Writer комплекта | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/WeaponSightAuthoring.cs` | Вставка nested `SightKit_*` под `MeshContainer`, компенсация масштаба корня, канонический `_assetId`. Третий писатель префабов — см. инвариант 6 |
+| Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, `SightSplitTable` …) | Выносит подвижный остров вшитого прицела на копии ствола (меши в памяти), 11 стволов. Таблица **генерируется** (раздел 10), привязана к GUID/localFileId и числу вершин меша. Встроить в `KinemationWeaponBuilder`/`HandsPackWeaponBuilder` — не сделано |
+| Оптика TR15 | `Assets/Editor/VR_Battlegrounds/Gameplay/Tr15OpticBuilder.cs` | Коллиматор XPS2 в основном TR15, принят в шлеме |
+| Тесты | `Assets/Tests/EditMode/Sights/*`, `Assets/Tests/EditMode/SightSplit/*` | 104/104 на 2026-10-12 |
+
+**Решатель на стенде «Родной прицел» (Z = 15 м), не применено:** AK105 +0,91; R08 +0,57; MP5K −0,90; Uzi −0,90;
+Herrington +1,65; Revolver +0,39; Gun −0,19; Scar −2,03; Mk14 +6,67; Viper −3,07 мм. PPK — только показ ошибки
+(+14,7 мм на 15 м). Комплект TR15 на AR-15 требует −5,6 мм.
+
+**Не покрыто:** M16 (нужен комплект TR15); SRM12, SniperRifle, MKR9 — пересадка комплектом; ShotgunReal не
+калибруется; SDKGun, SDK ShotGun, Machinegun — решения нет.
+
+**Ловушки:** `SaveAsPrefabAsset` обнуляет `NetworkIdentity._assetId` (тест `NetworkAssetIdOnDiskTests`); пересборка
+сборщиком пака ломает `SightSplitTable` и баланс (`WeaponBalanceApplier.Apply`); целик Viper и обе половины Browning
+сидят на затворе и едут с ним; копии `*_SightReview` сняты со стены лобби, но ещё в `WeaponRegistry.asset` и
+`ArsenalCompositionCatalog.asset`.
+
+## 10. Материалы и где их искать
+
+| Что | Где |
+|---|---|
+| Рабочая задача финальной калибровки: состояние, решения, хронология, зависимости | `tasks/weapon-sight-calibration/` — `Readme.md`, `Details.md` |
+| Blender-исходники: нарезка комплектов TR15/MX68, разборы островов 16 стволов | `tasks/weapon-sight-calibration/blender/` (`iron-kits.blend`, `iron-split.blend`, `iron-split-2.blend`, скриншоты pivot) |
+| Генератор `SightSplitTable.cs` и входы | `tasks/weapon-sight-calibration/tools/sight-split/` (`gen_table.py`, `islands*.json`, шаблон); описание — `tools/Readme.md` |
+| Сухой прогон разделителя по стволам (острова, точки, ход) | `tasks/weapon-sight-calibration/changelog/2026-10-12-sight-split-dry-run-485.txt` |
+| Итоги аренд Unity: размеры комплектов, проверки Apply, решатель, тесты разделителя | `tasks/weapon-sight-calibration/changelog/2026-10-12-sight-*-leases-*.md` |
+| Скрипты и MCP-сниппеты исследования 2026-10-04/05 (аудит, геометрия, доноры SniperRifle) | `tasks/weapon-sight-calibration/tools/research-2026-10-04/` |
+| План этапов weapon-system по прицелам | `tasks/weapon-system/plan.json` (`sight-tr15-optic`, `sight-iron-kits`, `sight-arsenal-dedupe`) |
+| Документы первого этапа | `Docs/tasks/weapon-sight-*.md` |
+| Дельта стрельбища Lobby | `Tools/Checkpoints/WeaponSightCalibration/lobby-range.patch` |
+| Вне Git, только на этой машине: скриншоты разборов, пакет доказательств 2026-10-05, визуальные обзоры, кандидаты звука щитов | `F:/UnityProjects/Vr_Battlegrounds_ai/tasks/weapon-sight-calibration/reports/`, `…/Docs/tasks/report/weapon-sight-calibration/`, `…/tmp/weapon-sight-calibration/`; оригиналы отчётов этапов — `F:/CodexWorktrees/weapon-system/tasks/weapon-system/reports/` |

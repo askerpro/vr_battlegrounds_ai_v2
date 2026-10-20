@@ -57,10 +57,11 @@
 - **SHA — только из git.** Однажды напечатанный по памяти SHA сломал merge-request.
 - Тело `coordination.py message` — одна строка без кавычек внутри.
 - После вливания у задачи нет активного этапа: хук блокирует запись (кроме Readme/Details/plan.json и reports/).
-- Офлайн-компиляция без Unity — `tasks/weapon-system/tools/compile.ps1`; фоновые `wait-claim.ps1` (offer → claim
-  сразу, предложение истекает) и `permit-renew.ps1` (допуск, пока пользователь в шлеме) — там же
-  ([tools/Readme.md](../../tasks/weapon-system/tools/Readme.md)). Хук может не дать остановить фоновую задачу —
-  останавливать удалением флага.
+- Офлайн-компиляция без Unity — `tasks/weapon-system/tools/compile.ps1`; фоновый `permit-renew.ps1` (допуск,
+  пока пользователь в шлеме) — там же ([tools/Readme.md](../../tasks/weapon-system/tools/Readme.md)). Хук может
+  не дать остановить `permit-renew.ps1` — останавливать удалением флага.
+- Аренду получать только фоновым `claim --wait --out <файл>` (оффер живёт 60 с), без самодельных обёрток
+  offer → claim — [unity_sharing.md](../../.agents/rules/unity_sharing.md).
 - «Оружие не стреляет нигде, учёт отклоняет команды»: сначала искать исключение в чужом коде внутри синхронизации
   SDK — оно оставляет `UxrStateSyncImplementer.SyncCallDepth > 0`, и учёт считает каждую команду вложенной (так было
   с `_avatarRenderers` Cyborg, исправлено avatar-renderer-regression f33e5f4e). «Не стреляет только в раунде» —

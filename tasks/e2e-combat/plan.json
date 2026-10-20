@@ -1,0 +1,32 @@
+{
+  "task_id": "e2e-combat",
+  "owner": "e2e-combat",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-combat",
+  "base_sha": "ae095ad49e7ff1f8254d65e75819b7b540700554",
+  "doc_path": "tasks/e2e-combat/Readme.md",
+  "title": "E2E этап 2: бой скриптовыми клиентами",
+  "branch": "task/e2e-combat",
+  "stages": [
+    {
+      "id": "hit",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "tasks/e2e-combat/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-combat/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

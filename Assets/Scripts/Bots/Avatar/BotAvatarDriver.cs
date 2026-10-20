@@ -68,9 +68,11 @@ namespace VrBattlegrounds.Bots
         /// </summary>
         public bool DrivesDeadBody { get; internal set; }
 
-        /// <summary>Пишет ли драйвер на этой машине: сервер/хост, автор мира, аватар без владельца.</summary>
+        /// <summary>Пишет ли драйвер на этой машине: сервер/хост, автор мира, аватар без владельца и без устройства ввода.</summary>
         public bool CanDrive => NetworkServer.active && StateEventAuthority.IsWorldAuthority && _avatar != null &&
-                                _identity != null && _identity.connectionToClient == null;
+                                _identity != null && _identity.connectionToClient == null &&
+                                // bot-input: тело на вводе устройства ведёт код человека — второго писателя нет.
+                                !VrBattlegrounds.Player.Input.AvatarInputDevice.IsDriven(_avatar);
 
         /// <summary>Намерения этого кадра. Применяются до Manipulation; без нового кадра держится прежний.</summary>
         public void Submit(in BotInputFrame frame)

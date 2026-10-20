@@ -225,7 +225,9 @@ namespace VrBattlegrounds.Bots
             if (session == null) return null;
 
             _bots.Add(session);
-            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, AutoEquip = options?.AutoEquip ?? true };
+            // Источник ввода — до SpawnBody: AvatarSpawned (сборка комплекта) приходит внутри спавна.
+            _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, AutoEquip = options?.AutoEquip ?? true,
+                                            InputSource = options?.InputSource };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
@@ -323,6 +325,13 @@ namespace VrBattlegrounds.Bots
         private void Think(PlayerSession bot, BotMind mind, BotStage stage)
         {
             PlayerController avatar = bot.ActiveAvatar;
+            // Бот на вводе устройства: решений директора нет — всё делает источник ввода (bot-input).
+            if (mind.InputSource != null)
+            {
+                if (!avatar.TryGetComponent(out BotInputKit _)) AttachKit(mind, avatar);
+                return;
+            }
+
             BotKitRefs kit = mind.Kit;
             if (kit == null || !ReferenceEquals(kit.Avatar, avatar))
             {
@@ -575,6 +584,15 @@ namespace VrBattlegrounds.Bots
         private static void AttachKit(BotMind mind, PlayerController avatar)
         {
             if (avatar == null) return;
+
+            if (mind.InputSource != null)
+            {
+                // Новое тело на той же карте продолжает с прежней позы головы (физическая голова не телепортируется).
+                bool sameScene = mind.SceneHandle == SceneManager.GetActiveScene().handle;
+                BotInputKit.Attach(avatar, mind.InputSource, keepHead: sameScene);
+                mind.SceneHandle = SceneManager.GetActiveScene().handle;
+                return;
+            }
 
             if (mind.Kit != null && ReferenceEquals(mind.Kit.Avatar, avatar))
             {

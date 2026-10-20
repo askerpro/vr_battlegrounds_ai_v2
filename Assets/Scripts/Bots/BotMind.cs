@@ -19,6 +19,9 @@ namespace VrBattlegrounds.Bots
         /// <summary>Директор управляет закупкой и вооружением; задаётся при добавлении бота.</summary>
         public bool AutoEquip = true;
 
+        /// <summary>Источник ввода бота (<see cref="BotAddOptions.InputSource"/>); null — прежний комплект player-flow.</summary>
+        public VrBattlegrounds.DevTools.E2E.Input.IAvatarInputSource InputSource;
+
         /// <summary>
         /// Комплект бот-компонентов текущего тела (<see cref="BotKit"/>): один раз на тело, ссылки без поиска в тике.
         /// Пишет только директор (по <c>AvatarSpawned</c>, повышение пассивного — в тике).

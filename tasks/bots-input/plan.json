@@ -32,7 +32,8 @@
         "Assets/Scripts/Player/Avatars/RemoteAvatarIKThrottle.cs",
         "Assets/Scripts/Debug/E2E/Input/**",
         "Assets/Scripts/Bots/**",
-        "Assets/Scripts/Debug/BotCombatStand/**"
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**"
       ],
       "after": [],
       "needs": []

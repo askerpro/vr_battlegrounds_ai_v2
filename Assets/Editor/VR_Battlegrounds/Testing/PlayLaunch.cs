@@ -67,12 +67,25 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private static Func<string> _nativeClientAddress;
         private static Func<GameNetworkDiscovery.AppRole?> _nativeRole;
         [Serializable] private sealed class RequestState { public string Owner; public string RunId; public ResolvedPlayPlan Plan; }
+        // Рекурсивный GetDependencies сцены стоит ~1 с (Lobby: ~2400 зависимостей), а окно строит план на каждую правку.
+        // Разметка сцены меняется только вместе с ассетами проекта: кэш сбрасывается по projectChanged.
+        private static readonly System.Collections.Generic.Dictionary<string, (bool Game, bool Standalone)> SceneMarkers =
+            new System.Collections.Generic.Dictionary<string, (bool Game, bool Standalone)>(StringComparer.Ordinal);
 
         static PlayLaunch()
         {
             PlayLaunchSettings.BindActiveLaunch(ParticipantConfiguration, () => StandManifest.Read() != null || ReadRequest() != null);
             EditorApplication.update += Tick;
+            EditorApplication.projectChanged += SceneMarkers.Clear;
             SceneManager.sceneLoaded += HandleNativeScene;
+        }
+        private static (bool Game, bool Standalone) ReadSceneMarkers(string target)
+        {
+            if (SceneMarkers.TryGetValue(target, out var markers)) return markers;
+            string[] dependencies = AssetDatabase.GetDependencies(target, true);
+            markers = (dependencies.Contains("Assets/Scripts/Maps/Runtime/MapRoot.cs"), dependencies.Contains("Assets/Scripts/Core/StandaloneSceneMarker.cs"));
+            SceneMarkers[target] = markers;
+            return markers;
         }
 
         private static RequestState ReadRequest()
@@ -178,9 +191,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
                 string target = config.SceneSource == "scene" ? config.ScenePath : config.SceneSource == "lobby" ? "Assets/Scenes/Lobby.unity" : SceneManager.GetActiveScene().path;
                 if (string.IsNullOrEmpty(target) || target == "Assets/Scenes/Offline.unity") target = "Assets/Scenes/Lobby.unity";
                 if (AssetDatabase.LoadAssetAtPath<SceneAsset>(target) == null) throw new PlayLaunchException("SceneNotLoadable", "Сцена не найдена: " + target);
-                string[] dependencies = AssetDatabase.GetDependencies(target, true);
-                bool game = dependencies.Contains("Assets/Scripts/Maps/Runtime/MapRoot.cs");
-                bool standalone = dependencies.Contains("Assets/Scripts/Core/StandaloneSceneMarker.cs");
+                var (game, standalone) = ReadSceneMarkers(target);
                 if (game && standalone) throw new PlayLaunchException("SceneKindConflict", "MapRoot и StandaloneSceneMarker одновременно.");
                 if (!game && !standalone && !config.AllowUnmarked) throw new PlayLaunchException("UnmarkedScene", "Неразмеченная сцена требует AllowUnmarked.");
                 string kind = game ? "Game" : standalone ? "Standalone" : "Unmarked";

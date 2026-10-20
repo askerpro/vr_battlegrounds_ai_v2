@@ -1,0 +1,22 @@
+{
+  "task_id": "play-launch-inspector-lag",
+  "owner": "play-launch-inspector-lag",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/play-launch-inspector-lag",
+  "base_sha": "646170c47d023d6aa278046cb501e7b28f19ccd6",
+  "doc_path": "tasks/play-launch-inspector-lag/Readme.md",
+  "title": "Лаги инспектора Play Launch",
+  "branch": "task/play-launch-inspector-lag",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/play-launch-inspector-lag/**",
+        "Assets/Editor/VR_Battlegrounds/Debug/PlayLaunchWindow.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/PlayLaunch.cs"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

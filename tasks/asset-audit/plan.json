@@ -13,6 +13,7 @@
       "writes": [
         "tasks/asset-audit/**",
         "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit.meta",
         "Assets/Editor/VR_Battlegrounds/Performance.meta",
         "Assets/Tests/EditMode/AssetAudit/**",
         "Assets/Tests/EditMode/AssetAudit.meta",

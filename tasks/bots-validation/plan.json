@@ -86,6 +86,14 @@
       "needs": []
     },
     {
+      "id": "qa-close-docs",
+      "writes": [
+        "tasks/bots-validation/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "cprime-probes",
       "writes": [
         "tasks/bots-validation/**",

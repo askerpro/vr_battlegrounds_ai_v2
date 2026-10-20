@@ -261,10 +261,24 @@ namespace VrBattlegrounds.Bots
 
             if (useSupport)
             {
-                // Левая — к снапу поддержки на стволе в его текущей позе; Grip по прибытии, дальше держится.
+                // Левая — к поддержке там, где она окажется при заданной позе правой (ствол жёстко в правой руке):
+                // при двуручном хвате ориентацию задают обе руки, и левая за текущей позой ствола держала бы его мимо
+                // цели (прогон iter2-7: 138°). Grip по прибытии к текущему снапу, дальше держится.
                 if (grip.ComputeRequiredGrabberTransform(left, support, out Vector3 supportSnap, out Quaternion supportRotation, false))
                 {
-                    _pilot.ReachGrabber(UxrHandSide.Left, supportSnap, supportRotation);
+                    Transform weapon = grip.transform;
+                    Transform hand = right.transform;
+                    Quaternion handInverse = Quaternion.Inverse(hand.rotation);
+                    Vector3 weaponInHand = handInverse * (weapon.position - hand.position);
+                    Quaternion weaponInHandRotation = handInverse * weapon.rotation;
+                    Quaternion weaponWanted = LastRightTarget.rotation * weaponInHandRotation;
+                    Vector3 weaponWantedPosition = LastRightTarget.position + LastRightTarget.rotation * weaponInHand;
+                    Quaternion weaponInverse = Quaternion.Inverse(weapon.rotation);
+                    Vector3 supportInWeapon = weaponInverse * (supportSnap - weapon.position);
+                    Quaternion supportInWeaponRotation = weaponInverse * supportRotation;
+                    Vector3 leftTarget = holdsSupport ? weaponWantedPosition + weaponWanted * supportInWeapon : supportSnap;
+                    Quaternion leftRotation = holdsSupport ? weaponWanted * supportInWeaponRotation : supportRotation;
+                    _pilot.ReachGrabber(UxrHandSide.Left, leftTarget, leftRotation);
                     bool atSupport = (left.transform.position - supportSnap).magnitude <= ReachTolerance;
                     _leftAtTarget = holdsSupport || atSupport ? _leftAtTarget + 1 : 0;
                 }

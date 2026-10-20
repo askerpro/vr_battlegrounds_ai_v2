@@ -300,10 +300,14 @@ namespace VrBattlegrounds.Maps
             }
             _localPlayer = null;
             foreach (PlayerController player in _playersInZone) ReportZoneState(player, false);
-            // Уничтоженным телам ReportZoneState сказать уже не может — снимаем по записи.
-            foreach (var reported in _reportedInside.Values)
+            // Уничтоженным телам ReportZoneState сказать уже не может — снимаем по записи. Учёт ведёт
+            // сервер: зона, выключенная после его остановки, SyncVar сессий не пишет.
+            if (NetworkServer.active)
             {
-                if (reported.session != null) reported.session.ServerExitSpawnZone(reported.teamIndex);
+                foreach (var reported in _reportedInside.Values)
+                {
+                    if (reported.session != null) reported.session.ServerExitSpawnZone(reported.teamIndex);
+                }
             }
             _reportedInside.Clear();
             _playersInZone.Clear();

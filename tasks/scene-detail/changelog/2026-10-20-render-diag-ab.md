@@ -96,3 +96,20 @@ reports/boxuv-apply-20261020/*.png (временная камера, не вид
 LIGHT-002/REFL-001, перевести BoxUv, LobbyTentFloorLightmap, render_diag и meta_renderdoc_quest.py в «Статус
 инструментов» как влитые, поправить источник чисел LOD башни в QPM-LOD-001 (аудит в Unity субагента, тикеты
 896/905, а не аудит UV 888). Ревью performance и level-design.
+
+## Итоговый normal A/B: база a0432b240 против финала 8500240ab (Quest 3, 2026-10-20)
+
+Визуальная проверка финального APK в шлеме (реальный трекинг, Lobby) — пользователь: «да, стало гораздо лучше».
+Серия tools/run_ab_two_builds.py: блоки A×3 | B×4 | A×3 с подменой Build/e2e и Build/Quest по sha (сервер и APK каждой
+ревизии собраны Build-Game -GpuSceneIdentity), Guardian pause "" → 1 → "" (restored), 10/10 GREEN.
+Условия: Quest 3 (совместимость Quest 2), Test, FFR 0,75, CPU 4 / GPU 2, center-north, фаза 20 с, AppGPUTime p50.
+| сборка | прогоны | p50, мс |
+| A a0432b240 | 6 | 10,814 10,801 10,817 / 10,796 10,801 10,815 → медиана 10,808 |
+| B 8500240ab | 4 | 4,235 4,245 4,267 4,670 → медиана 4,256 |
+Δ ≈ −6,55 мс (−61%); бюджет 7 мс выполнен с запасом ~2,7 мс. Дрейфа A до/после B нет.
+Условия A и B совпадают, кроме qualityHash: отличаются только пороги LOD групп 688/689 (вышки на LOD4 — наша правка).
+Между базами dev (911f93b37..646170c47) Lobby, ProjectSettings, URP и Packages не менялись → разница — правки задачи:
+box-UV + Baked Lit (пол, бетон, плитка), 91 материал декора на Baked Lit, вышки LOD4, зеркало 512²/8 м, свет шатра
+(перезапекание, пол в лайтмапе, Unlit/Simple Lit плафоны). Вклад по отдельности не мерился.
+Сводка: reports/q3final-ab-20261020/summary.json (tools/summarize_ab_two_builds.py).
+Попутно: сборка 8500240ab пересчитала ContentFingerprint Lobby в MapRuntimeCatalog — закоммичен в 91b9f1046.

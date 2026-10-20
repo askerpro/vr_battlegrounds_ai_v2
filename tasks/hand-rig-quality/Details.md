@@ -1,5 +1,15 @@
 # Hand Rig Quality — анализ и проектирование
 
+> **Хроника задачи.** Задача закрыта 2026-10-20 (итог — раздел «Задача закрыта 2026-10-20» в
+> [Readme](Readme.md)); записи ниже — история на свою дату. Актуальные знания — в `Docs/`:
+> [hand-rig-quality-tool.md](../../Docs/hand-rig-quality-tool.md),
+> [hand-rig-quality-mef-research.md](../../Docs/hand-rig-quality-mef-research.md),
+> [grip-quality-analysis.md](../../Docs/grip-quality-analysis.md),
+> [grip-known-issues.md](../../Docs/grip-known-issues.md),
+> [grip-extraction.md](../../Docs/grip-extraction.md),
+> [grip-pose-editor.md](../../Docs/grip-pose-editor.md).
+> Отчёты `reports/...` — в основном checkout `F:/UnityProjects/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/`.
+
 ## Текущий контактный IK — 2026-10-15
 
 Актуальный контракт: contracts/distal-palm-contact-ik-v2.md. Указанные material targets для ладони

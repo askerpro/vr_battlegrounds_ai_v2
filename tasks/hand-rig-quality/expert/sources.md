@@ -58,8 +58,17 @@ absolute-git-dir и git-common-dir. Исходники HRQ/HandPoseReview час
 
 ## Документы текущей задачи и проекта
 
-- S13: [Readme.md](../../Readme.md), [Details.md](../../Details.md), [tool.md](../../tool.md): границы,
+- S13: [Readme.md](../Readme.md), [Details.md](../Details.md), [tool.md](../tool.md): границы,
   единый capture, MEF eyes override, статический срез0.5, старая база/открытая динамика и Puppet контракт.
+  С 2026-10-20 `tool.md` — указатель; прежний текст — в истории Git.
+- После закрытия задачи 2026-10-20 знания перенесены в `Docs/` (добавлено после исходного перечня,
+  в исследование 2026-10-09 не входили):
+  [hand-rig-quality-tool.md](../../../Docs/hand-rig-quality-tool.md),
+  [hand-rig-quality-mef-research.md](../../../Docs/hand-rig-quality-mef-research.md),
+  [grip-quality-analysis.md](../../../Docs/grip-quality-analysis.md),
+  [grip-known-issues.md](../../../Docs/grip-known-issues.md),
+  [grip-extraction.md](../../../Docs/grip-extraction.md),
+  [grip-pose-editor.md](../../../Docs/grip-pose-editor.md).
 - [troubleshooting.md](../../../Docs/troubleshooting.md): строки297–363 (сеть/физика/две руки),
   адресный поиск симптомов410–440 (вставленный предмет/placement).
 - [UltimateXR/known-issues.md](../../../Docs/UltimateXR/known-issues.md): Issue13/14 найдены поиском;

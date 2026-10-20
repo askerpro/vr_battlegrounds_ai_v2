@@ -1,5 +1,71 @@
 # Качество кистей и хватов MEF
 
+**Задача/владелец:** `hand-rig-quality`, эксперт `avatar-grip`. **Статус:** закрыта 2026-10-20.
+**Обновлено:** 2026-10-20 (закрытие задачи, перенос знаний в `Docs/`).
+**Worktree:** `F:/CodexWorktrees/cyborg-hands`, ветка `codex/hands-rig-quality`.
+
+## Задача закрыта 2026-10-20
+
+**Решение пользователя 2026-10-20:** задача `hand-rig-quality` закрывается целиком. Направление
+«анализ рига кисти MEF» закрыто. Направления 1 (автоанализ хвата), 3 (экспорт хватов из паков) и
+4 (ручная доводка в редакторе поз) при возобновлении получают отдельные задачи; эта задача не возобновляется.
+
+**Итог по этапам.**
+
+- Влиты: `static-analyzer` (анализатор рига кисти 0.5), `expert-deployment` и `expert-registration`
+  (эксперт `avatar-grip`), `mef-grip-audit` (аудит хватов MEF), `contact-metrics` (полосы контакта и
+  правила грубых нарушений), `hand-graft-exp` (пересадка кисти SDK в скелет MEF), `sdk-hands-seam`,
+  `cyborg-grips` (`d00f53667`, хваты `MEF_cyborg_hands`), `grip-extraction` (`e16b86b82`, Grip Extraction Tools
+  и пилот), `grip-save-validation` (`846fa4bca`, нормализация `_assetId` после записи), `prefab-hierarchy`
+  (иерархия `PlayerBase → CyborgHandsBase → Controllers/MEF → Black`, принята пользователем 2026-10-18).
+- R2-этапы (`grip-extraction-r2-measure`, `grip-extraction-scoped-save`, `grip-extraction-r2`) и
+  `grip-contact-authoring`: их код и ассеты пришли в `origin/dev` коммитом `1b2f88612` (2026-10-16) вне учёта
+  хаба. R2 пользователь в шлеме (прогон 715) как готовый для продакшна не принял: неплотный обхват (G5).
+  Часть поз R2 на dev в других версиях, чем результат 712 — сверка в [grip-extraction.md](../../Docs/grip-extraction.md).
+- Не начаты и закрываются вместе с задачей: `grip-extraction-run` (R3–R5), `wrist-gap`, `grip-authoring`,
+  `palm-validation`, `dynamic-probes`, `mef-correction`, `acceptance`, `documentation`.
+
+**Поправки к записям ниже.**
+
+- Прогон 772 (раздел «Текущая работа — SDK editor v3…»): прежнее утверждение «`GrabPoseCoverageTests` на всём
+  боевом арсенале — PASS» неверно. Отчёт `reports/editmode-prefabs-test-report.json`: 624 теста, 568 PASS,
+  56 FAIL, из них 43 — `GrabPoseCoverageTests` (жетон, служебные `*_SightReview`/`MKR9_NativeProbe_b1bbb91d`,
+  у `PlayerControllersCyborgAvatar` на тот момент всё оружие). Разбор — G2 в
+  [grip-known-issues.md](../../Docs/grip-known-issues.md).
+- Билет 757: прежний `current_work` в `plan.json` ошибочно утверждал достижение численной цели
+  (`numerical_targets_reached=true`), проверку UI (`UI_interaction_checked=true`) и два изменённых префаба.
+  По `reports/sdk-contact-757-Review.md` и квитанции: цель не достигнута (Viper 8→9 из 15), UI не проверялся,
+  изменённых ассетов нет. Запись «Последний native — 757» ниже верна.
+
+**Где теперь знания** (актуальный источник; записи этого Readme — история):
+
+- [hand-rig-quality-tool.md](../../Docs/hand-rig-quality-tool.md) — анализатор рига кисти (инструкция);
+- [hand-rig-quality-mef-research.md](../../Docs/hand-rig-quality-mef-research.md) — итог исследования рига
+  кисти MEF, направление закрыто; исходный отчёт —
+  [source-mef-rig-research-2026-10-07.md](../hand-rig-analyzer-docs/source-mef-rig-research-2026-10-07.md);
+- [grip-quality-analysis.md](../../Docs/grip-quality-analysis.md) — автоанализ хвата (направление 1);
+- [grip-known-issues.md](../../Docs/grip-known-issues.md) — реестр дефектов хватов F1–F8, G1–G8;
+- [grip-extraction.md](../../Docs/grip-extraction.md) — экспорт хватов из паков (направление 3);
+- [grip-pose-editor.md](../../Docs/grip-pose-editor.md) — ручная доводка в редакторе поз (направление 4).
+
+**Где отчёты.** `reports/` задачи ignored и вне Git; постоянное место — основной checkout
+`F:/UnityProjects/Vr_Battlegrounds_ai/tasks/hand-rig-quality/reports/` (относительные ссылки `reports/...`
+этого Readme работают из него). Перечень сохранённого, включая материалы из worker и scratchpad, —
+`reports/_preserved-2026-10-20/MANIFEST.md`. Архивные Git-ветки `archive/avatar-grip/*` (локальные, в общем
+`.git` продукта) защищают снимки R2 (695, 701, 712, 715), вход и результат 772 и вход 766; перечень — там же.
+
+**Что открыто и куда.** Дефекты — в [реестре](../../Docs/grip-known-issues.md) (сводка со статусом на 2026-10-20
+и направлением). Условия возобновления — разделы «Перед следующим применением» в
+[grip-quality-analysis.md](../../Docs/grip-quality-analysis.md), [grip-extraction.md](../../Docs/grip-extraction.md),
+[grip-pose-editor.md](../../Docs/grip-pose-editor.md) и «Перед первым использованием на новом аватаре» в
+[hand-rig-quality-tool.md](../../Docs/hand-rig-quality-tool.md). Отложены: поддерживающая рука пистолета,
+анимация курка.
+
+## Журнал выполнения (история, до закрытия 2026-10-20)
+
+Записи «Сейчас», «Текущий шаг», «Дальше» ниже описывают состояние на свою дату; итог — в разделе
+«Задача закрыта 2026-10-20».
+
 **Сейчас 2026-10-18 16:29:** пользователь принял ручную проверку иерархии/поз
 и Play Mode и разрешил commit и вливание в origin/dev. Мелкие недочёты отложены
 на следующую итерацию. Результат native807 сохранён через штатный recovery
@@ -194,7 +260,16 @@ GUID перенесённого controller сохранён. Очередь ос
   3. Создан второй цветовой вариант команды `Assets/Prefabs/Player/MEF_cyborg_hands_Player_Black.prefab` (GUID `60604d8891226f64592f880c9b2da883`) через штатный `TeamColorVariantBuilder` (`Assets/Editor/VR_Battlegrounds/Avatars/TeamColorVariantBuilder.cs`) как Prefab Variant от `MEF_cyborg_hands_Player.prefab` с заменой только 6 материалов LOD тела/головы (`MEF_Optimized.mat` → `MEF_Optimized_Black.mat`), и собраны оба рэгдолла трупов (`MEF_cyborg_hands_Player_Corpse.prefab`, `MEF_cyborg_hands_Player_Black_Corpse.prefab`).
   4. Обновлены `OptimizedMEF.asset` (`MEF_cyborg_hands_Player`), `OptimizedMEF_Black.asset` (`MEF_cyborg_hands_Player_Black`), `AvatarsRegistry.asset`, `Terrorists_Team.asset`, `CounterTerrorists_Team.asset` и `--- MANAGERS ---.prefab`.
   5. Неиспользуемые префабы MEF с оригинальными руками и экспериментальные ассеты перенесены с сохранением `.meta`/GUID в `Assets/Prefabs/Player/Unused/`.
-  6. Прогнаны EditMode-проверки `VrBattlegrounds.Tests.Prefabs.*` (отчёт `reports/editmode-prefabs-test-report.json`) и `Persist UltimateXR Unique Ids`: `AvatarHandPoseChainTests`, `TeamAvatarsTests`, `TeamUniformTests`, `CorpseTests`, `AvatarRendererOwnershipTests`, `NetworkAssetIdOnDiskTests`, `RegisteredAvatarBodyTests` (все 7 проверок для `MEF_cyborg_hands_Player` и `MEF_cyborg_hands_Player_Black`) и `GrabPoseCoverageTests` на всём боевом арсенале для обоих новых основных аватаров — **PASS**.
+  6. Прогнаны EditMode-проверки `VrBattlegrounds.Tests.Prefabs.*` (отчёт `reports/editmode-prefabs-test-report.json`) и `Persist UltimateXR Unique Ids`: `AvatarHandPoseChainTests`, `TeamAvatarsTests`, `TeamUniformTests`, `CorpseTests`, `AvatarRendererOwnershipTests`, `NetworkAssetIdOnDiskTests`, `RegisteredAvatarBodyTests` (все 7 проверок для `MEF_cyborg_hands_Player` и `MEF_cyborg_hands_Player_Black`) и `GrabPoseCoverageTests` на всём боевом арсенале для обоих новых основных аватаров. **Исправление 2026-10-20:**
+     прежняя запись «— **PASS**» неверна. По отчёту прогон завершился `failed`: 624 теста, 568 PASS, 56 FAIL.
+     43 отказа — `GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара`: жетон `DogTagPanel` и служебные
+     `*_SightReview`/`MKR9_NativeProbe_b1bbb91d` у всех трёх аватаров на кисти Cyborg, а у
+     `PlayerControllersCyborgAvatar` на тот момент всё оружие (29 из 43). Остальные 13 к хватам не относятся:
+     телепорт на BotCombatStand (3), тесты паков HandsPack/Kinemation (7), `RegisteredAvatarBodyTests`,
+     `UxrUniqueIdOnDiskTests`, `WeaponShotSoundTests` (по 1). Разбор — G2 в
+     [grip-known-issues.md](../../Docs/grip-known-issues.md). Результат 772 через broker не получен
+     (`accepted=false`) и заменён этапом `prefab-hierarchy`; снимок — ветка
+     `archive/avatar-grip/mef-cyborg-promotion-772-result-unreceived`.
 Контракт: contracts/sdk-hand-pose-contact-editing-v3.md.
 
 **Текущее решение пользователя — 2026-10-15:** площадь отменена как критерий. Нужны автоматически
@@ -220,13 +295,12 @@ byte-exact:24файла+SHA manifest в drafts/contact-area-20261015/; стар�
 Дамп геометрии и весов: reports/phalanx-contact-unity/geometry-20261015-r1/. Идёт разбор причины.
 Fullskin collision — отдельный guard. Старые записи площади ниже относятся к сохранённому черновику.
 
-**Задача/владелец:** `hand-rig-quality`, эксперт `avatar-grip`. **Обновлено:** 2026-10-15 (R2 отклонён; фиксированные опорные точки и редакторский IK, площадь в черновике).
-**Worktree:** `F:/CodexWorktrees/avatar-grip/Vr_Battlegrounds_ai`, ветка `codex/hands-rig-quality`.
-
-## История R2 и предыдущих прототипов
+## История R2 и предыдущих прототипов (история, до закрытия 2026-10-20)
 
 Ниже сохранены результаты и ограничения прежних подходов; актуальные требования v2 и следующие
 действия указаны выше и в plan.json/current_work. Площадь и прежние проверки не принимают v2.
+После закрытия задачи актуальное состояние R2 — в «Задача закрыта 2026-10-20» и
+[grip-extraction.md](../../Docs/grip-extraction.md).
 
 **Решение пользователя после715:** «текущую работу как готовую для продакшна не принимаю».
 Часто отсутствует плотный обхват рукояти всей поверхностью кисти и пальцев. Автоматический curl
@@ -312,7 +386,9 @@ FIFO request-base692 DONE (7620), принятая правка опублико
 по решению пользователя). Анализатор контакта Hand Pose Fit даёт грубые нарушения и листы ревью;
 Grip Extraction Tools переносит хват с кисти на кисть; финальная доводка поз — за человеком.
 
-## Состояние на 2026-10-14
+## Состояние на 2026-10-14 (история, до закрытия 2026-10-20)
+
+Итог и открытые вопросы — в разделе «Задача закрыта 2026-10-20».
 
 Влито (этапы `merged`): static-analyzer, expert-deployment, expert-registration, mef-grip-audit,
 contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), grip-extraction (`e16b86b82`).
@@ -325,7 +401,9 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
   шлем: «стало гораздо лучше, всё сделанное можно выпускать».
 [Подробно](Details.md#grip-extraction-tools-и-план-извлечения-хватов--2026-10-13-решение-пользователя).
 
-## Дальше — следующий шаг
+## Дальше — следующий шаг (история, до закрытия 2026-10-20)
+
+План не выполняется: задача закрыта; открытые дефекты — в [реестре](../../Docs/grip-known-issues.md).
 
 1. **Принятая правка влита `846fa4bca`** (GripRecordWriter: после `SaveAsPrefabAsset` —
    `NetworkAssetIdNormalizer.Normalize` + сверка `_assetId` на диске с `NetworkIdentity.AssetGuidToUint`).
@@ -344,7 +422,7 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
 5. После: `wrist-gap` (зазор 2–3 см + материал «уступает кисти»), `grip-authoring` (ручные точки
    подушечек как источник Grip Extraction), palm-validation, dynamic-probes, mef-correction.
 
-## Возобновление Codex — 2026-10-14
+## Возобновление Codex — 2026-10-14 (история, до закрытия 2026-10-20)
 
 - Хаб: `hand-rig-quality`, owner `avatar-grip`; десять этапов `merged`, включая save-validation7558.
   `grip-save-validation`: после release683 получена приёмка пользователя 2026-10-15;
@@ -485,7 +563,9 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
   Native guard/cleanup PASS: tests/compile/import/Play=false, probeAbsent=true. Worker/admission освобождены.
   Infra_issue7446 в хабе и подтверждённом native канале сопровождающего. [Итоги](changelog/2026-10-15-tests-680.md).
 
-## Ждёт пользователя
+## Ждёт пользователя (история, до закрытия 2026-10-20)
+
+R4/R5 закрыты вместе с задачей; при возобновлении — в задаче направления 3.
 
 - R4 (заменить хваты MEF посадкой по ладони) и R5 (покрытие Cyborg/BigHands) — решение после R2/R3.
 - Удалить вручную `C:\renders` (агент удалять вне workspace не может).
@@ -502,6 +582,8 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
 - 2026-10-14: `_assetId` — «все 3» предложения владельцам; пилот починить вручную и влить, не ждать фикса.
 - 2026-10-14: `MEF_sdk_hands` — убрать из команды террористов (основа — `MEF_cyborg_hands`; префабы оставить как эксперимент).
 - 2026-10-14: патч Mirror у network — после их текущих работ (network-sync-hardening); до него нормализуем у себя.
+- 2026-10-20: задача закрывается целиком; анализ рига кисти закрыт, направления 1, 3, 4 при возобновлении —
+  отдельными задачами; знания — в `Docs/`, отчёты — в основном checkout вне Git.
 
 ## Риски и ловушки
 
@@ -516,7 +598,7 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
   на MEF (левая рука) — см. бэклог.
 - Play агентам — только через PlayLaunch; аренды ≤20 мин, цикл продления ограничен 90 мин.
 
-## Координация (Codex)
+## Координация (Codex) (история, до закрытия 2026-10-20)
 
 Входящие: `python Tools/agents/coordination.py inbox --owner avatar-grip --unread --as "<свой адрес>"`;
 при недоступном native discovery маршрут очищается, чужой адрес не используется. Вопросы пользователю
@@ -524,4 +606,4 @@ contact-metrics, hand-graft-exp, sdk-hands-seam, cyborg-grips (`d00f53667`), gri
 Обещания другим агентам — `experts/avatar-grip/backlog.md` (раздел «Обязательства»).
 
 [Details](Details.md) · [plan.json](plan.json) · [Роль эксперта](expert/avatar-grip-expert.md) ·
-[Инструкция](tool.md) · журнал `experts/avatar-grip/journal/`.
+[Инструкция](tool.md) (указатель на [Docs](../../Docs/hand-rig-quality-tool.md)) · журнал `experts/avatar-grip/journal/`.

@@ -7,32 +7,19 @@
   "doc_path": "tasks/hand-rig-quality/Readme.md",
   "title": "Качество кистей и хватов MEF",
   "current_work": {
-    "stage": "prefab-hierarchy",
-    "updated": "2026-10-18",
-    "contract": "tasks/hand-rig-quality/contracts/cyborg-prefab-hierarchy-v2.md",
-    "status": "user-accepted-20261018-1629; native-migration-delivered; EditMode96of99; same-teleport-floor-defect-confirmed-on-accepted-base; six-zone-review-approved",
-    "integration_status_source": "coordination status/task-brief: prefab-hierarchy verified/accepted/merged SHA",
-    "validation": { "ticket": 812, "input": "fa6d3c4d738925df8aa155bba34dda920c29b481", "result": "49023c250d2e2aa7bfe96a3727942fd01d5336cc", "phase": "DONE", "received": true, "total": 99, "passed": 96, "failed": 3, "hand_chain": "19/19", "composition": "17/17", "loadout": "60/63", "report": "reports/prefab-hierarchy-20261018/test812-full.json", "sha256": "ea9d5f6d4eed50082ad2aaaa3a2056cbfcd58ce7233a07310320f9ce0120cd68", "source_changes": 0, "unexpected": 0 },
-    "baseline_control": { "ticket": 815, "input": "3a3a73402c33d92bdf2788a1a1c3b1e17b558d48", "result": "5660d497fe08944dfcbafdd692457575fc97cd25", "phase": "DONE", "jobs": ["2f4ff74dc8a34889b17c219588b95d51", "ed22a49134c24552b7c0d434b8b97696"], "cases": 4, "same_floor_mask_failure": 4, "report": "reports/prefab-hierarchy-20261018/baseline815-full.json", "sha256": "c7db07f89202a5641e9eaddfc86f0627e4b2d3bcf927463a327eb8f122acc3cb", "source_changes": 0, "unexpected": 0 },
-    "pending_request": { "ticket": 807, "input": "1581500ed27933a8941d6d53ea9bc9e756a50991", "phase": "DONE", "output_count": 57, "native_success": true, "received": true, "delivery": "reviewed-exact-git-diff-and-ack", "recovery_sha": "126ba84c11909e5364319e185b2eb24942eea1db", "verified_paths": 55, "blob_mismatches": 0, "visual_png": 3, "changed_asset_paths": 53, "outside_scope": 0, "manual_review_open": false, "user_accepted": true, "report": "reports/prefab-hierarchy-20261018/ticket807-result.json" },
-    "last_diagnostic_request": { "ticket": 791, "input": "a42344ecfba53ea28c31d1772ae18c85d03c777b", "result": "f3b39da40809934a1e4ff0cf7ff1c8fff580dd04", "phase": "DONE", "received": true, "output_count": 56, "delta": [], "expected_modifications": 727, "actual_modifications": 727, "changed_metadata_pairs": 203, "changed_properties": ["__isInPrefab", "__prefabGuid"], "compile_errors": 0, "compile_warnings": 37 },
-    "current_request": { "ticket": 789, "input": "24c95d53f5b221c67b127a3de490c7958f1f944c", "result": "5458c18ed41ae0576ac630292d483a5dd8e70b36", "phase": "DONE", "received": true, "prefabs_changed": false, "output_count": 56, "report": "reports/prefab-hierarchy-20261018/ticket789-result.json", "report_sha256": "b55983cba4ff206296619702ae54ae1b6377377278be4953846878c912f06155", "compile_sources": 334, "compile_references": 405, "compile_errors": 0, "compile_warnings": 36 },
-    "diagnostic_request": { "ticket": 786, "input": "7cb28c37853c17249fcd0644dbc806a14eb738f8", "result": "712a87234e0bfc513b396f9632dfe46a47428998", "phase": "DONE", "received": true, "output_count": 0, "migration_enabled": false, "native_orphan_objects": 0, "native_reverse_candidates": 10225, "native_inbound": 0 },
-    "sdk_reference_patch": 85,
-    "reference_output_scope": "tasks/hand-rig-quality/tools/cyborg-reference-outputs.json",
-    "prefab_worker": { "ticket": 781, "input": "fd0958bad42c82adf2d3bc3143cdc3ab1564798e", "result": "e710ba95110c941439216f0f8165453920ada292", "phase": "DONE", "received": true, "assets_changed": false, "actual_resolved_poses": 65, "incoming_pptr": 2489, "report": "reports/prefab-hierarchy-20261018/ticket781-result.json", "report_sha256": "0e01dee06acc501beba96b91d5bc56fdcc81d6743060ec639ba2e6dfd6e378e7" },
-    "infra_issue": 8986,
-    "execution_plan": "tasks/hand-rig-quality/tools/cyborg-prefab-hierarchy-plan.md",
-    "last_worker": { "ticket": 757, "input": "14d401177b43a396dffd3be9d894b11e369bc5b9", "result": "304ae4e1f18727d9981332095ef1a2c3c8395536", "phase": "DONE", "received": true, "native_artifacts_sha_verified": 17, "reference_points": {"right":15,"left":15}, "Viper_contact_count": {"before":8,"after":9,"expected":15}, "numerical_targets_reached": true, "source_hash_count":1240, "changed_assets":["Assets/Prefabs/Player/CyborgHandsBase.prefab","Assets/Prefabs/Player/Experimental/MEF_cyborg_hands/MEF_cyborg_hands_Player.prefab"], "report":"reports/sdk-contact-757-Review.md", "UI_interaction_checked":true },
-    "prior_worker_failure": { "ticket":756,"capture_started":false,"recovery_complete_event":8741,"recovery_result":"d0e6e01aac9c1340090b7c55375ffbce295cad5a","meta_transferred":8,"cause":"named Review referenced default Editor; fixed locally and compiled separately" },
-    "last_successful_capture": { "ticket": 755, "input": "a7799b80385430282a2e7c0dafabca4ddacdabd1", "result": "f9e2aa0d64309f49a83e755ce37a5dfed579c6fc", "received": true, "changed_assets": [], "native_artifacts_sha_verified": 12 },
-    "next": [
-      "Завершить компиляцию и ревью native Unity migration, не меняя тесты до пользовательской проверки",
-      "После восстановления штатных Unity MCP tools выполнить миграцию в собственной broker-аренде и сразу finish/receive",
-      "Проверить в Unity чистые базы, обе модели, Black, skinning, LOD, калибровку, часы/карманы и хваты; получить пользовательскую проверку",
-      "После подтверждения обновить устаревшие AvatarHandPoseChainTests и связанные ожидания, затем принятый commit/integration"
+    "stage": "closure-docs",
+    "updated": "2026-10-20",
+    "owner_session": "Claude как avatar-grip (назначение пользователя 2026-10-20)",
+    "status": "Закрытие задачи по решению пользователя 2026-10-20: hand-rig-quality закрывается целиком, направления 1, 3, 4 при возобновлении — отдельными задачами. Знания перенесены в Docs/ (hand-rig-quality-tool, hand-rig-quality-mef-research, grip-quality-analysis, grip-known-issues, grip-extraction, grip-pose-editor), отчёты — в основной checkout вне Git (reports/_preserved-2026-10-20/MANIFEST.md).",
+    "corrections": [
+      "Прежний current_work (этап prefab-hierarchy, 2026-10-18) заменён; его текст — в истории Git до 2026-10-20.",
+      "last_worker 757 в прежнем current_work ошибочно утверждал numerical_targets_reached=true, UI_interaction_checked=true и два изменённых префаба; по отчёту reports/sdk-contact-757-Review.md и receipt.json: цель не достигнута (Viper 8→9/15), UI не проверялся, changedAssets=[]."
     ],
-    "deferred": ["Поддерживающая рука пистолета"]
+    "next": [],
+    "deferred": [
+      "Поддерживающая рука пистолета",
+      "Анимация курка"
+    ]
   },
   "stages": [
     {
@@ -313,7 +300,11 @@
         "experts/avatar-grip/expert.json"
       ],
       "after": [
-        { "task": "hand-rig-quality", "stage": "grip-extraction", "state": "merged" }
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -347,7 +338,11 @@
         "tasks/hand-rig-quality/changelog/**"
       ],
       "after": [
-        { "task": "hand-rig-quality", "stage": "grip-save-validation", "state": "merged" }
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-save-validation",
+          "state": "merged"
+        }
       ],
       "needs": []
     },
@@ -397,11 +392,11 @@
           "task": "hand-rig-quality",
           "stage": "grip-extraction-r2-measure",
           "state": "verified"
-      },
-      {
-        "task": "hand-rig-quality",
-        "stage": "grip-extraction-scoped-save",
-        "state": "verified"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-scoped-save",
+          "state": "verified"
         }
       ],
       "needs": []
@@ -421,9 +416,21 @@
         "tasks/hand-rig-quality/changelog/**"
       ],
       "after": [
-        { "task": "weapon-system", "stage": "r08-magazine-only", "state": "merged" },
-        { "task": "hand-rig-quality", "stage": "grip-extraction-r2", "state": "merged" },
-        { "task": "hand-rig-quality", "stage": "grip-contact-authoring", "state": "merged" },
+        {
+          "task": "weapon-system",
+          "stage": "r08-magazine-only",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-extraction-r2",
+          "state": "merged"
+        },
+        {
+          "task": "hand-rig-quality",
+          "stage": "grip-contact-authoring",
+          "state": "merged"
+        },
         {
           "task": "hand-rig-quality",
           "stage": "grip-extraction",
@@ -752,6 +759,14 @@
           "state": "merged"
         }
       ],
+      "needs": []
+    },
+    {
+      "id": "closure-docs",
+      "writes": [
+        "tasks/hand-rig-quality/**"
+      ],
+      "after": [],
       "needs": []
     }
   ]

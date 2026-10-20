@@ -122,7 +122,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
     /// Проба матча ботов (cc-0 clip-cutover): только чтение состояния игры, поведение не меняет.
     /// <list type="bullet">
     /// <item>Сервер/хост: таймлайн матча (фазы и раунды Elimination, закупки и все денежные операции, выстрелы
-    ///       <c>UxrFirearmWeapon.ProjectileShot</c>, попадания <c>UxrWeaponManager.DamageReceived</c>, гибели
+    ///       <c>UxrFirearmWeapon.ProjectileShot</c>, попадания <c>UxrWeaponManager.DamageReceiving</c> (включая смертельные, без
+    ///       урона, отменённого режимом), гибели
     ///       <c>MapReferee.PlayerKilled</c>, тела <c>AvatarManager.AvatarSpawned</c> — живое/призрак, конец карты),
     ///       снимок ботов на каждой смене фазы (команда, жив, деньги, оружие в руках); стоимость кадра по окнам фаз
     ///       (время кадра, «GC Allocated In Frame», сборки GC, маркеры бот-кода через <see cref="ProfilerRecorder"/>);
@@ -302,7 +303,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             }
             BindReferee(null);
             BindMode(null);
-            if (_weaponManager != null) { _weaponManager.DamageReceived -= OnDamage; _weaponManager = null; }
+            if (_weaponManager != null) { _weaponManager.DamageReceiving -= OnDamage; _weaponManager = null; }
             foreach (var pair in _shotHandlers) if (pair.Key != null) pair.Key.ProjectileShot -= pair.Value;
             _shotHandlers.Clear();
             for (int i = 0; i < _recorders.Length; i++) _recorders[i].Dispose();
@@ -351,7 +352,10 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 if (_weaponManager == null && UxrWeaponManager.HasInstance)
                 {
                     _weaponManager = UxrWeaponManager.Instance;
-                    _weaponManager.DamageReceived += OnDamage;
+                    // DamageReceiving, а не DamageReceived: SDK не поднимает DamageReceived для смертельного урона
+                    // (UxrActor — ветка DieInternal), и добивание пропадало из отчёта. Автор убийства в игре пишется
+                    // из того же DamageReceiving (DamageLedger).
+                    _weaponManager.DamageReceiving += OnDamage;
                 }
                 if (MapReferee.Instance != _referee) BindReferee(MapReferee.Instance);
                 GameMode mode = _referee != null ? _referee.ActiveGameMode : null;
@@ -671,6 +675,10 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private void OnDamage(object sender, UxrDamageEventArgs e)
         {
             if (_finished || !NetworkServer.active || e == null) return;
+            // Урон, который режим не пропускает (разминка), игра отменяет в обработчике актора; порядок вызова
+            // обработчиков не гарантирован, поэтому правило режима проверяется здесь, а не IsCanceled.
+            GameMode mode = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode : null;
+            if (e.IsCanceled || (mode != null && !mode.PlayersTakeDamage)) return;
             PlayerSession source = SessionOf(e.ActorSource);
             PlayerSession target = SessionOf(e.ActorTarget);
             bool sourceBot = source != null && BotDirector.IsBotToken(source.DeviceToken);

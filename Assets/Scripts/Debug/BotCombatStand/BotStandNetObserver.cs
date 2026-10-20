@@ -50,7 +50,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private const string TargetTokenPrefix = "bot-stand-target-";
         private const float DiscoverySeconds = 0.5f;
         private const float ScanSeconds = 2f;
-        private const float WriteSeconds = 2f;
+        private const float WriteSeconds = 5f;
+        /// <summary>Потолок общих рядов клиента (кадр, RTT, буфер): при достижении ряд прореживается через один.</summary>
+        private const int MaxSeriesSamples = 8192;
         private const float PoseDelaySampleSeconds = 0.1f;
         private const int MaxTimeline = 64;
         private const int MaxShotsKept = 400;
@@ -91,6 +93,12 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         // Тела и выстрелы.
         private readonly Dictionary<string, Body> _bodies = new Dictionary<string, Body>();
         private readonly List<Body> _order = new List<Body>();
+        // Ушедшие тела (смерть/смена тела/отключение) после завершения замеров дописываются строкой в .bodies.jsonl и
+        // выбывают из памяти и периодического отчёта: иначе за матч с ботами отчёт рос на каждую жизнь, и каждая запись
+        // сериализовала все прежние тела (торможение клонов в C' 2026-10-20).
+        private readonly HashSet<string> _retiredKeys = new HashSet<string>();
+        private string _retiredPath;
+        private int _retiredCount;
         private readonly Dictionary<UxrProjectileSource, Body> _sources = new Dictionary<UxrProjectileSource, Body>();
         private UxrWeaponManager _weaponManager;
 
@@ -218,8 +226,9 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             _request = request;
             _participant = ParticipantName();
             _startedUtc = DateTime.UtcNow.ToString("o");
-            string file = Sanitize(_participant) + "-pid" + Process.GetCurrentProcess().Id + ".json";
-            _reportPath = Path.Combine(request.OutputDirectory, file);
+            string file = Sanitize(_participant) + "-pid" + Process.GetCurrentProcess().Id;
+            _reportPath = Path.Combine(request.OutputDirectory, file + ".json");
+            _retiredPath = Path.Combine(request.OutputDirectory, file + ".bodies.jsonl");
         }
 
         private void OnEnable()
@@ -266,7 +275,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 if (now >= _nextDiscovery) { _nextDiscovery = now + DiscoverySeconds; Discover(); }
                 if (now >= _nextScan) { _nextScan = now + ScanSeconds; Scan(); }
                 if (now >= _nextPoseDelay) { _nextPoseDelay = now + PoseDelaySampleSeconds; SamplePoseDelay(); }
-                if (_connected) _frameMs.Add(Time.unscaledDeltaTime * 1000f);
+                if (_connected) AddSample(_frameMs, Time.unscaledDeltaTime * 1000f);
                 if (_connected && now >= _nextTiming) { _nextTiming = now + TimingSampleSeconds; SampleTiming(); }
                 if (_weaponManager == null && UxrWeaponManager.HasInstance)
                 {
@@ -274,6 +283,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     _weaponManager.DamageReceived += OnDamage;
                 }
                 PendingChecks(now);
+                RetireGoneBodies();
                 CaptureAfterNt();
             }
             catch (Exception e) { GameLog.Debug.Warning("[BotStandNetObserver] " + e.Message); }
@@ -350,6 +360,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     }
                     continue;
                 }
+                // Ключ уже выбывшего тела: тот же netId в той же эпохе — повторный спавн; запись начинается заново.
+                bool reborn = _retiredKeys.Remove(key);
                 var body = new Body
                 {
                     Key = key, Kind = kind, Token = token, Name = session.PlayerName, Epoch = _epoch, AvatarNetId = player.netId,
@@ -373,6 +385,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 ScanBody(body);
                 if (kind != "remote") body.Inventory = BotStandNetPoses.Inventory(body.Avatar);
                 Event(body, "firstSeen", player.name, body.PreviousAvatarNetId != 0 ? (object)body.PreviousAvatarNetId : null);
+                if (reborn) Event(body, "respawnedSameNetId", player.name, null);
             }
             foreach (Body body in _order)
                 if (!body.Gone && body.Player == null) Leave(body, "destroyed");
@@ -386,6 +399,72 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             Event(body, "gone", why, null);
             body.Player = null;
             body.Avatar = null;
+        }
+
+        /// <summary>
+        /// Ушедшее тело без незавершённых замеров (оружие после смерти, выстрелы в ожидании позы) — строкой в
+        /// .bodies.jsonl и из памяти: из списков, ключей и привязок оружия.
+        /// </summary>
+        private void RetireGoneBodies()
+        {
+            for (int i = _order.Count - 1; i >= 0; i--)
+            {
+                Body body = _order[i];
+                if (!body.Gone || body.PendingWeapons.Count > 0 || HasPendingShot(body)) continue;
+                Retire(body);
+                _order.RemoveAt(i);
+            }
+        }
+
+        private bool HasPendingShot(Body body)
+        {
+            foreach (PendingShot pending in _pendingShots) if (pending.Body == body) return true;
+            return false;
+        }
+
+        private void Retire(Body body)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_retiredPath));
+                File.AppendAllText(_retiredPath, JsonConvert.SerializeObject(Describe(body), Formatting.None) + "\n",
+                    new System.Text.UTF8Encoding(false));
+                _retiredCount++;
+            }
+            catch (Exception e) { GameLog.Debug.Warning("[BotStandNetObserver] Выбытие тела: " + e.Message); }
+            _bodies.Remove(body.Key);
+            _retiredKeys.Add(body.Key);
+            var sources = new List<UxrProjectileSource>();
+            foreach (var pair in _sources) if (pair.Value == body || pair.Key == null) sources.Add(pair.Key);
+            foreach (UxrProjectileSource source in sources)
+            {
+                if (source != null) source.StateChanged -= OnSourceStateChanged;
+                _sources.Remove(source);
+            }
+            var firearms = new List<UxrFirearmWeapon>();
+            foreach (var pair in _firearms) if (pair.Value == body || pair.Key == null) firearms.Add(pair.Key);
+            foreach (UxrFirearmWeapon firearm in firearms)
+            {
+                if (firearm != null)
+                {
+                    firearm.StateChanged -= OnFirearmStateChanged;
+                    if (_divergenceHandlers.TryGetValue(firearm, out var handler)) firearm.ReadinessReplayDiverged -= handler;
+                }
+                _divergenceHandlers.Remove(firearm);
+                _firearms.Remove(firearm);
+            }
+        }
+
+        private static void AddSample(List<float> series, float value)
+        {
+            if (series.Count >= MaxSeriesSamples)
+            {
+                // Прореживание через один: распределение сохраняется, память и сортировка в Stats ограничены.
+                int write = 0;
+                for (int read = 0; read < series.Count; read += 2) series[write++] = series[read];
+                series.RemoveRange(write, series.Count - write);
+            }
+            series.Add(value);
         }
 
         /// <summary>Бот-компоненты на теле и в сцене клиента (ожидается 0): пространства имён ботов и Blaze.</summary>
@@ -447,8 +526,8 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
 
         private void SampleTiming()
         {
-            _rttMs.Add((float)(NetworkTime.rtt * 1000.0));
-            _bufferTimeMs.Add((float)(NetworkClient.bufferTime * 1000.0));
+            AddSample(_rttMs, (float)(NetworkTime.rtt * 1000.0));
+            AddSample(_bufferTimeMs, (float)(NetworkClient.bufferTime * 1000.0));
         }
 
         /// <summary>A: запястья бота сразу после применения снимков NT (Update наблюдателя идёт после Update NT).</summary>
@@ -1034,7 +1113,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 }
                 var report = new Dictionary<string, object>
                 {
-                    ["schema"] = "bot-stand-net-observer@2", ["runTag"] = _request.RunTag, ["participant"] = _participant,
+                    ["schema"] = "bot-stand-net-observer@3", ["runTag"] = _request.RunTag, ["participant"] = _participant,
                     ["clientNoRecoil"] = _request.ClientNoRecoil, ["receiveTraceError"] = _receive.Error,
                     ["pid"] = Process.GetCurrentProcess().Id, ["dataPath"] = Application.dataPath, ["startedUtc"] = _startedUtc,
                     ["updatedUtc"] = DateTime.UtcNow.ToString("o"), ["final"] = final, ["writeReason"] = _lastWriteReason,
@@ -1066,11 +1145,18 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                     ["duplicateWeaponIdsMax"] = _duplicateWeaponIdsMax,
                     ["localAvatars"] = _localAvatars,
                     ["console"] = console,
+                    ["retiredBodies"] = new Dictionary<string, object>
+                    {
+                        ["count"] = _retiredCount, ["file"] = Path.GetFileName(_retiredPath),
+                        ["note"] = "Ушедшие тела с завершёнными замерами — по строке JSON в этом файле (та же схема, что bodies[])."
+                    },
                     ["bodies"] = bodies
                 };
                 Directory.CreateDirectory(Path.GetDirectoryName(_reportPath));
                 string temp = _reportPath + ".tmp";
-                File.WriteAllText(temp, JsonConvert.SerializeObject(report, Formatting.Indented), new System.Text.UTF8Encoding(false));
+                // Периодическая запись — компактная; с отступами только итоговая.
+                File.WriteAllText(temp, JsonConvert.SerializeObject(report, final ? Formatting.Indented : Formatting.None),
+                    new System.Text.UTF8Encoding(false));
                 if (File.Exists(_reportPath)) File.Delete(_reportPath);
                 File.Move(temp, _reportPath);
             }

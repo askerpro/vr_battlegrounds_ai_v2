@@ -24,10 +24,11 @@ def parse(change=None):
 
 
 class SuiteTests(unittest.TestCase):
-    def test_default_suite_has_stage_one_scenarios_with_topology(self):
+    def test_default_suite_has_accepted_scenarios_with_topology(self):
         suite = S.load("default")
         chosen = {s.name: s.topology for s in S.select(suite, "editor")}
-        self.assertEqual(chosen, {"scripted-input-smoke": "S+1", "scripted-wall-purchase": "S+2"})
+        self.assertEqual(chosen, {"scripted-input-smoke": "S+1", "scripted-wall-purchase": "S+2",
+                                  "scripted-combat-hit": "S+2"})
 
     def test_defaults_apply_and_scenario_overrides(self):
         smoke, purchase = parse().scenarios

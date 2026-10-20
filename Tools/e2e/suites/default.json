@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Набор перед вливанием: скриптовый ввод сетевых клиентов (этап 1 эпика e2e-regression).",
+  "description": "Набор перед вливанием: скриптовый ввод сетевых клиентов и бой (этапы 1 и 2 эпика e2e-regression).",
   "defaults": {
     "map": "Assets/Scenes/Maps/TestMap2.unity",
     "mode": "elimination",
@@ -15,6 +15,11 @@
     },
     {
       "name": "scripted-wall-purchase",
+      "clients": 2,
+      "profiles": ["editor"]
+    },
+    {
+      "name": "scripted-combat-hit",
       "clients": 2,
       "profiles": ["editor"]
     }

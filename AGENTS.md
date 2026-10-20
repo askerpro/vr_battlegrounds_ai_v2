@@ -169,9 +169,9 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
 Задача, меняющая игровой код или ассеты (`Assets/**`, `Packages/**`, `ProjectSettings/**`), перед merge-request
 прогоняет набор e2e-сценариев на Editor-стенде. Только документы/инструменты — по желанию.
 1. Rebase на свежую origin/dev, затем своя аренда worker: checkpoint → request → watch-ticket → claim → begin → guard.
-2. Из своего worktree: `python Tools/e2e/heavy.py --profile editor --suite default` (около 4 мин на набор).
+2. Из своего worktree: `python Tools/e2e/heavy.py --profile editor --suite default` (около 7 мин на набор).
    heavy о брокере не знает: Unity — через MCP-прокси этого worktree; без своей аренды прокси отказывает.
-   Если прогон дольше 10 мин, параллельно `editor-broker.py renew`.
+   Аренда — 15 мин вместе с begin: запускать heavy в фоне и продлевать `editor-broker.py renew` каждые ~4 мин.
 3. Сразу после прогона finish, затем receive (без своего output при отказе из-за пересохранённых Unity файлов — ack).
 4. Код 0 — можно вливать; 1 — регрессия (не вливать, разобрать `verdict.json`); 2 — вердикт не получен
    (тоже не вливать; сбой аренды/стенда/MCP — infra_issue сопровождающему). Путь к `verdict.json` — в review-request.

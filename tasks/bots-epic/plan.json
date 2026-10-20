@@ -1,0 +1,28 @@
+{
+  "task_id": "bots-epic",
+  "owner": "bots-epic",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/bots-epic",
+  "base_sha": "2a5931352033cce85a86f396dc837cca340b7583",
+  "doc_path": "tasks/bots-epic/Readme.md",
+  "title": "Эпик: боты по правилам сетевых игроков",
+  "branch": "task/bots-epic",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/bots-epic/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "stage1-close",
+      "writes": [
+        "tasks/bots-epic/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

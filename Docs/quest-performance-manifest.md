@@ -26,12 +26,12 @@
 
 ## Статус инструментов
 
-Часть правил опирается на инструменты, которые ещё в ветках своих задач. До их вливания в `origin/dev`
+Правила опираются на инструменты; часть из них ещё в ветках своих задач. До вливания инструмента в `origin/dev`
 правило действует, но выполняется вручную. Когда инструмент вливается, эта таблица обновляется.
 
 | Инструмент | Что делает | Где сейчас |
 |---|---|---|
-| Аудитор ассетов: `Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/`, меню `Tools/VR Battlegrounds/Performance/Asset Audit/…` | Механическая проверка правил с id из колонки «Аудитор» | задача asset-audit, ветка `task/asset-audit`, не влито |
+| Аудитор ассетов: `Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/`, меню `Tools/VR Battlegrounds/Performance/Asset Audit/` (Audit Selection, Audit Active Scene, окно) | Механическая проверка правил с id из колонки «Аудитор» | влит в `origin/dev` (задача asset-audit, 2026-10-20) |
 | Box-UV при импорте: `Assets/Editor/VR_Battlegrounds/Performance/BoxUv/` | Переразвёртка UV вместо трипланарного шейдера + конвертер в Baked Lit | задача scene-detail, ветка `codex/scene-detail-perf-20261018`, не влито |
 | Свой меш с UV2 для пола шатра: `LobbyTentFloorLightmap` | Пол в лайтмапе без правки общего FBX | scene-detail, не влито |
 | Диагностические подмены `render_diag` (`PerfRenderDiagnosticControl`) | Рантайм-подмена шейдера/неба для A/B без правки ассетов | scene-detail, не влито |
@@ -140,7 +140,7 @@
 - повторное копирование элемента из каталога откатывает адаптацию. После копирования адаптацию надо повторить: у материала один писатель (QPM-SHADER-007).
 
 Чек-лист после выборочного импорта, до размещения в карте:
-- [ ] аудит игровой копии (аудитор — см. [статус инструментов](#статус-инструментов); до его вливания — вручную по правилам ниже);
+- [ ] аудит игровой копии: `Tools/VR Battlegrounds/Performance/Asset Audit/Audit Selection` по её папке;
 - [ ] шейдеры — на URP Baked Lit / Simple Lit / Unlit (QPM-SHADER-001…004); трипланарные материалы — box-UV плюс Baked Lit (QPM-SHADER-002);
 - [ ] текстуры: mip, ASTC, размер (QPM-TEX);
 - [ ] LOD: последний уровень — заметное упрощение (QPM-LOD-001);
@@ -163,7 +163,7 @@ Windows-сборка годится для картинки и связи draw �
 
 ## Сопоставление с аудитором ассетов
 
-Id правил аудитора — по ветке `task/asset-audit` (не влито).
+Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/Rules/`).
 
 | Правило аудитора | id манифеста |
 |---|---|

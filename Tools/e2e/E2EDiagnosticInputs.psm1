@@ -1,4 +1,4 @@
-# Общий transport RunSpec: исходные байты не нормализуются и не становятся actual evidence.
+﻿# Общий transport RunSpec: исходные байты не нормализуются и не становятся actual evidence.
 $ErrorActionPreference = 'Stop'
 
 function Get-E2EFileSha256([string] $Path) {

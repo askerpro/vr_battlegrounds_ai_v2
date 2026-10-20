@@ -1,4 +1,4 @@
-param([uint32]$ThreadId = 60476)
+﻿param([uint32]$ThreadId = 60476)
 # Только чтение Windows wait-chain; не debugger attach, без памяти процесса и Unity API.
 Add-Type -TypeDefinition @'
 using System;

@@ -1,4 +1,4 @@
-param([string]$Candidate = 'tmp/mp5k-audit/Lobby-recovered-after-repeat.unity')
+﻿param([string]$Candidate = 'tmp/mp5k-audit/Lobby-recovered-after-repeat.unity')
 $ErrorActionPreference = 'Stop'
 # Только чтение исходной сцены и forensic copy; результат вне Assets.
 function Read-Documents([string]$Path) {

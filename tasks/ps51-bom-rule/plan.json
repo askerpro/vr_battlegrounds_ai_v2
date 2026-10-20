@@ -1,0 +1,25 @@
+{
+  "task_id": "ps51-bom-rule",
+  "owner": "ps51-bom-rule",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/ps51-bom-rule",
+  "base_sha": "81442a3ea13255d057bb1dbb79ea66874df24af2",
+  "doc_path": "tasks/ps51-bom-rule/Readme.md",
+  "title": "PowerShell 5.1: BOM-правило с автопроверкой",
+  "branch": "task/ps51-bom-rule",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/ps51-bom-rule/**",
+        "Tools/e2e/E2EDiagnosticInputs.psm1",
+        "Tools/Probes/arsenal-thread-wait-chain.ps1",
+        "Tools/Probes/mp5k-lobby-copy-diff.ps1",
+        "Docs/release.md",
+        "experts/launch-infra/journal/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -74,10 +74,13 @@ $sha = git rev-parse HEAD
 $win = 'F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai'
 $android = 'F:/CodexWorktrees/build-test-android/Vr_Battlegrounds_ai'
 # Проверка текущей пары: не запускает Unity и не переключает SHA.
-pwsh -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -DryRun
+powershell -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -DryRun
 # Реальная сборка: запускать только после свежей проверки процессов/логов/lock обоих checkout.
-pwsh -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -Ref $sha
+powershell -NoProfile -File Tools/release/Build-Game.ps1 -Targets 'quest,server' -Config Test -Win64Worktree $win -AndroidWorktree $android -Ref $sha
 ```
+
+Скрипты `Tools/release` и `Tools/e2e` рассчитаны на встроенный Windows PowerShell 5.1 (`powershell`), pwsh 7 не нужен.
+5.1 читает файл без BOM в кодировке ANSI, поэтому `.ps1`/`.psm1` с кириллицей сохраняются в UTF-8 с BOM.
 
 Для Prod замени `Test` на `Prod`, а пути — на `build-prod-win64` / `build-prod-android`.
 Для планшета добавь `tablet` к `-Targets`. Результаты находятся в **целевом checkout**:

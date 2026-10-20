@@ -1,7 +1,17 @@
 # Детальная GPU-диагностика сцены
 
-Обновлено: **19.10.2026**. Текущее продолжение — задача `scene-detail` в
+Обновлено: **20.10.2026**. Текущее продолжение — задача `scene-detail` в
 `F:/CodexWorktrees/71af/Vr_Battlegrounds_ai`, ветка `codex/scene-detail-perf-20261018`.
+
+**Статус 20.10 (Claude, сессия 341520):** Lobby на Quest 3 — **10,81 → 4,26 мс GPU** (normal A/B a0432b240 против
+8500240ab, 10/10 GREEN; бюджет 7 мс выполнен). Пользователь принял картинку в шлеме («стало гораздо лучше») и
+поручил финализацию: тесты на принятое, цены в манифест, ревью зон, heavy, вливание. Вошло: per-draw Meta RenderDoc
+и `render_diag` A/B (инструменты), box-UV при импорте + URP Baked Lit вместо S_VPWorldAligned, 91 материал декора на
+Baked Lit, LOD вышек, зеркало 512²/8 м, свет шатра (пол в лайтмапе, 8 ламп, плафоны). Этап вливания — новый
+`quest-gpu-lobby` в plan.json (writes = фактический diff ветки). Прежние незавершённые этапы (lobby-apply,
+shader-tier, overrides, docs, gpu-*) не закрыты — решение пользователя после вливания. Журнал:
+[changelog/2026-10-20-render-diag-ab.md](changelog/2026-10-20-render-diag-ab.md); отчёт пользователю — Claude Docs
+«Lobby на Quest 3: замеры GPU и план оптимизаций». Ждёт: worker после крэша (ticket 952) → тесты (ticket 957).
 
 **Текущий статус:** выполняется разрешённый пользователем
 [единый план завершения](gpu-diagnostics-completion-plan.md). GPU-исходники перенесены

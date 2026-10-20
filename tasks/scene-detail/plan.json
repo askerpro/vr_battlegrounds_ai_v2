@@ -535,6 +535,44 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "quest-gpu-lobby",
+      "writes": [
+        "tasks/scene-detail/**",
+        "Tools/Perf/**",
+        "Tools/e2e/.gitattributes",
+        "Tools/e2e/E2EDiagnosticInputs.psm1",
+        "Tools/e2e/E2ERenderDoc.psm1",
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/release/Build-Game.ps1",
+        "Assets/Editor/VR_Battlegrounds/Performance/**",
+        "Assets/Editor/VR_Battlegrounds/Performance.meta",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyDecorationAuthoring.cs",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyNightLighting.cs",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyTentFloorLightmap.cs",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyTentFloorLightmap.cs.meta",
+        "Assets/Scripts/Debug/E2E/**",
+        "Assets/Scripts/Debug/StressTest/**",
+        "Assets/Scripts/Maps/Detail/**",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Art/Lobby/**",
+        "Assets/Materials/Lobby/**",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "Assets/Tests/EditMode/DevTools/BoxUvProjectorTests.cs",
+        "Assets/Tests/EditMode/DevTools/BoxUvProjectorTests.cs.meta",
+        "Assets/Tests/EditMode/Maps/LobbyQuestRenderStateTests.cs",
+        "Assets/Tests/EditMode/Maps/LobbyQuestRenderStateTests.cs.meta",
+        "Docs/quest-performance-manifest.md",
+        "Docs/testing.md",
+        "experts/performance/AGENT.md",
+        "experts/performance/journal/**",
+        "experts/level-design/journal/**"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

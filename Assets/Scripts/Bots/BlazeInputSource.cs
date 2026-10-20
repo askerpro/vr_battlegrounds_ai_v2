@@ -278,7 +278,11 @@ namespace VrBattlegrounds.Bots
         {
             rightTarget = leftTarget = default;
             Transform weapon = grip.transform;
-            if (!grip.ComputeRequiredGrabberTransform(right, primary, out Vector3 rp, out Quaternion rr, false)) return false;
+            // Смещение «ствол ↔ правый грабер» — фактическое, пока ствол в руке: SDK при хвате выравнивает оружие по
+            // контроллеру (AlignToController), и оно отличается от снапа рукояти (прогон iter2-4: систематические 31°).
+            Vector3 rp = right.transform.position;
+            Quaternion rr = right.transform.rotation;
+            if (right.GrabbedObject != grip && !grip.ComputeRequiredGrabberTransform(right, primary, out rp, out rr, false)) return false;
             Quaternion inverse = Quaternion.Inverse(weapon.rotation);
             Vector3 rightInWeapon = inverse * (rp - weapon.position);
             Quaternion rightInWeaponRotation = inverse * rr;

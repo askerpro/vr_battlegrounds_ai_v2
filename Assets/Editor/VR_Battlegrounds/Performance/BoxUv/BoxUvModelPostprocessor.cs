@@ -55,7 +55,7 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             {
                 if (!string.Equals(path, BoxUvTargets.FilePath, StringComparison.OrdinalIgnoreCase)) continue;
                 // Импортировать модели посреди импорта нельзя — сразу после него.
-                EditorApplication.delayCall += ReimportTargets;
+                EditorApplication.delayCall += () => ReimportTargets();
                 return;
             }
         }

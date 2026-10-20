@@ -1,3 +1,4 @@
+using Mirror;
 using UnityEngine;
 using UltimateXR.Manipulation;
 using VrBattlegrounds.Core;
@@ -318,7 +319,8 @@ namespace VrBattlegrounds.Arsenal
             // Оружие приезжает позже, чем стена успевает заблокировать слоты: закрытая
             // стена блокирует их в Start(), а пополнение идёт из OnStartServer и из фазы
             // Setup. Без этой строки предмет появлялся хватаемым в закрытом арсенале.
-            // С T-45 — и в арсенале, где на него не хватает денег.
+            // С T-45 — и в арсенале, где на него не хватает денег. Свежую выдачу (ещё не
+            // заспавненную) запись пропускает: её захват выставляет ApplyGrabAvailability после спавна.
             SetItemGrabbable(AllowsGrabNow);
 
             ApplyOfferVisuals();
@@ -399,8 +401,26 @@ namespace VrBattlegrounds.Arsenal
             // на каждый предмет (known-issues, Issue 23).
             if (!StateEventAuthority.IsWorldAuthority) return;
 
+            // Сервер ещё не заспавнил предмет (выдача привязывает его к слоту до Spawn): UniqueId
+            // не выровнены по netId, и событие ушло бы с id префаба, которого нет ни у одного
+            // клиента (UxrComponentNotFoundException «IsGrabbable = False»), а сервер остался бы
+            // с другим значением, чем клиенты. Доступность такому предмету выставляет выдача
+            // после спавна — ApplyGrabAvailability, как у магазинов (ArsenalMagazineSupply).
+            NetworkIdentity identity = item.GetComponent<NetworkIdentity>();
+            if (identity != null && identity.netId == 0 && NetworkServer.active) return;
+
             foreach (UxrGrabbableObject grab in item.GetComponentsInChildren<UxrGrabbableObject>(true))
                 grab.IsGrabbable = grabbable;
+        }
+
+        /// <summary>
+        /// Выставляет захват предмета в слоте по текущему правилу слота. Зовёт серверная выдача
+        /// сразу после <c>NetworkUxrIdentity.SpawnServerObject</c>: только тогда синхронизируемая
+        /// запись адресуется выровненными UniqueId и доходит до клиентов.
+        /// </summary>
+        public void ApplyGrabAvailability()
+        {
+            SetItemGrabbable(AllowsGrabNow);
         }
 
         /// <summary>

@@ -168,9 +168,10 @@ namespace VrBattlegrounds.Weapons
             UxrFirearmReadinessState state = _weapon.GetReadinessState(_trigger);
             if (state == null || state.ChamberRound) return null;
             if (_initValidatorCalled) return "досылание отклонено проверкой: " + (_initValidatorRefusal ?? "ревизия/состояние учёта");
-            // SDK зовёт валидатор только при M>0 и HasReloaded (UxrFirearmWeapon.Readiness TryInitializeReadiness).
+            // SDK зовёт валидатор только при M>0 и не магазинном режиме (UxrFirearmWeapon.Readiness TryInitializeReadiness;
+            // условие HasReloaded убрано патчем 90).
             return $"проверка досылания не вызвана: патронов в магазине {_weapon.GetAmmoLeft(_trigger)}, режим {_mode} — " +
-                   "вероятно HasReloaded=false (Initialize раньше UxrFirearmWeapon.Start) или магазин пуст";
+                   "магазин пуст или режим без патронника";
         }
 
         /// <summary>

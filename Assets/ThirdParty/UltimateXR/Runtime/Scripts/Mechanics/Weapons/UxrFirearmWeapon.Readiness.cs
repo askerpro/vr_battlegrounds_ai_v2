@@ -331,7 +331,11 @@ namespace UltimateXR.Mechanics.Weapons
             if (!CanWriteReadiness(triggerIndex)) return false;
             var capture = new PhysicalValidationCapture(this, triggerIndex);
             if (capture.State?.ReadinessInitialized == true || !IsReadinessStateCompatibleWithMode(triggerIndex, capture.State)) return false;
-            bool prepared = !IsMagazineOnly(triggerIndex) && capture.Rounds > 0 && capture.HasReloaded &&
+            // VR Battlegrounds patch 90: досылание при Initialize — магазин не пуст и проверка досылания (Action в покое,
+            // магазин в гнезде, автор). Без HasReloaded: до UxrFirearmWeapon.Start он ещё false, и ствол, выданный в кобуру
+            // при включённом оружии (Respawn, выделенный сервер), инициализировался недосланным, а тот же ствол при хвате —
+            // досланным (bot-input 2026-10-20). Bool-флаг не физическое доказательство (см. Reload).
+            bool prepared = !IsMagazineOnly(triggerIndex) && capture.Rounds > 0 &&
                             ValidateChamberCompletion(triggerIndex, capture.State?.Revision ?? 0, capture.Magazine);
             if (!IsPhysicalValidationCurrent(triggerIndex, capture)) return false;
             var state = new UxrFirearmReadinessState { ReadinessInitialized = true, ChamberRound = prepared };

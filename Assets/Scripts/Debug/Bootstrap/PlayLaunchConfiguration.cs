@@ -29,6 +29,8 @@ namespace VrBattlegrounds.DevTools
         public bool PauseOnFocusLoss = true;
         public bool ScreenshotOnButtonB;
         public bool AllowUnmarked;
+        // Только пассивная диагностика управляемого запуска; обычные профили её не включают.
+        public bool NetworkStartupDiagnostics;
         public string Readiness = "map-playable";
         public int TimeoutSeconds = 90;
 

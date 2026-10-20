@@ -56,6 +56,12 @@ namespace VrBattlegrounds.DevTools
         public static System.Func<string> EditorBeforeServerStart { get; set; }
         /// <summary>Один Editor-владелец применяет frozen порты до старта сети каждой роли.</summary>
         public static System.Func<Mirror.NetworkManager, Mirror.Discovery.NetworkDiscovery, Network.GameNetworkDiscovery.AppRole, string> EditorBeforeNetworkStart { get; set; }
+#if UNITY_EDITOR
+        /// <summary>Пассивная диагностика managed launch до Awake транспорта; владелец scope восстанавливает настройку.</summary>
+        public static System.Action<Mirror.NetworkManager> EditorBeforeNetworkAwake { get; set; }
+        /// <summary>Редкие метки сети и загрузки сцены; обработчик не управляет запуском или состоянием игры.</summary>
+        public static System.Action<string, string> EditorNetworkDiagnosticEvent { get; set; }
+#endif
         /// <summary>
         /// Аналог <see cref="EditorBeforeNetworkStart"/> для собранного плеера: применяет пару портов до старта сети
         /// каждой роли, код отказа запрещает старт. Ставит только E2E-харнесс (<c>E2EPlayerPorts</c>); в обычном

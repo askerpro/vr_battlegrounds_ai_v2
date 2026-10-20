@@ -31,6 +31,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private static IDisposable _identity;
         private static IDisposable _focus;
         private static IDisposable _launch;
+        private static IDisposable _networkDiagnostics;
         private static StartupRouteHandle _startupRoute;
         private static Func<string> _beforeServerStart;
         private static Func<string> _clientAddress;
@@ -120,6 +121,8 @@ namespace VrBattlegrounds.EditorTools.TestStand
             {
                 _focus = UxrManager.BeginEditorFocusPauseOverride(configuration.PauseOnFocusLoss);
                 if (!next.MarkerProbe) _launch = DebugBootstrapGate.BeginManagedLaunch();
+                if (!next.MarkerProbe && configuration.NetworkStartupDiagnostics)
+                    _networkDiagnostics = PlayLaunchNetworkDiagnostics.Begin(next.RunId, participant, Session);
             }
             catch { Release(); throw; }
             _restored = false;
@@ -380,6 +383,7 @@ namespace VrBattlegrounds.EditorTools.TestStand
             _identity?.Dispose(); _identity = null;
             _focus?.Dispose(); _focus = null;
             _launch?.Dispose(); _launch = null;
+            _networkDiagnostics?.Dispose(); _networkDiagnostics = null;
             _profile?.Dispose(); _profile = null;
             if (_run != null) _restored = LocalClientProfile.OverrideStateKey == _originalProfile;
             if (!_reloading) ArchiveLog(active);

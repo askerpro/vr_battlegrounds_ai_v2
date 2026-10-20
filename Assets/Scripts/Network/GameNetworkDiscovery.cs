@@ -125,6 +125,17 @@ namespace VrBattlegrounds.Network
             {
                 _discovery.OnServerFound.RemoveListener(OnServerFound);
             }
+            GameNetworkManager.ServerPublished -= OnServerPublished;
+        }
+
+        private void Update()
+        {
+            if (_initialPhase == InitialConnectPhase.WaitingRetry) TickInitialConnect();
+        }
+
+        private void OnServerPublished()
+        {
+            if (_discovery != null) _discovery.AdvertiseServer();
         }
 
 
@@ -193,14 +204,18 @@ namespace VrBattlegrounds.Network
 
             switch (role)
             {
+                // Сервер объявляет себя, только когда открыл порт после готовности карты (S1):
+                // discovery не зовёт клиентов в его тяжёлый старт.
                 case AppRole.Server:
-                    NetworkManager.singleton.StartServer();
-                    _discovery.AdvertiseServer();
+                    GameNetworkManager.ServerPublished -= OnServerPublished;
+                    GameNetworkManager.ServerPublished += OnServerPublished;
+                    ((GameNetworkManager)NetworkManager.singleton).StartServerWithoutSocket();
                     break;
 
                 case AppRole.Host:
-                    NetworkManager.singleton.StartHost();
-                    _discovery.AdvertiseServer();
+                    GameNetworkManager.ServerPublished -= OnServerPublished;
+                    GameNetworkManager.ServerPublished += OnServerPublished;
+                    ((GameNetworkManager)NetworkManager.singleton).StartHostWithoutSocket();
                     break;
 
                 case AppRole.Client:
@@ -208,7 +223,7 @@ namespace VrBattlegrounds.Network
                     string explicitAddress = VrBattlegrounds.DevTools.DebugBootstrapGate.EditorClientAddressOverride?.Invoke();
                     if (!string.IsNullOrEmpty(explicitAddress))
                     {
-                        ConnectToAddress(explicitAddress);
+                        BeginInitialConnect(explicitAddress);
                         break;
                     }
                     _discovery.OnServerFound.AddListener(OnServerFound);
@@ -229,6 +244,9 @@ namespace VrBattlegrounds.Network
 
             _discovery.OnServerFound.RemoveListener(OnServerFound);
             _discovery.StopDiscovery();
+            GameNetworkManager.ServerPublished -= OnServerPublished;
+            // Пользователь остановил роль — начальные попытки клиента прекращаются.
+            CancelInitialConnect("остановлено пользователем");
 
             switch (CurrentRole)
             {
@@ -431,6 +449,7 @@ namespace VrBattlegrounds.Network
         public static void NotifyClientStopped(bool controlledLaunch)
         {
             if (controlledLaunch && !NetworkServer.active) _holdClientAutoStart = true;
+            ScheduleInitialRetry();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -451,6 +470,7 @@ namespace VrBattlegrounds.Network
         public void RequestClientDisconnect()
         {
             if (NetworkServer.active) throw new System.InvalidOperationException("HostDisconnectUnsupported");
+            CancelInitialConnect("штатное отключение клиента");
             if (!NetworkClient.active) throw new System.InvalidOperationException("ClientNotActive");
             if (CurrentRole == null) CurrentRole = AppRole.Client;
             if (CurrentRole != AppRole.Client) throw new System.InvalidOperationException("ClientRoleRequired");
@@ -474,6 +494,121 @@ namespace VrBattlegrounds.Network
             }
             catch { CurrentRole = null; _holdClientAutoStart = true; throw; }
         }
+        // ── Первое подключение по явному адресу (S2) ────────────────────────
+        //
+        // Клиент мог стартовать раньше, чем сервер открыл порт: KCP получает SocketException и рвёт
+        // соединение (trace829, localhost8 — разрыв ~80 с). До первого успешного подключения обрыв —
+        // повод для новой попытки с паузой 1→2→4→5 с в общем сроке; по истечении — именованный отказ.
+        // После первого подключения фаза закрыта навсегда: дальше обрыв — штатный, без автоповторов.
+        // Состояние статическое: владелец переживает замену компонента при переходе в Offline.
+        // Контракт: tasks/bots-validation/contracts/startup-lifecycle-design.md, S2.
+
+        /// <summary>Фаза первого подключения клиента по явному адресу.</summary>
+        public enum InitialConnectPhase { None, Connecting, WaitingRetry, Online, Failed, Cancelled }
+
+        /// <summary>Общий срок первого подключения по умолчанию, секунды (решение пользователя 2026-10-19).</summary>
+        public const float InitialConnectDeadlineSeconds = 180f;
+
+        private static readonly float[] InitialRetryDelays = { 1f, 2f, 4f, 5f };
+
+        private static InitialConnectPhase _initialPhase;
+        private static string _initialAddress;
+        private static float _initialDeadline;
+        private static float _initialNextAttemptAt;
+        private static int _initialAttempt;
+        private static string _initialLastError;
+
+        /// <summary>Текущая фаза первого подключения (для статуса стенда и диагностики).</summary>
+        public static InitialConnectPhase InitialPhase => _initialPhase;
+
+        /// <summary>Номер последней попытки первого подключения.</summary>
+        public static int InitialAttempt => _initialAttempt;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetInitialConnect()
+        {
+            _initialPhase = InitialConnectPhase.None;
+            _initialAddress = null;
+            _initialAttempt = 0;
+            _initialLastError = null;
+        }
+
+        private static void BeginInitialConnect(string address)
+        {
+            _initialAddress = address;
+            _initialDeadline = Time.realtimeSinceStartup + InitialConnectDeadlineSeconds;
+            _initialAttempt = 0;
+            _initialLastError = null;
+            StartInitialAttempt();
+        }
+
+        private static void StartInitialAttempt()
+        {
+            _initialAttempt++;
+            _initialPhase = InitialConnectPhase.Connecting;
+#if UNITY_EDITOR
+            VrBattlegrounds.DevTools.DebugBootstrapGate.EditorNetworkDiagnosticEvent?.Invoke(
+                "client-initial-attempt", $"{_initialAttempt}|{_initialAddress}");
+#endif
+            GameLog.Network.Info($"[GameNetworkDiscovery] Первое подключение: попытка {_initialAttempt} к {_initialAddress}.");
+            ConnectToAddress(_initialAddress);
+        }
+
+        /// <summary>Пауза перед следующей попыткой или именованный отказ по сроку.</summary>
+        private static void TickInitialConnect()
+        {
+            float now = Time.realtimeSinceStartup;
+            if (now >= _initialDeadline)
+            {
+                _initialPhase = InitialConnectPhase.Failed;
+#if UNITY_EDITOR
+                VrBattlegrounds.DevTools.DebugBootstrapGate.EditorNetworkDiagnosticEvent?.Invoke(
+                    "client-initial-failed", $"{_initialAttempt}|{_initialLastError}");
+#endif
+                GameLog.Network.Error(
+                    $"[GameNetworkDiscovery] Первое подключение не удалось: initial-connect-timeout " +
+                    $"({InitialConnectDeadlineSeconds:0} с, попыток {_initialAttempt}, адрес {_initialAddress}, " +
+                    $"последняя ошибка: {(string.IsNullOrEmpty(_initialLastError) ? "нет" : _initialLastError)}).");
+                return;
+            }
+            // Новая попытка — только после полного перехода прошлой в Offline.
+            if (now < _initialNextAttemptAt || !ClientManagerReady) return;
+            StartInitialAttempt();
+        }
+
+        /// <summary>Клиент подключился (handshake прошёл): фаза первого подключения закрыта.</summary>
+        public static void NotifyClientConnected()
+        {
+            if (_initialPhase != InitialConnectPhase.Connecting) return;
+            _initialPhase = InitialConnectPhase.Online;
+            GameLog.Network.Info($"[GameNetworkDiscovery] Первое подключение установлено с попытки {_initialAttempt}.");
+        }
+
+        /// <summary>Ошибка транспорта клиента — для текста отказа по сроку.</summary>
+        public static void NotifyClientError(string reason)
+        {
+            if (_initialPhase == InitialConnectPhase.Connecting) _initialLastError = reason;
+        }
+
+        /// <summary>Обрыв до первого подключения — пауза и новая попытка в общем сроке.</summary>
+        private static void ScheduleInitialRetry()
+        {
+            if (_initialPhase != InitialConnectPhase.Connecting) return;
+            float delay = InitialRetryDelays[Mathf.Min(_initialAttempt - 1, InitialRetryDelays.Length - 1)];
+            _initialNextAttemptAt = Time.realtimeSinceStartup + delay;
+            _initialPhase = InitialConnectPhase.WaitingRetry;
+            GameLog.Network.Info(
+                $"[GameNetworkDiscovery] Попытка {_initialAttempt} не подключилась" +
+                $"{(string.IsNullOrEmpty(_initialLastError) ? "" : $" ({_initialLastError})")}; повтор через {delay:0} с.");
+        }
+
+        private static void CancelInitialConnect(string reason)
+        {
+            if (_initialPhase != InitialConnectPhase.Connecting && _initialPhase != InitialConnectPhase.WaitingRetry) return;
+            _initialPhase = InitialConnectPhase.Cancelled;
+            GameLog.Network.Info($"[GameNetworkDiscovery] Первое подключение прекращено: {reason}.");
+        }
+
         private static void ConnectToAddress(string address)
         {
             if (System.Uri.TryCreate(address, System.UriKind.Absolute, out var uri) && address.Contains("://"))

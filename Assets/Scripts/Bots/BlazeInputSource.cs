@@ -26,8 +26,8 @@ namespace VrBattlegrounds.Bots
     ///
     /// <para>
     /// <b>Оружие.</b> Не в руке — правая кисть к снапу основной рукояти выбранного оружия (кобура, покупка у кисти) и Grip.
-    /// В руке — Grip держится; у винтовки левая — к поддержке и Grip. Есть цель — наведение замкнутым циклом по фактическому
-    /// дулу; нет — ствол опущен. Курок — когда <see cref="BotGunner.DecideTriggerPress"/> разрешил: отпущен ≥ 2 кадров,
+    /// В руке — Grip держится; у винтовки левая — к поддержке и Grip. Есть цель — наведение жёсткого ствола двумя руками
+    /// (обе кисти — по желаемой позе оружия); нет — ствол опущен. Курок — когда <see cref="BotGunner.DecideTriggerPress"/> разрешил: отпущен ≥ 2 кадров,
     /// нажат 3, отпущен. Пистолет под покупку и чужой предмет — отпустить Grip (размещение и падение решает SDK).
     /// </para>
     /// </summary>
@@ -48,7 +48,6 @@ namespace VrBattlegrounds.Bots
         private const int TriggerPressFrames = 3;
         private const int SeesIntervalFrames = BotPlayerFlowSettings.SeesIntervalFrames;
         private const float HoldForward = 0.40f, HoldDown = 0.12f, HoldSide = 0.12f;
-        private const float AimGain = 0.7f;
         private static readonly Vector3 LowReadyFromEye = new Vector3(0.1f, -1.2f, 3f);
 
         private readonly AvatarPilot _pilot = new AvatarPilot();
@@ -60,8 +59,6 @@ namespace VrBattlegrounds.Bots
         private int _tickFrame = -1;
         private int _seesPhase;
         private int _rightAtTarget, _leftAtTarget;
-        private bool _aiming;
-        private Quaternion _aimRotation;
         private int _triggerFrames;   // > 0 — курок нажат ещё столько кадров
         private int _releasedFrames;  // сколько кадров курок отпущен
         private bool _approach;       // идём к предмету: ходьба головой к нему, а не к ногам мозга
@@ -87,7 +84,6 @@ namespace VrBattlegrounds.Bots
             _gunner = avatar != null ? avatar.GetComponent<BotGunner>() : null;
             _combat = avatar != null ? avatar.GetComponent<BotCombatDriver>() : null;
             _rightAtTarget = _leftAtTarget = 0;
-            _aiming = false;
             _triggerFrames = 0;
             _releasedFrames = 0;
             _seesPhase = avatar != null ? (avatar.GetHashCode() & 0x7fffffff) % SeesIntervalFrames : 0;
@@ -193,8 +189,7 @@ namespace VrBattlegrounds.Bots
 
             if (!holdsPrimary)
             {
-                _aiming = false;
-                _pilot.Rest(UxrHandSide.Left);
+                    _pilot.Rest(UxrHandSide.Left);
                 _pilot.Press(UxrHandSide.Left, UxrInputButtons.Grip, false);
                 if (!UxrGrabManager.HasInstance || UxrGrabManager.Instance.IsBeingGrabbed(grip) || _gunner.SwapPending)
                 {
@@ -243,16 +238,26 @@ namespace VrBattlegrounds.Bots
             Vector3 eye = _pilot.HeadPosition;
             Quaternion yaw = Quaternion.AngleAxis(_pilot.Yaw, Vector3.up);
             Vector3 aimPoint = _gunner.HasAimPoint ? _gunner.AimPoint : eye + yaw * LowReadyFromEye;
-            if (muzzle != null) Aim(right, muzzle, aimPoint, eye, yaw);
-
-            // Поддержка: у винтовки левая к снапу поддержки и Grip.
             bool rifle = _gunner.WeaponCategory == WeaponCategory.Rifle;
-            if (rifle && support >= 0 && left != null)
+            bool useSupport = rifle && support >= 0 && left != null;
+            bool holdsSupport = useSupport && left.GrabbedObject == grip;
+
+            if (muzzle == null || !AimRigid(grip, primary, useSupport ? support : -1, right, left, muzzle, aimPoint, eye, yaw,
+                                            out Pose rightTarget, out Pose leftTarget))
             {
-                bool holdsSupport = left.GrabbedObject == grip;
-                if (grip.ComputeRequiredGrabberTransform(left, support, out Vector3 supportSnap, out Quaternion supportRotation, false))
-                    _pilot.ReachGrabber(UxrHandSide.Left, supportSnap, supportRotation);
-                _leftAtTarget = holdsSupport || _pilot.GrabberAtTarget(UxrHandSide.Left, ReachTolerance) ? _leftAtTarget + 1 : 0;
+                Rest();
+                _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, true);
+                return;
+            }
+
+            _pilot.ReachGrabber(UxrHandSide.Right, rightTarget.position, rightTarget.rotation);
+            if (useSupport)
+            {
+                // Левая — к поддержке на стволе в заданной позе; Grip по прибытии, дальше держится.
+                _pilot.ReachGrabber(UxrHandSide.Left, leftTarget.position, leftTarget.rotation);
+                bool atSupport = grip.ComputeRequiredGrabberTransform(left, support, out Vector3 supportNow, out _, false) &&
+                                 (left.transform.position - supportNow).magnitude <= ReachTolerance;
+                _leftAtTarget = holdsSupport || atSupport ? _leftAtTarget + 1 : 0;
                 _pilot.Press(UxrHandSide.Left, UxrInputButtons.Grip, holdsSupport || _leftAtTarget >= ReachStableFrames);
             }
             else
@@ -263,35 +268,48 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
-        /// Наведение: точка удержания перед головой, поворот грабера, при котором дуло смотрит в точку; дальше — по
-        /// фактическому дулу (ограничения хвата и отдача накапливаются в команде, коэффициент &lt; 1).
+        /// Наведение жёсткого ствола (как человек держит оружие двумя руками): желаемая поза оружия — рукоять у точки
+        /// удержания перед головой, дуло на <paramref name="target"/> (крен прежний); цели кистей — позы граберов для
+        /// рукояти и поддержки в этой позе оружия (<c>ComputeRequiredGrabberTransform</c>, только чтение SDK). Без
+        /// интегратора: ограничения хвата SDK держат ствол жёстко между руками.
         /// </summary>
-        private void Aim(UxrGrabber grabber, Transform muzzle, Vector3 target, Vector3 eye, Quaternion yaw)
+        private bool AimRigid(UxrGrabbableObject grip, int primary, int support, UxrGrabber right, UxrGrabber left, Transform muzzle,
+                              Vector3 target, Vector3 eye, Quaternion yaw, out Pose rightTarget, out Pose leftTarget)
         {
-            Transform hand = grabber.transform;
+            rightTarget = leftTarget = default;
+            Transform weapon = grip.transform;
+            if (!grip.ComputeRequiredGrabberTransform(right, primary, out Vector3 rp, out Quaternion rr, false)) return false;
+            Quaternion inverse = Quaternion.Inverse(weapon.rotation);
+            Vector3 rightInWeapon = inverse * (rp - weapon.position);
+            Quaternion rightInWeaponRotation = inverse * rr;
+            Vector3 muzzleInWeapon = inverse * (muzzle.position - weapon.position);
+            Vector3 muzzleForwardInWeapon = inverse * muzzle.forward;
+            Vector3 leftInWeapon = Vector3.zero;
+            Quaternion leftInWeaponRotation = Quaternion.identity;
+            bool hasLeft = false;
+            if (support >= 0 && left != null && grip.ComputeRequiredGrabberTransform(left, support, out Vector3 lp, out Quaternion lr, false))
+            {
+                hasLeft = true;
+                leftInWeapon = inverse * (lp - weapon.position);
+                leftInWeaponRotation = inverse * lr;
+            }
+
             Vector3 hold = eye + yaw * new Vector3(HoldSide, -HoldDown, HoldForward);
-            Quaternion handInverse = Quaternion.Inverse(hand.rotation);
-            Vector3 muzzleInHand = handInverse * (muzzle.position - hand.position);
-            Quaternion muzzleInHandRotation = handInverse * muzzle.rotation;
-
-            if (!_aiming)
+            Quaternion rotation = weapon.rotation;
+            Vector3 position = hold - rotation * rightInWeapon;
+            for (int i = 0; i < 4; i++)
             {
-                _aimRotation = hand.rotation;
-                for (int i = 0; i < 3; i++)
-                {
-                    Vector3 muzzlePosition = hold + _aimRotation * muzzleInHand;
-                    Vector3 muzzleForward = _aimRotation * muzzleInHandRotation * Vector3.forward;
-                    _aimRotation = Quaternion.FromToRotation(muzzleForward, target - muzzlePosition) * _aimRotation;
-                }
-                _aiming = true;
+                position = hold - rotation * rightInWeapon;
+                Vector3 muzzlePosition = position + rotation * muzzleInWeapon;
+                Vector3 wanted = target - muzzlePosition;
+                if (wanted.sqrMagnitude < 1e-6f) break;
+                rotation = Quaternion.FromToRotation(rotation * muzzleForwardInWeapon, wanted) * rotation;
             }
-            else
-            {
-                Quaternion correction = Quaternion.FromToRotation(muzzle.forward, target - muzzle.position);
-                _aimRotation = Quaternion.Slerp(Quaternion.identity, correction, AimGain) * _aimRotation;
-            }
+            position = hold - rotation * rightInWeapon;
 
-            _pilot.ReachGrabber(UxrHandSide.Right, hold, _aimRotation);
+            rightTarget = new Pose(position + rotation * rightInWeapon, rotation * rightInWeaponRotation);
+            if (hasLeft) leftTarget = new Pose(position + rotation * leftInWeapon, rotation * leftInWeaponRotation);
+            return true;
         }
 
         private void Trigger(bool alive)
@@ -320,7 +338,6 @@ namespace VrBattlegrounds.Bots
 
         private void Rest()
         {
-            _aiming = false;
             _rightAtTarget = _leftAtTarget = 0;
             _pilot.Rest(UxrHandSide.Right);
             _pilot.Rest(UxrHandSide.Left);

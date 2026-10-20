@@ -112,7 +112,9 @@ namespace VrBattlegrounds.Haptics
             GameObject prefab = grabber != null ? ResolveReady(grabber, out target, out role) : null;
 
             Active active = _ready[(int)side];
-            if (prefab == active.Prefab && target == active.Target && role == active.Role && active.Instance != null) return;
+            // Без изменений — ничего не делаем; «готовности нет» тоже неизменное состояние (иначе Verbose-строка каждый кадр
+            // на обе руки вытесняет из лога полезные строки, bot-input 2026-10-20).
+            if (prefab == active.Prefab && target == active.Target && role == active.Role && (prefab == null || active.Instance != null)) return;
 
             Release(active.Prefab, active.Instance);
             active.Prefab = prefab;

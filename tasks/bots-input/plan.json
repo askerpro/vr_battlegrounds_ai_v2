@@ -33,7 +33,9 @@
         "Assets/Scripts/Debug/E2E/Input/**",
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**"
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Scripts/Weapons/WeaponSystem/WeaponSystem.cs",
+        "Assets/Scripts/Haptics/InteractionFeedback.cs"
       ],
       "after": [],
       "needs": []

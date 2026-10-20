@@ -637,6 +637,7 @@ namespace VrBattlegrounds.Weapons
                 UxrGrabber mainHand = vrFeedback ? pending.MainHand ?? _context.MainHand() : null;
                 for (int index = 0; index < _out.Cues.Count; index++)
                 {
+                    if (_out.Cues[index] == WS.WeaponCue.DryFire) LogDryFire(_out.Reasons[index]);
                     _sound.Play(_out.Cues[index], _out.Reasons[index], mainHand);
                     _ejectionOut.Play(_out.Cues[index]);
                 }
@@ -650,15 +651,15 @@ namespace VrBattlegrounds.Weapons
 
         /// <summary>
         /// Повтор Initialize без спама: первый отказ — предупреждение с причиной (видимые условия порта), следующие — Verbose;
-        /// успех после отказов — Info с номером попытки.
+        /// успех — Info один раз на инициализацию: номер попытки, дослан ли патрон и где оружие (в руке / в якоре) — по этой
+        /// строке видно, почему ствол требует досылания (bot-input, прогон 3: недосланный пистолет из кобуры).
         /// </summary>
         private void LogInitialize(bool accepted)
         {
             _initAttempts++;
             if (accepted)
             {
-                if (_initRejects > 0)
-                    GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован со {_initAttempts}-й попытки.", this);
+                GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован (попытка {_initAttempts}) — {DescribeReadiness()}.", this);
                 _initAttempts = _initRejects = 0;
                 return;
             }
@@ -668,6 +669,26 @@ namespace VrBattlegrounds.Weapons
                 GameLog.WeaponSystem.Warning($"[WeaponSystem] {name}: учёт отклонил Initialize — {why}. Повтор: хват основной рукой, " +
                                              "магазин, нажатие спуска, смена автора, запрос бота; дальше отказы — Verbose.", this);
             else GameLog.WeaponSystem.Verbose($"[WeaponSystem] {name}: Initialize отклонён ({_initRejects}-й раз) — {why}.", this);
+        }
+
+        /// <summary>
+        /// Сухой щелчок (T53 и др.): отказ спуска с причиной — одна строка на нажатие, только у автора (машина выдаёт отказ
+        /// только ему). Отвечает на «нажал курок — почему не выстрелило».
+        /// </summary>
+        private void LogDryFire(WS.WeaponNotReadyReason reason) =>
+            GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: спуск отклонён — {reason} (строка {_machine?.LastRowId ?? "—"}); {DescribeReadiness()}.", this);
+
+        /// <summary>Состояние учёта и места оружия для лога: патронник, патроны, держит ли рука (чья) или якорь.</summary>
+        private string DescribeReadiness()
+        {
+            if (_weapon == null) return "нет огнестрела";
+            UxrFirearmReadinessState state = _weapon.UsesReadinessLedger(_triggerIndex) ? _weapon.GetReadinessState(_triggerIndex) : null;
+            UxrGrabber hand = _context != null ? _context.MainHand() : null;
+            UxrGrabbableObject grabbable = _weapon.GetComponent<UxrGrabbableObject>();
+            string where = hand != null && hand.Avatar != null ? $"в руке {hand.Avatar.name} ({hand.Avatar.AvatarMode})"
+                : grabbable != null && grabbable.CurrentAnchor != null ? $"в якоре {grabbable.CurrentAnchor.name}" : "свободно";
+            return $"патронник={(state != null && state.ChamberRound ? "да" : "нет")}, Action открыт={(state != null && state.ActionOpen ? "да" : "нет")}, " +
+                   $"патронов={_weapon.GetAmmoLeft(_triggerIndex)}, {where}, сервер={Mirror.NetworkServer.active}";
         }
 
         private void Log(in WS.WeaponReport report)

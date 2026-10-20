@@ -38,6 +38,9 @@ namespace VrBattlegrounds.Weapons
         private readonly WeaponLedgerReader _reader;
         private Func<int, UxrGrabber, UxrFirearmTriggerDecision> _defaultEvaluate;
         private bool _installed, _initializing, _inFlight;
+        // Диагностика Initialize (bot-input 2026-10-20): вызывался ли валидатор досылания и что он отказал — для строки лога.
+        private bool _initValidatorCalled;
+        private string _initValidatorRefusal;
         private LedgerCommandKind _inFlightKind;
         private uint _inFlightRevision;
 
@@ -110,9 +113,12 @@ namespace VrBattlegrounds.Weapons
                 {
                     bool accepted;
                     _initializing = true;
+                    _initValidatorCalled = false;
+                    _initValidatorRefusal = null;
                     try { accepted = _weapon.TryInitializeReadiness(_trigger); }
                     finally { _initializing = false; }
                     LastInitializeRefusal = accepted ? null : DescribeInitializeRefusal();
+                    LastInitializeChamberNote = accepted ? DescribeInitializeChamber() : null;
                     return accepted;
                 }
                 case LedgerCommandKind.BeginAction:
@@ -150,6 +156,22 @@ namespace VrBattlegrounds.Weapons
 
         /// <summary>Видимые условия, не выполненные при последнем отказе Initialize (null — последний Initialize принят).</summary>
         public string LastInitializeRefusal { get; private set; }
+
+        /// <summary>
+        /// Почему принятый Initialize оставил патронник пустым (null — дослан или неприменимо). Одна строка на
+        /// инициализацию; печатает <c>WeaponSystem.LogInitialize</c>.
+        /// </summary>
+        public string LastInitializeChamberNote { get; private set; }
+
+        private string DescribeInitializeChamber()
+        {
+            UxrFirearmReadinessState state = _weapon.GetReadinessState(_trigger);
+            if (state == null || state.ChamberRound) return null;
+            if (_initValidatorCalled) return "досылание отклонено проверкой: " + (_initValidatorRefusal ?? "ревизия/состояние учёта");
+            // SDK зовёт валидатор только при M>0 и HasReloaded (UxrFirearmWeapon.Readiness TryInitializeReadiness).
+            return $"проверка досылания не вызвана: патронов в магазине {_weapon.GetAmmoLeft(_trigger)}, режим {_mode} — " +
+                   "вероятно HasReloaded=false (Initialize раньше UxrFirearmWeapon.Start) или магазин пуст";
+        }
 
         /// <summary>
         /// Какие из видимых снаружи условий <c>TryInitializeReadiness</c> не выполнены (SDK не меняется: только публичные
@@ -204,6 +226,14 @@ namespace VrBattlegrounds.Weapons
 
         private bool ValidateChamberCompletion(int trigger, uint revision, UxrGrabbableObject magazine)
         {
+            if (_initializing && trigger == _trigger)
+            {
+                _initValidatorCalled = true;
+                _initValidatorRefusal = !CanAuthor(trigger) ? "не автор/не готов (CanAuthor=false)"
+                    : !_rig.IsAtRest() ? "Action не в покое: " + _rig.DescribeRestDeviation()
+                    : magazine != _reader.CurrentAnchorMagazine() ? "магазин не совпал с магазином в гнезде"
+                    : null;
+            }
             if (trigger != _trigger || !CanAuthor(trigger) || !_rig.IsAtRest() || magazine != _reader.CurrentAnchorMagazine()) return false;
             if (_initializing)
             {

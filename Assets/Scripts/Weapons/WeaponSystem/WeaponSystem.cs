@@ -659,7 +659,9 @@ namespace VrBattlegrounds.Weapons
             _initAttempts++;
             if (accepted)
             {
-                GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован (попытка {_initAttempts}) — {DescribeReadiness()}.", this);
+                string chamberNote = _port.LastInitializeChamberNote;
+                GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован (попытка {_initAttempts}) — {DescribeReadiness()}" +
+                                          (chamberNote != null ? $"; патронник пуст: {chamberNote}" : "") + ".", this);
                 _initAttempts = _initRejects = 0;
                 return;
             }

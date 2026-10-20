@@ -34,8 +34,11 @@
         "Assets/Scripts/Bots/**",
         "Assets/Scripts/Debug/BotCombatStand/**",
         "Assets/Editor/VR_Battlegrounds/Bots/**",
-        "Assets/Scripts/Weapons/WeaponSystem/WeaponSystem.cs",
-        "Assets/Scripts/Haptics/InteractionFeedback.cs"
+        "Assets/Scripts/Haptics/InteractionFeedback.cs",
+        "Assets/Scripts/Weapons/WeaponSystem/**",
+        "Assets/Scripts/Weapons/Core/**",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
+        "Assets/Tests/EditMode/Weapons/**"
       ],
       "after": [],
       "needs": []

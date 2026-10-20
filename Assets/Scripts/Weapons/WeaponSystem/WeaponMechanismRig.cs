@@ -237,6 +237,27 @@ namespace VrBattlegrounds.Weapons
         }
 
         /// <summary>Action физически в покое: ручка и каждая деталь в своей локальной позе покоя.</summary>
+        /// <summary>
+        /// Только диагностика (лог Initialize): какая привязка Action вне покоя и на сколько; «в покое» — все в покое.
+        /// </summary>
+        public string DescribeRestDeviation()
+        {
+            if (!_prepared) return "риг не подготовлен";
+            for (int index = 0; index < _bindings.Length; index++)
+            {
+                ChamberActionBinding binding = _bindings[index];
+                LocalPose rest = _actionLocalRest[index];
+                Transform target = binding.Target;
+                if (target == null) return $"привязка {index}: цели нет";
+                if (target.parent != binding.CapturedParent) return $"привязка {index} '{target.name}': сменился родитель";
+                float offset = (target.localPosition - rest.Position).magnitude;
+                float angle = Quaternion.Angle(target.localRotation, rest.Rotation);
+                if (offset > _epsilon || !ChamberActionBinding.RotationNear(target.localRotation, rest.Rotation))
+                    return $"привязка {index} '{target.name}': сдвиг {offset * 1000f:0.###} мм, поворот {angle:0.###}°";
+            }
+            return "в покое";
+        }
+
         public bool IsAtRest()
         {
             if (!_prepared) return false;

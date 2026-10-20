@@ -1,0 +1,60 @@
+{
+  "task_id": "bots-input",
+  "owner": "bots-input",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/bots-input",
+  "base_sha": "246d91e11ea474cfa2c67c4d26593bd4d2a37ce2",
+  "doc_path": "tasks/bots-input/Readme.md",
+  "title": "Боты: ввод устройства в аватар бота (этап 2 bots-epic)",
+  "branch": "task/bots-input",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/bots-input/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "input-scenario",
+      "writes": [
+        "tasks/bots-input/**",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Core/UxrManager.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/UxrAvatar.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/Controllers/UxrStandardAvatarController.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Avatar/Controllers/UxrStandardAvatarController.Custom.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Devices/UxrControllerTracking.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrWeapon.Custom.cs",
+        "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Manipulation/UxrGrabManager.Manipulation.cs",
+        "Assets/Scripts/Player/Input/**",
+        "Assets/Scripts/Player/Avatars/RemoteAvatarIKThrottle.cs",
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "input-blaze",
+      "writes": [
+        "tasks/bots-input/**",
+        "Assets/Scripts/Player/Input/**",
+        "Assets/Scripts/Bots/**",
+        "Assets/Scripts/Debug/BotCombatStand/**",
+        "Assets/Editor/VR_Battlegrounds/Bots/**",
+        "Assets/Tests/EditMode/Bots/**"
+      ],
+      "after": [
+        {
+          "task": "bots-input",
+          "stage": "input-scenario",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    }
+  ]
+}

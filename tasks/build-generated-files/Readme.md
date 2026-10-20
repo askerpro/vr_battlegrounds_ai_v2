@@ -29,7 +29,10 @@
 - [x] Отрицательный путь на временном sparse-worktree: embedded-копия при git-форме, лишняя правка lock, staged,
   `m_Name` в PC.asset, другой ассет — отказ с причиной; generated-only — проходит.
 - [x] `Run-QuestE2E -Build -DryRunBuild` (pwsh 7) с модулем на чистой паре.
-- [ ] Возврат после реальной сборки (`finally`) — полная сборка на паре после A/B серии scene-detail (ждём сигнала).
-- [ ] Ревью зон launch-infra и performance; приёмка пользователем; вливание.
+- [x] Полная сборка `quest,server` `-Ref da78253b6` на build-test (06:18, exit 0, uxr-ids совпали): после неё
+  Build-Game вернул lock (обе) и PC.asset (win64), оба checkout чисты; `-DryRun -Ref` на другой SHA не отказывает.
+- [x] Ревью launch-infra и performance — approve (раунд 1, 0df79a52a).
+- [x] Приёмка пользователем 2026-10-20. Тесты: `Tools/release/tests/test_build_checkout_generated.py` (10/10).
+- [ ] Повторное ревью на финальном SHA и вливание.
 
 Логи проверок — `reports/` (ignored).

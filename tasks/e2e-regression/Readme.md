@@ -74,6 +74,19 @@ SDK «внешний аватар с вводом», 5 точек), правил
 на worker (OculusXRPlugin у участников без шлема, infra 10064); зависание моста MCP после domain reload (infra_issue
 от bots-control-modes 2026-10-19); устаревшие шаблоны путей `owns` после player-prefab-layout.
 
+## Исполнители этапов (2026-10-20)
+
+Эпик ведёт координационная сессия (эта задача): этапы, приёмка, сводка. Этапы — отдельные задачи со своими
+агентами и worktree, области записи не пересекаются:
+
+| Этап | Задача | Пишет | Не трогает |
+|---|---|---|---|
+| 2 Бой | [e2e-combat](../e2e-combat/Readme.md) | `Assets/Scripts/Debug/E2E/Input/**`, `Assets/Scripts/Debug/E2E/Scenarios/Scripted*`, регистрация в `E2ERunner.cs`, `Assets/Tests/EditMode/DevTools/ScriptedInput*` | `Tools/e2e/**`, `Assets/Editor/VR_Battlegrounds/Testing/**`, `AGENTS.md` |
+| 4 HeavyEditor | [e2e-heavy-editor](../e2e-heavy-editor/Readme.md) | `Tools/e2e/**` (раннер и наборы), `Assets/Editor/VR_Battlegrounds/Testing/**` (фасад дирижёра стенда), раздел в `AGENTS.md`, свои тесты | `Assets/Scripts/Debug/E2E/Input/**`, `Scenarios/Scripted*`, префабы |
+
+Стык: набор HeavyEditor начинается с `scripted-input-smoke` и `scripted-wall-purchase`; сценарий боя добавляется в
+набор тем, кто вливает позже. Каждая итерация вливается сразу после проверки пользователем.
+
 ## Статус
 
-2026-10-20: эпик заведён. Этап 1 влит. Следующий — этап 2 «Бой».
+2026-10-20: эпик заведён. Этап 1 влит. Этапы 2 (e2e-combat) и 4 (e2e-heavy-editor) ведут отдельные агенты параллельно.

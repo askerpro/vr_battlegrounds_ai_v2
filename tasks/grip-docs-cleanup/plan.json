@@ -1,0 +1,25 @@
+{
+  "task_id": "grip-docs-cleanup",
+  "owner": "avatar-grip",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/grip-docs-cleanup",
+  "base_sha": "ade7d06eff7f9f5e3a9065de83be2d1de3544b2f",
+  "doc_path": "tasks/grip-docs-cleanup/Readme.md",
+  "title": "Уборка хватов: документация автоанализа, экспортёра и редактора поз",
+  "branch": "task/grip-docs-cleanup",
+  "stages": [
+    {
+      "id": "quality-analysis",
+      "writes": [
+        "tasks/grip-docs-cleanup/**",
+        "Docs/grip-quality-analysis.md",
+        "Docs/grip-known-issues.md",
+        "Docs/hand-pose-fit-tool.md",
+        "Docs/hand-pose-fit-analysis.md",
+        "experts/avatar-grip/AGENT.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

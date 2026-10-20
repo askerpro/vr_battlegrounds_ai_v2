@@ -1,0 +1,313 @@
+# Автоматический анализ качества хвата
+
+## Назначение
+
+Направление 1 работ по хватам: editor-инструменты измеряют, **как кисть аватара держит предмет** — где
+подушечки пальцев и ладонь относительно поверхности, есть ли просвет или проникновение и насколько это
+выходит за распределение штатных хватов SDK. Анализ рига кисти ([hand-rig-quality-tool.md](hand-rig-quality-tool.md))
+отвечает на другой вопрос — «правильно ли устроена сама кисть» (скелет и скиннинг, без предметов).
+Перенос хватов из паков (Grip Extraction, направление 3) и ручная доводка в редакторе поз (направление 4)
+используют этот анализатор как проверку, но в этот документ не входят.
+
+Роль анализатора задана решением пользователя 2026-10-12: полная автоматическая оценка хвата невозможна —
+хороший хват допускает палец не на поверхности, а скрытые просветы и касания внутри кулака не видны игроку.
+Анализатор выдаёт **грубые нарушения** (notable/gross по выходу за полосу SDK, «мимо», ладонь вне предмета)
+и **листы ревью**; правку предлагает человек или LLM через предпросмотр на временной копии; итог за человеком.
+
+Основной аватар игры — семейство CyborgHandsBase: `MEF_cyborg_hands_Player` (и `_Black`),
+`PlayerControllersCyborgAvatar`; база `Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab`
+(GUID `71b74b0d08444f49bbb7aa2828d0890a`), позы — `Assets/Prefabs/Player/HandPoses/CyborgHands/`.
+Большая часть чисел ниже снята раньше: аудит F1–F8 — на родной кисти MEF (`MEF_Base_Avatar`, теперь
+в `Assets/Prefabs/Player/Unused/`), R1/R2 — на `MEF_cyborg_hands` до переезда в CyborgHandsBase.
+Известные дефекты с аватаром и статусом — в [реестре](grip-known-issues.md).
+
+## Из чего состоит
+
+Код — `Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/` (далее `HPR/`), сборка
+`VrBattlegrounds.HandPoseReview.Editor`, пространство имён `VrBattlegrounds.Editor.HandPoseReview`.
+Версия отчёта: схема 4, `mesh-fit-0.6-grip-rules`.
+
+| Часть | Что делает | Код |
+|---|---|---|
+| Снимок Fit | Временная копия аватара и предмета в preview-сцене: поза Fixed/Blend на кости цели, `BakeMesh` LOD0, кисть на сохранённом align точки (`grip_reference`). Игровой снимок — то же из Play после SDK update | `HandPoseFitSnapshot.cs`, `HandPoseFitRuntimeCapture.cs` |
+| Беззнаковые зоны (схемы 1–2) | P10/P50/P95 до контактной поверхности, доля 0–2 мм, пары-маркеры, 24 PNG. Описаны в [hand-pose-fit-tool.md](hand-pose-fit-tool.md) | `HandPoseFitAnalyzer.cs`, `HandPoseFitPrecision.cs`, `HandPoseFitRenderer.cs` |
+| Знаковое расстояние | Расстояние до ближайшей точки всего предмета × знак по обобщённому числу оборотов (winding ≥ 0,5 — точка кисти внутри). Работает на открытых мешах; быстрая оценка сверяется с точной на подмножестве точек | `HandPoseContactMetrics.cs`, `HandPoseFitGeometry.cs` |
+| Подушечки и сегменты | Подушечка — треугольники distal в полуугле 60° вокруг направления отпечатка SDK (`−LocalUp` той же кости). По подушечке: расстояние точки, минимум, P50, глубина; по пальцу — минимум и глубина по всем фалангам; отдельно сегмент ладони `palm_wrist` | `HandPoseContactMetrics.cs` |
+| Полосы SDK | `HPR/Calibration/contact-bands-v1.json`: по пяти типам хвата и каждому пальцу `pad`, `padMin`, `padDepth`, `fingerDepth`, плюс `palm.min`, `palm.depth` (`palm.p50` справочно) | `FitBandSet` в `HandPoseGripRules.cs` |
+| Авто-тип хвата | Тип по роли точки и ограничениям grabbable; можно задать явно | `HandPoseGripRules.DetectGripType` |
+| Правила gross/notable | Выход метрики за полосу своего типа → severity пальца, ладони и всей кисти | `HandPoseGripRules.Evaluate` |
+| Подсказка сгиба | Один угол curl на палец к медиане полосы; сдвиг кисти только по нормали ладони | `HandPoseBendSolver.cs` |
+| Лист ревью | Один PNG на кейс: четыре ракурса, мм и severity по пальцам, подсказка | `HandPoseReviewSheet.cs` |
+| Предпросмотр curl | Правка curl/сдвига/поворота → временная копия → переизмерение → лист «до/после»; хеш доказывает, что поза и префаб не изменены | `HandPoseEditPreview.cs` |
+
+### Авто-тип хвата
+
+Пять типов: `pistol_grip`, `foregrip`, `pump`, `pinch_small`, `handle`. Правило (`DetectGripType`):
+
+- предмет внутри `UxrFirearmWeapon`: точка спуска (`TriggerGrabbable` + индекс точки) — `pistol_grip`;
+  магазин (`UxrFirearmMag`) — `pinch_small`; другая точка того же grabbable или корневого grabbable
+  оружия — `foregrip`; любой другой дочерний grabbable оружия — `pump` (сюда попадают и затворы);
+- вне оружия: магазин или патрон — `pinch_small`; перемещение `Locked` — `handle`; ручка, управляющая
+  направлением родителя (`ControlParentDirection` при ограничении), — `handle`; остальное — `pinch_small`.
+
+Причина выбора пишется в `GripTypeAutoReason`, источник — в `GripRules.GripTypeSource` (`auto:<причина>`
+или `override`). Правило подогнано под SDK-набор калибровки (82/82); ручки планшета проекта не проверялись.
+
+### Правило грубых нарушений
+
+Полоса метрики — `[P5 − m; P95 + m]` по эталонам SDK своего типа, `m = max(2 мм, 0,25·IQR)`.
+Для расстояний (`pad`, `padMin`, `palm.min`) выход ниже полосы означает проникновение, выше — просвет;
+для глубин (`padDepth`, `fingerDepth`, `palm.depth`) учитывается только выход вверх.
+
+| Параметр запроса | По умолчанию | Смысл |
+|---|---:|---|
+| `NotableExcessMm` | 5 | Наибольший выход метрики пальца ≥ 5 мм — `notable`; меньше — `ok` (шум эталона) |
+| `GrossExcessMm` | 10 | Выход ≥ 10 мм — `gross`; минимум ладони выше полосы на ≥ 10 мм — флаг `palm_off_object`, кисть `gross` |
+| `MissExcessMm`, `MissFingerCount` | 15, 3 | У ≥ 3 пальцев подушечка выше полосы на ≥ 15 мм — флаг `miss`, кисть `gross` |
+| `LowConfidenceMaxCases` (в файле полос) | 4 | Тип с ≤ 4 эталонами помечается `low_confidence` (сейчас `foregrip`, `pump`) |
+
+Направление пальца (`Direction`): `gap`, `penetration`, `mixed` или `none` — по флагам с выходом не меньше
+порога notable. Итог кисти (`Overall`) — худший из пальцев, ладони и флагов кисти. Если метрик или полос
+для типа нет, `GripRules.Status` = `no_contact_metrics` или `no_bands_for_type`, итог не выставляется.
+
+### Подсказка сгиба
+
+`HandPoseBendSolver` подбирает **один угол curl на палец**. Распределение по фалангам как в SDK
+`CurlFinger`: у пальцев 1:1:1, у большого 0,1:0,3:1; ось — `LocalRight` каждой кости. Модель жёсткая:
+точка подушечки и до 240 вершин фаланг поворачиваются вокруг суставов. Цель — P50 полосы `pad` своего
+типа; просвет закрывается сгибом к ладони, проникновение — разгибом; диапазон −45…+60°, шаг 2° и
+бисекция. Глубина пальца ограничена `max(hi полосы fingerDepth, текущая глубина)`; при упоре угол
+уменьшается и ставится `DepthLimited`. `Recommended` — только у пальцев с severity не `ok`.
+Сдвиг кисти считается только вдоль нормали ладони (к P50 `palm.min`). Та же функция curl
+(`FitFingerChain.ApplyCurl`) используется кодировщиком поз Grip Extraction.
+
+## Как запустить
+
+### Окно
+
+`Tools/VR Battlegrounds/Avatars/Редактор аватара` → выбрать аватар → «Открыть Hand Pose Review для аватара».
+Откроется окно «Посадка кисти» (`HandPoseFitWindow`).
+
+1. В «Статической конфигурации» выбрать сохранённый prefab предмета, «Хватаемый объект», точку хвата и руку.
+   Кандидат позы и Blend — по необходимости; SDK default без явного разрешения не анализируется.
+2. Нажать «Выполнить анализ». Правила включены по умолчанию (`ApplyGripRules = true`): в окне строки
+   Findings показывают тип хвата, полосы, итог и нарушения по пальцам.
+3. «Показать каталог отчёта»: там `report.json`, `review-sheet.png`, `review.json` и 24 PNG.
+
+Блок «Фактический игровой хват» в Play Mode снимает живой `UxrGrabber`, уже удерживающий предмет
+(1–30 снимков через заданный интервал кадров); к каждому кадру применяются те же метрики и правила.
+Тип хвата, пороги, путь полос и предпросмотр правки в окне не настраиваются — только через API.
+
+По умолчанию отчёт пишется в `Temp/HandPoseFit/<UTC-время>-<id>/` в checkout, где работает Unity;
+Temp может очищаться. Каталог внутри `Assets` анализатор отклоняет.
+
+### API
+
+Агенты запускают Unity только через штатный worker брокера.
+
+```csharp
+using System.Collections.Generic;
+using UltimateXR.Core;
+using VrBattlegrounds.Editor.HandPoseReview;
+
+var request = new HandPoseFitRequest {
+    AvatarPath = "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab",
+    ObjectPath = "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+    GrabPoint = 0,
+    Side = UxrHandSide.Right,
+    OutputDirectory = "tasks/<task-id>/reports/fit/ak105-p0-right"
+};
+var report = HandPoseFitAnalyzer.Analyze(request);
+// report.GripRules.Overall: ok | notable | gross; report.ReviewSheet — путь к review-sheet.png
+
+var preview = HandPoseEditPreview.Run(new HandPoseEditPreviewRequest {
+    Request = request,
+    Edits = { new FitPoseEdit { Name = "middle-flex", FingerCurlDeg = { ["middle"] = 12 } } },
+    PreviewHint = true   // добавить правку "hint" из CorrectionHints
+});
+// preview.SourceUnchanged == true: хеш позы и префаба аватара до/после совпал, dirty-флагов нет
+```
+
+- `HandPoseFitAnalyzer.RunJson(string)` и `RunBatchJson(string)` (1–30 запросов) — тот же вход в JSON;
+  `Side`: 0 — Left, 1 — Right; векторы — массивы `[x, y, z]`.
+- Поля правил в `HandPoseFitRequest`: `ApplyGripRules`, `GripType` (пусто — авто), `ContactBandsPath`
+  (пусто — `contact-bands-v1.json`), `NotableExcessMm`, `GrossExcessMm`, `MissExcessMm`, `MissFingerCount`,
+  `ComputeCorrectionHints`, `RenderReviewSheet`, `ReviewPanelSize` (256–1024), `ReviewTitle`.
+  Параметры знаковых метрик: `ContactWindowMm` (2), `PadHalfAngleDeg` (60), `PadSamplesPerFinger` (256).
+- `FitPoseEdit`: `FingerCurlDeg` по пальцам (+ — сгиб), `HandShiftMm` и `HandRotationDeg` в осях кисти:
+  x — радиально к указательному, y — к пальцам, z — в ладонь.
+- Предпросмотр работает только со статическим снимком. Он пишет `review-sheet-<имя>.png`,
+  `review-compare-<имя>.png` (сверху до, снизу после, одинаковый кадр), `review-<имя>.json` и
+  `edit-preview.json` рядом с исходным отчётом.
+- Grip Extraction после Apply вызывает анализатор через `GripFitCheck` и берёт из отчёта вердикт,
+  лист ревью и подсказки следующей итерации.
+
+## Пороги и калибровка
+
+Калибровка `calib-fbb5bd5b-01` (2026-10-12; 82 кейса, без ошибок): **48 позитивов** — стоковые хваты SDK
+Cyborg и BigHands на обе руки (24 варианта с dynamic snap исключены), **21 негатив** — хваты родной кисти MEF
+с вердиктами шлема 2026-10-11, 13 сравнительных хватов MEF. Позитивы по типам: `pistol_grip` 12 (Gun,
+Machinegun, Shotgun — основная точка), `foregrip` 4 (Machinegun p1), `pump` 4 (помпа Shotgun),
+`pinch_small` 16 (Battery, Grenade, LightBulb), `handle` 12 (LaserGrip, LockRotationGeo).
+
+| Порог выхода за полосу | Позитивы SDK за полосой (leave-one-grip-out) | Негативы найдены | Направление верно |
+|---|---|---|---|
+| 0 мм | 32/48 | 21/21 | 19/21 |
+| **5 мм** | **5/48** (pump ×4 и Machinegun p1 R; у обоих типов n = 4) | **21/21** | 19/21 |
+| 8 мм | 5/48 | 18/21 | 16/21 |
+
+Рабочий порог — выход ≥ 5 мм. Негативы выходят на 7–70 мм тремя–пятью пальцами; AK105 p0 (пальцы в меше)
+— на 5,3 мм, у самого края. Не разделяются: просвет, «открыто» и «мимо» (одно направление, разница только
+в величине); проникновение на цевье (эталон `foregrip` сам вдавлен до −10 мм); скрытое проникновение
+проксимальных фаланг при зазоре подушечек (`mixed`); `pump` и `foregrip` с четырьмя эталонами;
+неоднородные `pinch_small` и `handle`.
+
+Эталон — не «0 мм без проникновения»: у хватов SDK подушечки лежат в диапазоне −6…+9 мм, у указательного
+на спуске Gun −2,8 мм при глубине 9,3 мм. Поэтому граница классов задана распределением эталонов, а не
+фиксированным допуском.
+
+На родной кисти MEF обнаружены **два семейства дефектов с противоположным направлением исправления**:
+
+- Kinemation (AK105, Mk14, MKR9 R, R08, SRM12, TR15, FabarmSDASS, Herrington) — проникновение пальцев в рукоять;
+- HandsPack (Scar, MP5K, Uzi, BrowningHiPower, PPK, Revolver, SniperRifle) — просвет.
+
+Встречность нормалей кисти и предмета (opposition) пересчитана с исправленными нормалями граней:
+Cyborg 0,54, BigHands 0,69, MEF 0,11. В правила она не входит.
+
+Полосы версионируются: `contact-bands-v1.json` хранит идентификатор прогона, `inputSha` и SHA256
+`calibration.json`. Генератор — `tools/make_contact_bands.py` внутри каталога прогона. Изменение метрик
+снимка требует новой калибровки и новой версии файла; старые полосы к новым метрикам не применяются.
+
+Материалы калибровки и проверок — локально, вне Git, в основном checkout:
+`tasks/hand-rig-quality/reports/mef-grip-audit/calib-fbb5bd5b-01/` (`calibration.json`, `classification.json`,
+`tables.md`), метод фазы 1 — `.../contact-8ab30470-01/`, правила и листы фазы 2b — `.../rules-364fcb65-01/`.
+
+## Как читать результат
+
+1. `report.Status` и `Error`. `analysis_incomplete` — обычный статус: часть `Reliability` всегда
+   `approximate` (знак на открытых мешах, непроверенные маски). Отказ — `invalid_configuration`
+   или `unsupported_context` (например, dynamic snap или `controller_reference`).
+2. `GripRules.Status` = `evaluated`; проверить `GripType`, `GripTypeSource` и `LowConfidence`.
+   Неверный авто-тип исправляется явным `GripType`, а не подгонкой порогов.
+3. `GripRules.Overall` и `HandFlags` (`miss`, `palm_off_object`), затем по каждому пальцу `Severity`,
+   `Direction` и `Flags`: метрика, значение, полоса, выход.
+4. **Обязательно открыть `review-sheet.png`.** Ракурсы: ладонь (рентген), вид от глаз (над запястьем, 45°),
+   сторона большого пальца (рентген), тыл. Кадр по габариту кисти с запасом 25 мм, линейка 20 мм.
+   Цвет кисти — знаковое расстояние центра треугольника: красный — внутри глубже окна 2 мм, зелёный —
+   касание ±2 мм, голубой → синий — просвет 2–20 мм, бежевый — дальше 20 мм. Метка подушечки:
+   палец, мм со знаком, `N` или `G` при notable/gross. Внизу — строка по каждому пальцу и подсказка.
+5. Подсказку проверять предпросмотром (`review-compare-*.png`), а не принимать по прогнозу.
+
+Знак: плюс — просвет, минус — точка кисти внутри предмета. `pad` — **одна точка** подушечки (ближайшая
+к центру площади подушечки точка её поверхности); `padDepth` и `fingerDepth` — максимум по площади.
+Хорошая точка не исключает глубокого проникновения рядом: в R2 у Revolver Left ring точка +1,6 мм
+при `padDepth` 6,7 мм.
+
+Достоверность маски и знака: `RigAxisAgreement`, `JointPalmarAgreement` и `JointPadIoU` у пальца
+сверяют подушечку с геометрией суставов; `WindingCheckMismatches > 0`, большие `NegativeWindingAreaMm2`
+или `AmbiguousWindingFarAreaMm2` означают, что знаку на этом предмете доверять нельзя.
+
+Пример фазы 2b (2026-10-12, родная кисть MEF и SDK):
+
+| Кейс | Итог | Подсказка → после предпросмотра |
+|---|---|---|
+| SDK Cyborg Gun, Machinegun p1; BigHands Battery, LockRotation | ok | — |
+| MEF Scar p0 R | notable gap | curl T+38, M/R/L +12 → ok |
+| MEF AK105 p0 R | notable penetration | разгиб M −9°: −11,9 → +0,3 мм → ok |
+| MEF MP5K p0 R | gross gap | → notable (средний упёрся в глубину) |
+| MEF MKR9 p0 L | gross miss | без изменений: кисть не на рукояти, curl не поможет |
+
+## Ограничения
+
+- **Только curl.** Один угол на палец с фиксированным распределением SDK. Нет развода пальцев,
+  отдельных суставов, сдвига кисти вдоль рукояти и поворота кисти. Кисть «мимо рукояти» (MKR9 p0 L)
+  подсказка не исправляет.
+- **Проксимальное проникновение.** Цель решателя — точка подушечки. Предел глубины не ниже текущей
+  глубины, поэтому уже вдавленный палец может остаться вдавленным; скрытое проникновение проксимальных
+  фаланг при зазоре подушечек правило отдельно не называет. В R2 догиб улучшил подушечки и одновременно
+  увеличил глубину пальцев (числа ниже).
+- **Статика.** Статический снимок — сохранённый align (`grip_reference`) без `AlignToController`, IK,
+  динамики двух рук, переходов, анимации курка; dynamic snap даёт `unsupported_context` (планшет в аудите
+  2026-10-10/11). Игровой снимок — один кадр после SDK update, без шлема и трекинга контроллера.
+- **Расстояние до всего предмета.** Знаковые метрики считаются по всей кисти и всей видимой поверхности
+  предмета; контактные области и маски в правила не входят. Видимость дефекта с позиции игрока не
+  оценивается — по решению пользователя это работа человека по листу.
+- **Полосы.** 48 эталонов на всех; `foregrip` и `pump` — по 4 (`low_confidence`); `pinch_small`
+  и `handle` неоднородны; затворы попадают в `pump`, у которого нет эталона затвора.
+- **Маска подушечки.** Полуугол 60° пропускает боковое касание (попадание 0,22–0,62 на Machinegun),
+  подушечка большого пальца Cyborg узкая (0,16–0,18). Старая ладонная маска `PalmarOnly` захватывает
+  в медиане лишь 0,61 площади касания (distal — 0,35–0,44); для пальцев её не использовать.
+- **Редактор против рантайма.** Анализатор читает позу редакторским путём. Дефект поз без пястных на кисти
+  с пястными (рантайм против редактора 179°, 2026-10-13) статика почти не показала: выкрученную кисть
+  Scar анализатор оценил лишь как notable. Сторожа «рантайм против редактора» нет.
+- **Метрики ≠ приёмка.** Урок R2 (2026-10-15, 17 точек, 34 кисти, 9 стволов, `MEF_cyborg_hands`):
+  после 24 подсказок curl на 14 кистях статический Fit улучшился с 19 gross / 7 notable / 8 ok до
+  10 / 4 / 20; у всех 24 изменённых пальцев уменьшился выход подушечки за полосу. Одновременно полная
+  глубина пальца выросла у 16 из 24, глубина подушечки — у 21 из 24, площадь проникновения пальца —
+  у 22 из 24. Пользователь в шлеме не принял результат: «неплотный обхват всей поверхностью кожи кисти
+  и пальцев». SDK-полоса `ok` и автоматический curl не являются критерием качества.
+
+## Уровни доказательства
+
+| Уровень | Что доказывает | Чего не доказывает |
+|---|---|---|
+| Конфигурация (YAML, `GrabPoseCoverageTests`) | Есть ли запись хвата для GUID-цепочки аватара, поза и align | Геометрию и контакт |
+| Статический Fit (снимок, правила, лист) | Геометрию сохранённой позы на align в Editor | Игровой цикл, IK, трекинг, восприятие |
+| Runtime-проба (`HandPoseFitRuntimeCapture`, Play) | Что игра воспроизводит посадку статики | Quest, руку живого игрока, восприятие |
+| Шлем (пользователь) | Видимый результат; единственная приёмка | Числа и причину |
+
+Пример runtime-пробы: Scar p0 Right на родной кисти MEF, 2026-10-11 — граббер против align 0,22–0,26 мм,
+запястье против статики 0,006 мм / 0,31°, суставы против позы ≤ 0,032°. Вывод: просветы Scar заложены
+в позе и align, а не в игровом цикле. Уровень доказательства называть явно в каждом отчёте и не повышать.
+
+## Состояние на 2026-10-20
+
+- Ядро правил, полосы `contact-bands-v1` и подсказки — 2026-10-12 (фаза 2b); EditMode 65/65 (worker484).
+  2026-10-13 общая функция curl вынесена для Grip Extraction; 2026-10-16 менялись снимок, рендер и
+  рентген (CyborgHandsBase, рентген v4); 2026-10-19 — только тесты превью.
+- Последнее применение — Fit R2 704/712 (2026-10-15) на `MEF_cyborg_hands`, тогда ещё в `Experimental/`.
+  После переезда в CyborgHandsBase (2026-10-16) и реструктуризации префабов (2026-10-18) анализатор
+  на текущем dev не запускался; совместимость полос с изменённым снимком не перепроверена.
+- Потребители: `GripFitCheck` (Grip Extraction, после Apply) и `HandContactMaskCapture` (черновой
+  инструмент разметки контакта, направление 4).
+- Рентген-панель SDK Hand Pose Editor отключена: `HandPoseSdkContactDiagnostics` — заглушка
+  (`Enabled = false`), `HandPoseEditorCapture.Export` нигде не вызывается. Раздел «Встроенная диагностика
+  SDK Hand Pose Editor» в [hand-pose-fit-tool.md](hand-pose-fit-tool.md) описывает прежнее состояние.
+- Не сделано:
+  - динамика: переходы, удержание двумя руками, анимация курка;
+  - обе руки в аудите: сравнительный набор калибровки (13 хватов MEF) — только правая рука, runtime-проба —
+    только Scar p0 Right; полной двусторонней матрицы на CyborgHandsBase нет;
+  - Quest: ни один прогон анализатора не связан с проверкой на устройстве;
+  - маски: подушечка 60°, ладонная маска неполна; разметка потенциального контакта
+    (`HandPosePotentialContactMask`) — черновик направления 4;
+  - сторож «рантайм против редактора» (бэклог `fit-runtime-guard`), оценка видимости дефекта,
+    повторный аудит всех хватов на CyborgHandsBase.
+
+Отчёты R2 — локально, вне Git, в основном checkout: `tasks/hand-rig-quality/reports/r2-fit-comparison-712/`
+(`Assessment.md`, `Comparison.md`), пользовательское ревью — `tasks/hand-rig-quality/reports/r2-human-review-715/Review.md`,
+сверка эталонов пользователя — `tasks/hand-rig-quality/reports/reference-grips-715/Review.md`.
+
+## Перед следующим применением
+
+1. Обновить рабочую ветку на свежий `origin/dev`; через worker прогнать `HandPoseGripRulesTests`
+   и `HandPoseContactMetricsTests`.
+2. Контроль: стоковый хват SDK (Cyborg Gun p0 Right) должен дать `ok`; известный негатив на
+   CyborgHandsBase (например, MKR9 p0 Left) должен выйти за полосу. Иначе сначала разобрать регрессию
+   снимка или полос.
+3. `OutputDirectory` задавать в `tasks/<task-id>/reports/`, а не в Temp.
+4. Листы ревью показывать человеку; в отчёте указывать аватар, предмет, руку, точку, позу, Blend, GUID
+   и уровень доказательства.
+
+## Связанные документы
+
+- [hand-pose-fit-tool.md](hand-pose-fit-tool.md) — окно, беззнаковые метрики, 24 PNG, игровой снимок,
+  локальный объём (версия 0.4).
+- [hand-pose-fit-analysis.md](hand-pose-fit-analysis.md) — исследование 2026-10-04…07;
+  [hand-pose-fit-sdk-calibration.md](hand-pose-fit-sdk-calibration.md) и
+  [hand-pose-fit-mef-comparison.md](hand-pose-fit-mef-comparison.md) — его выборки.
+- [grip-known-issues.md](grip-known-issues.md) — реестр известных дефектов хватов.
+- [hand-rig-quality-tool.md](hand-rig-quality-tool.md) — анализ рига кисти.
+- [UltimateXR/known-issues.md](UltimateXR/known-issues.md) — Issue 26 (нет записи хвата, тихий default)
+  и Issue 28 (предпросмотр перенесённой позы).
+- [Details задачи hand-rig-quality](../tasks/hand-rig-quality/Details.md) — разделы «Полная статическая матрица»,
+  «contact-metrics фаза 1/2a/2b», «Проверка в шлеме — 2026-10-11», «Пользователь отклонил production-приёмку R2».

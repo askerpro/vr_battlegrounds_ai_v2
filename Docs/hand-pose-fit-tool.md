@@ -1,5 +1,8 @@
 # Анализ посадки кисти
 
+> Обзор направления (знаковые метрики, правила gross/notable, лист ревью, предпросмотр curl, состояние
+> на 2026-10-20) — [grip-quality-analysis.md](grip-quality-analysis.md); известные дефекты — [grip-known-issues.md](grip-known-issues.md).
+
 ## Назначение
 
 ### SDK grip preview и игровой skinning

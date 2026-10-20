@@ -27,6 +27,10 @@
   `-DryRunBuild` — отказ с причиной для `$RepoRoot`, старая версия печатала «Будут возвращены»; п.2 — строки
   `--- `/`+++ ` в hunk теперь отказ, старая версия принимала; п.4 — `Write-BuildPairManifest` через AST на
   подставных manifest: совпавший sha256 → `dirty.value=false`, иной sha/чужая правка/нет классификации → `true`.
-- [ ] Компиляция `BuildProvenance.cs` через аренду брокера.
-- [ ] Ревью launch-infra.
-- [ ] Приёмка пользователем, затем новые тесты в `test_build_checkout_generated.py`.
+- [x] Компиляция `BuildProvenance.cs` на worker: тикет 879, вход 2c024bb2, 0 ошибок (отчёт `reports/compile-2026-10-20.txt`).
+- [x] Ревью launch-infra раунд 1 — approve (622cb8604).
+- [x] Приёмка пользователем 2026-10-20. Тесты `test_build_checkout_generated.py` 18/18: +2 на строки hunk,
+  похожие на заголовок (п.2), +6 на пометку pair manifest (п.4, `Write-BuildPairManifest` через AST).
+  П.1 unit-тестом не покрыт (логика внутри сценария Run-QuestE2E), доказательство — сухой прогон выше.
+  Журнал — `experts/launch-infra/journal/2026-10-20-build-generated-followups.md`.
+- [ ] Ревью финального SHA и вливание.

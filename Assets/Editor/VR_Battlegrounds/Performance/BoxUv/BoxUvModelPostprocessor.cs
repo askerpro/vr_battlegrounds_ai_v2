@@ -14,8 +14,12 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
     /// </summary>
     public sealed class BoxUvModelPostprocessor : AssetPostprocessor
     {
-        /// <summary>Увеличить при изменении алгоритма <see cref="BoxUvProjector"/> — переимпорт всех моделей.</summary>
-        public const int Version = 1;
+        /// <summary>
+        /// Увеличить при изменении алгоритма <see cref="BoxUvProjector"/> — переимпорт всех моделей. Версия входит в ключ
+        /// кэша артефактов: 2 отсекает артефакты v1, импортированные до появления конфига (при смене ветки модели
+        /// импортируются раньше компиляции постпроцессора, и без новой версии Unity возвращал их из кэша).
+        /// </summary>
+        public const int Version = 2;
 
         public override uint GetVersion() => Version;
 

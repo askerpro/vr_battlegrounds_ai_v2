@@ -336,11 +336,11 @@ namespace VrBattlegrounds.Bots
                 Vector3 muzzleInHand = handInverse * (muzzle.position - hand.position);
                 Quaternion muzzleInHandRotation = handInverse * muzzle.rotation;
                 _aimRotation = hand.rotation;
+                // Ствол на цель, верх вверх (как держит человек; модель стрелка скриптового клиента e2e-combat).
                 for (int i = 0; i < 3; i++)
                 {
                     Vector3 muzzlePosition = hold + _aimRotation * muzzleInHand;
-                    Vector3 muzzleForward = _aimRotation * muzzleInHandRotation * Vector3.forward;
-                    _aimRotation = Quaternion.FromToRotation(muzzleForward, target - muzzlePosition) * _aimRotation;
+                    _aimRotation = LookUpright(target - muzzlePosition) * Quaternion.Inverse(muzzleInHandRotation);
                 }
                 _aiming = true;
             }
@@ -348,10 +348,11 @@ namespace VrBattlegrounds.Bots
             {
                 Vector3 wanted = target - muzzle.position;
                 float error = Vector3.Angle(muzzle.forward, wanted);
-                if (error > AimDeadbandDeg)
+                if (error > AimDeadbandDeg || Level(muzzle) < 0.98f)
                 {
-                    Quaternion correction = Quaternion.FromToRotation(muzzle.forward, wanted);
-                    float step = Mathf.Min(error * AimGain, AimMaxStepDeg);
+                    // Поправка направления и крена по фактическому дулу.
+                    Quaternion correction = LookUpright(wanted) * Quaternion.Inverse(muzzle.rotation);
+                    float step = Mathf.Min(Quaternion.Angle(Quaternion.identity, correction) * AimGain, AimMaxStepDeg);
                     _aimRotation = Quaternion.RotateTowards(Quaternion.identity, correction, step) * _aimRotation;
                 }
             }
@@ -359,6 +360,16 @@ namespace VrBattlegrounds.Bots
             _pilot.ReachGrabber(UxrHandSide.Right, hold, _aimRotation);
             LastRightTarget = new Pose(hold, _aimRotation);
             LastAimPoint = target;
+        }
+
+        /// <summary>Поза «смотрит по направлению, верх вверх».</summary>
+        private static Quaternion LookUpright(Vector3 direction) => Quaternion.LookRotation(direction, Vector3.up);
+
+        /// <summary>Ровность оружия: 1 — верх оружия вверх для текущего направления ствола, 0 — на боку.</summary>
+        private static float Level(Transform frame)
+        {
+            Vector3 upright = Vector3.ProjectOnPlane(Vector3.up, frame.forward);
+            return upright.sqrMagnitude < 1e-6f ? 1f : Vector3.Dot(frame.up, upright.normalized);
         }
 
         private void Trigger(bool alive)

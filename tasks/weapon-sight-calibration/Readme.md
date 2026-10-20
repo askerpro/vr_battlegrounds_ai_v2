@@ -1,43 +1,48 @@
 # weapon-sight-calibration — финальная калибровка прицелов оружия
 
 Обновлено: 2026-10-20. Ветка `weapon-sight-calibration` от `origin/dev` `43332888b`, основной checkout.
-Подробный контекст, хронология, пути и ловушки: [Details.md](Details.md).
+Подробности: [Details.md](Details.md), разд. 0 — действующий подход и стволы по вариантам.
 
 ## Цель
 
-Свести прицелы всех стволов на дистанцию zero 15 м штатными инструментами Sight Auto-Zero
-(решение пользователя 2026-10-12: «финальная калибровка — отдельной задачей»).
-Эталон — TR15 с коллиматором XPS2, уже принят в шлеме.
+Свести прицелы всех стволов на zero 15 м стендом **Sight Auto-Zero** (weapon-system, 2026-10-12, `a3b06c637`)
+и записать результат в игровые префабы. Решение пользователя 2026-10-12: «финальная калибровка — отдельной задачей».
+
+## Подход (уточнение пользователя 2026-10-20)
+
+- Действующий стенд — окно `Tools/VR Battlegrounds/Weapons/Sight Auto-Zero`, три варианта прицела:
+  **SightKit_MX68**, **SightKit_TR15**, **Родной прицел**.
+- Родной прицел: целик и мушка ствола отделены от меша корпуса в отдельные подвижные объекты с pivot на точке
+  прицеливания. Острова определены в Blender (`blender/iron-split*.blend` → `tools/sight-split/islands*.json` →
+  `SightSplitTable.cs`, 11 стволов), режет `SightPartSplitter` — **пока только в памяти на копии стенда**.
+- Ствол без своего прицела получает готовый комплект TR15 или MX68, вырезанный в Blender (`blender/iron-kits.blend`).
+- Ручной стенд `WeaponSightManualCalibration` и подход первого агента (маркеры, копии Sight Review, доноры)
+  **устарели**. В силе остаются модель zero, инварианты ShotSource и коллиматор TR15.
 
 ## Состояние
 
-- Весь принятый код, сцены и ассеты по прицелам уже в dev: этапы `sight-tr15-optic` (`5fc162060`),
-  `sight-iron-kits` (`a3b06c637`), `sight-arsenal-dedupe` (`b624fdb3c`), WIP 2026-10-05/06 (`3a46cd931`, `d6c0fded0`).
-  Непринятой работы по прицелам нет ни в ветках, ни в stash, ни в worktree.
-- Калибровка не начата: `SaveUnlocked`/`ApplyUnlocked` = false в `SightAutoZeroWindow.cs`,
-  `WeaponSightTable.asset` пуст, ни один префаб не сведён. Сдвиги решателя по стволам — в Details.md, разд. 3.
-- Опора: `Docs/weapons/sight-calibration.md`, `Docs/weapons/decisions.md` (стр. 54–71),
-  `experts/weapon-system/journal/2026-10-12-sight-tools.md`, backlog weapon-system п.5 и п.15.
+- Весь код стенда, комплекты и разборы — в dev. Непринятой работы по прицелам нет ни в ветках, ни в worktree.
+- Калибровка не начата: `SaveUnlocked`/`ApplyUnlocked` = false, `WeaponSightTable.asset` пуст, ни один префаб
+  не сведён, разделённые меши не сохранены. Принят только коллиматор TR15.
 
-## Материалы задачи (собраны 2026-10-20)
+## Материалы задачи
 
-Описание каждого файла — [tools/Readme.md](tools/Readme.md); для других агентов то же сведено в
-[Docs/weapons/sight-calibration.md](../../Docs/weapons/sight-calibration.md), разделы 9–10.
-- `blender/` — `iron-kits.blend` (нарезка комплектов TR15/MX68), `iron-split.blend`, `iron-split-2.blend`
-  (разборы островов 16 стволов), скриншоты pivot комплектов.
-- `tools/sight-split/` — генератор `SightSplitTable.cs` и его входы `islands*.json`.
-- `tools/research-2026-10-04/` — скрипты и MCP-сниппеты исследования первого этапа.
-- `changelog/2026-10-12-*` — итоги аренд Unity этапа `sight-iron-kits` и сухой прогон разделителя.
-- Вне Git (`reports/`, только эта машина): скриншоты разборов по стволам, `plan-477/485.json`, лог компиляции.
-  Пакеты 2026-10-05 остаются в `Docs/tasks/report/weapon-sight-calibration/` и `tmp/weapon-sight-calibration/`.
+Опись — [tools/Readme.md](tools/Readme.md); для других агентов — [Docs/weapons/sight-calibration.md](../../Docs/weapons/sight-calibration.md),
+разделы 9–10.
+- `blender/` — `iron-kits.blend`, `iron-split.blend`, `iron-split-2.blend`, скриншоты pivot комплектов.
+- `tools/sight-split/` — генератор `SightSplitTable.cs` и входы `islands*.json`.
+- `tools/research-2026-10-04/` — скрипты первого этапа (история).
+- `changelog/2026-10-12-*` — итоги аренд Unity стенда и сухой прогон разделителя.
+- Вне Git (`reports/`, эта машина): скриншоты разборов по стволам, `plan-477/485.json`, лог компиляции.
 
 ## Нужны решения до реализации
 
-1. Writer прицелов: Apply внутри `WeaponSystemAuthoring` или отдельный writer только узлов прицела
-   (инвариант «один writer», backlog `sight-writer`).
-2. Встроить разделитель SightSplit в `KinemationWeaponBuilder`/`HandsPackWeaponBuilder` для режима «Родной прицел».
-3. Стволы без решения: SDKGun, SDK ShotGun, Machinegun.
-4. Копии Sight Review: перенос в оригиналы и удаление из `WeaponRegistry`/`ArsenalCompositionCatalog` (gameplay).
+1. Где делать постоянное разделение родных прицелов: в сборщиках `KinemationWeaponBuilder`/`HandsPackWeaponBuilder`
+   (решение 2026-10-12) — подтвердить, куда сохранять меши детали и корпуса.
+2. Writer прицелов: `WeaponSightAuthoring` или шаг внутри `WeaponSystemAuthoring` (инвариант «один writer»).
+3. Комплект для SRM12 и SniperRifle (TR15 или MX68); стволы без решения: SDKGun, SDK ShotGun, Machinegun.
+4. Объём уборки первого этапа: ручной стенд, `Weapons/Calibration/*`, копии Sight Review (+ записи в
+   `WeaponRegistry`/`ArsenalCompositionCatalog`, зона gameplay).
 
 ## Зависимости
 
@@ -47,6 +52,6 @@
 
 ## Следующий шаг
 
-Получить решения 1–4, затем: разделитель в сборщиках → включить Save/Apply → по стволам свести,
+Получить решения 1–4, затем: постоянное разделение в сборщиках → включить Save/Apply → по стволам свести,
 записать в таблицу, применить (порядок — быстрый результат) → проверка в шлеме на стрельбище Lobby.
 Тесты новой логики — после приёмки пользователем.

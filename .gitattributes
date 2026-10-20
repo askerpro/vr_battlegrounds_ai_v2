@@ -219,6 +219,7 @@ Assets/Editor/VR_Battlegrounds/**/*.cs text eol=lf
 Docs/**/*.md text eol=lf
 Tools/**/*.py text eol=lf
 Tools/**/*.ps1 text eol=lf
+Tools/**/*.psm1 text eol=lf
 Tools/**/*.js text eol=lf
 Tools/**/*.cjs text eol=lf
 Tools/**/*.patch text eol=lf

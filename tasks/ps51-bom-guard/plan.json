@@ -1,0 +1,27 @@
+{
+  "task_id": "ps51-bom-guard",
+  "owner": "coordination-maintenance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/ps51-bom-guard",
+  "base_sha": "a762ae74d5494b8a17bdc1222d921be05d53ca50",
+  "doc_path": "tasks/ps51-bom-guard/Readme.md",
+  "title": "BOM-правило PowerShell 5.1 для Tools/**/*.ps1|psm1",
+  "branch": "task/ps51-bom-guard",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/ps51-bom-guard/**",
+        ".editorconfig",
+        ".gitattributes",
+        ".githooks/pre-push",
+        "Tools/e2e/E2EDiagnosticInputs.psm1",
+        "Tools/e2e/E2ELogVerdict.psm1",
+        "Docs/agents/text-eol.md",
+        "Tools/agents/tests/test_pre_push_bom.py"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

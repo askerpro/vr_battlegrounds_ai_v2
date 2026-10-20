@@ -1,7 +1,7 @@
 # LF для управляемого текста
 
 PhaseA охватывает собственные C# в Assets/Scripts и Assets/Editor/VR_Battlegrounds,
-Docs Markdown, agent instructions и Tools Python/PowerShell/JS/patches. Новые и
+Docs Markdown, agent instructions и Tools Python/PowerShell (*.ps1, *.psm1)/JS/patches. Новые и
 успешно изменяемые файлы этих путей сохраняйте с LF. Не переписывайте untouched
 legacy/foreign файлы; binary/LFS и generated IDE outputs сохраняют свои правила.
 GUID/meta и чужие staged/untracked изменения сохраняются.
@@ -45,6 +45,21 @@ IDE csproj/sln генераторы сохраняют CRLF. Массовый gi
 для новой ветки — от merge-base с dev): изменённые пути с eol=lf, кроме -text/binary,
 не должны содержать CR в blob. Нарушение — exit 1 со списком путей; файлы не
 исправляются. Удаления и пропущенная база не блокируют push; затем работает git lfs pre-push.
+
+## UTF-8 BOM для Tools/**/*.ps1|psm1
+
+Целевая оболочка — встроенный Windows PowerShell 5.1: он читает .ps1/.psm1 без BOM
+как ANSI, и кириллица в строках/комментариях ломает разбор (например, Import-Module
+модуля из Tools/e2e). Поэтому `Tools/**/*.ps1` и `Tools/**/*.psm1` с любым
+байтом >= 0x80 храним как UTF-8 с BOM (EF BB BF); чистый ASCII допустим без BOM.
+`.editorconfig` задаёт для них `charset = utf-8-bom` (секция перекрывает общую
+`[*] charset = utf-8`, из-за которой редакторы снимали BOM при сохранении).
+`.githooks/pre-push` в том же диапазоне, что и EOL-проверка, read-only проверяет
+изменённые/добавленные пути (расширение без учёта регистра): raw blob с байтом >= 0x80
+без BOM — отказ exit 1 со списком `<local ref>: <path>`; отчёты EOL и BOM выводятся
+вместе. Исправление: сохраните файл как «UTF-8 with BOM» (VS Code: Save with Encoding)
+или `$t = Get-Content -Raw -Encoding UTF8 <file>; [IO.File]::WriteAllText(<полный путь>, $t,
+(New-Object Text.UTF8Encoding $true))`, сохраните LF и сделайте новый коммит.
 
 Source checker/runtime и tracked launcher выпускаются штатно отдельно; владельцы
 обновляются rebase от origin/dev с сохранением своих diff/staged/untracked/meta.

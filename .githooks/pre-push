@@ -29,6 +29,17 @@ printf '%s\n' "$input" | while read -r local_ref local_sha remote_ref remote_sha
     git -c core.quotepath=off diff --name-only --no-renames --diff-filter=ACMRT "$base" "$commit" -- \
         > "$eol_tmp/paths" || exit 2
     [ -s "$eol_tmp/paths" ] || continue
+    # BOM-проверка: Windows PowerShell 5.1 читает .ps1/.psm1 без BOM как ANSI, поэтому
+    # Tools/**/*.ps1|psm1 (расширение без учёта регистра) с байтами >= 0x80 обязаны
+    # начинаться с EF BB BF. Проверяется raw blob отправляемого коммита; файлы не меняются.
+    LC_ALL=C awk 'index($0, "Tools/") == 1 { l = tolower($0); if (l ~ /\.psm?1$/) print }' \
+        "$eol_tmp/paths" > "$eol_tmp/ps"
+    while IFS= read -r ps_path; do
+        git cat-file blob "$commit:$ps_path" > "$eol_tmp/blob" 2>/dev/null || continue  # не blob
+        [ "$(od -An -N3 -tx1 "$eol_tmp/blob" | tr -d ' \n')" = efbbbf ] && continue
+        high=$(LC_ALL=C tr -d '\000-\177' < "$eol_tmp/blob" | od -An -N1 -tx1)
+        [ -n "$high" ] && printf '  %s: %s\n' "$local_ref" "$ps_path" >> "$eol_tmp/bom_report"
+    done < "$eol_tmp/ps"
     # Атрибуты берём из отправляемого коммита (git >= 2.40), иначе из рабочей копии.
     git -c core.quotepath=off check-attr --source "$commit" --stdin eol text < "$eol_tmp/paths" \
         > "$eol_tmp/attrs" 2>/dev/null \
@@ -48,12 +59,21 @@ printf '%s\n' "$input" | while read -r local_ref local_sha remote_ref remote_sha
         | awk -v c="$commit:" -v r="$local_ref" 'index($0, c) == 1 { print "  " r ": " substr($0, length(c) + 1) }' \
         >> "$eol_tmp/report"
 done || exit $?
+rejected=
 if [ -s "$eol_tmp/report" ]; then
     printf >&2 '\npre-push EOL: CR в путях с eol=lf (файлы не изменены; сохраните LF и сделайте новый коммит):\n'
     cat "$eol_tmp/report" >&2
     printf >&2 'Подробности: Docs/agents/text-eol.md\n\n'
-    exit 1
+    rejected=1
 fi
+if [ -s "$eol_tmp/bom_report" ]; then
+    printf >&2 '\npre-push BOM: PowerShell-скрипты с не-ASCII без UTF-8 BOM (файлы не изменены):\n'
+    cat "$eol_tmp/bom_report" >&2
+    printf >&2 'Сохраните файл как UTF-8 с BOM (Windows PowerShell 5.1 читает файл без BOM как ANSI) и сделайте новый коммит.\n'
+    printf >&2 'Подробности: Docs/agents/text-eol.md\n\n'
+    rejected=1
+fi
+[ -z "$rejected" ] || exit 1
 
 if [ -n "$input" ]; then
     printf '%s\n' "$input" | git lfs pre-push "$@"

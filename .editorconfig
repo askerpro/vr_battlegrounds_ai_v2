@@ -162,8 +162,13 @@ end_of_line = lf
 [Docs/**.md]
 end_of_line = lf
 
-[Tools/**.{py,ps1,js,cjs,patch}]
+[Tools/**.{py,ps1,psm1,js,cjs,patch}]
 end_of_line = lf
+
+# Windows PowerShell 5.1 читает .ps1/.psm1 без BOM как ANSI: кириллица ломает разбор.
+# Секция стоит после [*] charset = utf-8 и перекрывает её (проверка — .githooks/pre-push).
+[Tools/**.{ps1,psm1}]
+charset = utf-8-bom
 
 [*.sh]
 end_of_line = lf

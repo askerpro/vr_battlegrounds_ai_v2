@@ -174,7 +174,11 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
    Аренда — 15 мин вместе с begin: запускать heavy в фоне и продлевать `editor-broker.py renew` каждые ~4 мин.
 3. Сразу после прогона finish, затем receive (без своего output при отказе из-за пересохранённых Unity файлов — ack).
 4. Код 0 — можно вливать; 1 — регрессия (не вливать, разобрать `verdict.json`); 2 — вердикт не получен
-   (тоже не вливать; сбой аренды/стенда/MCP — infra_issue сопровождающему). Путь к `verdict.json` — в review-request.
+   (тоже не вливать). При коде 2 сначала логи участников в отчёте: стенд не доходит до Ready и из-за
+   регрессии игры; infra_issue сопровождающему — только при сбое окружения (аренда, MCP, клон MPPM).
+   Путь к `verdict.json` — в review-request.
+С изменениями кода, покрытого EditMode, добавлять `--editmode also` (ещё ~7 мин): новые красные против
+`Tools/e2e/editmode-known-red.json`. Стал зелёным известный красный — убрать его из списка в своей задаче.
 Новый сценарий добавляет в `Tools/e2e/suites/default.json` его автор после приёмки пользователем. [Набор и вердикт](Tools/e2e/heavy/README.md).
 
 ## Read only what this task needs

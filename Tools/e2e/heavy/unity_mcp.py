@@ -12,6 +12,7 @@ import time
 
 LAUNCH = "VrBattlegrounds.EditorTools.TestStand.PlayLaunch"
 STAND = "VrBattlegrounds.EditorTools.TestStand.PlayModeTestStand"
+SESSION_READ_SECONDS = 180
 
 
 class UnityCallError(RuntimeError):
@@ -54,6 +55,27 @@ def unpack(reply):
     raise RuntimeError("Неизвестная обёртка MCP")
 
 
+def unpack_envelope(reply):
+    """Ответ инструмента MCP for Unity без спуска в поля данных: снимает только конверты
+    {"result": {...}} и {"success", "data"}. У job get_test_job своё поле result (итог тестов) — его не трогаем."""
+    if getattr(reply, "isError", False):
+        raise RuntimeError("MCP отказал: " + " ".join(c.text for c in reply.content if hasattr(c, "text"))[:1200])
+    texts = [c.text for c in reply.content if hasattr(c, "text")]
+    if not texts:
+        raise RuntimeError("Нет ответа MCP")
+    value = json.loads(texts[0])
+    for _ in range(5):
+        if isinstance(value, dict) and set(value) == {"result"}:
+            value = value["result"]
+        elif isinstance(value, dict) and "success" in value:
+            if value.get("success") is False:
+                raise RuntimeError(str(value.get("error") or value.get("message") or "success=false без текста")[:1200])
+            value = value.get("data")
+        else:
+            return value
+    return value
+
+
 def is_observation(expression):
     return expression == LAUNCH + ".Status()" or (
         expression.startswith(STAND + ".Operation(") and expression.endswith(")"))
@@ -78,27 +100,32 @@ class UnityMcp:
                                        cwd=str(self.project_root))
         reader, writer = await self._stack.enter_async_context(stdio_client(server))
         self._session = await self._stack.enter_async_context(
-            ClientSession(reader, writer, read_timeout_seconds=timedelta(seconds=self.call_timeout + 30)))
+            # Срок чтения сессии — по самому долгому вызову (get_test_job во время EditMode), сроки вызовов — свои.
+            ClientSession(reader, writer, read_timeout_seconds=timedelta(seconds=SESSION_READ_SECONDS)))
         await asyncio.wait_for(self._session.initialize(), self.call_timeout)
         return self
 
     async def __aexit__(self, *exc):
         await self._stack.aclose()
 
-    async def _send(self, expression):
-        reply = await asyncio.wait_for(self._session.call_tool(
-            "execute_code", {"action": "execute", "code": "return " + expression + ";"}), self.call_timeout)
-        return unpack(reply)
-
     async def code(self, expression):
-        observation = is_observation(expression)
-        item = {"expression": expression[:400], "observation": observation, "started": time.time(), "attempts": 0}
-        deadline = time.monotonic() + self.observation_budget
+        """execute_code: повторяется только наблюдение Status/Operation."""
+        return await self.tool("execute_code", {"action": "execute", "code": "return " + expression + ";"},
+                               observation=is_observation(expression), label=expression, unpacker=unpack)
+
+    async def tool(self, name, arguments, observation=False, label=None, unpacker=unpack_envelope,
+                   call_timeout=None, budget=None):
+        """Любой инструмент MCP; observation=True — чтение, которое можно повторить в пределах budget."""
+        item = {"tool": name, "expression": (label or json.dumps(arguments, ensure_ascii=False))[:400],
+                "observation": observation, "started": time.time(), "attempts": 0}
+        deadline = time.monotonic() + (budget or self.observation_budget)
         try:
             while True:
                 item["attempts"] += 1
                 try:
-                    value = await self._send(expression)
+                    reply = await asyncio.wait_for(self._session.call_tool(name, arguments),
+                                                   call_timeout or self.call_timeout)
+                    value = unpacker(reply)
                     item["ok"] = True
                     return value
                 except Exception as error:

@@ -20,6 +20,27 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "it2",
+      "writes": [
+        "tasks/e2e-heavy-editor/**",
+        "Tools/e2e/heavy.py",
+        "Tools/e2e/heavy/**",
+        "Tools/e2e/suites/**",
+        "Tools/e2e/editmode-known-red.json",
+        "AGENTS.md"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "journal",
+      "writes": [
+        "experts/launch-infra/journal/2026-10-20-e2e-heavy-editor.md"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

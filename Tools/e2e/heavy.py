@@ -35,7 +35,11 @@ if __name__ == "__main__":
             environment = dict(os.environ, VRBG_HEAVY_UV="1", PYTHONIOENCODING="utf-8")
             command = ["uv", "run", "--quiet", "--no-project", "--with", "mcp>=1.20,<2",
                        "python", "-X", "utf8", str(Path(__file__).resolve()), *argv]
-            raise SystemExit(subprocess.run(command, env=environment).returncode)
+            try:
+                raise SystemExit(subprocess.run(command, env=environment).returncode)
+            except OSError as error:
+                print("heavy: не запустился uv для MCP SDK: " + str(error), file=sys.stderr)
+                raise SystemExit(2)
     sys.path.insert(0, str(HERE))
     from heavy.cli import main
     raise SystemExit(main(argv))

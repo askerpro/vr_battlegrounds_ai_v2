@@ -41,6 +41,19 @@ BotCount=0, Readiness=map-playable) → `Status` до Ready → `PlayModeTestSta
 строки-сообщения `UxrComponentNotFoundException` и `NullReferenceException` роняют, прочие исключения
 считаются; нативные падения роняют; стенд должен остановиться после прогона.
 
+Код worker сверяется с текущими файлами ветки по игровым путям (снимок через копию индекса, HEAD и индекс
+не меняются): если отличаются — аренда взята на другом checkpoint, вердикт не о текущих файлах (код 2).
+Любой сбой самого heavy (отчёт, git, uv) — тоже код 2.
+
+## EditMode
+
+`--editmode also` — после сценариев полный EditMode через MCP `run_tests`/`get_test_job`; `--editmode only` —
+только EditMode. Красные (state `Failed*`) сравниваются поимённо (fullName) с `Tools/e2e/editmode-known-red.json`:
+новый красный — код 1; известный красный, не красный в этом прогоне, — заметка убрать его из списка.
+Итоговый результат job содержит все не прошедшие тесты (лимит 25 у MCP — только в промежуточном прогрессе).
+Рядом с отчётом — `editmode-known-red.candidate.json`: список красных этого прогона для обновления базы
+(прогон на чистой origin/dev; причины существующих записей сохраняются).
+
 ## Набор
 
 `Tools/e2e/suites/<имя>.json`: `version`, `description`, `defaults` (`map`, `mode`, `readyTimeoutSeconds`,

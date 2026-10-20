@@ -3,10 +3,12 @@ import argparse
 import asyncio
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 
+from . import editmode as M
 from . import freshness as F
 from . import suite as S
 from . import verdict as V
@@ -15,9 +17,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RESULTS = PROJECT_ROOT / "Tools" / "e2e" / "results" / "heavy"
 
 
-def git(*args, timeout=120):
+def git(*args, timeout=300, env=None):
     return subprocess.run(["git", *args], cwd=PROJECT_ROOT, capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", timeout=timeout)
+                          encoding="utf-8", errors="replace", timeout=timeout,
+                          env=dict(os.environ, **env) if env else None)
 
 
 def normalized(path):
@@ -50,11 +53,22 @@ def branch_check(fetch):
 def prepare_outdir(arguments, profile, suite_name):
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     outdir = Path(arguments.output_dir).resolve() if arguments.output_dir else RESULTS / (stamp + "-" + profile + "-" + suite_name)
-    outdir.mkdir(parents=True, exist_ok=True)
     probe = outdir / "verdict.json"
     if outdir.is_relative_to(PROJECT_ROOT) and git("check-ignore", "--quiet", "--no-index", str(probe)).returncode != 0:
-        raise SystemExit("Каталог отчёта должен быть исключён из Git: " + str(outdir))
+        raise ValueError("Каталог отчёта должен быть исключён из Git: " + str(outdir))
+    outdir.mkdir(parents=True, exist_ok=True)
     return outdir
+
+
+def editmode_item(record):
+    """Запись EditMode в списке вердикта рядом со сценариями."""
+    summary = record.get("summary") or {}
+    text = ""
+    if summary.get("total"):
+        text = (str(summary.get("total")) + " тестов, красных " + str(len(record.get("red", []))) + ": новых "
+                + str(len(record.get("newRed", []))) + ", известных " + str(len(record.get("stillRed", []))))
+    return {"name": "EditMode", "topology": "", "verdict": record["verdict"], "reasons": record.get("reasons", []),
+            "notes": record.get("notes", []), "summary": text, "editmode": record}
 
 
 def scenario_summary(record):
@@ -85,19 +99,30 @@ def main(argv=None):
     parser.add_argument("--scenario", action="append", help="прогнать только этот сценарий набора (можно повторять)")
     parser.add_argument("--output-dir", help="каталог отчёта (исключённый из Git); по умолчанию Tools/e2e/results/heavy/<время>-<профиль>-<набор>")
     parser.add_argument("--no-fetch", action="store_true", help="не обновлять origin/dev перед проверкой ветки")
+    parser.add_argument("--editmode", default="off", choices=("off", "also", "only"),
+                        help="EditMode после сценариев (also) или вместо них (only): новые красные против "
+                             "Tools/e2e/editmode-known-red.json")
     arguments = parser.parse_args(argv)
+    try:
+        return run(arguments)
+    except Exception as error:  # noqa: BLE001 — любой сбой самого heavy: вердикта нет, это не регрессия
+        print("heavy: сбой без вердикта: " + type(error).__name__ + ": " + str(error), file=sys.stderr)
+        return 2
 
+
+def run(arguments):
     def log(text):
         print(text, flush=True)
 
     try:
         suite = S.load(arguments.suite)
-        scenarios = S.select(suite, arguments.profile, arguments.scenario)
+        scenarios = [] if arguments.editmode == "only" else S.select(suite, arguments.profile, arguments.scenario)
         framework = V.load_known_noise()
-    except (S.SuiteError, V.NoiseError) as error:
+        known_red = None if arguments.editmode == "off" else M.load_known_red()
+        outdir = prepare_outdir(arguments, arguments.profile, suite.name)
+    except (S.SuiteError, V.NoiseError, M.KnownRedError, ValueError) as error:
         print("heavy: " + str(error), file=sys.stderr)
         return 2
-    outdir = prepare_outdir(arguments, arguments.profile, suite.name)
     trace_path = outdir / "calls.jsonl"
 
     def trace(item):
@@ -107,7 +132,8 @@ def main(argv=None):
     report = {"profile": arguments.profile, "suite": suite.name, "suitePath": suite.path,
               "started": datetime.now().astimezone().isoformat(timespec="seconds"), "worktree": str(PROJECT_ROOT),
               "reportPath": str(outdir / "verdict.json"), "checks": [], "scenarios": []}
-    log("HEAVY " + arguments.profile + "/" + suite.name + ": " + ", ".join(s.name for s in scenarios) + " → " + str(outdir))
+    planned = [s.name for s in scenarios] + ([] if arguments.editmode == "off" else ["EditMode"])
+    log("HEAVY " + arguments.profile + "/" + suite.name + ": " + ", ".join(planned) + " → " + str(outdir))
     check, branch = branch_check(not arguments.no_fetch)
     report["checks"].append(check)
     report["branch"] = branch
@@ -121,9 +147,25 @@ def main(argv=None):
     else:
         from . import editor_profile
         checks, records, extra = asyncio.run(editor_profile.run(
-            PROJECT_ROOT, scenarios, outdir, log, trace, framework, branch.get("originDev")))
+            PROJECT_ROOT, scenarios, outdir, log, trace, framework, branch.get("originDev"), known_red))
         report["checks"].extend(checks)
+        editmode_record = extra.pop("editmode", None)
         report.update(extra)
+        worker_head = (extra.get("worker") or {}).get("head")
+        if worker_head:
+            tree, error = F.snapshot_tree(git, outdir / "snapshot.index")
+            (outdir / "snapshot.index").unlink(missing_ok=True)
+            identity = F.code_identity(git, worker_head, tree) if tree else {"known": False, "error": error}
+            report["codeIdentity"] = identity
+            report["checks"].append(F.identity_check(identity, worker_head))
+        if known_red is not None:
+            if editmode_record is None:
+                editmode_record = {"verdict": V.INCONCLUSIVE, "reasons": ["EditMode не выполнен — см. проверки выше"]}
+            elif editmode_record.get("red") is not None:
+                candidate = M.candidate_known_red(editmode_record, known_red, worker_head)
+                (outdir / "editmode-known-red.candidate.json").write_text(
+                    json.dumps(candidate, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            report["editmode"] = editmode_record
     for record in records:
         verdict, reasons = V.scenario_verdict(record)
         record["verdict"], record["reasons"], record["summary"] = verdict, reasons, scenario_summary(record)
@@ -135,6 +177,9 @@ def main(argv=None):
         if scenario.name not in ran and records:
             report["scenarios"].append({"name": scenario.name, "topology": scenario.topology, "verdict": V.INCONCLUSIVE,
                                         "reasons": ["не запускался: стенд не убран после предыдущего сценария"]})
+    if known_red is not None:
+        report["scenarios"].append(editmode_item(report.get("editmode") or {
+            "verdict": V.INCONCLUSIVE, "reasons": ["EditMode не выполнен — профиль или checkout не подходят"]}))
     report["verdict"], report["exitCode"] = V.aggregate(report["checks"], report["scenarios"])
     report["finished"] = datetime.now().astimezone().isoformat(timespec="seconds")
     (outdir / "verdict.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -12,6 +12,7 @@ import subprocess
 import time
 import uuid
 
+from . import editmode
 from . import freshness
 from . import verdict as V
 from .unity_mcp import LAUNCH, STAND, UnityCallError, UnityMcp, literal
@@ -311,8 +312,9 @@ def worker_revision(editor_root, origin_dev):
     return info
 
 
-async def run(project_root, scenarios, outdir, log, trace, framework, origin_dev):
-    """Возвращает (checks, scenario_records, extra)."""
+async def run(project_root, scenarios, outdir, log, trace, framework, origin_dev, editmode_known=None):
+    """Возвращает (checks, scenario_records, extra). editmode_known — словарь известных красных: после
+    сценариев прогнать EditMode (стенд к этому моменту убран)."""
     runner = EditorRun(project_root, outdir, log, trace)
     checks, records, extra = [], [], {}
     try:
@@ -335,6 +337,16 @@ async def run(project_root, scenarios, outdir, log, trace, framework, origin_dev
                 if record.get("cleanupError"):
                     log("  Стенд не убран — остальные сценарии не запускаются")
                     break
+            if editmode_known is not None:
+                if any(r.get("cleanupError") for r in records):
+                    extra["editmode"] = {"verdict": V.INCONCLUSIVE, "reasons": ["не запускался: стенд не убран"]}
+                else:
+                    result, info = await editmode.run(unity, log)
+                    record = editmode.compare(result, editmode_known)
+                    record["job"] = info
+                    if info.get("error") and record["verdict"] == V.INCONCLUSIVE:
+                        record["reasons"].append(str(info["error"]))
+                    extra["editmode"] = record
     except UnityCallError as error:
         checks.append({"name": "Unity доступна через MCP своего worktree", "verdict": V.INCONCLUSIVE,
                        "detail": str(error) + ". Нужна своя RUNNING аренда worker и прокси этого worktree."})

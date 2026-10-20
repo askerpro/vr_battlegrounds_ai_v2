@@ -1,6 +1,6 @@
 """Вердикт heavy-прогона: результаты участников, логи и сводка «можно вливать / нельзя».
 
-Классификация logIssues повторяет Tools/e2e/E2ELogVerdict.psm1 (контракт quest-device-run r4): шум сценария
+Классификация logIssues повторяет Tools/e2e/E2ELogVerdict.psm1 (контракт quest-device-run r5): шум сценария
 (knownNoise результата), затем шум каркаса Tools/e2e/known-noise.json с учётом scope; kind=defect роняет прогон.
 Дополнительно считаются строки архивов логов участников за окно прогона.
 """
@@ -244,5 +244,7 @@ def render_text(report):
         lines.append(head)
         for reason in scenario.get("reasons", [])[:MAX_EXAMPLES]:
             lines.append("           " + reason)
+        for note in scenario.get("notes", []):
+            lines.append("           заметка: " + note)
     lines.append("Отчёт: " + report["reportPath"])
     return "\n".join(lines)

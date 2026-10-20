@@ -109,7 +109,10 @@
   `bots-control-modes/reports/editmode-baseline-1` (GrabPoseCoverage cyborg ×21, KinemationWeapon R08,
   ShotgunPellets, WeaponShotSound); skipped — Ignored «семья NonSdkHands не зарегистрирована». Новых красных нет.
   Отчёт: `tasks/e2e-regression/reports/uid-fix/prefabs-after.json` (вне Git).
-- Diff (+374/−3): `__prefabGuid` ScriptedControllerInput (по 2 на префаб); в базах MEF_Base_Avatar и
+- Diff (+374/−3): `__prefabGuid` ScriptedControllerInput и ScriptedControllerTracking (по 1 на префаб каждый); в базах MEF_Base_Avatar и
   MEF_sdk_hands_Base — пересчитанный `_rigInfo` UxrAvatar и его stripped-заглушка; поля NetworkTransform
   `keyframeInterval/keyframeWarmup` по умолчанию; в _VRIK удалены `turnStartAngle/turnStopAngle/turnReleaseSpeed`,
   которых нет в коде FinalIK. GUID, `_assetId` и ссылки не тронуты. Коммит a4d9a8db9 (после rebase на 2a5931352; новые коммиты dev префабы не трогают).
+- Влито: merge 01d9c582c, origin/dev 137517ecb (fix a4d9a8db9 → после rebase 304defcae); ревью avatar-ik
+  консультативное, approve (event 10255); база worker опубликована (тикет 866 DONE). Перепроверка на влитом SHA,
+  аренда 869: UxrUniqueIdOnDiskTests 1/1 passed.

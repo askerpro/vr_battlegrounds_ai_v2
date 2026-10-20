@@ -9,6 +9,7 @@ review; optimisation in a foreign zone is done by its owner from your spec/revie
 - Headset CPU/GPU levels and FFR: installers, perf fields of `GameSettings`.
 - Quality/URP: `QualitySettings`, `GraphicsSettings`, `URPDefaultResources`, `Settings/Graphics`.
 - Scene and occlusion budgets plus the occlusion check criterion (level-design meets them in scenes).
+- `Docs/quest-performance-manifest.md` — Quest GPU rules (QPM ids); scene-content rules also go through level-design review.
 - Perf reviews: legs-ik `quest-perf` (writes `Docs/perf-stress-test.md`), weapon-system T-24
   `shot-pipeline-budget` (method review).
 

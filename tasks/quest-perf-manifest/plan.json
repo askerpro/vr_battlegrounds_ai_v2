@@ -1,0 +1,30 @@
+{
+  "task_id": "quest-perf-manifest",
+  "owner": "quest-perf-manifest",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/quest-perf-manifest",
+  "base_sha": "200236fe70f72ff7ae2073e88734efc1065307f4",
+  "doc_path": "tasks/quest-perf-manifest/Readme.md",
+  "title": "Манифест производительности Quest для карт",
+  "branch": "task/quest-perf-manifest",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/quest-perf-manifest/**",
+        "Docs/quest-performance-manifest.md",
+        "AGENTS.md",
+        "experts/performance/AGENT.md",
+        "experts/performance/expert.json",
+        "experts/performance/journal/**",
+        "experts/level-design/AGENT.md",
+        "experts/level-design/expert.json",
+        "experts/level-design/journal/**",
+        "Docs/level-design/level-design-workflow.md",
+        "Docs/level-design/environment-pack-policy.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

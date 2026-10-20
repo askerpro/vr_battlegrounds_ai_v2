@@ -46,7 +46,7 @@ Consumers: gameplay (MapBootstrap reads zones/stations), bots (navmesh), map E2E
 
 ## Details (grep the heading)
 - `Docs/quest-performance-manifest.md` — Quest GPU rules for scene content and new asset packs (shaders, baked light,
-  LOD, alpha, mirrors) and the pack checklist; run the asset audit before a pack enters a map.
+  LOD, alpha, mirrors) and the pack checklist for the game copy of a selected pack closure.
 - `Docs/level-design/README.md`; `Docs/scene-hierarchy.md` «Группы сцены», «LobbyRange»,
   «Изменения и проверка».
 - `Docs/level-design/level-design.md` «Высота и защита», «Декорация»; same folder: `physical-arena.md`,

@@ -768,6 +768,20 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "closure-docs-2",
+      "writes": [
+        "tasks/hand-rig-quality/**"
+      ],
+      "after": [
+        {
+          "task": "hand-rig-quality",
+          "stage": "closure-docs",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

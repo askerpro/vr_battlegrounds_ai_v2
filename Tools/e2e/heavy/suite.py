@@ -8,8 +8,11 @@ SUITES_DIR = Path(__file__).resolve().parents[1] / "suites"
 PROFILES = ("editor", "windows", "quest")
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SUITE_KEYS = {"version", "description", "defaults", "scenarios"}
-SCENARIO_KEYS = {"name", "clients", "profiles", "map", "mode", "readyTimeoutSeconds", "scenarioTimeoutSeconds"}
-DEFAULT_KEYS = SCENARIO_KEYS - {"name", "clients", "profiles"}
+SCENARIO_KEYS = {"name", "clients", "profiles", "map", "mode", "readyTimeoutSeconds", "scenarioTimeoutSeconds",
+                 "args", "lateClientDelaySeconds"}
+DEFAULT_KEYS = SCENARIO_KEYS - {"name", "clients", "profiles", "args", "lateClientDelaySeconds"}
+# Параметры -e2eArg уходят в Run-E2E одной строкой k=v,k=v: без пробелов, запятых, = и кавычек.
+ARG_TOKEN = re.compile(r"^[A-Za-z0-9_.:/-]+$")
 
 
 class SuiteError(ValueError):
@@ -25,6 +28,8 @@ class Scenario:
     mode: str
     ready_timeout: int
     scenario_timeout: int
+    args: tuple = ()
+    late_client_delay: int = 0
 
     @property
     def topology(self):
@@ -132,9 +137,15 @@ def parse(data, name, path=""):
         missing = [k for k in ("map", "mode", "ready_timeout", "scenario_timeout") if k not in settings]
         if missing:
             raise SuiteError(where + ": не заданы ни в сценарии, ни в defaults: " + ", ".join(missing))
+        args = item.get("args", {})
+        if not isinstance(args, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not ARG_TOKEN.match(k)
+                                             or not ARG_TOKEN.match(v) for k, v in args.items()):
+            raise SuiteError(where + ".args: объект строк ключ→значение из A-Z a-z 0-9 _ . : / -")
+        late = _integer(where + ".lateClientDelaySeconds", item.get("lateClientDelaySeconds", 0), 0, 600)
         scenarios.append(Scenario(name=scenario_name,
                                   clients=_integer(where + ".clients", item.get("clients"), 1, 16),
-                                  profiles=tuple(profiles), **settings))
+                                  profiles=tuple(profiles), args=tuple(sorted(args.items())),
+                                  late_client_delay=late, **settings))
     return Suite(name=name, path=path, description=str(data.get("description", "")), scenarios=tuple(scenarios))
 
 

@@ -1,0 +1,28 @@
+{
+  "task_id": "e2e-heavy-windows",
+  "owner": "e2e-heavy-windows",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-heavy-windows",
+  "base_sha": "c3e846fe2d41456cbeffb8a696fb9748cf15f4b2",
+  "doc_path": "tasks/e2e-heavy-windows/Readme.md",
+  "title": "E2E этап 6: HeavyWindows — регрессия на собранных Windows-плеерах",
+  "branch": "task/e2e-heavy-windows",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-heavy-windows/**",
+        "Tools/release/Build-Game.ps1",
+        "Tools/release/tests/**",
+        "Tools/e2e/Run-E2E.ps1",
+        "Tools/e2e/heavy.py",
+        "Tools/e2e/heavy/**",
+        "Tools/e2e/suites/**",
+        "AGENTS.md",
+        "Docs/release.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

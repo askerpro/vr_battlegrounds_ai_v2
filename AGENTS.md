@@ -177,6 +177,8 @@ Compare `git rev-parse --absolute-git-dir` with `git rev-parse --path-format=abs
    (тоже не вливать). При коде 2 сначала логи участников в отчёте: стенд не доходит до Ready и из-за
    регрессии игры; infra_issue сопровождающему — только при сбое окружения (аренда, MCP, клон MPPM).
    Путь к `verdict.json` — в review-request.
+Сеть, сборки и код плеера дополнительно проверяет `python Tools/e2e/heavy.py --profile windows --suite default`
+(собранные Windows-плееры, без аренды worker; берёт закоммиченный HEAD, ~11 мин плюс ожидание занятого build-test-win64).
 С изменениями кода, покрытого EditMode, добавлять `--editmode also` (ещё ~7 мин): новые красные против
 `Tools/e2e/editmode-known-red.json`. Стал зелёным известный красный — убрать его из списка в своей задаче.
 Новый сценарий добавляет в `Tools/e2e/suites/default.json` его автор после приёмки пользователем. [Набор и вердикт](Tools/e2e/heavy/README.md).

@@ -19,6 +19,19 @@ BotCount=0, Readiness=map-playable) → `Status` до Ready → `PlayModeTestSta
 клиентам → `Status` до E2EFinished → копия `e2e-*.json` → `Cancel` → архивы логов участников.
 Повторяются только наблюдения `Status`/`Operation`; Play, Send и Cancel отправляются один раз.
 
+## Профиль windows
+
+`python Tools/e2e/heavy.py --profile windows --suite default` — сценарии набора с `profiles: ["windows"]` в
+собранном Windows e2e-плеере (один exe — headless-сервер и оконные клиенты) через `Tools/e2e/Run-E2E.ps1`.
+Аренда worker не нужна. Ревизия — закоммиченный HEAD ветки: незакоммиченные игровые пути — код 2.
+Плеер собирает `Tools/release/Build-Game.ps1 -Targets e2e -Config Test -Ref <SHA>` в выделенном
+`F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai` (`--build-checkout` — другой); плеер той же ревизии
+(`Build/e2e/build.json` sourceSha) переиспользуется. Занятый checkout (Unity, Build-Game, Run-E2E, плеер на нём,
+открытый UnityLockfile, чужая сборка моложе 10 мин) heavy не трогает: перепроверка каждые 5 мин, не дольше часа,
+затем код 2. Каждый процесс сценария должен иметь `appVersion` `+<sha12>` HEAD. Сборка ~8 мин, сценарии ~3 мин.
+В наборе — e2e-kit-selftest и map-run-startup-route; scripted-* в плеерах ждут этапа 5 эпика e2e-regression.
+Поля набора для плееров: `args` (`-e2eArg`) и `lateClientDelaySeconds` (`-LateClientDelay`); `map` → имя сцены.
+
 ## Вердикт
 
 `Tools/e2e/results/heavy/<время>-<профиль>-<набор>/verdict.json` (вне Git), рядом `calls.jsonl`,

@@ -102,7 +102,12 @@ def main(argv=None):
     parser.add_argument("--editmode", default="off", choices=("off", "also", "only"),
                         help="EditMode после сценариев (also) или вместо них (only): новые красные против "
                              "Tools/e2e/editmode-known-red.json")
+    parser.add_argument("--build-checkout", help="профиль windows: выделенный сборочный checkout Win64; по умолчанию "
+                                                 "F:/CodexWorktrees/build-test-win64/Vr_Battlegrounds_ai")
     arguments = parser.parse_args(argv)
+    if arguments.editmode != "off" and arguments.profile != "editor":
+        print("heavy: --editmode только в профиле editor (EditMode идёт в Unity worker)", file=sys.stderr)
+        return 2
     try:
         return run(arguments)
     except Exception as error:  # noqa: BLE001 — любой сбой самого heavy: вердикта нет, это не регрессия
@@ -138,9 +143,15 @@ def run(arguments):
     report["checks"].append(check)
     report["branch"] = branch
     records = []
-    if arguments.profile != "editor":
+    if arguments.profile == "windows":
+        from . import windows_profile
+        checks, records, extra = windows_profile.run(PROJECT_ROOT, git, scenarios, outdir, log, framework,
+                                                     arguments.build_checkout)
+        report["checks"].extend(checks)
+        report.update(extra)
+    elif arguments.profile != "editor":
         report["checks"].append({"name": "Профиль " + arguments.profile, "verdict": V.INCONCLUSIVE,
-                                 "detail": "ещё не реализован (эпик e2e-regression, этапы HeavyWindows/HeavyQuest)"})
+                                 "detail": "ещё не реализован (эпик e2e-regression, этап HeavyQuest)"})
     elif not linked_worktree():
         report["checks"].append({"name": "Запуск из linked worktree", "verdict": V.INCONCLUSIVE,
                                  "detail": "основной checkout адресует Unity человека; запускать из worktree задачи в своей аренде"})

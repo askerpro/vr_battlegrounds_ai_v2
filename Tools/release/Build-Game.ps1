@@ -23,7 +23,7 @@
 
 [CmdletBinding()]
 param(
-    # all или список через запятую: server, quest, tablet.
+    # all или список через запятую: server, quest, tablet; e2e — Windows e2e-плеер (только явно, только Test).
     [string] $Targets = 'all',
 
     # Test — проверка на шлеме (Development, полные стектрейсы, быстрая сборка IL2CPP);
@@ -63,6 +63,7 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 # Запуски Unity по группам платформ: сначала Android (quest, tablet), затем server.
 # Бросает на неизвестном профиле.
 function Get-BuildRuns([string] $Spec) {
+    # all — релизные профили; e2e (Windows e2e-плеер, E2EPlayerBuilder) только явно и только в Test.
     $known = @('server', 'quest', 'tablet')
     $names = New-Object System.Collections.Generic.List[string]
 
@@ -71,19 +72,48 @@ function Get-BuildRuns([string] $Spec) {
         if ($name -eq '') { continue }
 
         if ($name -eq 'all') { $expanded = $known }
-        elseif ($known -contains $name) { $expanded = @($name) }
-        else { throw "неизвестный профиль '$name'. Есть: all, server, quest, tablet." }
+        elseif ($known -contains $name -or $name -eq 'e2e') { $expanded = @($name) }
+        else { throw "неизвестный профиль '$name'. Есть: all, server, quest, tablet, e2e." }
 
         foreach ($n in $expanded) { if (-not $names.Contains($n)) { $names.Add($n) } }
     }
 
-    if ($names.Count -eq 0) { throw 'не задан ни один профиль. Есть: all, server, quest, tablet.' }
+    if ($names.Count -eq 0) { throw 'не задан ни один профиль. Есть: all, server, quest, tablet, e2e.' }
+    if ($names.Contains('e2e') -and $names.Count -ne 1) { throw 'e2e запускается отдельно: клиент и сервер используют один artifact, cross-profile UXR здесь не применяется.' }
 
     $runs = New-Object System.Collections.Generic.List[object]
     $android = @(@('quest', 'tablet') | Where-Object { $names.Contains($_) })
     if ($android.Count -gt 0) { $runs.Add([pscustomobject]@{ Name = 'android'; BuildTarget = 'Android'; Profiles = ($android -join ',') }) }
     if ($names.Contains('server')) { $runs.Add([pscustomobject]@{ Name = 'server'; BuildTarget = 'Win64'; Profiles = 'server' }) }
+    # Один exe — и headless-сервер, и оконный клиент Tools/e2e/Run-E2E.ps1 (Build/e2e).
+    if ($names.Contains('e2e')) { $runs.Add([pscustomobject]@{ Name = 'e2e'; BuildTarget = 'Win64'; Profiles = 'e2e' }) }
     return $runs.ToArray()
+}
+
+# Аргументы Unity одного запуска: e2e-плеер собирает E2EPlayerBuilder, остальные профили — GameBuilder.
+function Get-UnityRunArguments($Run, [string] $Log, [string[]] $OtherRoots) {
+    $arguments = @(
+        '-batchmode', '-quit',
+        '-projectPath', "`"$($Run.ProjectPath)`"",
+        '-buildTarget', $Run.BuildTarget
+    )
+    if ($Run.Name -eq 'e2e') {
+        return $arguments + @('-executeMethod', 'VrBattlegrounds.EditorTools.E2EPlayerBuilder.RunBatch',
+            '-logFile', "`"$Log`"", '-buildRevision', $sharedRevision)
+    }
+    $arguments += @(
+        '-executeMethod', 'VrBattlegrounds.EditorTools.Release.GameBuilder.RunBatch',
+        '-buildProfile', $Run.Profiles,
+        '-logFile', "`"$Log`"",
+        '-config', $Config
+    )
+    if ($Config -eq 'Test') {
+        $arguments += @('-buildRevision', $sharedRevision)
+    }
+    foreach ($extRoot in $OtherRoots) {
+        $arguments += @('-compareBuildRoot', "`"$extRoot`"")
+    }
+    return $arguments
 }
 
 # Итог сборщика — блок от маркера [GameBuilder] до конца сообщения; нет маркера — хвост лога.
@@ -259,7 +289,8 @@ function Read-ValidatedBuildProfile([string] $ManifestPath, [string] $ArtifactRo
     foreach ($actualFile in $actualFiles) {
         if (-not $seen.Contains($actualFile)) { throw "В artifact tree найден файл вне inventory: $actualFile" }
     }
-    if (-not $seen.Contains((Get-ContainedArtifactPath $ArtifactRoot 'uxr-ids.txt')) -or [string]::IsNullOrWhiteSpace((Read-UxrIdHash $ArtifactRoot))) { throw 'Нет проверенного UXR fingerprint в inventory' }
+    # e2e-плеер один и для сервера, и для клиентов: сверять UXR fingerprint не с чем, E2EPlayerBuilder его не пишет.
+    if ($Profile -cne 'e2e' -and (-not $seen.Contains((Get-ContainedArtifactPath $ArtifactRoot 'uxr-ids.txt')) -or [string]::IsNullOrWhiteSpace((Read-UxrIdHash $ArtifactRoot)))) { throw 'Нет проверенного UXR fingerprint в inventory' }
     return [pscustomobject]@{ Manifest = $manifest; Record = $record }
 }
 
@@ -272,7 +303,7 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
     $dirtyKnown = $true
     $dirtyValue = $false
     $passed = $BuildPassed
-    $folders = @{ server = 'Server'; quest = 'Quest'; tablet = 'Tablet' }
+    $folders = @{ server = 'Server'; quest = 'Quest'; tablet = 'Tablet'; e2e = 'e2e' }
     foreach ($run in $Runs) {
         $terminal = $TerminalRuns[$run.Name]
         foreach ($profile in ($run.Profiles -split ',')) {
@@ -486,6 +517,10 @@ try {
     Write-Host ('Профили: ' + $_.Exception.Message) -ForegroundColor Red
     exit 2
 }
+if ($Config -ne 'Test' -and @($runs | Where-Object { $_.Name -eq 'e2e' }).Count -gt 0) {
+    Write-Host 'Профили: e2e-плеер собирается только с -Config Test (харнесс E2E вырезан в Prod).' -ForegroundColor Red
+    exit 2
+}
 
 if ([string]::IsNullOrEmpty($Unity)) {
     $versionLine = Select-String -Path (Join-Path $RepoRoot 'ProjectSettings\ProjectVersion.txt') -Pattern '^m_EditorVersion: (.+)$'
@@ -691,21 +726,7 @@ if ($DryRun) {
         $index++
         $log = Join-Path $logDir ('build-' + $stamp + '-' + $run.Name + '.log')
         $otherRoots = @($activeWorktrees | Where-Object { $_ -ne $run.ProjectPath } | ForEach-Object { Join-Path $_ 'Build' })
-        $arguments = @(
-            '-batchmode', '-quit',
-            '-projectPath', "`"$($run.ProjectPath)`"",
-            '-buildTarget', $run.BuildTarget,
-            '-executeMethod', 'VrBattlegrounds.EditorTools.Release.GameBuilder.RunBatch',
-            '-buildProfile', $run.Profiles,
-            '-logFile', "`"$log`"",
-            '-config', $Config
-        )
-        if ($Config -eq 'Test') {
-            $arguments += @('-buildRevision', $sharedRevision)
-        }
-        foreach ($extRoot in $otherRoots) {
-            $arguments += @('-compareBuildRoot', "`"$extRoot`"")
-        }
+        $arguments = Get-UnityRunArguments $run $log $otherRoots
         Write-Host ''
         Write-Host "[DryRun] Запуск $index/$($runs.Count): профили $($run.Profiles), -buildTarget $($run.BuildTarget), worktree $($run.ProjectPath)"
         Write-Host "[DryRun] Команда: `"$Unity`" $($arguments -join ' ')"
@@ -721,22 +742,7 @@ foreach ($run in $runs) {
     $index++
     $log = Join-Path $logDir ('build-' + $stamp + '-' + $run.Name + '.log')
     $otherRoots = @($activeWorktrees | Where-Object { $_ -ne $run.ProjectPath } | ForEach-Object { Join-Path $_ 'Build' })
-
-    $arguments = @(
-        '-batchmode', '-quit',
-        '-projectPath', "`"$($run.ProjectPath)`"",
-        '-buildTarget', $run.BuildTarget,
-        '-executeMethod', 'VrBattlegrounds.EditorTools.Release.GameBuilder.RunBatch',
-        '-buildProfile', $run.Profiles,
-        '-logFile', "`"$log`"",
-        '-config', $Config
-    )
-    if ($Config -eq 'Test') {
-        $arguments += @('-buildRevision', $sharedRevision)
-    }
-    foreach ($extRoot in $otherRoots) {
-        $arguments += @('-compareBuildRoot', "`"$extRoot`"")
-    }
+    $arguments = Get-UnityRunArguments $run $log $otherRoots
 
     Write-Host ''
     Write-Host "Запуск $index/$($runs.Count): профили $($run.Profiles), -buildTarget $($run.BuildTarget), worktree $($run.ProjectPath)"
@@ -767,6 +773,8 @@ $profileFolderMap = @{
 foreach ($run in $runs) {
     foreach ($p in ($run.Profiles -split ',')) {
         $pTrim = $p.Trim().ToLowerInvariant()
+        # e2e-плеер не участвует: он сам и сервер, и клиент, отпечатка uxr-ids.txt у него нет.
+        if ($pTrim -eq 'e2e') { continue }
         $folder = $profileFolderMap[$pTrim]
         $buildDir = Join-Path $run.ProjectPath "Build\$folder"
         $h = Read-UxrIdHash $buildDir
@@ -834,5 +842,8 @@ $pairRunSuccess = $true
 Write-Host 'Готово. Собранные профили:' -ForegroundColor Green
 foreach ($k in $builtProfileHashes.Keys) {
     Write-Host ("  {0} (uxr-ids: {1})" -f $k, $builtProfileHashes[$k]) -ForegroundColor Green
+}
+foreach ($run in @($runs | Where-Object { $_.Name -eq 'e2e' })) {
+    Write-Host ("  e2e ({0}) — один artifact для сервера и клиентов" -f (Join-Path $run.ProjectPath 'Build\e2e')) -ForegroundColor Green
 }
 exit 0

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Набор перед вливанием: скриптовый ввод сетевых клиентов и бой (этапы 1 и 2 эпика e2e-regression).",
+  "description": "Набор перед вливанием: скриптовый ввод сетевых клиентов и бой (Editor-стенд), каркас и маршрут старта в собранных Windows-плеерах.",
   "defaults": {
     "map": "Assets/Scenes/Maps/TestMap2.unity",
     "mode": "elimination",
@@ -22,6 +22,21 @@
       "name": "scripted-combat-hit",
       "clients": 2,
       "profiles": ["editor"]
+    },
+    {
+      "name": "e2e-kit-selftest",
+      "clients": 2,
+      "profiles": ["windows"],
+      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "scenarioTimeoutSeconds": 300
+    },
+    {
+      "name": "map-run-startup-route",
+      "clients": 2,
+      "profiles": ["windows"],
+      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "scenarioTimeoutSeconds": 300,
+      "lateClientDelaySeconds": 40
     }
   ]
 }

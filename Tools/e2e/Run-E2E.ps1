@@ -86,7 +86,11 @@ param(
 
     # Вердикт по логам: enforce — неожиданные ошибки в логах делают прогон RED (код 1); report — только отчёт.
     [ValidateSet('enforce', 'report')]
-    [string] $LogVerdict = 'enforce'
+    [string] $LogVerdict = 'enforce',
+
+    # Каталог артефактов прогона (новый или пустой). Пусто — Tools\e2e\results\<время>-<сценарий>.
+    # Нужен дирижёру набора (Tools/e2e/heavy): он знает каталог заранее, без разбора вывода.
+    [string] $ResultsDir = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -317,6 +321,13 @@ catch { Write-Host ('ОТКАЗ: build provenance: ' + $_.Exception.Message) -Fo
 $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
 $runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $stamp + '-' + $Scenario)
 if ($null -ne $diagnosticInput) { $runDir = Join-Path $RepoRoot ('Tools/e2e/results/' + $stamp + '-' + [guid]::NewGuid().ToString('N')) }
+if (-not [string]::IsNullOrWhiteSpace($ResultsDir)) {
+    $runDir = [IO.Path]::GetFullPath($ResultsDir)
+    if ((Test-Path -LiteralPath $runDir) -and @(Get-ChildItem -LiteralPath $runDir -Force).Count -gt 0) {
+        Write-Host ('ОТКАЗ: каталог -ResultsDir не пуст: ' + $runDir) -ForegroundColor Red
+        exit 2
+    }
+}
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 
 $roleInputs = @{}

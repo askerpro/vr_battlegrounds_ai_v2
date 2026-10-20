@@ -9,7 +9,7 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
 |---|---|
 | Редактор | `Tools/VR Battlegrounds/Release/Собрать всё (сервер, Quest, планшет)` или по одной |
 | Проверка без сборки | `Tools/VR Battlegrounds/Release/Проверить UXR id (без сборки)` |
-| CLI, выделенные сборочные worktree (по умолчанию) | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets all\|server,quest,tablet] [-Config Test\|Prod] [-Ref <commit>] [-DryRun]` |
+| CLI, выделенные сборочные worktree (по умолчанию) | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 [-Targets all\|server,quest,tablet\|e2e] [-Config Test\|Prod] [-Ref <commit>] [-DryRun]` |
 | CLI, в текущем checkout | `powershell -ExecutionPolicy Bypass -File Tools\release\Build-Game.ps1 -UseCurrentWorktree [-Targets ...] [-Config Test\|Prod]` |
 | Агент | `GameBuilder.Build(new[] { BuildProfile.Server }, BuildConfig.Test)` → `Result.Summary` |
 | Пара для прогона на шлеме | `Run-QuestE2E.ps1 -Build` (batch по умолчанию собирает через `build-test-android` + `build-test-win64` без переключения платформы) или `E2EPlayerBuilder.StartPairBuild(<статус>)` в редакторе — [testing.md](testing.md) |
@@ -93,6 +93,10 @@ Quest E2E использует `Tools/e2e/Run-QuestE2E.ps1 -Build` с явным
 У этого дирижёра нет `-Ref`: пару заранее выравнивает `Build-Game.ps1`.
 Windows E2E-плеер — `build-test-win64/Build/e2e/VrBattlegrounds.exe`; пример полного
 устройственного запуска — [testing.md](testing.md), «Прогон на шлеме».
+Сам по себе его собирает цель `e2e` (только `-Config Test`, отдельно от других целей, в `all` не входит):
+`Build-Game.ps1 -Targets e2e -Config Test -Win64Worktree $win -AndroidWorktree $android -Ref $sha` — тот же
+preflight, переключение и pair manifest; UXR-сверки нет (один artifact и для сервера, и для клиентов).
+Ей пользуется `Tools/e2e/heavy.py --profile windows` ([heavy](../Tools/e2e/heavy/README.md)).
 Агент не использует `-UseCurrentWorktree`, `-SingleWorktreeBuild` или меню чужого Editor как обход.
 Отказ инфраструктуры передаётся сопровождающему через hub infra_issue и проверенный Codex канал.
 

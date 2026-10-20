@@ -18,13 +18,11 @@ namespace VrBattlegrounds.Tests.Haptics
     /// (<see cref="InteractionFeedback" />): <see cref="InteractionFeedbackOverride" /> объекта → <see cref="InteractionFeedbackConfig" />
     /// (роль якоря или «в досягаемости»). Объект без отклика допустим только в списке
     /// <see cref="NoFeedbackYet" /> с причиной — так новый предмет или якорь без отклика сразу виден, а текущие пробелы
-    /// перечислены. Полный перечень — <c>Temp/HapticFeedbackCoverage.txt</c>. Обзорные и черновые префабы прицелов — не игра.
+    /// перечислены. Полный перечень — <c>Temp/HapticFeedbackCoverage.txt</c>.
     /// </summary>
     public class ManipulationFeedbackCoverageTests
     {
         private const string ReportPath = "Temp/HapticFeedbackCoverage.txt";
-
-        private static readonly string[] NotInGame = { "/SightReview/", "/SightCalibrationDrafts/" };
 
         /// <summary>
         /// Пока без отклика: «префаб | путь объекта | вид» → причина. Строка уходит, когда объект получил отклик (тест
@@ -61,7 +59,6 @@ namespace VrBattlegrounds.Tests.Haptics
             foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (NotInGame.Any(path.Contains)) continue;
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (prefab == null) continue;
 

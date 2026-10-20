@@ -285,7 +285,6 @@ namespace VrBattlegrounds.Tests.Weapons
         }
 
         [TestCase("MKR9", WS.WeaponCue.CasingEjected, "Pistol_Casing")]
-        [TestCase("MKR9_SightReview", WS.WeaponCue.CasingEjected, "Pistol_Casing")]
         public void Калибр_ствола_вне_категории_задан_оверрайдом(string name, WS.WeaponCue cue, string ejecta)
         {
             Assert.That(Call("EjectionOverrideOf", name, cue), Is.EqualTo(ejecta),
@@ -293,14 +292,11 @@ namespace VrBattlegrounds.Tests.Weapons
         }
 
         [TestCase("SniperRifle", WS.WeaponCue.ChamberEjected)]
-        [TestCase("SniperRifle_SightReview", WS.WeaponCue.ChamberEjected)]
         [TestCase("SRM12", WS.WeaponCue.ChamberEjected)]
-        [TestCase("SRM12_SightReview", WS.WeaponCue.ChamberEjected)]
         public void Снайперские_стволы_в_своей_категории_и_вылет_по_дефолту(string name, WS.WeaponCue cue)
         {
             Assert.That(Call("EjectionOverrideOf", name, cue), Is.Null, "Снайперский вылет — дефолт категории, не оверрайд.");
-            string path = name.EndsWith("_SightReview")
-                ? $"Assets/Prefabs/Weapons/SightReview/{name}.prefab" : $"Assets/Prefabs/Weapons/{name}/{name}.prefab";
+            string path = $"Assets/Prefabs/Weapons/{name}/{name}.prefab";
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             WeaponSystem host = prefab != null ? prefab.GetComponent<WeaponSystem>() : null;
             Assert.That(host, Is.Not.Null, path + ": нет хоста.");

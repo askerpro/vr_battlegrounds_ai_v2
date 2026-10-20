@@ -67,11 +67,6 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static Entry E(string name, string wave, string profile, WeaponFeedbackCategory category) =>
             new Entry { Name = name, Prefab = $"Assets/Prefabs/Weapons/{name}/{name}.prefab", Wave = wave, Profile = profile, Category = category };
 
-        /// <summary>Обзорная копия ствола (стена лобби): та же волна и категория, что у исходного (план, вопрос В10).</summary>
-        private static Entry Review(string name, string wave, string profile, WeaponFeedbackCategory category) =>
-            new Entry { Name = name + "_SightReview", Prefab = $"Assets/Prefabs/Weapons/SightReview/{name}_SightReview.prefab",
-                Wave = wave, Profile = profile, Category = category };
-
         /// <summary>
         /// Все стволы арсенала (план п. 5): волна, профиль и категория отклика — одна таблица. Новый ствол без строки
         /// writer не настроит. Из F5 поддержаны револьверы Revolver и R08 с явным профилем MagazineOnly.
@@ -95,11 +90,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             E("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // AX-50
             E("Gun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Pistol),
             E("Machinegun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Rifle),
-            Review("Viper", "F1", DetachableHoldOpenProfile, WeaponFeedbackCategory.Pistol),
-            Review("TR15", "F1", DetachableHoldOpenProfile, WeaponFeedbackCategory.Rifle),
-            Review("MKR9", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
-            Review("SRM12", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
-            Review("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),
             E("Revolver", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
             E("R08", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
             E("Shotgun", "F5", null, WeaponFeedbackCategory.Shotgun),
@@ -157,13 +147,12 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>
         /// Свои клипы механизма ствола поверх перенесённых из прежних компонентов (имя корня → поле <c>_audio</c> → клип).
         /// Нужны, когда звук пака испорчен: у SRM12 <c>BoltBack.wav</c> почти тишина, а <c>BoltForward.wav</c> — весь цикл;
-        /// нарезка — <c>Tools/Audio/recipes/srm12-bolt.json</c> (решение пользователя 2026-10-09). Обзорная копия — те же клипы.
+        /// нарезка — <c>Tools/Audio/recipes/srm12-bolt.json</c> (решение пользователя 2026-10-09).
         /// </summary>
         private static readonly Dictionary<string, (string Field, string Clip)[]> ClipOverrides =
             new Dictionary<string, (string Field, string Clip)[]>
             {
                 ["SRM12"] = Srm12Action,
-                ["SRM12_SightReview"] = Srm12Action,
             };
 
         private static readonly (string Path, WeaponAmmoCapability Ammo, WeaponPhysicalCapability Physical, WeaponChamberPolicy Policy, WeaponEmptyPose Pose)[] ProfileSpecs =
@@ -846,8 +835,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// Окно выброса ствола в системе ствола (<see cref="TryGetBarrelFrame"/>, метры): X — вправо (+ — правый бок),
         /// Y — вверх, Z — к дулу (минус — назад от дула). Окно повёрнуто как ствол: +X окна — наружу вправо. Якорь —
         /// корень оружия (окно на корпусе; затвор пистолета к выстрелу стоит в покое). Числа сняты с геометрии моделей
-        /// (отчёт <c>tasks/weapon-system/reports/ejection/geometry*.json</c>) и проверяются в шлеме. Обзорная копия
-        /// (<c>*_SightReview</c>) берёт строку исходного ствола.
+        /// (отчёт <c>tasks/weapon-system/reports/ejection/geometry*.json</c>) и проверяются в шлеме.
         /// </summary>
         private static readonly Dictionary<string, Vector3> EjectionPorts = new Dictionary<string, Vector3>
         {
@@ -873,8 +861,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             ["MP5K"] = new Vector3(0.020f, 0.005f, -0.155f),         // спуск z −0,213
             ["Machinegun"] = new Vector3(0.025f, 0f, -0.300f),       // MagDecal z −0,340…−0,248
         };
-
-        private const string ReviewSuffix = "_SightReview";
 
         // ── Префабы вылета и дефолты вылета категорий (этап ejection) ───────────────────────
 
@@ -944,7 +930,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         };
 
         /// <summary>
-        /// Оверрайды вылета ствола (имя корня без <c>_SightReview</c> → поле набора → префаб и импульс): калибр ствола не
+        /// Оверрайды вылета ствола (имя корня → поле набора → префаб и импульс): калибр ствола не
         /// совпадает с категорией. Решение пользователя 2026-10-09: MKR9 — 9 мм в категории «автомат», гильза и импульс
         /// пистолетные. Снайперские стволы (SniperRifle, SRM12) — своя категория, их вылет — дефолт категории.
         /// </summary>
@@ -960,7 +946,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public static string EjectionOverrideOf(string weaponName, WS.WeaponCue cue)
         {
             string field = cue == WS.WeaponCue.ChamberEjected ? "_liveRound" : cue == WS.WeaponCue.CasingEjected ? "_spentCasing" : null;
-            if (field == null || !EjectionOverrides.TryGetValue(PortKey(weaponName), out var rows)) return null;
+            if (field == null || !EjectionOverrides.TryGetValue(weaponName, out var rows)) return null;
             foreach (var row in rows) if (row.Field == field) return row.Ejecta;
             return null;
         }
@@ -974,7 +960,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         private static void WriteEjectionOverrides(SerializedObject settings, GameObject root)
         {
-            EjectionOverrides.TryGetValue(PortKey(root.name), out var rows);
+            EjectionOverrides.TryGetValue(root.name, out var rows);
             foreach (string field in EjectionFields)
             {
                 SerializedProperty entry = settings.FindProperty("_ejection." + field);
@@ -1258,13 +1244,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (cycle != null && cycle.intValue != (int)UxrShotCycle.ManualReload) yield return WS.WeaponCue.CasingEjected;
         }
 
-        private static string PortKey(string rootName) =>
-            rootName.EndsWith(ReviewSuffix, StringComparison.Ordinal) ? rootName.Substring(0, rootName.Length - ReviewSuffix.Length) : rootName;
-
         /// <summary>Записать окно выброса из таблицы <see cref="EjectionPorts"/>. Ствола нет в таблице — ошибка writer.</summary>
         private static void WritePort(SerializedObject settings, GameObject root)
         {
-            if (!EjectionPorts.TryGetValue(PortKey(root.name), out Vector3 local))
+            if (!EjectionPorts.TryGetValue(root.name, out Vector3 local))
                 throw new InvalidOperationException($"{root.name}: нет строки окна выброса (WeaponSystemAuthoring.EjectionPorts).");
             if (!TryGetBarrelFrame(root, out Vector3 origin, out Quaternion frame, out string error))
                 throw new InvalidOperationException($"{root.name}: окно выброса — {error}.");

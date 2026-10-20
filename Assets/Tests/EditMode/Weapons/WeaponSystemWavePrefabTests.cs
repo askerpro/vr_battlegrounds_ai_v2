@@ -15,8 +15,8 @@ namespace VrBattlegrounds.Tests.Weapons
 {
     /// <summary>
     /// Стволы волн F1–F4 на хосте <see cref="WeaponSystem"/> (этап waves-f, принят пользователем в шлеме 2026-10-09).
-    /// Источник списка — таблица <c>WeaponSystemAuthoring.Weapons</c> (волна, префаб, профиль, категория), включая обзорные
-    /// копии <c>SightReview</c>. F5 (Revolver, R08, SDK Shotgun) ещё не переведены и здесь не проверяются.
+    /// Источник списка — таблица <c>WeaponSystemAuthoring.Weapons</c> (волна, префаб, профиль, категория).
+    /// F5 (Revolver, R08, SDK Shotgun) ещё не переведены и здесь не проверяются.
     ///
     /// Классы ошибок: второй писатель позы/звука/подсказки рядом с хостом (прежние AWSF, WMV, Reminder) или компонент
     /// удалённого скрипта; ствол не своей категории или без ссылки на дефолты (звук и вибрация молчат или чужие);
@@ -182,7 +182,6 @@ namespace VrBattlegrounds.Tests.Weapons
         // ── SRM12: нарезанные клипы затвора ─────────────────────────────────────────────────
 
         [TestCase("SRM12")]
-        [TestCase("SRM12_SightReview")]
         public void SRM12_затвор_из_нарезки_и_не_тишина(string weapon)
         {
             Row row = AllRows().FirstOrDefault(r => r.Name == weapon);

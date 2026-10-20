@@ -6,13 +6,16 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using VrBattlegrounds.Editor.Weapons.Sights;
 using Object = UnityEngine.Object;
 
-namespace VrBattlegrounds.Editor.Weapons.Calibration
+namespace VrBattlegrounds.Editor.Weapons.Accessories
 {
     /// <summary>
-    /// Витрина прицелов и аксессуаров из паков оружия рядом с оружием ручного стенда.
+    /// Витрина прицелов и аксессуаров из паков оружия в открытой сцене (например, рядом со стендом Sight Auto-Zero).
     /// Только для выбора деталей: экземпляры связаны с исходными префабами/FBX пака, игровых компонентов не получают.
+    /// Вызывается вкладкой «Аксессуары» окна «Настройка оружия» (решение 2026-10-20); ручной стенд, где она жила
+    /// раньше, удалён.
     /// </summary>
     public static class SightAccessoryShowcase
     {
@@ -20,7 +23,7 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
         private const string Hands = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Prefabs/Weapons_Details";
         private const string Kinemation = "Assets/ThirdParty/KINEMATION/TacticalShooterPack";
 
-        // Ряды витрины: оружие на стенде стоит дулом в (0, 1.5, 0) и смотрит в +Z, ряды уходят назад справа от него.
+        // Ряды витрины: справа от начала координат сцены (там стоит оружие стенда, ствол в +Z), уходят назад по −Z.
         private static readonly Vector3 Origin = new Vector3(.45f, 1.3f, 0f);
         private const float RowPitch = .65f, Gap = .07f;
 
@@ -34,7 +37,7 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
         {
             new Category("Коллиматоры и голографы", n => (n.StartsWith("Sight_0") && n != "Sight_09") || n.StartsWith("Holograph") || n.Contains("XPS2")),
             new Category("Оптика и магнифер", n => n.StartsWith("Sight_") || n.Contains("Scope") || n.Contains("G33")),
-            new Category("Механические прицелы", n => n.Contains("IronSights") || n.Contains("FrontSight") || n.Contains("RearSight")),
+            new Category("Механические прицелы (комплекты)", n => n.StartsWith("SightKit_", StringComparison.Ordinal)),
             new Category("Глушители и пламегасители", n => n.StartsWith("Silencer") || n.Contains("_Silencer") || n.StartsWith("Flame_Arrester")),
             new Category("Фонари", n => n.Contains("Flaslight") || n.Contains("Flashlight")),
             new Category("Рукоятки и прочее", n => true),
@@ -44,18 +47,27 @@ namespace VrBattlegrounds.Editor.Weapons.Calibration
         {
             foreach (var folder in new[] { Hands, Kinemation + "/Prefabs/Attachments" })
                 foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { folder }).OrderBy(g => AssetDatabase.GUIDToAssetPath(g), StringComparer.Ordinal))
-                    yield return AssetDatabase.GUIDToAssetPath(guid);
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!IsPackIronSight(Path.GetFileNameWithoutExtension(path))) yield return path;
+                }
             string weapons = Kinemation + "/Meshes/Weapons/";
             foreach (var path in new[]
             {
                 // Holograph_Sight.prefab пака уже показывает XPS2; здесь — FBX без префабов.
                 "TR15/Attachments/SM_Attach_AR15_G33.FBX", "TR15/Attachments/SM_Attach_AR15_Grip.FBX", "TR15/Attachments/SM_Attach_AR15_Silencer.FBX",
-                "TR15/Attachments/Ironsights/SKM_TR15_FrontSight.FBX", "TR15/Attachments/Ironsights/SKM_TR15_RearSight.FBX",
-                "SRM-12/Attachments/Phantom_TAC/SM_Phantom_TAC_Scope.FBX", "MX68/Attachments/SM_IronSights_MX68.FBX", "MKR9/SM_MKR9_IronSights.fbx",
+                "SRM-12/Attachments/Phantom_TAC/SM_Phantom_TAC_Scope.FBX",
             }) yield return weapons + path;
+            // Механика — только готовые комплекты стенда Sight Auto-Zero: исходники пака (IronSights TR15, MX68/MKR9)
+            // нарезаны в них и в витрине были бы дублями.
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab SightKit_", new[] { SightKitBuilder.PrefabFolder }).OrderBy(g => AssetDatabase.GUIDToAssetPath(g), StringComparer.Ordinal))
+                yield return AssetDatabase.GUIDToAssetPath(guid);
         }
 
-        /// <summary>Пересобирает витрину в открытой сцене ручного стенда; прежняя витрина удаляется.</summary>
+        private static bool IsPackIronSight(string name) =>
+            name.Contains("IronSight") || name.Contains("FrontSight") || name.Contains("RearSight");
+
+        /// <summary>Пересобирает витрину в сцене; прежняя витрина удаляется.</summary>
         public static GameObject Build(Scene scene)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)

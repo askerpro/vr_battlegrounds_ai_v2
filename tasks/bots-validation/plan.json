@@ -86,6 +86,16 @@
       "needs": []
     },
     {
+      "id": "cprime-probes",
+      "writes": [
+        "tasks/bots-validation/**",
+        "Assets/Scripts/Debug/BotCombatStand/BotStandMatchProbe.cs",
+        "Assets/Scripts/Debug/BotCombatStand/BotStandNetObserver.cs"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "external-diagnostics",
       "writes": [
         "tasks/bots-validation/**"

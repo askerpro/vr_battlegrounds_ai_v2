@@ -1,0 +1,75 @@
+// Снимок реестра UXR на сервере (тело для execute_code; CodeDom — без локальных функций).
+// Перед вызовом заменить __LABEL__ (S1/S2/S3/...) и __DIR__ (папка отчётов на worker, вне Assets).
+// Сводка — строкой в registry.txt; все записи — registry-__LABEL__.tsv: по ключу мёртвой записи из следующего
+// снимка находится сцена/путь/активность того же ключа из предыдущего (разбор — analyze_registry.py).
+var label = "__LABEL__";
+var dir = "__DIR__";
+var d = UltimateXR.Core.Unique.UxrUniqueIdImplementer<UltimateXR.Core.Components.UxrComponent>.ComponentsById;
+var colField = typeof(UltimateXR.Core.Unique.UxrUniqueIdImplementer).GetField("s_idCollisions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+var col = colField != null ? (System.Collections.Generic.Dictionary<System.Guid, int>)colField.GetValue(null) : null;
+var implProp = typeof(UltimateXR.Core.Components.UxrComponent).GetProperty("UniqueIdImplementer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+int dead = 0, keyMismatch = 0, staleScene = 0, unregistered = 0, realCollisions = 0;
+var byScene = new System.Collections.Generic.Dictionary<string, int>();
+var deadTypes = new System.Collections.Generic.Dictionary<string, int>();
+var unregTypes = new System.Collections.Generic.Dictionary<string, int>();
+var tsv = new System.Text.StringBuilder();
+tsv.Append("label\tkey\tstate\ttype\tinstanceId\tscene\tpath\tactiveInHierarchy\tenabled\tuniqueIdIsKey\toriginalUniqueId\tcombineIdSource\tcollisionCount\n");
+foreach (var p in d) {
+  var c = p.Value;
+  bool live = c != null;
+  string type = ((object)c) != null ? c.GetType().Name : "null-ref";
+  int iid = 0; try { if (((object)c) != null) iid = c.GetInstanceID(); } catch (System.Exception) { }
+  string scene = "", path = "", active = "", enabled = "", orig = "", combine = "";
+  bool idIsKey = false;
+  if (((object)c) != null) {
+    try { idIsKey = c.UniqueId == p.Key; } catch (System.Exception) { }
+    try { var impl = implProp != null ? implProp.GetValue(c) as UltimateXR.Core.Unique.UxrUniqueIdImplementer : null; if (impl != null) orig = impl.OriginalUniqueId.ToString(); } catch (System.Exception) { }
+    try { combine = ((UltimateXR.Core.Unique.IUxrUniqueId)c).CombineIdSource.ToString(); } catch (System.Exception) { }
+  }
+  if (!live) {
+    dead++;
+    int k0; deadTypes.TryGetValue(type, out k0); deadTypes[type] = k0 + 1;
+  } else {
+    if (!idIsKey) keyMismatch++;
+    var s = c.gameObject.scene;
+    if (!s.IsValid() || !s.isLoaded) staleScene++;
+    scene = s.IsValid() ? s.name : "?";
+    int k; byScene.TryGetValue(scene, out k); byScene[scene] = k + 1;
+    var t = c.transform; var parts = new System.Collections.Generic.List<string>();
+    while (t != null) { parts.Insert(0, t.name); t = t.parent; }
+    path = string.Join("/", parts.ToArray());
+    active = c.gameObject.activeInHierarchy ? "1" : "0";
+    enabled = c.enabled ? "1" : "0";
+    if (orig != "" && orig != System.Guid.Empty.ToString() && orig != c.UniqueId.ToString() && (combine == "" || combine == System.Guid.Empty.ToString())) realCollisions++;
+  }
+  int cc = -1; if (col != null) { int v; if (col.TryGetValue(p.Key, out v)) cc = v; }
+  tsv.Append(label).Append('\t').Append(p.Key).Append('\t').Append(live ? "live" : "dead").Append('\t').Append(type).Append('\t').Append(iid)
+     .Append('\t').Append(scene).Append('\t').Append(path.Replace('\t', ' ')).Append('\t').Append(active).Append('\t').Append(enabled)
+     .Append('\t').Append(idIsKey ? "1" : "0").Append('\t').Append(orig).Append('\t').Append(combine).Append('\t').Append(cc).Append('\n');
+}
+foreach (var c in UnityEngine.Object.FindObjectsByType<UltimateXR.Core.Components.UxrComponent>(UnityEngine.FindObjectsInactive.Include, UnityEngine.FindObjectsSortMode.None)) {
+  UltimateXR.Core.Components.UxrComponent r;
+  if (!d.TryGetValue(c.UniqueId, out r) || !object.ReferenceEquals(r, c)) {
+    unregistered++;
+    string key = c.GetType().Name + (c.gameObject.activeInHierarchy ? "" : "(inactive)");
+    int k; unregTypes.TryGetValue(key, out k); unregTypes[key] = k + 1;
+  }
+}
+int collisionsDict = -1;
+if (col != null) { collisionsDict = 0; foreach (var kv in col) if (kv.Value > 0) collisionsDict++; }
+var bySession = new System.Collections.Generic.Dictionary<uint, int>(); int dupBodies = 0;
+foreach (var pc in UnityEngine.Object.FindObjectsByType<VrBattlegrounds.Player.PlayerController>(UnityEngine.FindObjectsSortMode.None)) {
+  if (pc.Session == null) continue; int k; bySession.TryGetValue(pc.Session.netId, out k); bySession[pc.Session.netId] = k + 1; }
+foreach (var kv in bySession) if (kv.Value > 1) dupBodies++;
+var sb = new System.Text.StringBuilder();
+sb.AppendFormat("{0} total={1} dead={2} keyMismatch={3} staleScene={4} unregistered={5} realCollisions={6} collisionsDict={7} sessionsWithBodies={8} dupBodies={9} activeScene={10} scenes:",
+  label, d.Count, dead, keyMismatch, staleScene, unregistered, realCollisions, collisionsDict, bySession.Count, dupBodies, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+foreach (var kv in byScene) sb.Append(" ").Append(kv.Key).Append("=").Append(kv.Value);
+sb.Append(" deadTypes:"); foreach (var kv in deadTypes) sb.Append(" ").Append(kv.Key).Append("=").Append(kv.Value);
+var top = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, int>>(unregTypes);
+top.Sort((a, b) => b.Value.CompareTo(a.Value));
+sb.Append(" unregisteredTop:"); for (int i = 0; i < System.Math.Min(6, top.Count); i++) sb.Append(" ").Append(top[i].Key).Append("=").Append(top[i].Value);
+System.IO.Directory.CreateDirectory(dir);
+System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "registry-" + label + ".tsv"), tsv.ToString(), new System.Text.UTF8Encoding(false));
+System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "registry.txt"), System.DateTime.UtcNow.ToString("o") + " " + sb + "\n");
+return sb.ToString();

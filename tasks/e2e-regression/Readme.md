@@ -86,6 +86,7 @@ SDK «внешний аватар с вводом», 5 точек), правил
 |---|---|---|---|
 | 2 Бой | [e2e-combat](../e2e-combat/Readme.md) | `Assets/Scripts/Debug/E2E/Input/**`, `Assets/Scripts/Debug/E2E/Scenarios/Scripted*`, регистрация в `E2ERunner.cs`, `Assets/Tests/EditMode/DevTools/ScriptedInput*` | `Tools/e2e/**`, `Assets/Editor/VR_Battlegrounds/Testing/**`, `AGENTS.md` |
 | 4 HeavyEditor | [e2e-heavy-editor](../e2e-heavy-editor/Readme.md) | `Tools/e2e/**` (раннер и наборы), `Assets/Editor/VR_Battlegrounds/Testing/**` (фасад дирижёра стенда), раздел в `AGENTS.md`, свои тесты | `Assets/Scripts/Debug/E2E/Input/**`, `Scenarios/Scripted*`, префабы |
+| 6 HeavyWindows | [e2e-heavy-windows](../e2e-heavy-windows/Readme.md) (агент HeavyEditor, с 2026-10-20) | `Tools/e2e/**`, при необходимости `E2EPlayerBuilder`/`Release/*` (по согласованию) | `Assets/Scripts/Debug/E2E/Input/**`, `Scenarios/Scripted*` |
 
 Стык: набор HeavyEditor начинается с `scripted-input-smoke` и `scripted-wall-purchase`; сценарий боя добавляется в
 набор тем, кто вливает позже. Каждая итерация вливается сразу после проверки пользователем.

@@ -68,9 +68,10 @@ namespace VrBattlegrounds.EditorTools.TestStand
         private static Func<GameNetworkDiscovery.AppRole?> _nativeRole;
         [Serializable] private sealed class RequestState { public string Owner; public string RunId; public ResolvedPlayPlan Plan; }
         // Рекурсивный GetDependencies сцены стоит ~1 с (Lobby: ~2400 зависимостей), а окно строит план на каждую правку.
-        // Разметка сцены меняется только вместе с ассетами проекта: кэш сбрасывается по projectChanged.
-        private static readonly System.Collections.Generic.Dictionary<string, (bool Game, bool Standalone)> SceneMarkers =
-            new System.Collections.Generic.Dictionary<string, (bool Game, bool Standalone)>(StringComparer.Ordinal);
+        // Запись привязана к dependency hash сцены (меняется синхронно при её импорте, в том числе сразу после SaveScene);
+        // правки вложенных префабов hash сцены не меняют — для них весь кэш сбрасывается по projectChanged.
+        private static readonly System.Collections.Generic.Dictionary<string, (Hash128 SceneHash, bool Game, bool Standalone)> SceneMarkers =
+            new System.Collections.Generic.Dictionary<string, (Hash128 SceneHash, bool Game, bool Standalone)>(StringComparer.Ordinal);
 
         static PlayLaunch()
         {
@@ -81,10 +82,11 @@ namespace VrBattlegrounds.EditorTools.TestStand
         }
         private static (bool Game, bool Standalone) ReadSceneMarkers(string target)
         {
-            if (SceneMarkers.TryGetValue(target, out var markers)) return markers;
+            Hash128 sceneHash = AssetDatabase.GetAssetDependencyHash(target);
+            if (SceneMarkers.TryGetValue(target, out var cached) && cached.SceneHash == sceneHash) return (cached.Game, cached.Standalone);
             string[] dependencies = AssetDatabase.GetDependencies(target, true);
-            markers = (dependencies.Contains("Assets/Scripts/Maps/Runtime/MapRoot.cs"), dependencies.Contains("Assets/Scripts/Core/StandaloneSceneMarker.cs"));
-            SceneMarkers[target] = markers;
+            var markers = (dependencies.Contains("Assets/Scripts/Maps/Runtime/MapRoot.cs"), dependencies.Contains("Assets/Scripts/Core/StandaloneSceneMarker.cs"));
+            SceneMarkers[target] = (sceneHash, markers.Item1, markers.Item2);
             return markers;
         }
 

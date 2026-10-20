@@ -11,7 +11,12 @@
     {
       "id": "work",
       "writes": [
-        "tasks/e2e-discovery-autostart/**"
+        "tasks/e2e-discovery-autostart/**",
+        "Assets/ThirdParty/Mirror/Components/Discovery/NetworkDiscoveryBase.cs",
+        "Assets/Tests/EditMode/Network/DiscoveryAdvertiseOwnerTests.cs",
+        "Assets/Tests/EditMode/Network/DiscoveryAdvertiseOwnerTests.cs.meta",
+        "experts/network/journal/2026-10-20-e2e-discovery-autostart.md",
+        "experts/launch-infra/journal/2026-10-20-e2e-discovery-autostart.md"
       ],
       "after": [],
       "needs": []

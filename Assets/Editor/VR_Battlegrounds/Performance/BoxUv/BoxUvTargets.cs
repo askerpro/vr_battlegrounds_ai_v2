@@ -29,7 +29,7 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             [JsonProperty("reason")] public string Reason;
         }
 
-        [JsonProperty("schemaVersion")] public int SchemaVersion = 1;
+        [JsonProperty("schemaVersion")] public int SchemaVersion = 2;
         [JsonProperty("note")] public string Note =
             "Генерирует Tools/VR Battlegrounds/Performance/Box UV/Scan And Apply. Руками не править.";
         [JsonProperty("materials")] public List<string> Materials = new List<string>();
@@ -64,16 +64,6 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         {
             foreach (Target target in Targets)
                 if (string.Equals(target.Model, modelPath, StringComparison.OrdinalIgnoreCase)) yield return target;
-        }
-
-        /// <summary>Отпечаток целей модели — значение её custom dependency (пустая строка — целей нет).</summary>
-        public Hash128 HashFor(string modelPath)
-        {
-            var parts = new List<string>();
-            foreach (Target target in ForModel(modelPath))
-                parts.Add(target.Mesh + ":" + string.Join(",", target.Submeshes));
-            parts.Sort(StringComparer.Ordinal);
-            return Hash128.Compute(BoxUvModelPostprocessor.Version + "|" + string.Join(";", parts));
         }
     }
 }

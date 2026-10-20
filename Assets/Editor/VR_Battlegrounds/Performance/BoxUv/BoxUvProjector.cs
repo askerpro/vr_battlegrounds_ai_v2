@@ -46,6 +46,10 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             mesh.GetNormals(normals);
             mesh.GetTangents(tangents);
             mesh.GetColors(colors);
+            // Наличие атрибута фиксируется до дублирования: после первого дубликата длины списков уже не равны originalCount.
+            bool hasNormals = normals.Count == originalCount;
+            bool hasTangents = tangents.Count == originalCount;
+            bool hasColors = colors.Count == originalCount;
             var uvs = new List<Vector4>[8];
             for (int channel = 0; channel < 8; channel++)
             {
@@ -113,9 +117,9 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
                 if (duplicates.TryGetValue(key, out int existing)) return existing;
                 int copy = positions.Count;
                 positions.Add(positions[source]);
-                if (normals.Count == originalCount) normals.Add(normals[source]);
-                if (tangents.Count == originalCount) tangents.Add(tangents[source]);
-                if (colors.Count == originalCount) colors.Add(colors[source]);
+                if (hasNormals) normals.Add(normals[source]);
+                if (hasTangents) tangents.Add(tangents[source]);
+                if (hasColors) colors.Add(colors[source]);
                 for (int channel = 0; channel < 8; channel++)
                     if (uvs[channel] != null) uvs[channel].Add(uvs[channel][source]);
                 uvs[0][copy] = Planar(positions[source], axis, uvs[0][source]);
@@ -127,9 +131,9 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             Bounds bounds = mesh.bounds;
             if (positions.Count > 65535) mesh.indexFormat = IndexFormat.UInt32;
             mesh.SetVertices(positions);
-            if (normals.Count == positions.Count) mesh.SetNormals(normals);
-            if (tangents.Count == positions.Count) mesh.SetTangents(tangents);
-            if (colors.Count == positions.Count) mesh.SetColors(colors);
+            if (hasNormals) mesh.SetNormals(normals);
+            if (hasTangents) mesh.SetTangents(tangents);
+            if (hasColors) mesh.SetColors(colors);
             for (int channel = 0; channel < 8; channel++)
                 if (uvs[channel] != null) mesh.SetUVs(channel, uvs[channel]);
             for (int sub = 0; sub < mesh.subMeshCount; sub++)

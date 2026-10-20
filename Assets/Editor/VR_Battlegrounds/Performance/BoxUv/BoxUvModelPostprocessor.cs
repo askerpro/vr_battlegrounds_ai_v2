@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Core;
@@ -9,22 +8,24 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
 {
     /// <summary>
     /// При импорте модели переразворачивает box-UV сабмеши из <see cref="BoxUvTargets"/>.
-    /// Каждая модель зависит от custom dependency <c>VrbBoxUv/&lt;путь&gt;</c>: когда конфиг меняется
-    /// (сканер или git), отпечаток пересчитывается и Unity переимпортирует только затронутые модели.
+    /// Импорт каждой модели из конфига зависит от самого файла конфига (<c>DependsOnSourceAsset</c>): ключ артефакта
+    /// включает его содержимое, поэтому кэш артефактов не вернёт развёртку по устаревшему конфигу. Модели, которые
+    /// попадают в конфиг впервые, такой зависимости ещё не имеют — их переимпортирует обработчик импорта конфига.
     /// </summary>
     public sealed class BoxUvModelPostprocessor : AssetPostprocessor
     {
         /// <summary>Увеличить при изменении алгоритма <see cref="BoxUvProjector"/> — переимпорт всех моделей.</summary>
         public const int Version = 1;
 
-        private const string DependencyPrefix = "VrbBoxUv/";
-        private const string RegisteredFile = "Library/VrbBoxUv/registered.txt";
-
         public override uint GetVersion() => Version;
 
         private void OnPreprocessModel()
         {
-            context.DependsOnCustomDependency(DependencyPrefix + assetPath);
+            foreach (BoxUvTargets.Target _ in BoxUvTargets.Load().ForModel(assetPath))
+            {
+                context.DependsOnSourceAsset(BoxUvTargets.FilePath);
+                return;
+            }
         }
 
         private void OnPostprocessModel(GameObject root)
@@ -53,40 +54,27 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             foreach (string path in imported)
             {
                 if (!string.Equals(path, BoxUvTargets.FilePath, StringComparison.OrdinalIgnoreCase)) continue;
-                // Регистрировать зависимости посреди импорта нельзя — сразу после него.
-                EditorApplication.delayCall += () => RegisterDependencies(refresh: true);
+                // Импортировать модели посреди импорта нельзя — сразу после него.
+                EditorApplication.delayCall += ReimportTargets;
                 return;
             }
         }
 
-        /// <summary>
-        /// Записать отпечатки целей в custom dependencies: моделей из конфига и тех, что были в нём раньше
-        /// (список ведётся в Library этой копии). Unity сама переимпортирует модели с изменившимся отпечатком.
-        /// Возвращает модели, для которых отпечаток записан.
-        /// </summary>
-        public static List<string> RegisterDependencies(bool refresh)
+        /// <summary>Переимпортировать все модели из конфига (новые цели ещё не зависят от файла конфига).</summary>
+        public static List<string> ReimportTargets()
         {
-            BoxUvTargets config = BoxUvTargets.Load();
             var models = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (BoxUvTargets.Target target in config.Targets) models.Add(target.Model);
-            string registeredFull = Path.GetFullPath(RegisteredFile);
-            if (File.Exists(registeredFull))
-                foreach (string line in File.ReadAllLines(registeredFull))
-                    if (line.Length > 0) models.Add(line);
-
-            var registered = new List<string>();
-            foreach (string model in models)
+            foreach (BoxUvTargets.Target target in BoxUvTargets.Load().Targets) models.Add(target.Model);
+            AssetDatabase.StartAssetEditing();
+            try
             {
-                AssetDatabase.RegisterCustomDependency(DependencyPrefix + model, config.HashFor(model));
-                registered.Add(model);
+                foreach (string model in models) AssetDatabase.ImportAsset(model, ImportAssetOptions.ForceUpdate);
             }
-            var current = new List<string>();
-            foreach (BoxUvTargets.Target target in config.Targets)
-                if (!current.Contains(target.Model)) current.Add(target.Model);
-            Directory.CreateDirectory(Path.GetDirectoryName(registeredFull));
-            File.WriteAllText(registeredFull, string.Join("\n", current) + "\n");
-            if (refresh) AssetDatabase.Refresh();
-            return registered;
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            return new List<string>(models);
         }
     }
 }

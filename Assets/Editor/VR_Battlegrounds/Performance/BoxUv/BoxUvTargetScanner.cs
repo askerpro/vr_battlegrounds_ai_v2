@@ -33,10 +33,10 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             BoxUvTargets config = Scan(scenes);
             config.Save();
             AssetDatabase.ImportAsset(BoxUvTargets.FilePath, ImportAssetOptions.ForceUpdate);
-            List<string> registered = BoxUvModelPostprocessor.RegisterDependencies(refresh: true);
+            List<string> reimported = BoxUvModelPostprocessor.ReimportTargets();
             Dictionary<string, object> materials = BakedLitMaterialConverter.Convert();
             Dictionary<string, object> report = Summary(config);
-            report["registeredModels"] = registered.Count;
+            report["reimportedModels"] = reimported.Count;
             report["materials"] = materials;
             return report;
         }

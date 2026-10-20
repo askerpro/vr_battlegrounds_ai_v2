@@ -53,7 +53,8 @@ namespace VrBattlegrounds.Editor.Performance
             {
                 foreach (MonoBehaviour behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
                 {
-                    if (behaviour == null || behaviour.GetType().Name != "UxrPlanarReflectionUrp") continue;
+                    // Только включённые зеркала: неактивный образец UXR (Scene/Rooms/.../SpawnRoom) не трогаем.
+                    if (behaviour == null || behaviour.GetType().Name != "UxrPlanarReflectionUrp" || !behaviour.gameObject.activeInHierarchy) continue;
                     var so = new SerializedObject(behaviour);
                     SerializedProperty size = so.FindProperty("_textureSize");
                     SerializedProperty distance = so.FindProperty("_maxReflectionDistance");

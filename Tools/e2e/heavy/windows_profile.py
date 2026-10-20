@@ -77,11 +77,15 @@ def list_processes():
                "Name='powershell.exe' or Name='pwsh.exe' or Name='VrBattlegrounds.exe' or Name='VrBattlegroundsServer.exe'\" "
                "| Select-Object ProcessId,Name,@{n='CommandLine';e={[string]$_.CommandLine + ' ' + [string]$_.ExecutablePath}}) "
                "| ConvertTo-Json -Compress")
-    result = subprocess.run(POWERSHELL + ["-Command", command], capture_output=True, text=True,
-                            encoding="utf-8", errors="replace", timeout=60)
-    if result.returncode or not result.stdout.strip():
-        return []
-    data = json.loads(result.stdout)
+    """Процессы Unity/PowerShell/плеера; None — список не прочитан (тогда checkout считается занятым)."""
+    try:
+        result = subprocess.run(POWERSHELL + ["-Command", command], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=60)
+        if result.returncode:
+            return None
+        data = json.loads(result.stdout) if result.stdout.strip() else []
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return None
     return data if isinstance(data, list) else [data]
 
 
@@ -100,19 +104,44 @@ def fresh_foreign_build(checkout, sha, now=None):
     return None
 
 
-def wait_free(checkout, sha, log):
-    deadline = time.monotonic() + BUSY_BUDGET_SECONDS
-    while True:
-        reasons = busy_reasons(checkout, list_processes(), os.getpid())
+def current_busy(checkout, sha):
+    """Причины занятости сейчас; непрочитанный список процессов — тоже занятость (при неуверенности ждать)."""
+    processes = list_processes()
+    if processes is None:
+        return ["список процессов Windows (CIM) не прочитан"]
+    reasons = busy_reasons(checkout, processes, os.getpid())
+    if sha:
         fresh = fresh_foreign_build(checkout, sha)
         if fresh:
             reasons.append(fresh)
+    return reasons
+
+
+def wait_free(checkout, sha, log):
+    deadline = time.monotonic() + BUSY_BUDGET_SECONDS
+    while True:
+        reasons = current_busy(checkout, sha)
         if not reasons:
             return None
         if time.monotonic() + BUSY_POLL_SECONDS > deadline:
             return "сборочный checkout занят больше часа: " + ", ".join(reasons)
         log("  Сборочный checkout занят (" + ", ".join(reasons) + "), перепроверка через 5 мин")
         time.sleep(BUSY_POLL_SECONDS)
+
+
+UNITY_FAILED = "Unity завершился с кодом"  # Build-Game.ps1: сам Unity-сборщик вернул ошибку (компиляция, сборка).
+
+
+def build_failure(log_path, seconds):
+    """Build-Game код 1: регрессия только при ошибке Unity; отказ provenance/manifest — вердикта нет."""
+    try:
+        text = Path(log_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        text = ""
+    if UNITY_FAILED in text:
+        return V.FAIL, "сборка e2e-плеера упала в Unity (" + str(seconds) + " с) — build-game.log и лог Unity"
+    return V.INCONCLUSIVE, ("Build-Game код 1 без ошибки Unity (provenance, manifest или UXR) за " + str(seconds)
+                            + " с — build-game.log")
 
 
 def build(project_root, checkout, android, sha, outdir, log):
@@ -129,28 +158,52 @@ def build(project_root, checkout, android, sha, outdir, log):
             return V.INCONCLUSIVE, "Build-Game не закончился за " + str(BUILD_TIMEOUT_SECONDS // 60) + " мин"
     seconds = round(time.monotonic() - started)
     if code == 1:
-        return V.FAIL, "сборка e2e-плеера упала (Build-Game код 1, " + str(seconds) + " с) — build-game.log"
+        return build_failure(outdir / "build-game.log", seconds)
     if code != 0:
         return V.INCONCLUSIVE, "Build-Game не запустил сборку (код " + str(code) + ") — build-game.log"
     return V.PASS, "собран за " + str(seconds) + " с"
 
 
-def ensure_player(project_root, checkout, android, sha, outdir, log, extra):
-    """Плеер ревизии sha в checkout: переиспользовать или собрать. Возвращает проверку."""
-    name = "e2e-плеер Windows собран на HEAD ветки"
+def same_game_paths(git, built_sha, sha):
+    """Плеер ревизии built_sha годится для sha: между ними не менялись игровые пути (код игры тот же)."""
+    if not built_sha:
+        return False
+    if built_sha == sha:
+        return True
+    diff = git("diff", "--name-only", built_sha, sha, "--", *[p.rstrip("/") for p in GAME_PREFIXES])
+    return diff.returncode == 0 and not diff.stdout.strip()
+
+
+def ensure_player(project_root, git, checkout, android, sha, outdir, log, extra):
+    """Плеер для кода sha в checkout: переиспользовать или собрать. Возвращает (проверка, sourceSha плеера)."""
+    name = "e2e-плеер Windows с кодом игры HEAD ветки"
     current = read_build(checkout)
     extra["playerBefore"] = current
-    if current and current["sourceSha"] == sha and current["success"]:
-        return {"name": name, "verdict": V.PASS, "detail": "уже собран на " + sha[:12] + " — без пересборки"}
+    if current and current["success"] and same_game_paths(git, current["sourceSha"], sha):
+        built = current["sourceSha"]
+        detail = "уже собран на " + built[:12] + (" — без пересборки" if built == sha else
+                                                  ", игровые пути с HEAD " + sha[:12] + " не менялись — без пересборки")
+        return {"name": name, "verdict": V.PASS, "detail": detail}, built
     busy = wait_free(checkout, sha, log)
     if busy:
-        return {"name": name, "verdict": V.INCONCLUSIVE, "detail": busy}
+        return {"name": name, "verdict": V.INCONCLUSIVE, "detail": busy}, None
     verdict, detail = build(project_root, checkout, android, sha, outdir, log)
     after = read_build(checkout)
     extra["playerAfter"] = after
     if verdict == V.PASS and not (after and after["sourceSha"] == sha and after["success"]):
-        return {"name": name, "verdict": V.INCONCLUSIVE, "detail": "build.json не подтверждает сборку " + sha[:12]}
-    return {"name": name, "verdict": verdict, "detail": detail}
+        return {"name": name, "verdict": V.INCONCLUSIVE, "detail": "build.json не подтверждает сборку " + sha[:12]}, None
+    return {"name": name, "verdict": verdict, "detail": detail}, sha
+
+
+def player_still_ours(checkout, built_sha):
+    """Перед сценарием: плеер в checkout тот же, на checkout не идёт чужая сборка (Build-Game -Ref его подменил бы)."""
+    current = read_build(checkout)
+    if not current or current["sourceSha"] != built_sha:
+        return "плеер в сборочном checkout подменён: build.json " + str((current or {}).get("sourceSha"))[:12]
+    building = [r for r in current_busy(checkout, None) if not r.startswith("VrBattlegrounds")]
+    if building:
+        return "на сборочном checkout идёт чужая работа: " + ", ".join(building)
+    return None
 
 
 def run_e2e_command(project_root, scenario, player, results_dir):
@@ -234,12 +287,18 @@ def run(project_root, git, scenarios, outdir, log, framework, checkout=None, and
     if not checkout.is_dir():
         checks.append({"name": "Сборочный checkout найден", "verdict": V.INCONCLUSIVE, "detail": str(checkout)})
         return checks, records, extra
-    check = ensure_player(project_root, checkout, android, sha, outdir, log, extra)
+    check, built = ensure_player(project_root, git, checkout, android, sha, outdir, log, extra)
     checks.append(check)
     if check["verdict"] != V.PASS:
         return checks, records, extra
+    extra["playerSha"] = built
     player = checkout / "Build" / "e2e" / "VrBattlegrounds.exe"
     for scenario in scenarios:
         log("Сценарий " + scenario.name + " (" + scenario.topology + ")")
-        records.append(run_scenario(project_root, scenario, player, sha[:12], outdir, framework, log))
+        changed = player_still_ours(checkout, built)
+        if changed:
+            records.append({"name": scenario.name, "topology": scenario.topology, "participants": [], "logs": {},
+                            "launchError": changed})
+            continue
+        records.append(run_scenario(project_root, scenario, player, built[:12], outdir, framework, log))
     return checks, records, extra

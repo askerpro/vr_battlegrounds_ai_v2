@@ -70,6 +70,61 @@ class BuildStateTests(unittest.TestCase):
         self.assertIsNone(W.fresh_foreign_build(self.root, "b" * 40))
 
 
+def fake_git(diff_out="", diff_code=0):
+    from subprocess import CompletedProcess
+
+    def git(*args):
+        return CompletedProcess(args, diff_code, diff_out, "fatal" if diff_code else "")
+    return git
+
+
+class Fix1Tests(unittest.TestCase):
+    """Замечания ревью launch-infra 2026-10-20: сбой CIM, код 1 Build-Game, переиспользование и подмена плеера."""
+
+    def setUp(self):
+        self.root = checkout_with_build()
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.original = W.list_processes
+        self.addCleanup(setattr, W, "list_processes", self.original)
+
+    def test_unread_process_list_is_busy(self):
+        W.list_processes = lambda: None
+        self.assertEqual(W.current_busy(self.root, None), ["список процессов Windows (CIM) не прочитан"])
+
+    def test_build_game_code_1_is_regression_only_for_unity_failure(self):
+        log = self.root / "build-game.log"
+        log.write_text("...\nUnity завершился с кодом 1 (профили e2e).\n", encoding="utf-8")
+        self.assertEqual(W.build_failure(log, 12)[0], W.V.FAIL)
+        log.write_text("Provenance не подтверждает текущие успешные builder artifacts; смотри pair manifest.\n",
+                       encoding="utf-8")
+        self.assertEqual(W.build_failure(log, 12)[0], W.V.INCONCLUSIVE)
+
+    def test_same_game_paths(self):
+        self.assertTrue(W.same_game_paths(fake_git(), SHA, SHA))
+        self.assertTrue(W.same_game_paths(fake_git(""), SHA, "c" * 40))
+        self.assertFalse(W.same_game_paths(fake_git("Assets/Scripts/A.cs\n"), SHA, "c" * 40))
+        self.assertFalse(W.same_game_paths(fake_git(diff_code=128), SHA, "c" * 40))
+        self.assertFalse(W.same_game_paths(fake_git(), None, SHA))
+
+    def test_player_of_other_commit_with_same_game_paths_is_reused_without_build(self):
+        original_build = W.build
+        W.build = lambda *a, **k: self.fail("пересборка не нужна")
+        try:
+            check, built = W.ensure_player(Path("."), fake_git(""), self.root, self.root, "c" * 40, self.root, print, {})
+        finally:
+            W.build = original_build
+        self.assertEqual((check["verdict"], built), (W.V.PASS, SHA))
+        self.assertIn("игровые пути", check["detail"])
+
+    def test_replaced_player_or_foreign_build_stops_scenario(self):
+        W.list_processes = lambda: []
+        self.assertIsNone(W.player_still_ours(self.root, SHA))
+        self.assertIn("подменён", W.player_still_ours(self.root, "d" * 40))
+        here = str(self.root)
+        W.list_processes = lambda: [{"ProcessId": 9, "Name": "Unity.exe", "CommandLine": "-projectPath " + here}]
+        self.assertIn("чужая работа", W.player_still_ours(self.root, SHA))
+
+
 class RunTests(unittest.TestCase):
     def test_run_e2e_command(self):
         scenario = S.Scenario(name="map-run-startup-route", clients=2, profiles=("windows",),

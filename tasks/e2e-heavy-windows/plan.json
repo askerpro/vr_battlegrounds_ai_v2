@@ -23,6 +23,16 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "fix1",
+      "writes": [
+        "tasks/e2e-heavy-windows/**",
+        "Tools/e2e/heavy/**",
+        "Tools/e2e/heavy.py"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

@@ -198,6 +198,7 @@ Before reading or running a helper, discover its actual path with `rg --files` i
 | Session/roles/devices | [session architecture](Docs/session-architecture.md) |
 | Weapons/avatars/menu | Matching asset section; recipes in .claude/skills/add-weapon, setup-avatar or add-menu-screen |
 | Map hierarchy/geometry | [scene hierarchy](Docs/scene-hierarchy.md), asset rules and occlusion/validation steps |
+| Map/lobby content, new asset pack, Quest GPU cost | [Quest performance manifest](Docs/quest-performance-manifest.md) — rules, budgets, pack checklist, measurement method |
 | Unity automation/tests | [Unity access](.agents/rules/project-workflows.md#unity-access) and [verification](.agents/rules/project-workflows.md#verification-and-acceptance); multi-process probes: [test stand](Docs/test-stand.md); Play — только через PlayLaunch ([test stand](Docs/test-stand.md), «Как агенту включить Play (через Offline)»), прямой `EditorApplication.isPlaying = true` запрещён (выход `= false` — шаг 4 рецепта) |
 | MCP failure | Current sections of [MCP diagnostics](Docs/unity-mcp.md); old 9.x fixes are historical |
 | New task, foreign zone, review | [tasks, experts and review](.agents/rules/agent_coordination.md#задачи-эксперты-и-ревью-решение-2026-10-17); zone knowledge: `experts/<id>/AGENT.md` |

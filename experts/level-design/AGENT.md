@@ -45,6 +45,8 @@ Consumers: gameplay (MapBootstrap reads zones/stations), bots (navmesh), map E2E
   `Assets/Scripts/Arsenal/ArsenalStationCompositionBinding.cs`, `Assets/Scripts/Bots/BotNavMeshSources.cs`.
 
 ## Details (grep the heading)
+- `Docs/quest-performance-manifest.md` — Quest GPU rules for scene content and new asset packs (shaders, baked light,
+  LOD, alpha, mirrors) and the pack checklist; run the asset audit before a pack enters a map.
 - `Docs/level-design/README.md`; `Docs/scene-hierarchy.md` «Группы сцены», «LobbyRange»,
   «Изменения и проверка».
 - `Docs/level-design/level-design.md` «Высота и защита», «Декорация»; same folder: `physical-arena.md`,

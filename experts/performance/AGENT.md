@@ -66,6 +66,9 @@ before/after measurement or justification; reject a perf PASS without measuremen
   `Assets/Scripts/Debug/E2E/Scenarios/ShotPipelineBudgetScenario.cs` (weapon-system T-24).
 
 ## Details (grep the heading)
+- `Docs/quest-performance-manifest.md` — canonical Quest GPU rules (QPM ids, prices, pack checklist, measurement
+  method, asset-audit mapping). This zone owns it: a new proven finding updates the manifest, the asset-audit rule
+  and its test in one change.
 - `Docs/perf-stress-test.md` «Фазы», «Как читать», «Метрики», «Прогон на Quest 3 (хост, 2026-09-28) и найденное», «Дальше».
 - `Docs/combat-networking.md` «Что измерить на Quest — и как».
 - `Docs/scene-hierarchy.md` «Изменения и проверка»; `.agents/rules/project-workflows.md` «Asset rules».

@@ -48,6 +48,7 @@ namespace VrBattlegrounds.EditorTools
         private static readonly Color BulbGlass = new Color(1f, .86f, .62f);
         // Эмиссия рассеивателя ярче оттенка лампы: без bloom насыщенный тёплый почти белый читается как свет.
         private const float LampGlowBoost = 1.6f;
+        private const string LampLongEmissionMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Lamp_long_EM.png";
         private const string BulbGlassPath = "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Materials/Instances/M_Emissive.mat";
 
         // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
@@ -215,24 +216,26 @@ namespace VrBattlegrounds.EditorTools
         // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому ярус материалов
         // (LobbyGpuMaterialTier) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
         // освещён, светится только рассеиватель), стекло SM_TopLight/SM_LampPost/SM_Lamp_02 — непрозрачный Unlit.
-        // EmissiveIsBlack: свет ламп запекают настоящие источники, эмиссия в GI второй раз не идёт.
+        // GI-флаг None: эмиссия видна, но в GI не идёт (свет ламп запекают настоящие источники). EmissiveIsBlack
+        // в URP выключает _EMISSION при валидации материала — с ним плафон гас (так было до 2026-10-20).
         private static void ApplyLampGlow(Material lampLong, StringBuilder log)
         {
             if (lampLong != null)
             {
                 var simpleLit = Shader.Find("Universal Render Pipeline/Simple Lit") ?? throw new InvalidOperationException("Нет шейдера URP Simple Lit.");
-                var emissionMap = lampLong.HasProperty("_EmissionMap") ? lampLong.GetTexture("_EmissionMap") : null;
                 lampLong.shader = simpleLit;
+                // У Baked Lit нет _EmissionMap: карта берётся из пака, а не из текущего материала.
+                var emissionMap = AssetDatabase.LoadAssetAtPath<Texture>(LampLongEmissionMap);
                 lampLong.shaderKeywords = Array.Empty<string>();
                 OpaqueSurface(lampLong);
-                lampLong.SetFloat("_SpecularHighlights", 0f);
+                lampLong.SetFloat("_SpecularHighlights", 1f); // SpecularSource.NoSpecular
                 lampLong.SetFloat("_ReceiveShadows", 0f);
                 lampLong.EnableKeyword("_RECEIVE_SHADOWS_OFF");
                 lampLong.SetTexture("_BumpMap", null);
                 lampLong.SetTexture("_EmissionMap", emissionMap);
                 lampLong.SetColor("_EmissionColor", WarmLamp * LampGlowBoost);
                 lampLong.EnableKeyword("_EMISSION");
-                lampLong.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+                lampLong.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 EditorUtility.SetDirty(lampLong);
                 log.AppendLine("Плафон: " + AssetDatabase.GetAssetPath(lampLong) + " — Simple Lit, эмиссия по карте " + (emissionMap != null ? emissionMap.name : "нет") + ".");
             }
@@ -245,7 +248,7 @@ namespace VrBattlegrounds.EditorTools
             OpaqueSurface(glass);
             glass.SetTexture("_BaseMap", null);
             glass.SetColor("_BaseColor", BulbGlass);
-            glass.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            glass.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(glass);
             log.AppendLine("Стекло плафонов: " + BulbGlassPath + " — непрозрачный Unlit " + BulbGlass + ".");
         }

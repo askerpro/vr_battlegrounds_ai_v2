@@ -44,6 +44,9 @@ namespace VrBattlegrounds.Bots
         /// <summary>Глаза над предметом при наклоне к нему, м (рука тянется вниз).</summary>
         private const float CrouchAboveItem = 0.55f;
         private const int ReachStableFrames = 3;
+        /// <summary>Grip нажат столько кадров без хвата — разжать и сжать снова (SDK берёт по фронту нажатия).</summary>
+        private const int GripRetryFrames = 10;
+        private const int GripReleaseFrames = 3;
         private const int TriggerReleaseFrames = 2;
         private const int TriggerPressFrames = 3;
         private const int SeesIntervalFrames = BotPlayerFlowSettings.SeesIntervalFrames;
@@ -72,6 +75,8 @@ namespace VrBattlegrounds.Bots
         private Quaternion _aimRotation;
         private Vector3 _aimTarget;
         private bool _hold;           // тянемся к предмету: стоим, ноги мозга — у головы
+        private int _rightGripPressed, _rightGripReleased; // Grip без хвата: кадров нажат / разжат для повтора
+        private int _leftGripPressed, _leftGripReleased;
         private bool _approach;       // идём к предмету: ходьба головой к нему, а не к ногам мозга
         private Vector3 _approachFloor;
         private bool _crouch;
@@ -263,7 +268,7 @@ namespace VrBattlegrounds.Bots
                 _hold = true;
                 _pilot.ReachGrabber(UxrHandSide.Right, snap, snapRotation);
                 _rightAtTarget = inHand || _pilot.GrabberAtTarget(UxrHandSide.Right, ReachTolerance) ? _rightAtTarget + 1 : 0;
-                _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, inHand || _rightAtTarget >= ReachStableFrames);
+                _pilot.Press(UxrHandSide.Right, UxrInputButtons.Grip, GripWithRetry(inHand || _rightAtTarget >= ReachStableFrames, ref _rightGripPressed, ref _rightGripReleased));
                 return;
             }
 
@@ -308,7 +313,8 @@ namespace VrBattlegrounds.Bots
                     bool atSupport = (left.transform.position - supportSnap).magnitude <= ReachTolerance;
                     _leftAtTarget = holdsSupport || atSupport ? _leftAtTarget + 1 : 0;
                 }
-                _pilot.Press(UxrHandSide.Left, UxrInputButtons.Grip, holdsSupport || _leftAtTarget >= ReachStableFrames);
+                _pilot.Press(UxrHandSide.Left, UxrInputButtons.Grip,
+                    holdsSupport || GripWithRetry(_leftAtTarget >= ReachStableFrames, ref _leftGripPressed, ref _leftGripReleased));
             }
             else
             {
@@ -394,6 +400,33 @@ namespace VrBattlegrounds.Bots
             _triggerFrames = TriggerPressFrames;
             _releasedFrames = 0;
             TriggerPresses++;
+        }
+
+        /// <summary>
+        /// Нажатие Grip для хвата, как у человека: держать, пока не взял; нет хвата за <see cref="GripRetryFrames"/> —
+        /// разжать на <see cref="GripReleaseFrames"/> и сжать снова (прогон iter2-11: кисть на рукояти, Grip зажат, хвата
+        /// нет — первый фронт пришёлся до досягаемости).
+        /// </summary>
+        private static bool GripWithRetry(bool want, ref int pressed, ref int released)
+        {
+            if (!want)
+            {
+                pressed = 0;
+                released = 0;
+                return false;
+            }
+            if (released > 0)
+            {
+                released--;
+                return false;
+            }
+            if (++pressed > GripRetryFrames)
+            {
+                pressed = 0;
+                released = GripReleaseFrames;
+                return false;
+            }
+            return true;
         }
 
         private void Rest()

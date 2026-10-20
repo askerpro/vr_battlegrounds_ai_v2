@@ -217,3 +217,18 @@ WeaponSystem.cs:453/601, WeaponContextSensor.cs:45-47); комментарии c
   5a066921c: те же 35 красных поимённо (только в задаче — 0, только в базе — 0). Красные — карты/блокаут, эмбиент
   BotCombatStand, GrabPoseCoverage, выстрел в WeaponSpread/RemoteShotReplay/Shotgun/Kinemation/ShotSound, Ledger, сканер
   StateSnapshotCoverage — к задаче не относятся. XML: `reports/editmode-full-1/`, `reports/editmode-baseline-1/`.
+
+## Вливание вехи 1 (2026-10-20)
+
+- Rebase на origin/dev 1aadb3dc3 (сеть: порт после готовности карты; диагностика старта), patch-id не изменился
+  (6ee626e9…). Перепрогон S+2 на перебазированном коде (ticket 853, run 10b0fa93): 16/16 + 16/16 + 6/6,
+  0 UxrComponentNotFound/NRE (`reports/purchase-4-rebased/`).
+- Ревью (делегаты из worktree задачи, хаб пометил self_review, сопровождающий уведомлён): launch-infra
+  bcf7eb5d41a64b18 approve (точная зона), gameplay b745513bf1c84abf approve, avatar-ik b02b78bfd30f4bd1 approve
+  (консультативно). Замечания без блокировки: проверка `E2EHeadPose.Avatar` → `Armed` и симметричный отказ;
+  встроенные сценарии из `Application.dataPath` только в редакторе; проверка op добавлена после прогона 846 (e2e
+  перепрогнан на 853); UniqueId новых компонентов в вариантах — подтвердить network; FindObjectsByType в ожиданиях
+  E2E; хрупкая проверка paid при посторонних транзакциях; угол запястья мерить на AvatarUsingTracking, если нужен
+  критерий.
+- begin → verify → accept → merge-request 2caf81982fdc42b0930d2714cefc04cd → merge-execute: origin/dev = 43332888b.
+  Публикация базы worker: request-base 855.

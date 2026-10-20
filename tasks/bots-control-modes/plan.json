@@ -31,6 +31,22 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "close",
+      "writes": [
+        "tasks/bots-control-modes/**",
+        "experts/launch-infra/journal/2026-10-20-bots-control-modes-xr-input.md",
+        "experts/avatar-ik/journal/2026-10-20-bots-control-modes-xr-input.md"
+      ],
+      "after": [
+        {
+          "task": "bots-control-modes",
+          "stage": "work",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

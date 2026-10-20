@@ -15,7 +15,8 @@
         "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
         "Assets/Editor/VR_Battlegrounds/Performance.meta",
         "Assets/Tests/EditMode/AssetAudit/**",
-        "Assets/Tests/EditMode/AssetAudit.meta"
+        "Assets/Tests/EditMode/AssetAudit.meta",
+        "experts/performance/journal/2026-10-20-asset-audit.md"
       ],
       "after": [],
       "needs": []

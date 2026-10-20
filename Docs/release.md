@@ -31,6 +31,11 @@ Android-планшете. Код — `Assets/Editor/VR_Battlegrounds/Release/`.
 - Перед стартом `Unity.exe` скрипты проверяют, что:
   1. В целевых сборочных worktree закрыт редактор (`Temp/UnityLockfile`) и `vrb.lfs.role != agent`, а все отслеживаемые LFS-файлы гидратированы (нет указателей `version https://git-lfs.github.com/spec/v1`).
   2. Оба парных worktree (`win64` и `android`) находятся на одном `HEAD` SHA и не содержат незакоммиченных правок в `Assets/`, `Packages/`, `ProjectSettings/` (параметр `-Ref <commit>` в `Build-Game.ps1` переключает задействованные сборочные worktree на нужный коммит и дотягивает LFS).
+     Исключение — файлы, которые Unity переписывает сама при запуске и сборке (`Tools/release/BuildCheckoutGenerated.ps1`):
+     `Packages/packages-lock.json` (MCP в сборочном checkout подключён из git, а не embedded-копией) и поля `m_Prefilter*`
+     URP-ассетов `Assets/URPDefaultResources/PC.asset` / `Quest.asset`. Если diff совпал с этой природой, `Build-Game.ps1`
+     возвращает их к индексу до `-Ref` и после сборки (diff — в `Logs/build-*-generated-*.patch`), `Run-QuestE2E.ps1 -Build` —
+     перед своей сборкой. Любая другая правка, в том числе staged или другой diff этих же файлов, по-прежнему отменяет запуск.
   3. Тестовые сборки в обоих worktree штампуются единым `-buildRevision <sha12>`, а после завершения сверяются отпечатки `uxr-ids.txt` между `build-<cfg>-win64/Build/Server` и `build-<cfg>-android/Build/Quest|Tablet`.
 - При запуске `Prod`-сборки в `unity-editor-worker` `GameBuilder` выводит явное предупреждение в `Result.Summary`.
 

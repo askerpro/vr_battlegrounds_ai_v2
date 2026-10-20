@@ -1,0 +1,25 @@
+{
+  "task_id": "build-generated-files",
+  "owner": "build-generated-files",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/build-generated-files",
+  "base_sha": "ae095ad49e7ff1f8254d65e75819b7b540700554",
+  "doc_path": "tasks/build-generated-files/Readme.md",
+  "title": "Build-Game: чистые сборочные checkout после сборки",
+  "branch": "task/build-generated-files",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/build-generated-files/**",
+        "Tools/release/Build-Game.ps1",
+        "Tools/release/BuildCheckoutGenerated.ps1",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Docs/release.md",
+        "Assets/URPDefaultResources/PC.asset"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -149,6 +149,16 @@ function Get-LfsPointerFiles([string] $WorktreePath) {
     return $pointers.ToArray()
 }
 
+# Известные generated-файлы сборочных checkout и их возврат к индексу.
+. (Join-Path $PSScriptRoot 'BuildCheckoutGenerated.ps1')
+
+# Изменения, которые мешают -Ref и парной сборке. В выделенном сборочном checkout известные
+# generated-файлы не мешают (Build-Game возвращает их сам); в текущем проекте мешает любое изменение.
+function Get-BlockingChanges([string] $WorktreePath) {
+    if ($dedicatedWorktrees -contains $WorktreePath) { return @((Get-BuildCheckoutChanges $WorktreePath).Unexpected) }
+    return @(& git -C $WorktreePath status --porcelain -- Assets Packages ProjectSettings 2>$null)
+}
+
 function Read-UxrIdHash([string] $ProfileBuildDir) {
     $uxrFile = Join-Path $ProfileBuildDir 'uxr-ids.txt'
     if (-not (Test-Path -LiteralPath $uxrFile -PathType Leaf)) { return $null }
@@ -525,6 +535,13 @@ foreach ($wt in $activeWorktrees) {
     }
 }
 
+# Выделенные сборочные checkout — все, кроме текущего проекта.
+$dedicatedWorktrees = @($activeWorktrees | Where-Object { -not $UseCurrentWorktree -and $_ -ine $RepoRoot })
+
+$logDir = Join-Path $RepoRoot 'Logs'
+New-Item -ItemType Directory -Force $logDir | Out-Null
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+
 if (-not [string]::IsNullOrWhiteSpace($Ref)) {
     $targetSha = (& git -C $RepoRoot rev-parse "$Ref^{commit}" 2>$null)
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($targetSha)) {
@@ -532,13 +549,42 @@ if (-not [string]::IsNullOrWhiteSpace($Ref)) {
         exit 2
     }
     $targetSha = $targetSha.Trim()
+}
 
+# Проверка всей группы до любых изменений: неожиданные правки отменяют -Ref, известные generated-файлы
+# выделенных checkout возвращаются к индексу (DryRun только сообщает).
+$preBuildGenerated = @{}
+foreach ($wt in $activeWorktrees) {
+    try {
+        $blocking = @(Get-BlockingChanges $wt)
+        if ($dedicatedWorktrees -contains $wt) { $preBuildGenerated[$wt] = @((Get-BuildCheckoutChanges $wt).Generated) }
+    } catch {
+        Write-Host ('Отказ сборки: ' + $_.Exception.Message) -ForegroundColor Red
+        exit 2
+    }
+    if ($blocking.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($Ref)) {
+        Write-Host "Сборочный worktree $wt содержит незакоммиченные правки в Assets/Packages/ProjectSettings; переключение на -Ref '$Ref' отменено." -ForegroundColor Red
+        $blocking | Select-Object -First 10 | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+        exit 2
+    }
+}
+foreach ($wt in $preBuildGenerated.Keys) {
+    $paths = @($preBuildGenerated[$wt])
+    if ($paths.Count -eq 0) { continue }
+    if ($DryRun) {
+        Write-Host ("[DryRun] Будут возвращены к индексу generated-файлы Unity в {0}: {1}" -f $wt, ($paths -join ', '))
+        continue
+    }
+    try {
+        Restore-GeneratedBuildChanges $wt $paths (Join-Path $logDir ('build-' + $stamp + '-generated-before-' + (Get-BuildCheckoutLabel $wt) + '.patch'))
+    } catch {
+        Write-Host ('Отказ сборки: ' + $_.Exception.Message) -ForegroundColor Red
+        exit 2
+    }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($Ref)) {
     foreach ($wt in $activeWorktrees) {
-        $dirty = @(& git -C $wt status --porcelain -- Assets Packages ProjectSettings 2>$null)
-        if ($dirty.Count -gt 0) {
-            Write-Host "Сборочный worktree $wt содержит незакоммиченные правки в Assets/Packages/ProjectSettings; переключение на -Ref '$Ref' отменено." -ForegroundColor Red
-            exit 2
-        }
         if (-not $DryRun) {
             Write-Host "Переключение $wt на $targetSha ($Ref)..."
             & git -C $wt checkout --detach $targetSha
@@ -608,9 +654,10 @@ if ($activeWorktrees.Count -gt 1) {
     }
 
     foreach ($wt in $activeWorktrees) {
-        $dirty = @(& git -C $wt status --porcelain -- Assets Packages ProjectSettings 2>$null)
+        try { $dirty = @(Get-BlockingChanges $wt) } catch { Write-Host ('Отказ сборки: ' + $_.Exception.Message) -ForegroundColor Red; exit 2 }
         if ($dirty.Count -gt 0) {
             Write-Host "Отказ парной сборки: в $wt есть незакоммиченные изменения в Assets/Packages/ProjectSettings, которых нет во втором сборочном worktree." -ForegroundColor Red
+            $dirty | Select-Object -First 10 | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
             exit 2
         }
     }
@@ -618,12 +665,8 @@ if ($activeWorktrees.Count -gt 1) {
 
 $primaryWt = $activeWorktrees[0]
 $shortSha = (& git -C $primaryWt rev-parse --short=12 HEAD 2>$null).Trim()
-$primaryDirty = @(& git -C $primaryWt status --porcelain -- Assets Packages ProjectSettings 2>$null)
+try { $primaryDirty = @(Get-BlockingChanges $primaryWt) } catch { Write-Host ('Отказ сборки: ' + $_.Exception.Message) -ForegroundColor Red; exit 2 }
 $sharedRevision = if ($primaryDirty.Count -eq 0) { $shortSha } else { "$shortSha-dirty" }
-
-$logDir = Join-Path $RepoRoot 'Logs'
-New-Item -ItemType Directory -Force $logDir | Out-Null
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 
 Write-Host "Unity: $Unity"
 Write-Host "Профили: $Targets, конфигурация: $Config, ревизия: $sharedRevision, запусков Unity: $($runs.Count)"
@@ -735,6 +778,28 @@ if ($uniqueUxrHashes.Count -gt 1) {
 
 $pairRunSuccess = $true
 } finally {
+    # Unity переписала generated-файлы при запуске и сборке; возвращаем их, чтобы checkout остался чистым.
+    # Неожиданные изменения не трогаем: следующий -Ref на них откажет. Ошибка здесь не меняет итог сборки.
+    if ($buildTerminal.Count -gt 0) {
+        foreach ($wt in $dedicatedWorktrees) {
+            try {
+                if (Test-EditorLocked $wt) {
+                    Write-Host "Unity ещё держит $wt; generated-файлы не возвращены." -ForegroundColor Yellow
+                    continue
+                }
+                $after = Get-BuildCheckoutChanges $wt
+                if ($after.Generated.Count -gt 0) {
+                    Restore-GeneratedBuildChanges $wt $after.Generated (Join-Path $logDir ('build-' + $stamp + '-generated-after-' + (Get-BuildCheckoutLabel $wt) + '.patch'))
+                }
+                if ($after.Unexpected.Count -gt 0) {
+                    Write-Host "После сборки в $wt остались изменения вне известных generated-файлов; следующий -Ref откажет:" -ForegroundColor Yellow
+                    $after.Unexpected | Select-Object -First 10 | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+                }
+            } catch {
+                Write-Host ("Generated-файлы в {0} не возвращены: {1}" -f $wt, $_.Exception.Message) -ForegroundColor Yellow
+            }
+        }
+    }
     try {
         $pairManifest = Write-BuildPairManifest $runs $worktreeHeads $buildTerminal $pairRunSuccess
         Write-Host ('Build manifest: ' + $pairManifest.Path)

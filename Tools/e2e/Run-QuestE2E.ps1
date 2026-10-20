@@ -972,11 +972,26 @@ if ($Build) {
             Stop-Refused ('-Build: сборочные worktree находятся на разных ревизиях: Android (' + $ResolvedAndroidBuildWorktree + ') = ' + $androidSha + ', Win64 (' + $ResolvedWin64BuildWorktree + ') = ' + $win64Sha) @(
                 'Выровняй оба сборочных worktree на один коммит перед парной сборкой.')
         }
+        # Известные generated-файлы Unity (Tools/release/BuildCheckoutGenerated.ps1) не мешают: их возвращаем
+        # к индексу; любые другие правки по-прежнему отменяют парную сборку.
+        . (Join-Path $RepoRoot 'Tools\release\BuildCheckoutGenerated.ps1')
+        $generatedByWt = @{}
         foreach ($buildWt in $buildWorktreesToCheck) {
-            $dirtyRes = Invoke-Tool 'git' @('-C', $buildWt, 'status', '--porcelain', '--', 'Assets', 'Packages', 'ProjectSettings') 30
-            if ($dirtyRes.Out.Trim() -ne '') {
-                Stop-Refused ('-Build: в сборочном worktree ' + $buildWt + ' есть незакоммиченные правки в Assets/Packages/ProjectSettings; парная сборка из двух worktree требует чистых копий на одном SHA.')
+            try { $changes = Get-BuildCheckoutChanges $buildWt } catch { Stop-Refused ('-Build: ' + $_.Exception.Message) }
+            if ($changes.Unexpected.Count -gt 0) {
+                Stop-Refused ('-Build: в сборочном worktree ' + $buildWt + ' есть незакоммиченные правки в Assets/Packages/ProjectSettings; парная сборка из двух worktree требует чистых копий на одном SHA.') @($changes.Unexpected | Select-Object -First 10)
             }
+            $generatedByWt[$buildWt] = $changes.Generated
+        }
+        foreach ($buildWt in $generatedByWt.Keys) {
+            $paths = @($generatedByWt[$buildWt])
+            if ($paths.Count -eq 0) { continue }
+            if ($DryRunBuild) {
+                Write-Host ('  Будут возвращены к индексу generated-файлы Unity в ' + $buildWt + ': ' + ($paths -join ', '))
+                continue
+            }
+            $patch = Join-Path $RepoRoot ('Logs\quest-e2e-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-generated-' + (Get-BuildCheckoutLabel $buildWt) + '.patch')
+            try { Restore-GeneratedBuildChanges $buildWt $paths $patch } catch { Stop-Refused ('-Build: ' + $_.Exception.Message) }
         }
         $shortShaRes = Invoke-Tool 'git' @('-C', $ResolvedAndroidBuildWorktree, 'rev-parse', '--short=12', 'HEAD') 15
         $SharedBuildRevision = $shortShaRes.Out.Trim()

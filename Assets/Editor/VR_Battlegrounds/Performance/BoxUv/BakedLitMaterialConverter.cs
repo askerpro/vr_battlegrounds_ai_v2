@@ -32,8 +32,7 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         {
             new Entry { MaterialPath = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Concrete_01.mat", BoxUv = true },
             new Entry { MaterialPath = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Tiles_ObjectSpace.mat", BoxUv = true },
-            // Пол шатра (nalchik_tolst.fbx, floor): UV0 растянута на весь пол, ≈39,6 м на единицу UV.
-            new Entry { MaterialPath = "Assets/Materials/Lobby/WornGround.mat", BoxUv = false, MetresPerUv = 39.59f },
+            // WornGround (пол шатра) — материал проекта: его пишет LobbyDecorationAuthoring.ApplyGroundMaterials.
         };
 
         [MenuItem("Tools/VR Battlegrounds/Performance/Box UV/Convert Materials To Baked Lit")]

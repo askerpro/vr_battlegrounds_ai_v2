@@ -441,39 +441,37 @@ namespace VrBattlegrounds.EditorTools
             renderer.shadowCastingMode = ShadowCastingMode.Off; renderer.receiveShadows = false;
         }
 
+        /// <summary>
+        /// Материалы грунта Lobby: пол шатра и гравий снаружи. Quest: URP Baked Lit — одна выборка текстуры
+        /// плюс лайтмапа/проба (весь свет Lobby запечён); прежний трипланарный S_VPWorldAligned стоил ~1,9 мс
+        /// кадра (tasks/scene-detail, normal A/B 2026-10-20). Единственный писатель этих двух материалов.
+        /// </summary>
+        public static void ApplyGroundMaterials()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Baked Lit") ?? throw new InvalidOperationException("URP/Baked Lit недоступен.");
+            // UV0 пола шатра растянута на весь пол: ≈39,6 м на единицу UV; текстура повторяется каждые 2 м.
+            ApplyBakedLit("Assets/Materials/Lobby/WornGround.mat", shader, "T_Ground_BC", 39.59f / 2f, new Color(.85f, .85f, .80f));
+            ApplyBakedLit("Assets/Materials/Lobby/OutsideGravel.mat", shader, "T_GroundIntense_BC", 45f, new Color(.70f, .70f, .64f));
+        }
+
+        private static void ApplyBakedLit(string path, Shader shader, string texture, float repeat, Color color)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (!material) { material = new Material(shader); AssetDatabase.CreateAsset(material, path); }
+            material.shader = shader;
+            material.SetTexture("_BaseMap", LobbyMilitaryCampSources.Texture(texture));
+            material.SetTextureScale("_BaseMap", new Vector2(repeat, repeat));
+            material.SetTextureOffset("_BaseMap", Vector2.zero);
+            material.SetColor("_BaseColor", color);
+            material.renderQueue = -1;
+            EditorUtility.SetDirty(material); AssetDatabase.SaveAssetIfDirty(material);
+        }
+
         private static void ApplyGroundVisuals(Scene scene, PhysicalArenaDefinition definition, Material canvas)
         {
-            string path = "Assets/Materials/Lobby/WornGround.mat";
-            var ground = AssetDatabase.LoadAssetAtPath<Material>(path);
-            var shader = AssetDatabase.LoadAssetAtPath<Shader>(Art + "Imported/MilitaryCamp/Art/Shaders/S_VPWorldAligned.shadergraph");
-            if (!shader) throw new InvalidOperationException("Не импортирован штатный URP world-aligned shader.");
-            if (!ground) { ground = new Material(shader); AssetDatabase.CreateAsset(ground, path); }
-            ground.shader = shader;
-            foreach (string channel in new[] { "_Main", "_RChannel", "_GChannel" })
-            {
-                ground.SetTexture(channel + "BC", LobbyMilitaryCampSources.Texture("T_Ground_BC"));
-                ground.SetTexture(channel + "Normal", LobbyMilitaryCampSources.Texture("T_Ground_N"));
-                ground.SetFloat(channel + "Tile", 2);
-                ground.SetFloat(channel + "NormalStrength", .22f);
-            }
-            ground.SetColor("_MainTint", new Color(.60f,.60f,.55f));
-            ground.SetColor("_RChannelBCTint", new Color(.60f,.60f,.55f));
-            ground.SetColor("_GChannelBCTint", new Color(.60f,.60f,.55f));
-            ground.SetFloat("_MainBCSaturation", .70f); ground.SetFloat("_RChannelSaturation", .70f); ground.SetFloat("_GChannelSaturation", .70f);
-            ground.SetFloat("_MainRoughnessIntensity", .90f); ground.SetFloat("_AlphaClip", 0);
-            EditorUtility.SetDirty(ground); AssetDatabase.SaveAssetIfDirty(ground);
-            string gravelPath = "Assets/Materials/Lobby/OutsideGravel.mat";
-            var gravel = AssetDatabase.LoadAssetAtPath<Material>(gravelPath);
-            var gravelShader = Shader.Find("Universal Render Pipeline/Lit");
-            if (!gravel) { gravel = new Material(gravelShader); AssetDatabase.CreateAsset(gravel, gravelPath); }
-            gravel.shader = gravelShader;
-            gravel.SetTexture("_BaseMap", LobbyMilitaryCampSources.Texture("T_GroundIntense_BC"));
-            gravel.SetTextureScale("_BaseMap", new Vector2(45,45));
-            gravel.SetTexture("_BumpMap", LobbyMilitaryCampSources.Texture("T_GroundIntense_N"));
-            gravel.SetTextureScale("_BumpMap", new Vector2(45,45));
-            gravel.SetColor("_BaseColor", new Color(.70f,.70f,.64f));
-            gravel.SetFloat("_Smoothness", .05f); gravel.SetFloat("_Metallic", 0); gravel.SetFloat("_BumpScale", .15f); gravel.EnableKeyword("_NORMALMAP");
-            EditorUtility.SetDirty(gravel); AssetDatabase.SaveAssetIfDirty(gravel);
+            ApplyGroundMaterials();
+            var ground = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Lobby/WornGround.mat");
+            var gravel = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Lobby/OutsideGravel.mat");
             foreach (var renderer in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MeshRenderer>(true)))
             {
                 string hierarchy = PathOf(renderer.transform);

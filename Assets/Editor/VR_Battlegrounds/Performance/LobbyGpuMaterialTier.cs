@@ -39,8 +39,9 @@ namespace VrBattlegrounds.Editor.Performance
             "Assets/Prefabs/Environment/",
         };
 
-        // Пол и связанные с ним материалы меняет главный агент задачи (S_VPWorldAligned).
-        static readonly string[] ExcludedMaterialPrefixes = { "WornGround", "M_Concrete_01", "M_Tiles_ObjectSpace" };
+        // Материалы с другим владельцем: пол и бетон пака (BoxUv/BakedLitMaterialConverter), грунт Lobby
+        // (LobbyDecorationAuthoring.ApplyGroundMaterials сам ставит Baked Lit). Ни Apply, ни Revert их не трогают.
+        static readonly string[] ExcludedMaterialPrefixes = { "WornGround", "M_Concrete_01", "M_Tiles_ObjectSpace", "OutsideGravel" };
 
         // Светящиеся плафоны ламп ведёт ночной пресет (LobbyNightLighting.ApplyLampGlow): Simple Lit/Unlit с эмиссией.
         // Baked Lit эмиссии не имеет, а Revert вернул бы им исходный шейдер без свечения.
@@ -145,7 +146,8 @@ namespace VrBattlegrounds.Editor.Performance
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 AssetImporter importer = AssetImporter.GetAtPath(path);
                 if (importer == null || string.IsNullOrEmpty(importer.userData) || !importer.userData.Contains(Marker)) continue;
-                if (LampGlowMaterials.Contains(System.IO.Path.GetFileNameWithoutExtension(path))) continue;
+                string fileName = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (LampGlowMaterials.Contains(fileName) || ExcludedMaterialPrefixes.Any(p => fileName.StartsWith(p, StringComparison.Ordinal))) continue;
                 RevertData data = JsonUtility.FromJson<RevertData>(importer.userData);
                 var material = AssetDatabase.LoadAssetAtPath<Material>(path);
                 Shader shader = LoadShader(data.shaderName, data.shaderPath);

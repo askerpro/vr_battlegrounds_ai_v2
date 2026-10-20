@@ -113,3 +113,16 @@ box-UV + Baked Lit (пол, бетон, плитка), 91 материал де�
 (перезапекание, пол в лайтмапе, Unlit/Simple Lit плафоны). Вклад по отдельности не мерился.
 Сводка: reports/q3final-ab-20261020/summary.json (tools/summarize_ab_two_builds.py).
 Попутно: сборка 8500240ab пересчитала ContentFingerprint Lobby в MapRuntimeCatalog — закоммичен в 91b9f1046.
+
+## Финализация 21.10: тесты и heavy
+
+Тесты (ticket 973, чистая смена ветки на worker, код 2986a88c5): BoxUvProjectorTests, LobbyQuestRenderStateTests,
+MapRunPreflightTests, MapCatalogIntegrityTests — 21/21. До этого тесты нашли и закрыли три дефекта: атрибуты
+дубликатов box-UV (cfa…), устаревшие артефакты моделей из кэша (DependsOnSourceAsset + BoxUvModelPostprocessor v2),
+плафон без _EMISSION (URP включает его только при AnyEmissive → RealtimeEmissive).
+Heavy editor/default --editmode also (тот же ticket): код 1. scripted-input-smoke и scripted-wall-purchase GREEN;
+scripted-combat-hit FAIL «нёс оружие не ровно: ровность 0,488 < 0,9»; EditMode 2885, красных 19 (новых 2:
+GameTagsTests.Prefabs_TagsMatchRules, HandsPackWeaponTests(Scar)). Те же три провала — в heavy задачи e2e-combat на
+той же dev (её reports/heavy-all-1, 21.10 02:25); два новых красных e2e-combat относит к пересборке стволов в dev
+(200236fe7, 331048228). Ветка scene-detail префабы оружия и e2e-сценарии боя не меняет → регрессия dev, не этой
+задачи. Отчёт: reports/heavy-20261021/verdict.json.

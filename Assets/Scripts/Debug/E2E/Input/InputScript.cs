@@ -35,6 +35,13 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         /// <summary>Каталог встроенных сценариев в проекте (редактор).</summary>
         public const string ProjectFolder = "Scripts/Debug/E2E/Input/Scripts";
 
+        /// <summary>Операции, которые исполняет <see cref="ScriptedClientRunner"/>.</summary>
+        public static readonly string[] Operations =
+        {
+            "activate", "measure-start", "measure-check", "walk", "turn", "choose-team", "grab-wall-item",
+            "release", "hold", "expect-held", "expect-peers-holding", "step", "wait-server"
+        };
+
         /// <summary>
         /// Загружает сценарий: <paramref name="path"/> — файл (плеер, <c>-e2eArg script=</c>), иначе встроенный
         /// <paramref name="builtInName"/> из <see cref="ProjectFolder"/>. Ошибка — в <paramref name="error"/>.
@@ -65,6 +72,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                     if (script.steps[i] == null || string.IsNullOrEmpty(script.steps[i].op))
                     {
                         error = $"шаг {i + 1} сценария {file} без op";
+                        return null;
+                    }
+
+                    if (Array.IndexOf(Operations, script.steps[i].op) < 0)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: неизвестная операция '{script.steps[i].op}'";
                         return null;
                     }
                 }

@@ -208,3 +208,12 @@ WeaponSystem.cs:453/601, WeaponContextSensor.cs:45-47); комментарии c
   каждый клиент видит оружие в руке другого (0,057 м до руки). Запястья ≤ 0,017 мм, угол запястья до 7,6° (критерия
   нет; вероятно скручивание IK — на ревью avatar-ik). 0 UxrComponentNotFound / NRE.
 - R прогона 2 — только пересохранённые Unity `Unused/*` (не взяты, `ack`). Логи: `reports/smoke-2/`, `reports/purchase-2/`.
+
+## Тесты вехи 1 (2026-10-20, ticket 848/850)
+
+- `Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs`: 11/11 (встроенные сценарии и известные op, отказ на
+  неизвестную op и отсутствующий файл, кадр покоя, закрытый ScriptedInputGate, регистрация сценариев, состав префабов).
+- Полный EditMode на ветке: 2824 passed / 35 failed / 9 skipped из 2868. Тот же набор 12 классов на чистой origin/dev
+  5a066921c: те же 35 красных поимённо (только в задаче — 0, только в базе — 0). Красные — карты/блокаут, эмбиент
+  BotCombatStand, GrabPoseCoverage, выстрел в WeaponSpread/RemoteShotReplay/Shotgun/Kinemation/ShotSound, Ledger, сканер
+  StateSnapshotCoverage — к задаче не относятся. XML: `reports/editmode-full-1/`, `reports/editmode-baseline-1/`.

@@ -16,15 +16,21 @@ namespace VrBattlegrounds.DevTools.E2E.Input
     /// <item><c>activate</c> — подать скриптовый ввод своему локальному аватару;</item>
     /// <item><c>measure-start</c> / <c>measure-check</c> — замер точности поз (голова ±1 см/0,1°, запястья ±1 мм);</item>
     /// <item><c>walk</c> — ходьба головой: <c>target</c> = <c>forward</c> (на <c>meters</c> по курсу),
-    ///       <c>own-spawn-zone</c> (до возрождения в своей зоне), <c>own-wall</c> (к точке своей стены арсенала);</item>
+    ///       <c>own-spawn-zone</c> (до возрождения в своей зоне), <c>own-spawn-point</c> (то же и встать в точку спавна
+    ///       зоны), <c>own-wall</c> (к точке своей стены арсенала);</item>
     /// <item><c>turn</c> — поворот курса на <c>degrees</c>;</item>
     /// <item><c>choose-team</c> — команда по индексу клиента тем же Command, что у планшета;</item>
     /// <item><c>grab-wall-item</c> — подвести кисть <c>hand</c> к самому дешёвому доступному предмету своей стены и
-    ///       нажать Grip;</item>
+    ///       нажать Grip; <c>item</c> = <c>pistol</c> — только пистолет с одной пулей на выстрел;</item>
+    /// <item><c>carry</c> — рука <c>hand</c> с предметом опускается и идёт за головой, Grip держится;</item>
+    /// <item><c>shoot-enemy</c> — подойти к живому противнику на <c>meters</c> м, навести ствол руки <c>hand</c> на
+    ///       его торс и жать Trigger до попадания, не больше <c>shots</c> нажатий;</item>
     /// <item><c>expect-held</c>, <c>expect-peers-holding</c> — проверки реплицированного состояния;</item>
     /// <item><c>release</c>, <c>hold</c> (<c>seconds</c>);</item>
     /// <item><c>step</c> / <c>wait-server</c> — барьер шагов e2e (<c>name</c>, <c>timeoutS</c>).</item>
     /// </list>
+    ///
+    /// <para>Шаг с <c>client</c> = N исполняет только клиент N (роль <c>client-N</c>); 0 — все клиенты.</para>
     /// </summary>
     [Serializable]
     public sealed class InputScript
@@ -39,8 +45,11 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public static readonly string[] Operations =
         {
             "activate", "measure-start", "measure-check", "walk", "turn", "choose-team", "grab-wall-item",
-            "release", "hold", "expect-held", "expect-peers-holding", "step", "wait-server"
+            "carry", "shoot-enemy", "release", "hold", "expect-held", "expect-peers-holding", "step", "wait-server"
         };
+
+        /// <summary>Фильтры предмета <see cref="InputStep.item"/> для <c>grab-wall-item</c>.</summary>
+        public static readonly string[] ItemFilters = { "", "pistol" };
 
         /// <summary>
         /// Загружает сценарий: <paramref name="path"/> — файл (плеер, <c>-e2eArg script=</c>), иначе встроенный
@@ -80,6 +89,18 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                         error = $"шаг {i + 1} сценария {file}: неизвестная операция '{script.steps[i].op}'";
                         return null;
                     }
+
+                    if (Array.IndexOf(ItemFilters, script.steps[i].item ?? "") < 0)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: неизвестный фильтр предмета '{script.steps[i].item}'";
+                        return null;
+                    }
+
+                    if (script.steps[i].client < 0)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: client {script.steps[i].client} < 0";
+                        return null;
+                    }
                 }
 
                 return script;
@@ -105,6 +126,14 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public float seconds;
         public float speed = 1.0f;
         public float timeoutS = 60f;
+        public string item = "";
+        public int shots = 3;
+
+        /// <summary>Номер клиента, который исполняет шаг; 0 — все.</summary>
+        public int client;
+
+        /// <summary>Шаг исполняет клиент с индексом <paramref name="clientIndex"/>.</summary>
+        public bool AppliesTo(int clientIndex) => client == 0 || client == clientIndex;
 
         /// <summary>Имя проверки в результате процесса: номер и суть шага.</summary>
         public string Label(int index)

@@ -438,6 +438,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new PerfStressScenario();
             yield return new ScriptedClientScenario(ScriptedClientScenario.SmokeName, "input-smoke");
             yield return new ScriptedClientScenario(ScriptedClientScenario.PurchaseName, "wall-purchase");
+            yield return new ScriptedClientScenario(ScriptedClientScenario.CombatHitName, "combat-hit");
         }
 
         /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>

@@ -48,12 +48,16 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             _script = script;
         }
 
-        /// <summary>Имена проверок всех шагов — для <see cref="E2EResult.Declare"/>.</summary>
+        /// <summary>Сводка стрельбы последнего шага <c>shoot-enemy</c>; null — не стрелял.</summary>
+        public ScriptedGunner.Outcome LastShooting { get; private set; }
+
+        /// <summary>Имена проверок шагов этого клиента — для <see cref="E2EResult.Declare"/>.</summary>
         public string[] Labels()
         {
-            var labels = new string[_script.steps.Length];
-            for (int i = 0; i < labels.Length; i++) labels[i] = _script.steps[i].Label(i);
-            return labels;
+            var labels = new List<string>();
+            for (int i = 0; i < _script.steps.Length; i++)
+                if (_script.steps[i].AppliesTo(_context.ClientIndex)) labels.Add(_script.steps[i].Label(i));
+            return labels.ToArray();
         }
 
         public IEnumerator Run()
@@ -63,6 +67,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 for (int i = 0; i < _script.steps.Length; i++)
                 {
                     InputStep step = _script.steps[i];
+                    if (!step.AppliesTo(_context.ClientIndex)) continue;
                     string label = step.Label(i);
                     GameLog.Debug.Info($"[E2E] Шаг {label}");
                     yield return Execute(step, label);
@@ -86,6 +91,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 case "turn": return Turn(step, label);
                 case "choose-team": return ChooseTeam(step, label);
                 case "grab-wall-item": return GrabWallItem(step, label);
+                case "carry": return Instant(() => Carry(step, label));
+                case "shoot-enemy": return ShootEnemy(step, label);
                 case "release": return Release(step, label);
                 case "hold": return Hold(step, label);
                 case "expect-held": return Instant(() => ExpectHeld(step, label));
@@ -143,8 +150,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 yield break;
             }
 
-            if (step.target == "own-spawn-zone")
+            if (step.target == "own-spawn-zone" || step.target == "own-spawn-point")
             {
+                bool toPoint = step.target == "own-spawn-point";
                 TeamSpawnZone zone = null;
                 while ((zone = OwnZone(session)) == null)
                 {
@@ -153,16 +161,18 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 }
 
                 Vector3 goal = zone.SpawnPoint.position;
-                while (session.IsEliminated || !session.IsInSpawnZone)
+                bool arrived = false;
+                while (session.IsEliminated || !session.IsInSpawnZone || (toPoint && !arrived))
                 {
                     if (Now > deadline)
                         Fail(label, $"за {step.timeoutS:0} с не возродился в своей зоне: выбыл={session.IsEliminated}, " +
                                     $"в зоне={session.IsInSpawnZone}, до точки зоны {F(Distance(goal))} м");
-                    _pilot.StepTowards(goal, step.speed, Time.deltaTime, 0.1f);
+                    arrived = _pilot.StepTowards(goal, step.speed, Time.deltaTime, 0.1f) || Distance(goal) <= 0.1f;
                     yield return null;
                 }
 
-                Pass(label, $"в зоне команды {session.TeamIndex}, жив; аватар {Name(E2EScriptedInput.Avatar)}");
+                Pass(label, $"в зоне команды {session.TeamIndex}{(toPoint ? $", в точке спавна ({F(Distance(goal))} м)" : "")}, " +
+                            $"жив; аватар {Name(E2EScriptedInput.Avatar)}");
                 yield break;
             }
 
@@ -240,8 +250,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 yield return null;
             }
 
-            ArsenalSlotController slot = CheapestAffordable(wall, session, out int money);
-            if (slot == null) Fail(label, $"на стене нет доступного предмета (денег {money})");
+            ArsenalSlotController slot = CheapestAffordable(wall, session, step.item, out int money);
+            if (slot == null) Fail(label, $"на стене нет доступного предмета{(string.IsNullOrEmpty(step.item) ? "" : $" '{step.item}'")} (денег {money})");
 
             UxrGrabbableObject item = slot.CurrentItem.GetComponent<UxrGrabbableObject>();
             NetworkIdentity identity = slot.CurrentItem.GetComponent<NetworkIdentity>();
@@ -289,6 +299,33 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
             GrabbedNetId = identity.netId;
             Pass(label, $"{item.name} netId={identity.netId} цена {slot.Price}, денег до хвата {moneyBefore}; хват по Grip {side}");
+        }
+
+        private void Carry(InputStep step, string label)
+        {
+            UxrHandSide side = Side(step);
+            UxrAvatar avatar = E2EScriptedInput.Avatar;
+            UxrGrabber grabber = avatar != null ? avatar.GetGrabber(side) : null;
+            if (grabber == null || grabber.GrabbedObject == null) Fail(label, $"в руке {side} нечего нести");
+
+            _pilot.Rest(side);
+            Pass(label, $"{grabber.GrabbedObject.name} опущен в руке {side}, Grip держится");
+        }
+
+        // ── Бой ──────────────────────────────────────────────────────────────
+
+        private IEnumerator ShootEnemy(InputStep step, string label)
+        {
+            var outcome = new ScriptedGunner.Outcome();
+            LastShooting = outcome;
+            yield return new ScriptedGunner(_pilot).ShootEnemy(Side(step), step.meters > 0f ? step.meters : 5f, step.speed,
+                                                              Mathf.Max(1, step.shots), step.timeoutS, outcome);
+            _pilot.Rest(Side(step));
+
+            string seen = outcome.Seen.Count > 0 ? "; " + string.Join("; ", outcome.Seen) : "";
+            if (!outcome.Hit) Fail(label, (outcome.Failure ?? "попадания нет") + seen);
+            Pass(label, $"{outcome.Weapon} → {outcome.Victim}: нажатий {outcome.Presses}, выстрелов {outcome.Shots}, " +
+                        $"{F(outcome.Distance)} м, здоровье {F(outcome.HealthBefore)}→{F(outcome.HealthAfter)}{seen}");
         }
 
         private IEnumerator Release(InputStep step, string label)
@@ -349,7 +386,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
         private void ReachStep(InputStep step, string label)
         {
-            string data = step.name == "grabbed" ? "netId=" + GrabbedNetId.ToString(CultureInfo.InvariantCulture) : null;
+            string data = step.name == "grabbed" ? "netId=" + GrabbedNetId.ToString(CultureInfo.InvariantCulture)
+                        : step.name == "shot" ? (LastShooting != null ? LastShooting.StepData() : "role=target")
+                        : null;
             if (!_context.Step(step.name, data)) Fail(label, "шаг не принят барьером (лимиты имени/данных)");
             Pass(label, data ?? "шаг отправлен");
         }
@@ -388,7 +427,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             return null;
         }
 
-        private static ArsenalSlotController CheapestAffordable(ArsenalWallController wall, PlayerSession session, out int money)
+        private static ArsenalSlotController CheapestAffordable(ArsenalWallController wall, PlayerSession session, string filter,
+                                                                out int money)
         {
             MatchEconomy economy = MatchEconomy.Current;
             money = economy != null && session != null ? economy.GetMoney(session) : int.MaxValue;
@@ -397,10 +437,19 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             {
                 if (slot == null || !slot.IsItemPresent || slot.Price > money) continue;
                 if (slot.CurrentItem.GetComponent<UxrGrabbableObject>() == null) continue;
+                if (filter == "pistol" && !IsSingleBulletPistol(slot)) continue;
                 if (best == null || slot.Price < best.Price) best = slot;
             }
 
             return best;
+        }
+
+        /// <summary>Пистолет со стены: огнестрел, одна пуля на выстрел, не очередью.</summary>
+        private static bool IsSingleBulletPistol(ArsenalSlotController slot)
+        {
+            WeaponInfo info = slot.WeaponData;
+            return info != null && info.Category == WeaponCategory.Pistol && info.Pellets <= 1 && !info.FullAuto &&
+                   slot.CurrentItem.GetComponentInParent<UltimateXR.Mechanics.Weapons.UxrFirearmWeapon>() != null;
         }
 
         // ── Вспомогательное ──────────────────────────────────────────────────

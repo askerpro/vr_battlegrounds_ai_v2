@@ -101,6 +101,9 @@ namespace VrBattlegrounds.Bots
         public bool TryRead(ref DeviceFrame frame)
         {
             if (_avatar == null) return false;
+            // Погибшее живое тело (с Blaze) не ведётся, как и в прежнем пути: оно ждёт смены на призрака или возрождения,
+            // устройство держит последнюю позу и отпущенные кнопки. Призрак (без Blaze) ведётся — идёт к своей зоне.
+            if (_player != null && !_player.IsAlive && _combat != null) return false;
             if (_tickFrame != Time.frameCount)
             {
                 _tickFrame = Time.frameCount;

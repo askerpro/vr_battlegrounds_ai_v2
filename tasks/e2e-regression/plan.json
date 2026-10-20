@@ -15,6 +15,21 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "uid-fix",
+      "writes": [
+        "tasks/e2e-regression/**",
+        "Assets/Prefabs/Player/Unused/**"
+      ],
+      "after": [
+        {
+          "task": "e2e-regression",
+          "stage": "work",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

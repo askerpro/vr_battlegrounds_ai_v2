@@ -1,0 +1,24 @@
+{
+  "task_id": "asset-audit",
+  "owner": "asset-audit",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/asset-audit",
+  "base_sha": "246d91e11ea474cfa2c67c4d26593bd4d2a37ce2",
+  "doc_path": "tasks/asset-audit/Readme.md",
+  "title": "Аудитор ассетов под Quest",
+  "branch": "task/asset-audit",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/asset-audit/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Editor/VR_Battlegrounds/Performance.meta",
+        "Assets/Tests/EditMode/AssetAudit/**",
+        "Assets/Tests/EditMode/AssetAudit.meta"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

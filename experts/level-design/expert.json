@@ -5,8 +5,8 @@
   "tasks": [
     "lobby-decoration"
   ],
-  "reviewed_sha": "9d44e8f9147da4acad972075a8e67810278a9129",
-  "reviewed_at": "2026-10-20",
+  "reviewed_sha": "716743336f5bc33b849dc8e2afb2101a31d56760",
+  "reviewed_at": "2026-10-11",
   "owns": [
     "Docs/level-design/**",
     "Docs/maps/**",

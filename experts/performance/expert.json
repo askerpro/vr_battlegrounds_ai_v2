@@ -6,11 +6,13 @@
     "performance-onboarding",
     "perf-stress-scenario"
   ],
-  "reviewed_sha": "9d44e8f9147da4acad972075a8e67810278a9129",
-  "reviewed_at": "2026-10-20",
+  "reviewed_sha": "156928ebfe03357b21438d5cfeae4a3950d2bac3",
+  "reviewed_at": "2026-10-15",
   "owns": [
     "Docs/perf-stress-test.md",
     "Docs/quest-performance-manifest.md",
+    "Assets/Tests/EditMode/AssetAudit/**",
+    "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
     "Assets/Scripts/Debug/StressTest/**",
     "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
     "Tools/Perf/**",

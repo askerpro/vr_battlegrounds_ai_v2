@@ -8,4 +8,18 @@
 
 ## Этапы
 
-Этапы и области записи — в [plan.json](plan.json). Заготовленный этап `work` пишет только в `tasks/quest-perf-manifest/**`: перед `begin` объявите нужные пути (`writes`) и перерегистрируйте план (`register`).
+Этапы и области записи — в [plan.json](plan.json). Этап `work` пишет манифест, ссылки в `AGENTS.md`, профили и журналы
+зон performance и level-design, обратные ссылки в `Docs/level-design/` (план перерегистрирован, rev 2).
+
+## План
+
+- [x] Собрать бюджеты и правила (experts/performance, Docs/perf-stress-test.md, замеры scene-detail)
+- [x] Docs/quest-performance-manifest.md: правила QPM, условия цен, статус инструментов, приём пака, метод замера
+- [x] Ссылки из AGENTS.md, профилей и Docs/level-design; owns performance (манифест, аудитор)
+- [x] Сопоставление с 13 правилами аудитора (влит в origin/dev)
+- [ ] Ревью зон performance и level-design (раунд 3), merge в origin/dev, task-close
+
+## Статус
+
+2026-10-20: формат подтверждён пользователем. Ревью раунд 2: level-design approve, performance changes (reviewed_sha
+без сверки карты) — исправлено, ждёт раунда 3. Цены финального A/B scene-detail дописать после её замера.

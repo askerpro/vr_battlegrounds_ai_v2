@@ -11,7 +11,23 @@
     {
       "id": "work",
       "writes": [
-        "tasks/bots-control-modes/**"
+        "tasks/bots-control-modes/**",
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/Input.meta",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Testing/ScriptedInputPrefabSetup.cs",
+        "Assets/Editor/VR_Battlegrounds/Testing/ScriptedInputPrefabSetup.cs.meta",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs.meta",
+        "Assets/Prefabs/Player/Avatars/Bases/PlayerBase.prefab",
+        "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player_Black.prefab",
+        "Assets/Prefabs/Player/Avatars/Ghost/GhostAvatar.prefab"
       ],
       "after": [],
       "needs": []

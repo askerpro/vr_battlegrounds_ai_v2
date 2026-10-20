@@ -43,8 +43,11 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
     /// </para>
     ///
     /// <para>
-    /// На этом этапе запись в префабы и меш-ассеты запрещена: <see cref="Apply"/> работает только с временной копией
-    /// (содержимое префаба в preview-сцене), <see cref="Plan"/> — сухой прогон без сохранения. Сборщики не вызывают.
+    /// Сам разделитель на диск не пишет: <see cref="Apply"/> работает только с временной копией (содержимое префаба в
+    /// preview-сцене), <see cref="Plan"/> — сухой прогон. Постоянное разделение (раунд 2, 2026-10-20) делает
+    /// единственный писатель узлов прицела <c>WeaponSightAuthoring</c>: вызывает <see cref="Apply"/> на содержимом
+    /// префаба и сохраняет меши по <see cref="MeshAssetPath"/>. Префаб, уже разделённый так, <see cref="Apply"/>
+    /// сначала возвращает к источнику в копии (<see cref="RevertMigrated"/>): повторный прогон даёт тот же результат.
     /// </para>
     /// </summary>
     public static class SightPartSplitter
@@ -138,6 +141,7 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Разделение прицела — только в Edit Mode");
             if (EditorUtility.IsPersistent(root) || !root.scene.IsValid() || !EditorSceneManager.IsPreviewScene(root.scene) || root.transform.parent != null)
                 throw new InvalidOperationException($"{spec.WeaponId}: Apply работает только с временной копией (корень содержимого префаба в preview-сцене)");
+            RevertMigrated(root, spec);
             if (root.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0)
                 throw new InvalidOperationException($"{spec.WeaponId}: в префабе уже есть SightAdjustablePart — повторное разделение или комплект");
 
@@ -213,18 +217,62 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
             }
         }
 
-        /// <summary>Предлагаемый путь game-owned меша (для будущей интеграции в сборщики; сейчас не пишется).</summary>
-        public static string ProposedMeshPath(SightSplitSpec spec, SightSplitPartSpec part, bool body)
+        /// <summary>Путь game-owned меша детали или корпуса узла (прежнее имя <see cref="MeshAssetPath"/>).</summary>
+        public static string ProposedMeshPath(SightSplitSpec spec, SightSplitPartSpec part, bool body) => MeshAssetPath(spec, part, body);
+
+        /// <summary>
+        /// Путь game-owned меша: деталь — <c>{оружие}_Sight{Role}.asset</c>, корпус узла — <c>{оружие}_{узел}_SightSplit.asset</c>
+        /// рядом с мешами Kinemation или в <c>Art/Weapons/HandsPack/{папка}/Meshes</c>. Исходный меш не перезаписывается
+        /// (раунд 2: сборщик Kinemation пишет его заново, а разделение всегда идёт от него — повторный прогон детерминирован).
+        /// </summary>
+        public static string MeshAssetPath(SightSplitSpec spec, SightSplitPartSpec part, bool body)
         {
             string weapon = Path.GetFileNameWithoutExtension(spec.PrefabPath);
             string folder = spec.Parts.First().SourceMeshPath.StartsWith(KinemationArtRoot, StringComparison.Ordinal)
                 ? Path.GetDirectoryName(part.SourceMeshPath).Replace('\\', '/')
                 : $"Assets/Art/Weapons/HandsPack/{Path.GetFileName(Path.GetDirectoryName(spec.PrefabPath))}/Meshes";
-            if (!body) return $"{folder}/{weapon}_Sight{part.Role}.asset";
-            // Kinemation: корпус пересобирается из пака каждой сборкой — разделённый корпус пишется на место исходного.
-            return part.SourceMeshPath.StartsWith(KinemationArtRoot, StringComparison.Ordinal)
-                ? part.SourceMeshPath
-                : $"{folder}/{weapon}_{Path.GetFileName(part.NodePath)}_SightSplit.asset";
+            return body ? $"{folder}/{weapon}_{Path.GetFileName(part.NodePath)}_SightSplit.asset" : $"{folder}/{weapon}_Sight{part.Role}.asset";
+        }
+
+        /// <summary>Исходный меш узла из спецификации (ассет + localFileID); null — не найден.</summary>
+        public static Mesh SourceMesh(SightSplitPartSpec part)
+        {
+            foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(part.SourceMeshPath))
+                if (asset is Mesh mesh && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(mesh, out string _, out long id) && id == part.SourceMeshLocalId)
+                    return mesh;
+            return null;
+        }
+
+        /// <summary>
+        /// Возврат уже разделённого префаба к источнику — только во временной копии: снимаются рамки
+        /// <c>Sight{Role}Frame</c> спецификации, у узла с вынесенной деталью меш корпуса (<see cref="MeshAssetPath"/>)
+        /// заменяется исходным. Чужие узлы и меши не трогаются: рамка без детали спецификации или чужой меш — отказ.
+        /// Поднятые рамки (Scar) остаются поднятыми: подъём идемпотентен.
+        /// </summary>
+        public static bool RevertMigrated(GameObject root, SightSplitSpec spec)
+        {
+            bool reverted = false;
+            foreach (SightSplitPartSpec part in spec.Parts)
+            {
+                Transform node = Find(root.transform, part.NodePath, spec);
+                Transform frame = node.Find(part.FrameName);
+                if (frame != null)
+                {
+                    Transform partNode = frame.Find(part.PartName);
+                    if (frame.childCount != 1 || partNode == null || partNode.GetComponent<SightAdjustablePart>() == null)
+                        throw new InvalidOperationException($"{spec.WeaponId}: {part.NodePath}/{part.FrameName} не похож на разделение прицела — откат отменён");
+                    UnityEngine.Object.DestroyImmediate(frame.gameObject);
+                    reverted = true;
+                }
+                if (!part.Extract) continue;
+                MeshFilter filter = node.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null) continue;
+                if (AssetDatabase.GetAssetPath(filter.sharedMesh) != MeshAssetPath(spec, part, true)) continue;
+                Mesh source = SourceMesh(part) ?? throw new InvalidOperationException($"{spec.WeaponId}: нет исходного меша {part.SourceMeshPath}:{part.SourceMeshLocalId}");
+                filter.sharedMesh = source;
+                reverted = true;
+            }
+            return reverted;
         }
 
         // ── Детали ─────────────────────────────────────────────────────────

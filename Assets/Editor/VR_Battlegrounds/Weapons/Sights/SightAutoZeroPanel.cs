@@ -17,14 +17,15 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// <item>комплект SightKit_* под MeshContainer копии оружия — пользователь ставит корень на планку и раздвигает
     /// половины вдоль планки (локальная Z);</item>
     /// <item>«Родной прицел» — вшитый прицел ствола из <see cref="SightSplitTable"/>, разделённый
-    /// <see cref="SightPartSplitter"/> на копии (<see cref="NativeSightStand"/>, меши только в памяти).</item>
+    /// <see cref="SightPartSplitter"/> на копии (<see cref="NativeSightStand"/>, меши в памяти; уже разделённый префаб
+    /// копия сначала возвращает к источнику и делит заново).</item>
     /// </list>
     /// «Свести» двигает подвижную деталь только по её локальной Y. У комплекта-коллиматора (SightKit_XPS2) подвижной
     /// детали нет: «Свести» привязывает сетку конечного фокуса к ShotSource и дистанции пристрелки и показывает, где
     /// точка пристрелки видна в окне (<see cref="SolveOptic"/>).
     /// Ствол со своим прицелом (<see cref="SightSplitTable"/>) калибруется только им — комплекты для него недоступны
-    /// (раунд 1, 2026-10-20). «Сохранить в таблицу» и «Применить к префабу» включены для комплектов (решение
-    /// пользователя 2026-10-20; писатель префаба — <see cref="WeaponSightAuthoring"/>); для родного прицела — следующим шагом.
+    /// (раунд 1, 2026-10-20). «Сохранить в таблицу» и «Применить к префабу» включены для комплектов и (раунд 2) для
+    /// родного прицела — запись с Kit = null, применение = постоянное разделение + сдвиг (<see cref="WeaponSightAuthoring"/>).
     /// Панель вкладки «Калибровка прицела» окна «Настройка оружия»: оружие выбирает окно, панель хранит стенд.
     /// </summary>
     [Serializable]
@@ -32,7 +33,6 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     {
         private const string SettingsPath = WeaponSightAuthoring.SettingsPath;
         private const string NativeOption = "Родной прицел";
-        private const string NativeLockedHint = "Родной прицел: запись в таблицу и применение к префабу — следующим шагом калибровки";
         // Решение пользователя 2026-10-20: запись таблицы и применение к префабу включены для комплектов SightKit_*.
         private static readonly bool SaveUnlocked = true;
         private static readonly bool ApplyUnlocked = true;
@@ -49,6 +49,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         [SerializeField] private string _message = "";
         [NonSerialized] private SightAutoZeroResult _last;
         [NonSerialized] private string _opticReport;
+        /// <summary>Поверхности оружия на стенде в системе ShotSource (без комплекта) — для посадки в паз планки.</summary>
+        [NonSerialized] private SurfaceProbe _railProbe;
+        /// <summary>Допуск посадки в паз: контакт и ось — 0,3 мм, упор от центра паза — 1 мм.</summary>
+        private const float SeatTolerance = .0003f, LugTolerance = .001f;
+        /// <summary>Наибольшее перекрытие губки с планкой с одной стороны, м: штатная посадка XPS2 на TR15 в паке — 2 мм.</summary>
+        private const float LipOverlapLimit = .002f;
         [NonSerialized] private NativeSightStand _native;
         [NonSerialized] private Action _repaint;
 
@@ -126,6 +132,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     if (!_standNative)
                     {
                         if (GUILayout.Button("Выделить корень комплекта")) { Selection.activeGameObject = _standKit; SceneView.lastActiveSceneView?.FrameSelected(); }
+                        if (GUILayout.Button(new GUIContent("Посадить на планку (в паз)", "Контакт канала — на вершины зубцов, ось — по оси планки, упор/центр крепления — в ближайший поперечный паз")))
+                            Run(SeatOnRail);
                         if (StandOptic) { if (GUILayout.Button("Вернуть масштаб комплекта")) Run(ResetHalves); }
                         else if (GUILayout.Button("Вернуть половины на планку (X/Y и поворот как в префабе)")) Run(ResetHalves);
                     }
@@ -135,14 +143,17 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     if (StandOptic) { if (!string.IsNullOrEmpty(_opticReport)) EditorGUILayout.HelpBox(_opticReport, MessageType.None); }
                     else DrawResult();
                     EditorGUILayout.Space();
-                    bool solved = StandOptic ? _opticReport != null : _last != null && _last.Ok;
-                    using (new EditorGUI.DisabledScope(!SaveUnlocked || _standNative || !solved))
-                        if (GUILayout.Button(new GUIContent("Сохранить в таблицу", _standNative ? NativeLockedHint : "Поза комплекта и сведение → WeaponSightTable")))
+                    // PPK: подвижной детали нет — «Свести» только измеряет, записать можно сдвиг 0.
+                    bool solved = StandOptic ? _opticReport != null
+                        : _last != null && (_last.Ok || (_standNative && _native != null && _native.Moving == null));
+                    using (new EditorGUI.DisabledScope(!SaveUnlocked || !solved))
+                        if (GUILayout.Button(new GUIContent("Сохранить в таблицу", _standNative ? "Сдвиг родного прицела → WeaponSightTable (Kit = null)" : "Поза комплекта и сведение → WeaponSightTable")))
                             Run(() => SaveToTable(settings));
-                    using (new EditorGUI.DisabledScope(!ApplyUnlocked || _standNative))
-                        if (GUILayout.Button(new GUIContent("Применить к префабу", _standNative ? NativeLockedHint : "Запись таблицы → префаб оружия (WeaponSightAuthoring)")))
+                    using (new EditorGUI.DisabledScope(!ApplyUnlocked))
+                        if (GUILayout.Button(new GUIContent("Применить к префабу", _standNative
+                                ? "Постоянное разделение родного прицела (меш-ассеты) + сдвиг из таблицы (WeaponSightAuthoring)"
+                                : "Запись таблицы → префаб оружия (WeaponSightAuthoring)")))
                             Run(() => _message = WeaponSightAuthoring.Apply(_standInfo));
-                    if (_standNative) EditorGUILayout.HelpBox(NativeLockedHint + ".", MessageType.None);
                     if (!_standNative && GUILayout.Button("Проверить запись таблицы (без записи)")) Run(() => _message = WeaponSightAuthoring.Preflight(_standInfo));
                 }
             }
@@ -179,7 +190,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return null;
             DisposeNative();
             EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            _standWeapon = null; _standKit = null; _standKitPrefab = null; _standInfo = null; _last = null; _opticReport = null;
+            _standWeapon = null; _standKit = null; _standKitPrefab = null; _standInfo = null; _last = null; _opticReport = null; _railProbe = null;
             return new GameObject("SightAutoZero_Stand (не сохранять)");
         }
 
@@ -233,6 +244,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             if (stand == null) return;
             _native = NativeSightStand.Build(spec, stand.scene, stand.transform);
             _standWeapon = _native.Weapon; _standInfo = info; _standNative = true;
+            // Сдвиг из таблицы, если запись родного прицела ещё годна (тот же ShotSource): стенд показывает префаб как есть.
+            WeaponSightTable table = WeaponSightTable.Load();
+            var entry = table != null ? table.Find(info) : null;
+            if (entry != null && entry.Kit == null && _native.Moving != null && _native.Moving.IsWithinTravel(entry.MovingOffset)
+                && entry.ShotSource.Compare(ShotSourceFingerprint.Capture(SightParts.FindShotSource(_standWeapon), _standWeapon.transform)) == null)
+                _native.Moving.transform.localPosition = _native.Moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
             Selection.activeGameObject = _native.Moving != null ? _native.Moving.gameObject : _native.Front.gameObject;
             SceneView.lastActiveSceneView?.FrameSelected();
             _message = "Стенд родного прицела открыт: " + spec.Note + (_native.Moving == null ? ". Подвижной детали нет — «Свести» только покажет ошибку." : ".");
@@ -314,6 +331,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             {
                 string scale = SightKitScale.Problem(_standKit.transform);
                 if (scale != null) return scale + (StandOptic ? " («Вернуть масштаб комплекта» восстановит)" : " («Вернуть половины на планку» восстановит)");
+                string seat = SeatProblem(out _);
+                if (seat != null) return seat;
                 if (StandOptic) return null;
                 foreach (string name in new[] { "Rear", "Front" })
                 {
@@ -333,6 +352,129 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                            (_standNative ? " («Вернуть деталь в нейтраль»)" : "");
             }
             return null;
+        }
+
+        // ── Посадка в паз планки (раунд 3, решение 2026-10-20 «Посадка в паз») ─────────
+
+        private Matrix4x4 MuzzleFrame()
+        {
+            Transform muzzle = SightParts.FindShotSource(_standWeapon);
+            return Matrix4x4.TRS(muzzle.position, muzzle.rotation, Vector3.one).inverse;
+        }
+
+        private SurfaceProbe RailProbe()
+        {
+            if (_railProbe != null) return _railProbe;
+            Matrix4x4 frame = MuzzleFrame();
+            var probe = new SurfaceProbe();
+            foreach (var filter in _standWeapon.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null || !filter.gameObject.activeInHierarchy || filter.GetComponent<MeshRenderer>() == null) continue;
+                if (filter.name.Contains("Highlight") || (_standKit != null && filter.transform.IsChildOf(_standKit.transform))) continue;
+                if (filter.GetComponentInParent<SightAdjustablePart>(true) != null) continue;
+                probe.Add(filter.sharedMesh, frame * filter.transform.localToWorldMatrix);
+            }
+            return _railProbe = probe;
+        }
+
+        /// <summary>Узлы крепления комплекта: (половина или корень, узел RailMount).</summary>
+        private List<(Transform half, Transform mount)> Mounts()
+        {
+            var result = new List<(Transform, Transform)>();
+            Transform[] halves = StandOptic ? new[] { _standKit.transform } : new[] { _standKit.transform.Find("Rear"), _standKit.transform.Find("Front") };
+            foreach (Transform half in halves)
+            {
+                Transform mount = half != null ? half.Find(SightRailMount.MountName) : null;
+                if (mount == null) throw new InvalidOperationException($"{_standKitPrefab.name}: нет узла крепления {SightRailMount.MountName} — пересоберите комплекты (Build Iron/Optic Sight Kits)");
+                result.Add((half, mount));
+            }
+            return result;
+        }
+
+        /// <summary>Канал крепления половины (ширина между губками, глубина) — из её меша, как у SightKitBuilder.</summary>
+        private static SightMountInfo MountGeometry(Transform half, bool optic)
+        {
+            var probe = new SurfaceProbe();
+            MeshFilter filter = optic ? half.GetComponentsInChildren<MeshFilter>(true).First() : half.GetComponent<MeshFilter>();
+            Matrix4x4 toHalf = half.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+            probe.Add(filter.sharedMesh, toHalf);
+            Bounds b = filter.sharedMesh.bounds, bounds = new Bounds(toHalf.MultiplyPoint3x4(b.min), Vector3.zero);
+            for (int i = 0; i < 8; i++)
+                bounds.Encapsulate(toHalf.MultiplyPoint3x4(new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z)));
+            return SightRailMount.FindMount(probe, bounds, half.name);
+        }
+
+        /// <summary>null — каждое крепление сидит в пазу планки; иначе причина. <paramref name="report"/> — зазоры и смещения.</summary>
+        private string SeatProblem(out string report)
+        {
+            report = null;
+            if (_standNative) return null;
+            Matrix4x4 frame = MuzzleFrame();
+            var lines = new List<string>();
+            string problem = null;
+            foreach (var (half, mount) in Mounts())
+            {
+                Vector3 p = frame.MultiplyPoint3x4(mount.position);
+                SightRailInfo rail = SightRailMount.FindRail(RailProbe(), p.z);
+                string name = StandOptic ? _standKitPrefab.name : half.name;
+                if (rail == null) { problem ??= $"{name}: под креплением нет планки"; lines.Add(name + ": планки нет"); continue; }
+                float gap = p.y - rail.TopY, side = p.x - rail.AxisX;
+                SightMountInfo channel = MountGeometry(half, StandOptic);
+                float railWidth = SightRailMount.RailWidthAt(RailProbe(), rail.AxisX, p.z, rail.TopY - channel.ChannelDepth + .0002f);
+                float lips = (channel.ChannelWidth - railWidth) * .5f;
+                int slot = rail.NearestSlot(p.z);
+                float lug = slot >= 0 ? p.z - rail.SlotCenters[slot] : float.NaN;
+                lines.Add($"{name}: контакт {gap * 1000:+0.00;-0.00;0.00} мм от вершин зубцов, ось {side * 1000:+0.00;-0.00;0.00} мм, " +
+                          (slot >= 0 ? $"упор от центра паза {lug * 1000:+0.00;-0.00;0.00} мм (паз {rail.SlotWidths[slot] * 1000:0.0} мм)" : "пазов под креплением нет") +
+                          $", губки: канал {channel.ChannelWidth * 1000:0.0} мм, планка на их глубине {railWidth * 1000:0.0} мм, зазор с боку {lips * 1000:+0.0;-0.0;0.0} мм; планка: {rail}");
+                if (gap > SeatTolerance) problem ??= $"{name} висит над планкой на {gap * 1000:0.00} мм — «Посадить на планку»";
+                else if (gap < -SeatTolerance) problem ??= $"{name} врезан в планку на {-gap * 1000:0.00} мм — «Посадить на планку»";
+                else if (Mathf.Abs(side) > SeatTolerance) problem ??= $"{name} смещён с оси планки на {side * 1000:0.00} мм — «Посадить на планку»";
+                else if (slot >= 0 && Mathf.Abs(lug) > LugTolerance) problem ??= $"{name}: упор не в пазу ({lug * 1000:0.00} мм) — «Посадить на планку»";
+                // Губки моделей паков упрощены: перекрытие с планкой до 2 мм с боку (штатная посадка XPS2 на TR15) только
+                // показывается; больше — комплект на эту планку не садится.
+                else if ((rail.TopWidth - channel.ChannelWidth) * .5f > LipOverlapLimit)
+                    problem ??= $"{name}: канал крепления {channel.ChannelWidth * 1000:0.0} мм уже верха планки {rail.TopWidth * 1000:0.0} мм — комплект на эту планку не садится";
+            }
+            report = string.Join("\n", lines);
+            return problem;
+        }
+
+        /// <summary>
+        /// «Посадить на планку»: корень — по осям ShotSource; первое крепление (Rear или коллиматор) — контакт на вершины
+        /// зубцов, на ось планки, упор в ближайший паз; у механики Front сдвигается вдоль планки к своему ближайшему пазу.
+        /// </summary>
+        private void SeatOnRail()
+        {
+            RequireStand();
+            if (_standNative) throw new InvalidOperationException("Родной прицел на планку не сажается");
+            Transform muzzle = SightParts.FindShotSource(_standWeapon);
+            Undo.RecordObject(_standKit.transform, "Посадить комплект на планку");
+            _standKit.transform.rotation = muzzle.rotation;
+            SightKitScale.Apply(_standKit.transform);
+            Matrix4x4 frame = MuzzleFrame(), back = frame.inverse;
+            var mounts = Mounts();
+            Vector3 p = frame.MultiplyPoint3x4(mounts[0].mount.position);
+            SightRailInfo rail = SightRailMount.FindRail(RailProbe(), p.z) ?? throw new InvalidOperationException("Под креплением нет планки — поставьте комплект над планкой и повторите");
+            int slot = rail.NearestSlot(p.z);
+            var target = new Vector3(rail.AxisX, rail.TopY, slot >= 0 ? rail.SlotCenters[slot] : p.z);
+            _standKit.transform.position += back.MultiplyVector(target - p);
+            if (mounts.Count > 1)
+            {
+                Transform front = mounts[1].half;
+                Vector3 f = frame.MultiplyPoint3x4(mounts[1].mount.position);
+                SightRailInfo frontRail = SightRailMount.FindRail(RailProbe(), f.z) ?? throw new InvalidOperationException("Под мушкой нет планки — сдвиньте Front вдоль планки и повторите");
+                int frontSlot = frontRail.NearestSlot(f.z);
+                if (frontSlot >= 0)
+                {
+                    Undo.RecordObject(front, "Посадить мушку в паз");
+                    // Корень стоит по осям ShotSource: локальная Z корня = z системы ShotSource (масштаб корня мира 1).
+                    front.localPosition += Vector3.forward * (frontRail.SlotCenters[frontSlot] - f.z);
+                }
+            }
+            _last = null; _opticReport = null;
+            string problem = SeatProblem(out string report);
+            _message = (problem == null ? "Посажено в паз планки.\n" : "Посадка с замечанием: " + problem + "\n") + report;
         }
 
         private SightAutoZeroResult Solve(WeaponSightCalibrationSettings settings, bool write)
@@ -401,20 +543,37 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         /// <summary>Запись позы комплекта и сведения в таблицу. Префаб оружия не меняется.</summary>
         private void SaveToTable(WeaponSightCalibrationSettings settings)
         {
-            if (_standNative) throw new InvalidOperationException("Таблица хранит только комплекты; родной прицел — следующим шагом калибровки");
             bool optic = StandOptic;
             // Повторный расчёт без записи: состояние стенда должно быть сведённым прямо сейчас.
             if (optic) SolveOptic(settings, false);
             else
             {
                 var check = Solve(settings, false);
-                if (!check.Ok) throw new InvalidOperationException("Не сведено: " + check.Error);
-                if (Math.Abs(check.RequiredWorldShift) > 1e-6) throw new InvalidOperationException("Стенд изменился после сведения — нажмите «Свести» ещё раз");
+                bool measureOnly = _standNative && _native != null && _native.Moving == null;
+                if (!check.Ok && !measureOnly) throw new InvalidOperationException("Не сведено: " + check.Error);
+                if (!measureOnly && Math.Abs(check.RequiredWorldShift) > 1e-6) throw new InvalidOperationException("Стенд изменился после сведения — нажмите «Свести» ещё раз");
             }
             Transform muzzleAsset = SightParts.FindShotSource(_standInfo.WeaponPrefab);
             var fingerprint = ShotSourceFingerprint.Capture(muzzleAsset, _standInfo.WeaponPrefab.transform);
             string drift = fingerprint.Compare(ShotSourceFingerprint.Capture(SightParts.FindShotSource(_standWeapon), _standWeapon.transform));
             if (drift != null) throw new InvalidOperationException("Копия оружия на стенде отличается от префаба (" + drift + ") — откройте стенд заново");
+            if (_standNative)
+            {
+                SightParts.Find(_standWeapon, out _, out _, out var nativeMoving);
+                var native = new WeaponSightTable.Entry
+                {
+                    Weapon = _standInfo, Kit = null, KitLocalPosition = Vector3.zero, KitLocalRotation = Quaternion.identity,
+                    MovingOffset = nativeMoving != null ? nativeMoving.Offset : 0f, ZeroDistance = settings.DefaultZeroDistance, ShotSource = fingerprint
+                };
+                WeaponSightTable nativeTable = WeaponSightTable.LoadOrCreate();
+                Undo.RecordObject(nativeTable, "Сохранить сведение прицела");
+                nativeTable.Set(native);
+                EditorUtility.SetDirty(nativeTable);
+                AssetDatabase.SaveAssetIfDirty(nativeTable);
+                _message = $"Сохранено в таблицу: {_standInfo.WeaponId}, родной прицел, сдвиг {native.MovingOffset * 1000:+0.00;-0.00;0.00} мм. " +
+                           "Префаб не менялся — «Применить к префабу» разделит прицел постоянно.";
+                return;
+            }
             SightAdjustablePart moving = optic ? null : WeaponSightAuthoring.Moving(_standKit);
             var entry = new WeaponSightTable.Entry
             {

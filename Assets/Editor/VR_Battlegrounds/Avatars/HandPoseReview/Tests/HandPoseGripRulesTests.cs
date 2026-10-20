@@ -145,11 +145,15 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
         }
 
         const string Cyborg = "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/Avatars/CyborgAvatarExample.prefab";
-        const string Gun = "Assets/Prefabs/Weapons/Gun/Gun.prefab";
+        // Сэмплы SDK (Gun, Machinegun, Shotgun) убраны из арсенала 2026-10-20 (Assets/Unused/Weapons) — правила хвата
+        // проверяются на стволах игрового набора с теми же ролями точек.
+        const string Gun = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab";
+        // Превью правки позы — на исходном сэмпле SDK (ThirdParty): у него явная запись хвата CyborgAvatarExample.
+        const string SdkSampleGun = "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/ShootingRange/Weapons/Gun.prefab";
 
         [TestCase(Gun, "", 0, "pistol_grip")]
-        [TestCase("Assets/Prefabs/Weapons/Machinegun/Machinegun.prefab", "", 1, "foregrip")]
-        [TestCase("Assets/Prefabs/Weapons/Shotgun/Shotgun.prefab", "0/3", 0, "pump")]
+        [TestCase("Assets/Prefabs/Weapons/AK105/AK105.prefab", "", 1, "foregrip")]
+        [TestCase("Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", "1", 0, "pump")]
         [TestCase("Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab", "", 0, "pinch_small")]
         [TestCase("Assets/Prefabs/Weapons/Scar/Scar.prefab", "", 0, "pistol_grip")]
         [TestCase("Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/Lab/Battery.prefab", "", 0, "pinch_small")]
@@ -166,7 +170,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
             string Rotations() => string.Join("|", avatar.GetComponentsInChildren<Transform>(true).Select(t => t.localRotation.ToString("R")));
             string before = Rotations();
             string output = Path.Combine("Temp", "HandPoseFitTests", "edit-preview-" + System.Guid.NewGuid().ToString("N").Substring(0, 6));
-            var request = new HandPoseEditPreviewRequest {PreviewHint = false, Request = new HandPoseFitRequest {AvatarPath = Cyborg, ObjectPath = Gun, GrabPoint = 0, Side = UxrHandSide.Right,
+            var request = new HandPoseEditPreviewRequest {PreviewHint = false, Request = new HandPoseFitRequest {AvatarPath = Cyborg, ObjectPath = SdkSampleGun, GrabPoint = 0, Side = UxrHandSide.Right,
                 SampleCount = 2000, RenderImages = false, RenderReviewSheet = false, IncludeOtherHand = false, OutputDirectory = output}};
             request.Edits.Add(new FitPoseEdit {Name = "middle-curl", FingerCurlDeg = new Dictionary<string, float> {["middle"] = 20}});
             var result = HandPoseEditPreview.Run(request);

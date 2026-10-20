@@ -88,11 +88,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             E("Scar", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("Uzi", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Pistol),
             E("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // AX-50
-            E("Gun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Pistol),
-            E("Machinegun", "F4", DetachableNoActionProfile, WeaponFeedbackCategory.Rifle),
             E("Revolver", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
             E("R08", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
-            E("Shotgun", "F5", null, WeaponFeedbackCategory.Shotgun),
         };
 
         /// <summary>Строка таблицы по имени корня/рецепта; null — ствола в таблице нет.</summary>
@@ -854,12 +851,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             ["Viper"] = new Vector3(0.009f, 0.013f, -0.120f),        // Slide/Bolt z −0,186…−0,007, верх 0,018
             ["BrowningHiPower"] = new Vector3(0.009f, 0.009f, -0.110f), // Slide/Gate z −0,177…0,011
             ["PPK"] = new Vector3(0.011f, 0.012f, -0.110f),          // Slide/Gun02_Detail_01 z −0,172…0,010
-            ["Gun"] = new Vector3(0.011f, 0.008f, -0.020f),          // GunGeo z −0,110…0,098 (без затвора)
             // Окна нет в модели: над передним краем магазинной шахты, правый борт коробки.
             ["AK105"] = new Vector3(0.022f, 0.008f, -0.390f),        // гнездо магазина z −0,413…−0,328
             ["AR15"] = new Vector3(0.022f, -0.012f, -0.478f),        // по TR15: окно в 0,058 м впереди спуска
             ["MP5K"] = new Vector3(0.020f, 0.005f, -0.155f),         // спуск z −0,213
-            ["Machinegun"] = new Vector3(0.025f, 0f, -0.300f),       // MagDecal z −0,340…−0,248
         };
 
         // ── Префабы вылета и дефолты вылета категорий (этап ejection) ───────────────────────

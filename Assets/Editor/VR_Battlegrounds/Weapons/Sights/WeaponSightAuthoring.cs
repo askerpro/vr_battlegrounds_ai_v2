@@ -6,6 +6,7 @@ using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Editor.Gameplay.SightSplit;
 using VrBattlegrounds.Weapons.Sights;
 
 namespace VrBattlegrounds.Editor.Weapons.Sights
@@ -20,7 +21,18 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// Комплект-коллиматор (<see cref="SightParts.IsOpticKit"/>, раунд 1 2026-10-20): половин и подвижной детали нет;
     /// writer ставит комплект и привязывает сетку конечного фокуса экземпляра к ShotSource оружия и дистанции записи
     /// (<see cref="SightParts.BindOptic"/>). Второй прицел (механика или коллиматор вне комплекта) — отказ.
-    /// С раунда 1 «Применить к префабу» включено для комплектов; встроенный (родной) прицел — следующим шагом.
+    /// <para>
+    /// Родной прицел (раунд 2, 2026-10-20; запись таблицы с Kit = null): постоянное разделение по
+    /// <see cref="SightSplitTable"/> — <see cref="SightPartSplitter.Apply"/> на содержимом префаба, меши корпуса и детали
+    /// сохраняются ассетами по <see cref="SightPartSplitter.MeshAssetPath"/>, узлы <c>Sight{Role}Frame/Sight{Role}</c>
+    /// с <see cref="SightAdjustablePart"/>, подъём рамок Scar; затем сдвиг подвижной детали из записи. Повторный
+    /// прогон возвращает разделение к исходному мешу и делает его заново — результат тот же.
+    /// </para>
+    /// <para>
+    /// Сборка ствола: сборщик пака → <see cref="AfterBuild"/> (родной прицел разделяется всегда, сдвиг — из записи,
+    /// если отпечаток ShotSource совпал, иначе 0 и «пересвести на стенде»; комплект — из записи) → баланс.
+    /// Кнопка стенда «Применить к префабу» вызывает тот же код (<see cref="Apply"/>).
+    /// </para>
     /// </summary>
     public static class WeaponSightAuthoring
     {
@@ -41,12 +53,61 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             return ApplyToPrefab(path, entry);
         }
 
-        /// <summary>Применить запись таблицы, если она есть (для сборщика после пересборки ствола); null — записи нет.</summary>
+        /// <summary>Применить запись таблицы, если она есть; null — записи нет. Для сборщика — <see cref="AfterBuild"/>.</summary>
         public static string ApplyIfRecorded(WeaponInfo info)
         {
             WeaponSightTable table = WeaponSightTable.Load();
             return info != null && table != null && table.Find(info) != null ? Apply(info) : null;
         }
+
+        /// <summary>
+        /// Шаги 2–3 сборки ствола (вызывают сборщики после сохранения префаба): родной прицел — разделение всегда
+        /// (сдвиг из записи или 0), комплект — из записи таблицы. null — у ствола нет ни родного прицела, ни записи.
+        /// </summary>
+        public static string AfterBuild(string prefabPath)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) throw new InvalidOperationException("Нет префаба " + prefabPath);
+            WeaponInfo info = InfoOf(prefab);
+            WeaponSightTable table = WeaponSightTable.Load();
+            WeaponSightTable.Entry entry = info != null && table != null ? table.Find(info) : null;
+            SightSplitSpec spec = NativeSpec(prefabPath);
+            if (spec != null)
+            {
+                if (entry != null && entry.Kit != null)
+                    throw new InvalidOperationException($"{prefabPath}: у ствола свой прицел, а в таблице комплект {entry.Kit.name} — пересвести на стенде");
+                return ApplyNative(prefabPath, spec, entry);
+            }
+            return entry != null ? ApplyToPrefab(prefabPath, entry) : null;
+        }
+
+        /// <summary>
+        /// <see cref="AfterBuild"/> для сборщика: ошибка не прерывает сборку, а пишется предупреждением с подсказкой
+        /// «пересвести на стенде». Возвращает отчёт или null.
+        /// </summary>
+        public static string AfterBuildLogged(string prefabPath, string builder)
+        {
+            try
+            {
+                string report = AfterBuild(prefabPath);
+                if (report != null) VrBattlegrounds.Core.GameLog.WeaponSystem.Info($"[{builder}] прицел: {report}");
+                return report;
+            }
+            catch (Exception e)
+            {
+                VrBattlegrounds.Core.GameLog.WeaponSystem.Warning($"[{builder}] {prefabPath}: прицел не подготовлен — {e.Message}. " +
+                    "Откройте вкладку «Калибровка прицела» окна «Настройка оружия», сведите и примените заново.",
+                    AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+                return null;
+            }
+        }
+
+        /// <summary>Спецификация родного прицела префаба; null — у ствола нет своего прицела в таблице разделения.</summary>
+        public static SightSplitSpec NativeSpec(string prefabPath) => SightSplitTable.All.FirstOrDefault(s => s.PrefabPath == prefabPath);
+
+        /// <summary>WeaponInfo, чей WeaponPrefab — этот префаб (первый найденный); null — нет.</summary>
+        public static WeaponInfo InfoOf(GameObject prefab) => AssetDatabase.FindAssets("t:WeaponInfo").Select(AssetDatabase.GUIDToAssetPath)
+            .Select(AssetDatabase.LoadAssetAtPath<WeaponInfo>).FirstOrDefault(i => i != null && i.WeaponPrefab == prefab);
 
         private static void Resolve(WeaponInfo info, out string path, out WeaponSightTable.Entry entry)
         {
@@ -63,12 +124,20 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (asset == null || !prefabPath.StartsWith(WeaponPrefabRoot, StringComparison.Ordinal))
                 throw new InvalidOperationException("Префаб оружия должен лежать в " + WeaponPrefabRoot + ": " + prefabPath);
+            if (entry != null && entry.Kit == null) return PreflightNative(asset, prefabPath, entry);
             return Check(asset, entry, out _, out _);
         }
 
         public static string ApplyToPrefab(string prefabPath, WeaponSightTable.Entry entry)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Применение прицела — только в Edit Mode");
+            if (entry != null && entry.Kit == null)
+            {
+                SightSplitSpec spec = NativeSpec(prefabPath) ?? throw new InvalidOperationException($"{prefabPath}: запись родного прицела, а ствола нет в SightSplitTable");
+                PreflightPrefab(prefabPath, entry);
+                return ApplyNative(prefabPath, spec, entry);
+            }
+            if (NativeSpec(prefabPath) != null) throw new InvalidOperationException($"{prefabPath}: у ствола свой прицел — комплект не ставится");
             PreflightPrefab(prefabPath, entry);
             GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
@@ -76,8 +145,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 Check(root, entry, out Transform container, out Transform shotSource);
                 ShotSourceFingerprint before = ShotSourceFingerprint.Capture(shotSource, root.transform);
                 GameObject kit = ExistingKit(container);
-                // Встроенный прицел: двигается только его подвижная деталь; у комплекта — только узлы комплекта.
-                Transform builtInMoving = entry.Kit == null ? Moving(root).transform : null;
+                Transform builtInMoving = null; // родной прицел — ApplyNative
                 bool optic = SightParts.IsOpticKit(entry.Kit);
                 var untouched = Snapshot(root.transform, kit != null ? kit.transform : null, builtInMoving);
 
@@ -119,13 +187,239 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
 
-            // SaveAsPrefabAsset пишет NetworkIdentity._assetId = 0; вернуть канон и сверить на диске, как Tr15OpticBuilder.
+            RestoreAssetId(prefabPath);
+            return Readback(prefabPath, entry);
+        }
+
+        /// <summary>SaveAsPrefabAsset пишет NetworkIdentity._assetId = 0; вернуть канон и сверить на диске, как Tr15OpticBuilder.</summary>
+        private static void RestoreAssetId(string prefabPath)
+        {
             VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
             uint canonical = Mirror.NetworkIdentity.AssetGuidToUint(new Guid(AssetDatabase.AssetPathToGUID(prefabPath)));
             uint? onDisk = VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.ReadOnDisk(prefabPath);
             if (onDisk != canonical)
                 throw new InvalidOperationException($"{prefabPath}: NetworkIdentity._assetId на диске {onDisk}, ожидается {canonical}");
-            return Readback(prefabPath, entry);
+        }
+
+        // ── Родной прицел ───────────────────────────────────────
+
+        private static string PreflightNative(GameObject asset, string prefabPath, WeaponSightTable.Entry entry)
+        {
+            SightSplitSpec spec = NativeSpec(prefabPath) ?? throw new InvalidOperationException($"{prefabPath}: ствола нет в SightSplitTable — родной прицел не записывается");
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            if (settings == null) throw new InvalidOperationException("Нет настроек калибровки: " + SettingsPath);
+            if (entry.ZeroDistance != settings.DefaultZeroDistance)
+                throw new InvalidOperationException($"Запись сведена на {entry.ZeroDistance} м, текущая пристрелка {settings.DefaultZeroDistance} м — пересвести на стенде");
+            Transform shotSource = FindShotSource(asset);
+            string drift = entry.ShotSource.Compare(ShotSourceFingerprint.Capture(shotSource, asset.transform));
+            if (entry.ShotSource.IsEmpty || drift != null)
+                throw new InvalidOperationException("Отпечаток ShotSource не совпал (" + (drift ?? "пуст") + ") — пересвести на стенде");
+            SightSplitPartSpec moving = spec.MovingPart;
+            if (moving == null && entry.MovingOffset != 0f) throw new InvalidOperationException("Подвижной детали нет — сдвиг в записи должен быть 0");
+            if (moving != null && (entry.MovingOffset < -moving.TravelDown - 1e-7f || entry.MovingOffset > moving.TravelUp + 1e-7f))
+                throw new InvalidOperationException($"Сдвиг {entry.MovingOffset * 1000:0.00} мм вне хода −{moving.TravelDown * 1000:0.00}…+{moving.TravelUp * 1000:0.00} мм");
+            return $"{asset.name}: родной прицел, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм, пристрелка {entry.ZeroDistance} м, ShotSource {shotSource.name}";
+        }
+
+        /// <summary>
+        /// Постоянное разделение родного прицела и сдвиг подвижной детали. <paramref name="entry"/> null или с чужим
+        /// отпечатком ShotSource / дистанцией — разделение со сдвигом 0 и пометкой «пересвести на стенде».
+        /// </summary>
+        public static string ApplyNative(string prefabPath, SightSplitSpec spec, WeaponSightTable.Entry entry)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Применение прицела — только в Edit Mode");
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            if (settings == null) throw new InvalidOperationException("Нет настроек калибровки: " + SettingsPath);
+            string note;
+            float offset = 0f;
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            // Разделение — на второй временной копии; в основную копию переносятся только его результаты, существующие
+            // узлы рамок и деталей обновляются на месте (их fileID в префабе не меняются — повторный прогон тот же).
+            GameObject fresh = PrefabUtility.LoadPrefabContents(prefabPath);
+            SightSplitApplyResult split = null;
+            try
+            {
+                if (ExistingKit(FindContainer(root.transform)) != null || root.GetComponentsInChildren<WeaponOpticView>(true).Length > 0)
+                    throw new InvalidOperationException($"{prefabPath}: у ствола свой прицел, а в префабе стоит комплект/коллиматор — снимите его");
+                Transform shotSource = FindShotSource(root);
+                ShotSourceFingerprint before = ShotSourceFingerprint.Capture(shotSource, root.transform);
+                if (entry == null) note = "записи в таблице нет — сдвиг 0, свести на стенде";
+                else if (entry.ZeroDistance != settings.DefaultZeroDistance) note = $"запись на {entry.ZeroDistance} м, пристрелка {settings.DefaultZeroDistance} м — сдвиг 0, пересвести на стенде";
+                else if (entry.ShotSource.IsEmpty || entry.ShotSource.Compare(before) != null) note = "отпечаток ShotSource не совпал — сдвиг 0, пересвести на стенде";
+                else { offset = entry.MovingOffset; note = null; }
+
+                // TRS всех узлов вне прицела: рамки Sight*Frame пересоздаются, рамки Scar поднимаются (спецификация).
+                var raise = new HashSet<Transform>(spec.Raises.Select(r => root.transform.Find(r.NodePath)).Where(t => t != null));
+                var untouched = new Dictionary<Transform, Trs>();
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                    if (!raise.Contains(t) && !InsideSightFrame(t, spec))
+                        untouched[t] = new Trs { P = t.localPosition, R = t.localRotation, S = t.localScale, Parent = t.parent };
+
+                split = SightPartSplitter.Apply(fresh, spec);
+                Persist(spec, split);
+                Sync(root, fresh, spec);
+                SightSplitPartSpec movingSpec = spec.MovingPart;
+                if (movingSpec != null)
+                {
+                    SightAdjustablePart moving = root.transform.Find($"{movingSpec.NodePath}/{movingSpec.FrameName}/{movingSpec.PartName}").GetComponent<SightAdjustablePart>();
+                    if (!moving.IsWithinTravel(offset))
+                        throw new InvalidOperationException($"Сдвиг {offset * 1000:0.00} мм вне хода −{moving.TravelDown * 1000:0.00}…+{moving.TravelUp * 1000:0.00} мм");
+                    moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * offset;
+                }
+                else if (offset != 0f) throw new InvalidOperationException("Подвижной детали нет — сдвиг в записи должен быть 0");
+
+                foreach (var pair in untouched)
+                    if (pair.Key == null || !Same(pair.Key, pair.Value))
+                        throw new InvalidOperationException("Изменился узел вне прицела: " + (pair.Key != null ? pair.Key.name : "удалён"));
+                if (before.Compare(ShotSourceFingerprint.Capture(shotSource, root.transform)) != null)
+                    throw new InvalidOperationException("Цепочка ShotSource изменилась — отказ сохранения");
+                if (PrefabUtility.SaveAsPrefabAsset(root, prefabPath) == null)
+                    throw new InvalidOperationException("Не удалось сохранить " + prefabPath);
+            }
+            finally
+            {
+                split?.DestroyMeshes(); // временные меши; сохранённые — отдельные объекты-ассеты
+                PrefabUtility.UnloadPrefabContents(fresh);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            RestoreAssetId(prefabPath);
+            return ReadbackNative(prefabPath, spec, offset) + (note != null ? " — " + note : "");
+        }
+
+        /// <summary>
+        /// Переносит разделение из копии <paramref name="fresh"/> в <paramref name="root"/>: меш узла, поза поднятых
+        /// рамок, узлы <c>Sight{Role}Frame/Sight{Role}[/Sight{Role}Mesh]</c>. Существующие узлы той же формы обновляются на
+        /// месте (TRS и сериализованные поля компонентов), иначе заменяются копией.
+        /// </summary>
+        private static void Sync(GameObject root, GameObject fresh, SightSplitSpec spec)
+        {
+            foreach (SightNodeRaise raise in spec.Raises)
+            {
+                Transform from = fresh.transform.Find(raise.NodePath), to = root.transform.Find(raise.NodePath);
+                to.SetLocalPositionAndRotation(from.localPosition, from.localRotation);
+            }
+            foreach (SightSplitPartSpec part in spec.Parts)
+            {
+                Transform freshNode = fresh.transform.Find(part.NodePath), node = root.transform.Find(part.NodePath);
+                MeshFilter freshFilter = freshNode.GetComponent<MeshFilter>(), filter = node.GetComponent<MeshFilter>();
+                if (freshFilter != null && filter != null) filter.sharedMesh = freshFilter.sharedMesh;
+                Transform freshFrame = freshNode.Find(part.FrameName), frame = node.Find(part.FrameName);
+                if (frame != null && SameShape(freshFrame, frame)) CopyTree(freshFrame, frame);
+                else
+                {
+                    if (frame != null) UnityEngine.Object.DestroyImmediate(frame.gameObject);
+                    GameObject copy = UnityEngine.Object.Instantiate(freshFrame.gameObject, node, false);
+                    copy.name = freshFrame.name;
+                }
+            }
+        }
+
+        private static bool SameShape(Transform a, Transform b)
+        {
+            if (a.name != b.name || a.childCount != b.childCount) return false;
+            var ta = a.GetComponents<Component>().Select(c => c.GetType()).ToArray();
+            var tb = b.GetComponents<Component>().Select(c => c != null ? c.GetType() : null).ToArray();
+            if (!ta.SequenceEqual(tb)) return false;
+            for (int i = 0; i < a.childCount; i++) if (!SameShape(a.GetChild(i), b.GetChild(i))) return false;
+            return true;
+        }
+
+        private static void CopyTree(Transform from, Transform to)
+        {
+            to.SetLocalPositionAndRotation(from.localPosition, from.localRotation);
+            to.localScale = from.localScale;
+            to.gameObject.layer = from.gameObject.layer;
+            var source = from.GetComponents<Component>();
+            var target = to.GetComponents<Component>();
+            for (int i = 0; i < source.Length; i++)
+                if (!(source[i] is Transform)) EditorUtility.CopySerialized(source[i], target[i]);
+            for (int i = 0; i < from.childCount; i++) CopyTree(from.GetChild(i), to.GetChild(i));
+        }
+
+        private static bool InsideSightFrame(Transform t, SightSplitSpec spec)
+        {
+            foreach (SightSplitPartSpec part in spec.Parts)
+                for (Transform c = t; c != null; c = c.parent)
+                    if (c.name == part.FrameName && c.parent != null && c.parent.GetComponent<SightAdjustablePart>() == null) return true;
+            return false;
+        }
+
+        /// <summary>Меши корпуса и детали — ассетами (на месте прежних, GUID сохраняется); узлы ссылаются на ассеты.</summary>
+        private static void Persist(SightSplitSpec spec, SightSplitApplyResult split)
+        {
+            foreach (var pair in split.Splits)
+            {
+                if (pair.Value.Parts.Count == 0) continue;
+                SightSplitPartSpec extracted = pair.Value.Parts[0].Spec;
+                pair.Key.GetComponent<MeshFilter>().sharedMesh = SaveMesh(pair.Value.Body, SightPartSplitter.MeshAssetPath(spec, extracted, true));
+                foreach (SightPartMesh part in pair.Value.Parts)
+                    split.PartRenderers[part.Spec].GetComponent<MeshFilter>().sharedMesh = SaveMesh(part.Mesh, SightPartSplitter.MeshAssetPath(spec, part.Spec, false));
+            }
+        }
+
+        private static Mesh SaveMesh(Mesh source, string path)
+        {
+            string folder = Path.GetDirectoryName(path).Replace('\\', '/');
+            SightKitBuilder.EnsureFolder(folder);
+            Mesh asset = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            bool create = asset == null;
+            if (create && File.Exists(path)) throw new InvalidOperationException("Путь меша занят ассетом другого типа: " + path);
+            if (create) asset = new Mesh();
+            CopyMesh(source, asset);
+            asset.name = Path.GetFileNameWithoutExtension(path); // CreateAsset всё равно назовёт по файлу — первый и повторный прогон одинаковы
+            // В игре меш только рисуется: без CPU-копии (как импорт FBX пака).
+            var so = new SerializedObject(asset);
+            so.FindProperty("m_IsReadable").boolValue = false;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            if (create) AssetDatabase.CreateAsset(asset, path);
+            else EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssetIfDirty(asset);
+            return asset;
+        }
+
+        /// <summary>
+        /// Копия меша через Mesh API (сырые вершинные потоки, индексы по подмешам, bounds). EditorUtility.CopySerialized
+        /// для меша, собранного SetVertexBufferData в несколько потоков (меши пака Hands), теряет вершины — проверено 2026-10-20.
+        /// </summary>
+        private static void CopyMesh(Mesh source, Mesh target)
+        {
+            using (var data = Mesh.AcquireReadOnlyMeshData(source))
+            {
+                target.Clear(false);
+                target.indexFormat = source.indexFormat;
+                target.SetVertexBufferParams(source.vertexCount, source.GetVertexAttributes());
+                for (int stream = 0; stream < data[0].vertexBufferCount; stream++)
+                {
+                    var bytes = data[0].GetVertexData<byte>(stream);
+                    target.SetVertexBufferData(bytes, 0, 0, bytes.Length, stream, UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
+                }
+                target.subMeshCount = source.subMeshCount;
+                for (int s = 0; s < source.subMeshCount; s++)
+                    target.SetIndices(source.GetIndices(s), MeshTopology.Triangles, s, false);
+                target.bounds = source.bounds;
+            }
+        }
+
+        private static string ReadbackNative(string prefabPath, SightSplitSpec spec, float offset)
+        {
+            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            SightParts.Find(asset, out var rear, out var front, out var moving);
+            foreach (SightSplitPartSpec part in spec.Parts)
+            {
+                Transform node = asset.transform.Find(part.NodePath);
+                if (node == null || node.Find(part.FrameName + "/" + part.PartName) == null)
+                    throw new InvalidOperationException($"Readback: нет {part.NodePath}/{part.FrameName}/{part.PartName}");
+                if (!part.Extract) continue;
+                if (AssetDatabase.GetAssetPath(node.GetComponent<MeshFilter>().sharedMesh) != SightPartSplitter.MeshAssetPath(spec, part, true))
+                    throw new InvalidOperationException("Readback: у узла " + part.NodePath + " не меш корпуса");
+                var partMesh = node.Find($"{part.FrameName}/{part.PartName}/{part.MeshObjectName}")?.GetComponent<MeshFilter>();
+                if (partMesh == null || AssetDatabase.GetAssetPath(partMesh.sharedMesh) != SightPartSplitter.MeshAssetPath(spec, part, false))
+                    throw new InvalidOperationException("Readback: у детали " + part.Role + " не сохранённый меш");
+            }
+            if (moving != null && Mathf.Abs(moving.Offset - offset) > 1e-6f)
+                throw new InvalidOperationException("Readback: сдвиг подвижной детали не совпал");
+            return $"{prefabPath}: родной прицел разделён ({spec.WeaponId}), " +
+                   (moving != null ? $"сдвиг {moving.Offset * 1000:+0.00;-0.00;0.00} мм" : "без подвижной детали");
         }
 
         // ── Проверки ────────────────────────────────────────────
@@ -165,7 +459,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 Transform rear = entry.Kit.transform.Find("Rear"), front = entry.Kit.transform.Find("Front");
                 if (rear == null || front == null) throw new InvalidOperationException("У комплекта нет половин Rear/Front");
             }
-            else moving = Moving(root);
+            else throw new InvalidOperationException("Запись без комплекта — родной прицел (PreflightNative)");
             if (!moving.IsWithinTravel(entry.MovingOffset))
                 throw new InvalidOperationException($"Сдвиг {entry.MovingOffset * 1000:0.00} мм вне хода −{moving.TravelDown * 1000:0.00}…+{moving.TravelUp * 1000:0.00} мм");
             return $"{root.name}: {(entry.Kit != null ? entry.Kit.name : "встроенный прицел")}, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм, " +

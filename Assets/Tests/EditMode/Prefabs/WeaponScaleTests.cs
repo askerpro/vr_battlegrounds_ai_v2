@@ -31,10 +31,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         private static readonly Dictionary<string, Vector2> RealLengths = new Dictionary<string, Vector2>
         {
             { "BrowningHiPower",         new Vector2(0.17f, 0.23f) }, // Browning Hi-Power: принятый игровой диапазон сохраняется
-            { "Gun",              new Vector2(0.17f, 0.23f) }, // пистолет сэмпла UltimateXR
-            { "Shotgun",          new Vector2(0.80f, 1.10f) }, // Remington 870: 100–106 см
             { "FabarmSDASS",     new Vector2(0.66f, 0.78f) }, // FABARM SDASS: принятый игровой диапазон сохраняется
-            { "Machinegun",       new Vector2(0.85f, 1.20f) }, // ручной пулемёт / штурмовая винтовка
             { "Grenade",          new Vector2(0.08f, 0.12f) }, // M67: 9 см, с запалом 11
 
             // T-38, пак Hands: размер — по руке пака (длина в паке × 0,707, как у Gun_real), чтобы хват из

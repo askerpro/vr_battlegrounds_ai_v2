@@ -16,8 +16,8 @@ MonoBehaviour:
   - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
     WeaponId: TR15
     Kit: {fileID: 3461758466485114572, guid: 1f70cec2f0f5ad341bd513822d1098e8, type: 3}
-    KitLocalPosition: {x: 0.00028601848, y: 0.06843856, z: 0.02373872}
-    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    KitLocalPosition: {x: 0.0009839241, y: 0.06856251, z: 0.021739818}
+    KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
     RearAlongRail: 0
     FrontAlongRail: 0
     MovingOffset: 0
@@ -29,6 +29,396 @@ MonoBehaviour:
       - TR15
       LocalPositions:
       - {x: 0.0002949359, y: 0.045662507, z: 0.5668245}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: 7d9a79e589f45c74e9585bdbed93ce76, type: 2}
+    WeaponId: AK105
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0.0009108782
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - AK105
+      LocalPositions:
+      - {x: 0.0014420524, y: 0.024627713, z: 0.48046798}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
+    WeaponId: Mk14
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.00640738
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Mk14
+      LocalPositions:
+      - {x: 0.00000011827797, y: 0.05331959, z: 0.7122128}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
+    WeaponId: Viper
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.0030723698
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Viper
+      LocalPositions:
+      - {x: 0.000000034458935, y: 0.04140602, z: 0.13957052}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: aee060eddb6e37d47a40b21ba4b87468, type: 2}
+    WeaponId: R08
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0.00057296455
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - R08
+      LocalPositions:
+      - {x: -0.000019634143, y: 0.04737705, z: 0.15409656}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: 43bf1b3029e7a1945b50f121df6b0a73, type: 2}
+    WeaponId: MP5K
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.00090417266
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - MP5K
+      LocalPositions:
+      - {x: -0.000015054713, y: 0.015035088, z: 0.046982944}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 4.5333433, y: 4.5333433, z: 4.5333433}
+  - Weapon: {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
+    WeaponId: Uzi
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.0009037927
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Uzi
+      LocalPositions:
+      - {x: -0.004712034, y: 0.17955026, z: 0.8930168}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.20867454, y: 0.20867454, z: 0.20867454}
+  - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
+    WeaponId: Herrington
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0.0016495809
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Herrington
+      LocalPositions:
+      - {x: -0.000000058673322, y: 0.032150242, z: 0.61568034}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
+    WeaponId: Revolver
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0.00039236248
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Revolver
+      LocalPositions:
+      - {x: 0.00039944611, y: 0.18751764, z: 0.23459299}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.7058332, y: 0.7058332, z: 0.7058332}
+  - Weapon: {fileID: 11400000, guid: b2e37e600ab1893469a53e2d5940e98b, type: 2}
+    WeaponId: Gun
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.00018964335
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - BrowningHiPower
+      LocalPositions:
+      - {x: -0.000000009313226, y: 0.052155938, z: 0.15573911}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.68, y: 0.68, z: 0.68}
+  - Weapon: {fileID: 11400000, guid: 404a3a34a0892dc409212566f388c37f, type: 2}
+    WeaponId: Scar
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.0020253658
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Scar
+      LocalPositions:
+      - {x: -0.006268002, y: 0.079842955, z: 0.5076409}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.71620476, y: 0.71620476, z: 0.71620476}
+  - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
+    WeaponId: SRM12
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: -0.005162582
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - SRM12
+      LocalPositions:
+      - {x: 0.00000012014061, y: 0.039058767, z: 0.5225631}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: e656ffaededf94447b00dfe8561f5caf, type: 2}
+    WeaponId: PPK
+    Kit: {fileID: 0}
+    KitLocalPosition: {x: 0, y: 0, z: 0}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - PPK
+      LocalPositions:
+      - {x: 0.0000000018626451, y: 0.07647364, z: 0.15497452}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.65456605, y: 0.65456605, z: 0.65456605}
+  - Weapon: {fileID: 11400000, guid: 4f810565631ae0c40bce683a1d290f39, type: 2}
+    WeaponId: M16
+    Kit: {fileID: 1915617855418213174, guid: 992f4fd4888411942a44527b8d75739e, type: 3}
+    KitLocalPosition: {x: -0.0047711562, y: 0.118595384, z: 0.0059185713}
+    KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
+    RearAlongRail: 0.011548452
+    FrontAlongRail: 0.21509969
+    MovingOffset: -0.005240001
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - AR15
+      LocalPositions:
+      - {x: -0.004892179, y: 0.08757315, z: 0.7655596}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 0.7, y: 0.7, z: 0.7}
+  - Weapon: {fileID: 11400000, guid: 60bc69af3cd41db4bb971e35f2a44346, type: 2}
+    WeaponId: SniperRifle
+    Kit: {fileID: 1915617855418213174, guid: 992f4fd4888411942a44527b8d75739e, type: 3}
+    KitLocalPosition: {x: 0.000077293276, y: 0.07509597, z: 0.017768776}
+    KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
+    RearAlongRail: 0.011548452
+    FrontAlongRail: 0.49759966
+    MovingOffset: -0.0063428357
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - SniperRifle
+      LocalPositions:
+      - {x: -0.0000000027939677, y: 0.054552488, z: 0.7476974}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1.0959959, y: 1.0959959, z: 1.0959959}
+  - Weapon: {fileID: 11400000, guid: 7fdcb3f0b05028044a0ba801f61bf4cc, type: 2}
+    WeaponId: MKR9
+    Kit: {fileID: 2555542198041491480, guid: e55ad9da72c636945aab161408f2c102, type: 3}
+    KitLocalPosition: {x: 0.00083337567, y: 0.06936651, z: -0.052559227}
+    KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
+    RearAlongRail: 0.1950625
+    FrontAlongRail: -0.0009503033
+    MovingOffset: 0.00007460266
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - MKR9
+      LocalPositions:
+      - {x: 0.00082366634, y: 0.03105832, z: 0.2676911}
       - {x: 0, y: 0, z: 0}
       - {x: 0, y: 0, z: 0}
       LocalRotations:

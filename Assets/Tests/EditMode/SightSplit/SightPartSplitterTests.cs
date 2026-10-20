@@ -48,7 +48,7 @@ namespace VrBattlegrounds.Tests.SightSplit
         [Test]
         public void Table_CoversAgreedWeapons()
         {
-            CollectionAssert.AreEquivalent(new[] { "AK105", "Mk14", "Viper", "R08", "MP5K", "Uzi", "Herrington", "Revolver", "Gun", "PPK", "Scar" }, Weapons.ToArray());
+            CollectionAssert.AreEquivalent(new[] { "AK105", "Mk14", "Viper", "R08", "MP5K", "Uzi", "Herrington", "Revolver", "Gun", "PPK", "Scar", "SRM12" }, Weapons.ToArray());
             foreach (SightSplitSpec spec in SightSplitTable.All)
                 Assert.That(spec.Parts.Count(p => p.Movable), Is.EqualTo(spec.WeaponId == "PPK" ? 0 : 1), spec.WeaponId);
         }
@@ -56,10 +56,13 @@ namespace VrBattlegrounds.Tests.SightSplit
         [TestCaseSource(nameof(Weapons))]
         public void Selectors_FindExactlyOneIslandEach(string weaponId)
         {
-            using var copy = new TempCopy(weaponId, apply: false);
-            foreach (var group in copy.Spec.Parts.Where(p => p.Selectors.Count > 0).GroupBy(p => p.NodePath))
+            // Селекторы — по исходному мешу спецификации (ассет + localFileID): узел мигрированного префаба уже держит
+            // корпус без детали (раунд 2, 2026-10-20).
+            SightSplitSpec spec = SightSplitTable.Get(weaponId);
+            foreach (var group in spec.Parts.Where(p => p.Selectors.Count > 0).GroupBy(p => p.NodePath))
             {
-                Mesh mesh = copy.Root.transform.Find(group.Key).GetComponent<MeshFilter>().sharedMesh;
+                Mesh mesh = SightPartSplitter.SourceMesh(group.First());
+                Assert.That(mesh, Is.Not.Null, $"{weaponId}: нет исходного меша {group.First().SourceMeshPath}:{group.First().SourceMeshLocalId}");
                 SightMeshSnapshot snapshot = SightMeshSnapshot.Read(mesh, weaponId);
                 var islands = new MeshIslands(snapshot.Positions, snapshot.SubmeshIndices);
                 foreach (SightSplitPartSpec part in group)
@@ -191,6 +194,9 @@ namespace VrBattlegrounds.Tests.SightSplit
         {
             using var copy = new TempCopy("Scar", apply: false);
             Transform root = copy.Root.transform;
+            // Префаб уже мигрирован (рамки подняты) — сложенная поза берётся из спецификации.
+            foreach (SightNodeRaise raise in copy.Spec.Raises)
+                root.Find(raise.NodePath).SetLocalPositionAndRotation(raise.FoldedLocalPosition, raise.FoldedLocalRotation);
             var folded = copy.Spec.Raises.Select(r => (r, node: root.Find(r.NodePath))).Select(x => (x.r, x.node,
                 position: SightSplitPaths.PrefabMetres(root, x.node.position), rotation: Quaternion.Inverse(root.rotation) * x.node.rotation)).ToList();
             copy.Result = SightPartSplitter.Apply(copy.Root, copy.Spec);

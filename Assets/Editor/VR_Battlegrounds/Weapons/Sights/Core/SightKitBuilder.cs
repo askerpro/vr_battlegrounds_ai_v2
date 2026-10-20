@@ -189,7 +189,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             for (int i = 0; i < Kits.Length; i++)
             {
                 Material material = Kits[i].MaterialPath != null ? AssetDatabase.LoadAssetAtPath<Material>(Kits[i].MaterialPath) : mx68;
-                WritePrefab(Kits[i], layouts[i], material);
+                report.Append(WritePrefab(Kits[i], layouts[i], material)).Append('\n');
                 report.Append(Readback(Kits[i], layouts[i], material)).Append('\n');
             }
             report.Append(BuildOptics());
@@ -229,6 +229,13 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     var materials = Enumerable.Repeat(housing, mesh.subMeshCount).ToArray();
                     materials[optic.LensMaterialIndex] = reticle;
                     renderer.sharedMaterials = materials;
+                    // Крепление к планке — по нижней поверхности корпуса в системе корня (раунд 3, «Посадка в паз»).
+                    var probe = new SurfaceProbe();
+                    Matrix4x4 meshToRoot = Matrix4x4.TRS(nodePosition, Quaternion.Euler(optic.MeshEuler), Vector3.one);
+                    probe.Add(mesh, meshToRoot);
+                    SightMountInfo mount = SightRailMount.FindMount(probe, RotatedBounds(mesh.bounds, meshToRoot), optic.Name);
+                    Node(Child(root.transform, SightRailMount.MountName), mount.Point, null, null);
+                    report.Append(optic.Name).Append(" крепление: ").Append(mount).Append('\n');
                     var view = node.GetComponent<WeaponOpticView>();
                     if (view == null) view = node.gameObject.AddComponent<WeaponOpticView>();
                     var so = new SerializedObject(view);
@@ -286,7 +293,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
 
         private static void ValidateOwnedOptic(OpticKitSpec optic, GameObject root)
         {
-            var allowed = new HashSet<string> { root.name, optic.NodeName };
+            var allowed = new HashSet<string> { root.name, optic.NodeName, SightRailMount.MountName };
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
             {
                 if (!allowed.Contains(t.name))
@@ -305,6 +312,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 throw new InvalidOperationException("Readback: у коллиматора не должно быть деталей механики и коллайдеров");
             var views = asset.GetComponentsInChildren<WeaponOpticView>(true);
             if (views.Length != 1) throw new InvalidOperationException("Readback: нужен ровно один WeaponOpticView");
+            if (asset.transform.Find(SightRailMount.MountName) == null) throw new InvalidOperationException("Readback: нет узла крепления " + SightRailMount.MountName);
             Transform node = asset.transform.Find(optic.NodeName);
             if (node == null || (node.localPosition - nodePosition).magnitude > 1e-7f || Quaternion.Angle(node.localRotation, Quaternion.Euler(optic.MeshEuler)) > 1e-3f)
                 throw new InvalidOperationException("Readback: поза узла оптики не совпала");
@@ -430,8 +438,28 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
 
         // ── Префаб ──────────────────────────────────────────────
 
-        private static void WritePrefab(KitSpec kit, KitLayout layout, Material material)
+        /// <summary>Bounds меша после матрицы (по 8 углам).</summary>
+        private static Bounds RotatedBounds(Bounds b, Matrix4x4 m)
         {
+            var result = new Bounds(m.MultiplyPoint3x4(b.min), Vector3.zero);
+            for (int i = 0; i < 8; i++)
+                result.Encapsulate(m.MultiplyPoint3x4(new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z)));
+            return result;
+        }
+
+        /// <summary>Узел крепления <see cref="SightRailMount.MountName"/> под основанием: точка контакта и упора (из меша).</summary>
+        private static string Mount(Transform node, Mesh baseMesh, string context)
+        {
+            var probe = new SurfaceProbe();
+            probe.Add(baseMesh, Matrix4x4.identity);
+            SightMountInfo info = SightRailMount.FindMount(probe, baseMesh.bounds, context);
+            Node(Child(node, SightRailMount.MountName), info.Point, null, null);
+            return context + " крепление: " + info;
+        }
+
+        private static string WritePrefab(KitSpec kit, KitLayout layout, Material material)
+        {
+            string mounts;
             bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(kit.PrefabPath) != null;
             GameObject root = exists ? PrefabUtility.LoadPrefabContents(kit.PrefabPath) : new GameObject(kit.Name);
             try
@@ -442,6 +470,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 Transform front = Node(Child(root.transform, "Front"), layout.Front.NodeLocalPosition, layout.Front.BaseMesh, material);
                 Part(Node(Child(rear, kit.Rear.PartName), layout.Rear.PartLocalPosition, layout.Rear.PartMesh, material), kit.Rear, layout.Rear);
                 Part(Node(Child(front, kit.Front.PartName), layout.Front.PartLocalPosition, layout.Front.PartMesh, material), kit.Front, layout.Front);
+                mounts = Mount(rear, layout.Rear.BaseMesh, kit.Name + " Rear") + "\n" + Mount(front, layout.Front.BaseMesh, kit.Name + " Front");
                 if (PrefabUtility.SaveAsPrefabAsset(root, kit.PrefabPath) == null)
                     throw new InvalidOperationException("Не удалось сохранить " + kit.PrefabPath);
             }
@@ -450,12 +479,13 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 if (exists) PrefabUtility.UnloadPrefabContents(root);
                 else UnityEngine.Object.DestroyImmediate(root);
             }
+            return mounts;
         }
 
         /// <summary>Префаб содержит только узлы и компоненты этого writer; иначе отказ без записи.</summary>
         private static void ValidateOwned(KitSpec kit, GameObject root)
         {
-            var allowedNames = new HashSet<string> { root.name, "Rear", "Front", kit.Rear.PartName, kit.Front.PartName };
+            var allowedNames = new HashSet<string> { root.name, "Rear", "Front", kit.Rear.PartName, kit.Front.PartName, SightRailMount.MountName };
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
             {
                 if (!allowedNames.Contains(t.name))

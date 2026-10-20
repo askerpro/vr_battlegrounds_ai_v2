@@ -709,6 +709,54 @@ MonoBehaviour:
   _uxrUniqueId: 7bd28ec6-2c1c-44a3-a33e-e4d35fadda05
   __prefabGuid: 53b2af502e94d13489397cef90c86925
   __isInPrefab: 1
+--- !u!1 &1925383094849689460
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3360304024097721946}
+  - component: {fileID: 1577561466438307700}
+  m_Layer: 0
+  m_Name: SightRear
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3360304024097721946
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1925383094849689460}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.000010001087, y: 0.066796154, z: -0.049032748}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7057657727998466427}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1577561466438307700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1925383094849689460}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 955d7f020ea40ab4b9dca8848bdf1c3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Sights.SightAdjustablePart
+  _role: 0
+  _neutralLocalPosition: {x: 0.000010001087, y: 0.066796154, z: -0.049032748}
+  _travelDown: 0
+  _travelUp: 0
 --- !u!1 &2021582190267622700
 GameObject:
   m_ObjectHideFlags: 0
@@ -846,6 +894,38 @@ MonoBehaviour:
   _uxrUniqueId: 3485b204-2fab-466d-8665-e1c7d2c2e1cf
   __prefabGuid: 53b2af502e94d13489397cef90c86925
   __isInPrefab: 1
+--- !u!1 &2156940678921254951
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2962020818660802949}
+  m_Layer: 0
+  m_Name: SightFrontFrame
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2962020818660802949
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2156940678921254951}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.7071069, y: 0.00000017641345, z: -0.0000001631717, w: 0.7071067}
+  m_LocalPosition: {x: -0.00000010556604, y: 0.01702021, z: 0.005849414}
+  m_LocalScale: {x: 1.52773, y: 1.5277295, z: 1.5277295}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4383691623159264440}
+  m_Father: {fileID: 5970669985926589971}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2226238828419683324
 GameObject:
   m_ObjectHideFlags: 0
@@ -1682,6 +1762,8 @@ Transform:
   - {fileID: 3584411254462160548}
   - {fileID: 6867507796167494102}
   - {fileID: 3014765162785129913}
+  - {fileID: 7057657727998466427}
+  - {fileID: 2962020818660802949}
   m_Father: {fileID: 6257543447470349033}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1035689135029895266
@@ -2173,6 +2255,86 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponMagazineAnchorHighlight
   _anchor: {fileID: 5311436392561753306}
   _visual: {fileID: 2691537478943293257}
+--- !u!1 &6044612073878220092
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4383691623159264440}
+  - component: {fileID: 8525696215052660210}
+  m_Layer: 0
+  m_Name: SightFront
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4383691623159264440
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044612073878220092}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.0000000011068378, y: 0.06677632, z: 0.10074608}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2962020818660802949}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8525696215052660210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044612073878220092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 955d7f020ea40ab4b9dca8848bdf1c3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Sights.SightAdjustablePart
+  _role: 1
+  _neutralLocalPosition: {x: 0.0000000011068378, y: 0.06677632, z: 0.10074608}
+  _travelDown: 0
+  _travelUp: 0
+--- !u!1 &6257299833100356710
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7057657727998466427}
+  m_Layer: 0
+  m_Name: SightRearFrame
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7057657727998466427
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6257299833100356710}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.7071069, y: 0.00000017641345, z: -0.0000001631717, w: 0.7071067}
+  m_LocalPosition: {x: -0.00000010556604, y: 0.01702021, z: 0.005849414}
+  m_LocalScale: {x: 1.52773, y: 1.5277295, z: 1.5277295}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3360304024097721946}
+  m_Father: {fileID: 5970669985926589971}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6918846520955968794
 GameObject:
   m_ObjectHideFlags: 0

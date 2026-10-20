@@ -166,31 +166,6 @@ MonoBehaviour:
       PhysicalRootBounds:
         m_Center: {x: 0, y: 0, z: 0}
         m_Extent: {x: 0.012030228, y: 0.09548226, z: 0.03645982}
-  - Weapon: {fileID: 11400000, guid: 16e9377ecb9b1bb41929e8aa3a7d3ae9, type: 2}
-    WeaponId: Machinegun
-    SourceGuid: 16e9377ecb9b1bb41929e8aa3a7d3ae9
-    Item:
-      Present: 1
-      Resource: {fileID: 7352647028226897614, guid: 4a28fd7096bf0994eac0a22cbb3a922c, type: 3}
-      SourceGuid: 4a28fd7096bf0994eac0a22cbb3a922c
-      SourceFingerprint: dfd15c9e655f2d4e779617cbdfa29192
-      PhysicalScale: {x: 1, y: 1, z: 1}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: 0.0000000037252903, y: 0.02398251, z: 0.16095719}
-        m_Extent: {x: 0.02674273, y: 0.1386342, z: 0.4945067}
-    Magazine:
-      Present: 1
-      Resource: {fileID: 4349744495954637256, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
-      SourceGuid: ff6c66ad770fc1f42854b90cb14b7ad0
-      SourceFingerprint: 93864782a35d07c8b91c30eaa54f7516
-      PhysicalScale: {x: 1, y: 1, z: 1}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: 0.00010849815, y: -0.054847, z: 0.0000000037252903}
-        m_Extent: {x: 0.012775348, y: 0.055529226, z: 0.034626473}
   - Weapon: {fileID: 11400000, guid: e0b50a7a3495ac74eb153cd542432c4e, type: 2}
     WeaponId: Mk14
     SourceGuid: e0b50a7a3495ac74eb153cd542432c4e
@@ -291,31 +266,6 @@ MonoBehaviour:
       PhysicalRootBounds:
         m_Center: {x: 0, y: -0.000000007450581, z: -0.00014821999}
         m_Extent: {x: 0.02209707, y: 0.02213056, z: 0.024438035}
-  - Weapon: {fileID: 11400000, guid: 2d5744f916e787646bda8847c74f84fc, type: 2}
-    WeaponId: SDKGun
-    SourceGuid: 2d5744f916e787646bda8847c74f84fc
-    Item:
-      Present: 1
-      Resource: {fileID: 1322554604466671563, guid: a9d715d8903fb4640b9d200d10aa876d, type: 3}
-      SourceGuid: a9d715d8903fb4640b9d200d10aa876d
-      SourceFingerprint: fabeec606b5419fa62df23220632e77b
-      PhysicalScale: {x: 0.55, y: 0.55, z: 0.55}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: -0.0000000018626451, y: -0.012669869, z: 0.076371476}
-        m_Extent: {x: 0.013127778, y: 0.069200695, z: 0.1041034}
-    Magazine:
-      Present: 1
-      Resource: {fileID: 7658064994636483981, guid: 425cdab6ae3143146873c90b4a0f0d76, type: 3}
-      SourceGuid: 425cdab6ae3143146873c90b4a0f0d76
-      SourceFingerprint: 91757459aade829f811857846a2b768e
-      PhysicalScale: {x: 0.55, y: 0.55, z: 0.55}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: 0.00017300528, y: -0.029773066, z: 0}
-        m_Extent: {x: 0.0072220964, y: 0.030901967, z: 0.0192696}
   - Weapon: {fileID: 11400000, guid: 06130e656acaee24da3fb3f2d54de872, type: 2}
     WeaponId: SRM12
     SourceGuid: 06130e656acaee24da3fb3f2d54de872
@@ -366,31 +316,6 @@ MonoBehaviour:
       PhysicalRootBounds:
         m_Center: {x: 9.313226e-10, y: 0, z: 0}
         m_Extent: {x: 0.012036583, y: 0.08727333, z: 0.035714462}
-  - Weapon: {fileID: 11400000, guid: bf5b7399e87929c45ae98591db37ec71, type: 2}
-    WeaponId: Shotgun
-    SourceGuid: bf5b7399e87929c45ae98591db37ec71
-    Item:
-      Present: 1
-      Resource: {fileID: 5857197354937311182, guid: 8b9da2dc5df93b94e96eb12b2ac13288, type: 3}
-      SourceGuid: 8b9da2dc5df93b94e96eb12b2ac13288
-      SourceFingerprint: d72256fd11b908037f8143cb67e72e28
-      PhysicalScale: {x: 1, y: 1, z: 1}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: 0.000000014901161, y: 0.0010869801, z: 0.15007061}
-        m_Extent: {x: 0.033204377, y: 0.13615108, z: 0.4228536}
-    Magazine:
-      Present: 1
-      Resource: {fileID: 5837573240272137203, guid: d28f92e640efecc41b278625340bff0c, type: 3}
-      SourceGuid: d28f92e640efecc41b278625340bff0c
-      SourceFingerprint: ef841ca5806ed42270393f1cfc09504a
-      PhysicalScale: {x: 1, y: 1, z: 1}
-      DropOffsetPhysical: {x: 0, y: 0, z: 0}
-      DropRotation: {x: 0, y: 0, z: 0, w: 1}
-      PhysicalRootBounds:
-        m_Center: {x: 0.00008583628, y: -0.05413285, z: 0}
-        m_Extent: {x: 0.015970854, y: 0.056185417, z: 0.035035647}
   - Weapon: {fileID: 11400000, guid: 29c9d566aa4ac214ab127b4e633b4334, type: 2}
     WeaponId: ShotgunReal
     SourceGuid: 29c9d566aa4ac214ab127b4e633b4334

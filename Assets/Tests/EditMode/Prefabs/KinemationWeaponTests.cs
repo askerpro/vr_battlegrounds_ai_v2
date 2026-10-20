@@ -100,7 +100,9 @@ namespace VrBattlegrounds.Tests.Prefabs
                     { "Ammo_01", "MeshContainer/MagAnchor/MKR9_mag/Ammo_01" }
                 },
                 ActionPart = "Bolt", Clip = "A_W_MKR9_Fire",
-                Dropped = new[] { "Ammo_03", "Ammo_30", "Follower", "Spring" }, MaxTriangles = 30000
+                // 32000 (решение пользователя 2026-10-20): комплект прицела SightKit_MX68 добавляет 3026 треугольников
+                // к стволу ~28,5 тыс.; бюджет поднят вместо замены комплекта.
+                Dropped = new[] { "Ammo_03", "Ammo_30", "Follower", "Spring" }, MaxTriangles = 32000
             };
             yield return new Case
             {
@@ -135,7 +137,9 @@ namespace VrBattlegrounds.Tests.Prefabs
                 },
                 Attachments = new Dictionary<string, string>
                 {
-                    { "SM_Attach_AR15_Silencer", "MeshContainer/SM_Attach_AR15_Silencer" }, { "SM_Attach_AR15_XPS2", "MeshContainer/SM_Attach_AR15_XPS2" }
+                    // Коллиматор XPS2 с 2026-10-20 — не обвес пака, а вложенный комплект MeshContainer/SightKit_XPS2 в пазу
+                    // планки (Коллиматор_TR15_вложенный_комплект_XPS2, WeaponSightPrefabTests).
+                    { "SM_Attach_AR15_Silencer", "MeshContainer/SM_Attach_AR15_Silencer" }
                 },
                 Muzzle = "SM_Attach_AR15_Silencer",
                 ActionPart = "Bolt", Clip = "A_W_TR15_Fire", EmptyClip = "A_W_TR15_Fire_Out",
@@ -249,6 +253,31 @@ namespace VrBattlegrounds.Tests.Prefabs
 
         public static IEnumerable<Case> WithAttachments() => Cases().Where(c => c.Attachments != null);
 
+        /// <summary>
+        /// Коллиматор TR15 (решение пользователя 2026-10-20): вложенный префаб SightKit_XPS2 под MeshContainer, один
+        /// WeaponOpticView на окне XPS2, сетка привязана к источнику выстрела TR15 и сведена на дистанцию пристрелки.
+        /// Прежнего обвеса пака SM_Attach_AR15_XPS2 в префабе нет.
+        /// </summary>
+        [Test]
+        public void Коллиматор_TR15_вложенный_комплект_XPS2()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Weapons/TR15/TR15.prefab");
+            Transform kit = prefab.transform.Find("MeshContainer/SightKit_XPS2");
+            Assert.That(kit, Is.Not.Null, "нет MeshContainer/SightKit_XPS2");
+            Assert.That(PrefabUtility.IsAnyPrefabInstanceRoot(kit.gameObject), Is.True, "коллиматор — вложенный префаб комплекта");
+            Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromOriginalSource(kit.gameObject)),
+                        Is.EqualTo("Assets/Prefabs/Weapons/Sights/SightKit_XPS2.prefab"));
+            Assert.That(prefab.GetComponentsInChildren<Transform>(true).Any(t => t.name == "SM_Attach_AR15_XPS2"), Is.False, "прежний обвес XPS2 снят");
+            var views = prefab.GetComponentsInChildren<VrBattlegrounds.Weapons.Sights.WeaponOpticView>(true);
+            Assert.That(views.Length, Is.EqualTo(1));
+            Assert.That(views[0].transform.parent, Is.EqualTo(kit));
+            var so = new SerializedObject(views[0]);
+            Assert.That(so.FindProperty("_source").objectReferenceValue, Is.EqualTo(prefab.GetComponentInChildren<UxrProjectileSource>(true)));
+            var settings = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Weapons.Sights.WeaponSightCalibrationSettings>(
+                "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset");
+            Assert.That(so.FindProperty("_calibratedZeroDistance").floatValue, Is.EqualTo(settings.DefaultZeroDistance), "сетка сведена на пристрелку");
+        }
+
         [TestCaseSource(nameof(Cases))]
         public void Ход_затвора_как_в_клипе(Case c)
         {
@@ -354,7 +383,8 @@ namespace VrBattlegrounds.Tests.Prefabs
             {
                 if (m == null) { failures.Add($"{prefab.name}/{r.name}: пустой материал"); continue; }
                 if (r.name == "GrabHighlight") continue;
-                bool opticLens = c.PackPrefab == "W_TR15" && r.name == "SM_Attach_AR15_XPS2" &&
+                // Окно коллиматора — узел XPS2 вложенного комплекта MeshContainer/SightKit_XPS2 (2026-10-20).
+                bool opticLens = c.PackPrefab == "W_TR15" && r.name == "XPS2" && r.transform.parent != null && r.transform.parent.name == "SightKit_XPS2" &&
                     AssetDatabase.GetAssetPath(m) == "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat";
                 if (opticLens)
                 {

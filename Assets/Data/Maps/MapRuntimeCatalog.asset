@@ -34,7 +34,7 @@ MonoBehaviour:
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
     ContentFingerprint: a7553c0bced6c0480c188709fae131f47c4a34e5c5972a8f83f3f3e8bfa4c0c9
-    ArsenalFingerprint: bb0ef3a420b3591f5d91194077ce8e6e903f2e5c0f507ee7df923eb8b0ccca71
+    ArsenalFingerprint: 77fedaa094aa2ca72d4ed8b195ee3625c8714c48dbef897a2f50695803b3e70b
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
     ScenePath: Assets/Scenes/Maps/ServiceYard.unity
     ContentFingerprint: 8fe9822111b39db9dc6a6d967b62528736d688dcda6f1ea3ebaced124755116b
@@ -45,7 +45,7 @@ MonoBehaviour:
     ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
   - Map: {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
     ScenePath: Assets/Scenes/Debug/BotCombatStand.unity
-    ContentFingerprint: e32efa57cab66ab5a91a9978a37a0c29ec4fe75227c5dcee645fb28dd767d39b
+    ContentFingerprint: 320ce131f6ef49c1af17010575382aa9de923a4be46ac677fbc01347869f5b0f
     ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
   _compositionVersion: 1
   _arsenalComposition: {fileID: 11400000, guid: b8538636e1c0b6c4f92d6b8d8e4737b0, type: 2}

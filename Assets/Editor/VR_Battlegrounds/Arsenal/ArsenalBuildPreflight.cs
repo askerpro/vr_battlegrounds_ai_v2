@@ -19,7 +19,8 @@ namespace VrBattlegrounds.Editor.Arsenal
     internal static class ArsenalBuildPreflight
     {
         public const string InsertionMaterial = "Assets/Art/Weapons/Interaction/InsertionHighlight.mat";
-        private const string Mef = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        // Аватар записей хвата поз паков — по GUID, как у импортёра поз (путь менялся переносом в Player/Unused).
+        private static string Mef => HandsPackPoseImporter.MefBaseAvatarPath;
         private const string MagazineGrip = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab";
         private static readonly string[] Effects = { "Tracer_Default", "Impact_Concrete", "ImpactDecal_Concrete", "Muzzle_Default" };
 

@@ -57,6 +57,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             r.TargetLength = 0f; // пак в реальном масштабе
             r.BodyPart = "Body";
             r.RestClip = null;   // покой — поза префаба пака
+            // Области подсветки — сразу в папку ствола, куда их печёт KinemationFixReview; без лишней Interaction/<имя>.
+            r.InteractionFolder = KinemationFixReview.InteractionFolder(r.Name);
             return r;
         }
 
@@ -303,9 +305,21 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public static string PrefabPath(KinemationWeaponRecipe k) => $"Assets/Prefabs/Weapons/{k.Weapon.PrefabFolder}/{k.Weapon.Name}.prefab";
 
-        public static GameObject Build(KinemationWeaponRecipe k)
+        /// <summary>Собственный магазин ствола (как его называет <see cref="HandsPackWeaponBuilder" />).</summary>
+        public static string MagazinePath(KinemationWeaponRecipe k) =>
+            $"Assets/Prefabs/Weapons/{k.Weapon.PrefabFolder}/{k.Weapon.MagazineName ?? k.Weapon.Name + "_mag"}.prefab";
+
+        /// <summary>
+        /// Полная пересборка из пака: звуки → геометрия и магазин → позы (<paramref name="poses" />) → отдача →
+        /// механика и подсветка (<see cref="KinemationFixReview" />) → прицел, хост WeaponSystem, баланс
+        /// (<see cref="WeaponRebuildFinish" />). Хваты по умолчанию переносятся из текущего префаба.
+        /// </summary>
+        public static GameObject Build(KinemationWeaponRecipe k, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             HandsPackWeaponRecipe r = k.Weapon;
+            string path = PrefabPath(k);
+            // Хваты снимаются до сборки: сборщик перезаписывает оружие и магазин.
+            WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, MagazinePath(k));
 
             // Звуки — до геометрии и на своём экземпляре модели: импорт новых WAV обновляет базу ассетов, и у
             // экземпляра, созданного до него, меш пака однажды пришёл без треугольников детали (AK105, первая сборка).
@@ -321,38 +335,19 @@ namespace VrBattlegrounds.Editor.Gameplay
             string[] excluded = k.Excluded ?? new string[0];
             r.StaticParts = model.Parts.Where(p => !used.Contains(p) && !excluded.Any(e => e.EndsWith("*") ? p.StartsWith(e.TrimEnd('*')) : p == e)).ToArray();
 
-            GameObject saved = HandsPackWeaponBuilder.Build(r, model);
-            string path = PrefabPath(k);
-            ImportPoses(k, model);
+            HandsPackWeaponBuilder.Build(r, model);
+            if (poses == WeaponGripPoseMode.ReimportFromPack) ImportPoses(k, model);
+            // До механики: области подсветки хвата строятся по хвату MEF (WeaponInteractionRecipes).
+            WeaponGripCarryOver.Restore(grips, poses);
             HandsPackWeaponBuilder.AlignRecoilToMainGrip(path);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
+            // WeaponInteractionInstaller переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
+            WeaponGripCarryOver.Restore(grips, poses);
             if (r.Name == "TR15") Tr15OpticBuilder.Apply(); // ассеты окна XPS2 для SightKit_XPS2
-            RestoreSight(path);
-            AssetDatabase.SaveAssets();
+            WeaponRebuildFinish.Complete(path, MagazinePath(k), "KinemationWeaponBuilder");
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
             return AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        }
-
-        /// <summary>
-        /// Пересборка пишет префаб заново — комплект прицела из таблицы сведения ставит обратно его писатель
-        /// (<see cref="VrBattlegrounds.Editor.Weapons.Sights.WeaponSightAuthoring"/>). Без записи — ничего.
-        /// </summary>
-        private static void RestoreSight(string prefabPath)
-        {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            var info = AssetDatabase.FindAssets("t:WeaponInfo").Select(AssetDatabase.GUIDToAssetPath)
-                .Select(AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>).FirstOrDefault(i => i != null && i.WeaponPrefab == prefab);
-            try
-            {
-                string report = VrBattlegrounds.Editor.Weapons.Sights.WeaponSightAuthoring.ApplyIfRecorded(info);
-                if (report != null) GameLog.WeaponSystem.Info($"[KinemationWeaponBuilder] прицел из таблицы: {report}");
-            }
-            catch (System.Exception e)
-            {
-                GameLog.WeaponSystem.Warning($"[KinemationWeaponBuilder] {prefabPath}: прицел из таблицы не поставлен — {e.Message}. " +
-                                             "Откройте стенд «Калибровка прицела», сведите и примените заново.", prefab);
-            }
         }
 
         /// <summary>Звуки ствола: выстрел, затвор назад/вперёд, магазин снять/вставить — куски звуков пака.</summary>

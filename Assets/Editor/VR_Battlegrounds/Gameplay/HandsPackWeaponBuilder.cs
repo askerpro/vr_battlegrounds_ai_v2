@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Editor.Avatars;
 using VrBattlegrounds.Interaction;
 using VrBattlegrounds.Weapons;
 
@@ -53,6 +54,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string UxrTag;          // тег хвата корня: по нему карманы и слоты принимают оружие
         public string MagazineBase;    // префаб магазина, от которого делается вариант (сеть, физика, звук)
         public string MagazineName;    // прежнее имя ассета магазина; null — Name + "_mag"
+        public string InteractionFolder; // ассеты областей подсветки; null — Art/Weapons/Interaction/<имя>
         public string MagazineGripDonor; // immutable калибровка магазина; null — прежний Gun_real_mag
         public string MagazinePart;    // меш магазина из пака
         public string[] MagazineExtraParts; // вынимаются вместе с магазином: патроны, гильзы барабана
@@ -134,7 +136,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             GripDonorBody     = "Rifle_Body_Mesh",
             GripDonorBodyPath = "MeshContainer/Rifle_Body_Mesh",
             GripDonorPoseClip = "Aim_Idle",
-            FirearmDonor      = "Assets/Prefabs/Weapons/Shotgun/Shotgun.prefab",
+            // Сэмпл SDK Shotgun убран из арсенала (2026-10-20, Assets/Unused/Weapons): донор спуска — неизменный снимок
+            // самого FABARM, как и в HandsPackLegacyRebuild (recipe.FirearmDonor = Donor(...)).
+            FirearmDonor      = "Assets/Art/Weapons/HandsPack/LegacyBuildDonors/Shotgun_real.prefab",
             ShotAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/edit/shot.mp3",
             LoadAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/Reload_1.mp3"
         };
@@ -291,14 +295,27 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         private static void BuildT38() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenBuildSet(T38.Select(r => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab"));
 
-        /// <summary>Полный маршрут одного T-38: существующая сборка, поза кисти и точка отдачи.</summary>
-        public static void BuildFull(HandsPackWeaponRecipe r)
+        /// <summary>
+        /// Полный маршрут одного T-38: сборка → позы (<paramref name="poses" />; по умолчанию хваты переносятся из
+        /// текущего префаба) → точка отдачи → прицел, хост WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />).
+        /// </summary>
+        public static void BuildFull(HandsPackWeaponRecipe r, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Пересборка запрещена в Play Mode.");
-            Build(r);
             string path = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
-            VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.ImportFor(path);
+            string magazine = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
+            // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
+            WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
+            Build(r);
+            if (poses == WeaponGripPoseMode.ReimportFromPack) VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.ImportFor(path);
+            WeaponGripCarryOver.Restore(grips, poses);
             AlignRecoilToMainGrip(path);
+            // Области и подсветка хвата — по итоговому хвату MEF (сборка пекла их по калибровочному), подсветка
+            // выдаваемого отдельно магазина. Писатель — узкое обновление взаимодействия.
+            WeaponInteractionReview.Apply(new[] { path }, new[] { magazine });
+            // Оно переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
+            WeaponGripCarryOver.Restore(grips, poses);
+            WeaponRebuildFinish.Complete(path, magazine, "HandsPackWeaponBuilder");
         }
 
         /// <summary>
@@ -681,7 +698,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
-            WeaponInteractionInstaller.Apply(root, WeaponInteractionRecipes.For(root, r));
+            WeaponInteractionRecipe interaction = WeaponInteractionRecipes.For(root, r);
+            if (r.InteractionFolder != null) interaction.AssetFolder = r.InteractionFolder;
+            WeaponInteractionInstaller.Apply(root, interaction);
             if (r.ManualLoading)
                 ManualLoadingAuthoring.ConfigureWeapon(root, r.Name, r.MagazineCapacity,
                     AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
@@ -746,7 +765,16 @@ namespace VrBattlegrounds.Editor.Gameplay
             else
             {
                 var slide = new SerializedObject(root.AddComponent<AutomaticWeaponSlideFeedback>());
-                CopyFields(gripDonor.GetComponent<AutomaticWeaponSlideFeedback>(), slide.targetObject, slide);
+                var donorFeedback = gripDonor.GetComponent<AutomaticWeaponSlideFeedback>();
+                if (donorFeedback == null)
+                {
+                    // Живой донор (AR15, BrowningHiPower) переведён на WeaponSystem и затвора AWSF больше не несёт —
+                    // порог, возврат и звуки затвора берутся из его immutable снимка (LegacyBuildDonors). Иначе
+                    // WeaponSystemAuthoring.Configure брал значения по умолчанию: порог 0,7 вместо 0,855 и без звуков.
+                    var snapshot = AssetDatabase.LoadAssetAtPath<GameObject>(HandsPackLegacyRebuild.DonorSnapshot(r.GripDonor) ?? "");
+                    donorFeedback = snapshot != null ? snapshot.GetComponent<AutomaticWeaponSlideFeedback>() : null;
+                }
+                CopyFields(donorFeedback, slide.targetObject, slide);
                 slide.FindProperty("_slide").objectReferenceValue = actionGrab;
                 // Свои звуки затвора (KINEMATION) — и для пустого, и для заряженного хода.
                 foreach (var (field, audio) in new[] { ("_audioSlideBack", r.SlideBackAudio), ("_audioSlideBackWhenLoaded", r.SlideBackAudio),

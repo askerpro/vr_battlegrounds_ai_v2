@@ -12,6 +12,9 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <summary>Узкое обновление восьми KINEMATION из T-39 без сборки из донора и без изменения реестра.</summary>
     public static class KinemationFixReview
     {
+        /// <summary>Ассеты областей подсветки ствола KINEMATION (их же печёт сборка, <c>HandsPackWeaponRecipe.InteractionFolder</c>).</summary>
+        public static string InteractionFolder(string name) => $"{KinemationWeapon.ArtRoot}/{name}/Interaction";
+
         public static void Apply(string name)
         {
             KinemationWeaponRecipe recipe = KinemationWeaponBuilder.All.Single(k => k.Weapon.Name == name);
@@ -24,7 +27,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 HandsPackWeaponBuilder.AlignMuzzle(root, recipe.Weapon);
                 var interaction = WeaponInteractionRecipes.For(root, recipe.Weapon);
-                interaction.AssetFolder = $"{KinemationWeapon.ArtRoot}/{name}/Interaction";
+                interaction.AssetFolder = InteractionFolder(name);
                 WeaponInteractionInstaller.Apply(root, interaction);
                 var body = root.transform.Find("MeshContainer/Base");
                 Transform slideTransform = root.transform.Find("Slide");

@@ -205,7 +205,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             donor = (CyborgLegsBuilder.LegsDonor)EditorGUILayout.EnumPopup("Донор ног Cyborg", donor);
             var capturedDonor = donor;
             ActionButton("Build Cyborg Legs", "Только PlayerControllersCyborgAvatar и сгенерированные legs assets; выбран донор " + donor,
-                () => AvatarMaintenanceTools.Scope(CyborgLegsBuilder.AvatarPath, CyborgLegsBuilder.OutFolder, "Assets/Prefabs/Player/MEF_Base_Avatar.prefab", "Assets/ThirdParty/UnityStarter_Robot"),
+                () => AvatarMaintenanceTools.Scope(CyborgLegsBuilder.AvatarPath, CyborgLegsBuilder.OutFolder, HandsPackPoseImporter.MefBaseAvatarPath, "Assets/ThirdParty/UnityStarter_Robot"),
                 () => AvatarMaintenanceTools.Checked(() => CyborgLegsBuilder.Build(capturedDonor)));
             EditorGUILayout.LabelField("Team Color Variant · Optimized MEF", EditorStyles.boldLabel);
             colorSuffix = EditorGUILayout.TextField("Суффикс", colorSuffix); colorName = EditorGUILayout.TextField("Название скина", colorName);

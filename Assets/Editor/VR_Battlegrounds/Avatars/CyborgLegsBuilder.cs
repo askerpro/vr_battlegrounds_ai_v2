@@ -48,7 +48,8 @@ namespace VrBattlegrounds.Editor.Avatars
         public const string OutFolder = "Assets/Art/Avatars/PlayerControllersCyborgAvatar/Legs";
         public const string HumanAvatarPath = OutFolder + "/CyborgHumanoid.asset";
 
-        private const string TemplatePath = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        // MEF_Base_Avatar — по GUID: префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
+        private static string TemplatePath => HandsPackPoseImporter.MefBaseAvatarPath;
         private const string RobotPack = "Assets/ThirdParty/UnityStarter_Robot/";
 
         private const string ModelName = "Cyborg";

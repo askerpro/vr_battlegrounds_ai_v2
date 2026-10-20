@@ -27,7 +27,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 .FirstOrDefault(r => r.Name == root.name);
             var recipe = WeaponInteractionRecipes.For(root, source);
             if (KinemationWeaponBuilder.All.Any(r => r.Weapon.Name == root.name))
-                recipe.AssetFolder = $"{KinemationWeapon.ArtRoot}/{root.name}/Interaction";
+                recipe.AssetFolder = KinemationFixReview.InteractionFolder(root.name);
             return recipe;
         }
 

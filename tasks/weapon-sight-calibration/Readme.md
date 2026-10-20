@@ -133,3 +133,37 @@ SRM12 в таблице; Scar поднимает рамки на стенде; `
 - Стволы без своего прицела: AR15 (M16) и SniperRifle — `SightKit_TR15`, MKR9 — `SightKit_MX68`.
 - SDKGun, SDK ShotGun, Machinegun — убрать из арсенала (реестр, ассортименты, каталог; зона gameplay).
 - Раунд 1 закоммичен предварительно; приёмка — вместе с миграцией.
+
+## Раунд 2 — миграция арсенала (2026-10-20, не закоммичено, ждёт проверки пользователем)
+
+Журнал: `changelog/2026-10-20-round2-migration.md`; скриншоты — `reports/round2/<Weapon>/` (вне Git).
+Все стволы реестра сведены на 15 м и записаны в префабы: родной прицел — AK105, Mk14, Viper, R08, MP5K, Uzi,
+Herrington, Revolver, BrowningHiPower, Scar, SRM12 (24 mesh-ассета `*_SightSplit` + `*_Sight{Front|Rear}`), PPK — только
+точки; комплекты — M16 и SniperRifle `SightKit_TR15`, MKR9 `SightKit_MX68`; TR15 — XPS2. Сборщики после сборки
+вызывают `WeaponSightAuthoring.AfterBuildLogged`. SDKGun, SDK ShotGun, Machinegun убраны из арсенала, ассеты — в
+`Assets/Unused/Weapons/` (README там). `MapRuntimeCatalog` перепечён (`MapBootstrapMigration.RebakeCatalog`: 7/7 карт).
+
+Решения пользователя: Uzi — боковую ошибку 32,5 мм на 15 м принять; M16 — сложенный BUIS оставить; бюджет
+треугольников MKR9 поднять до 32 000 (правка теста — вместе с обновлением тестов после приёмки); ассеты SDK-стволов
+оставить в `Assets/Unused`.
+
+Известное: полная пересборка AK105 `KinemationWeaponBuilder` падает до шага прицела (NRE в
+`HandsPackPoseImporter.AssignToGrabPoint:209`, зона avatar-grip). Устаревшие тесты после приёмки:
+`SightPartSplitterTests` (Selectors ×11, Scar_RaiseMatchesHingeAxis, Table_CoversAgreedWeapons), `KinemationWeaponTests`
+TR15 ×2 и бюджет MKR9, `HandPoseGripRulesTests` (пути SDK-префабов). Посторонний красный: бюджет R08.
+
+## Раунд 3 и пересборка (2026-10-20, не закоммичено)
+
+- Посадка в паз (decisions.md): комплекты M16, SniperRifle, MKR9, TR15 пересажены по `RailMount` комплекта и пазам
+  планки (`Core/SightRailMount.cs`, кнопка «Посадить на планку»); журнал `changelog/2026-10-20-round3-rail-seating.md`.
+  Решения: MX68 на MKR9 оставить (канал 14 мм уже планки, перекрытие скрыто); поперечные упоры не моделировать.
+- Пересборка KINEMATION падала: путь `MEF_Base_Avatar` после переноса в `Player/Unused` — импортёр поз переведён
+  на GUID (`changelog/2026-10-20-grip-rebuild-fix.md`). Пересборка теряла хват Cyborg, хост WeaponSystem и отклик
+  магазина. Решение пользователя: у сборщиков режим поз — «Оставить текущие» (по умолчанию: позы и записи хвата MEF
+  и Cyborg переносятся из префаба) или «Перезаписать из пака» (импортёр, слой Cyborg всё равно сохраняется);
+  пересборка полная (WeaponSystem, отклик магазина, прицел, баланс). В работе у субагента avatar-grip.
+- Итог (субагент avatar-grip): режим поз `WeaponGripPoseMode` (`Avatars/WeaponGripCarryOver.cs`), общий конец пересборки
+  `Gameplay/WeaponRebuildFinish.cs` (прицел → MigrateWeapons → баланс). Пересобранные AK105, Mk14, MP5K совпали с
+  прежними по оружию; у магазинов убран мусор (двойной ImpactSound, лишние узлы, override MagPlace) — пользователь
+  решил оставить пересобранные. Не прогонялись: `HandsPackLegacyRebuild.RebuildAll`, режим перезаписи для Hands,
+  пересборка пилотов волны D (Herrington, FABARM). Посторонний красный: `GrabPoseCoverageTests` ×3 (`DogTagPanel` без хвата Cyborg).

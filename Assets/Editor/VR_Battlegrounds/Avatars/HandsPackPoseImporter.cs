@@ -51,8 +51,35 @@ namespace VrBattlegrounds.Editor.Avatars
         private const string Pack       = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
         internal const string PoseBase  = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
 
-        /// <summary>Аватары, чьим записям хвата на оружии назначаются позы пака (профиль MEF Grip Extraction читает тот же список).</summary>
-        internal static readonly string[] GripAvatars = { "Assets/Prefabs/Player/MEF_Base_Avatar.prefab" };
+        /// <summary>GUID <c>MEF_Base_Avatar</c> — ключ его записей хвата на оружии (<c>_avatarPrefabGuid</c>).</summary>
+        internal const string MefBaseAvatarGuid = "b6fe59db941fa944696ece5e1aabc032";
+
+        /// <summary>
+        /// Аватары, чьим записям хвата на оружии назначаются позы пака (профиль MEF Grip Extraction читает тот же список).
+        /// Задаются GUID: записи хвата ключуются им, а путь префаба меняется при переносах (2026-10-17 MEF_Base_Avatar
+        /// переехал в <c>Player/Unused</c>, и прежний путь давал null-аватар — NRE в <see cref="AssignToGrabPoint" />).
+        /// </summary>
+        private static readonly string[] GripAvatarGuids = { MefBaseAvatarGuid };
+
+        /// <summary>Текущие пути <see cref="GripAvatarGuids" />; нет префаба — исключение до первой записи.</summary>
+        internal static string[] GripAvatars => GripAvatarGuids.Select(ResolveGripAvatar).ToArray();
+
+        /// <summary>GUID аватаров, чьи записи хвата пишет импорт (их не переносит <see cref="WeaponGripCarryOver" /> в режиме перезаписи).</summary>
+        internal static HashSet<string> GripAvatarGuidSet() => new HashSet<string>(GripAvatarGuids);
+
+        /// <summary>Путь <c>MEF_Base_Avatar</c> по GUID (общий вход хвата для сборщиков, preflight и Grip Extraction).</summary>
+        internal static string MefBaseAvatarPath => ResolveGripAvatar(MefBaseAvatarGuid);
+
+        private static string ResolveGripAvatar(string guid)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path) || AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            {
+                throw new FileNotFoundException($"Нет префаба аватара хвата с GUID {guid} — записи хвата на оружии ключуются им.");
+            }
+
+            return path;
+        }
 
         public static readonly HandsPackPoseRecipe[] Recipes = new[]
         {
@@ -111,6 +138,8 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </summary>
         public static void Import(IEnumerable<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample)> samples)
         {
+            // Аватары хвата — до записи поз и базы поз: иначе сбой на точке хвата оставит их полузаписанными.
+            string[] gripAvatars = GripAvatars;
             var imported = new List<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample, UxrHandPoseAsset Pose)>();
             foreach (var (recipe, sample) in samples)
             {
@@ -122,7 +151,7 @@ namespace VrBattlegrounds.Editor.Avatars
             RegisterOnPoseBase(imported.Select(i => i.Pose));
             foreach (var (recipe, sample, pose) in imported)
             {
-                AssignToGrabPoint(recipe, sample, pose);
+                AssignToGrabPoint(recipe, sample, pose, gripAvatars);
             }
 
             AssetDatabase.SaveAssets();
@@ -193,7 +222,8 @@ namespace VrBattlegrounds.Editor.Avatars
             PrefabUtility.SavePrefabAsset(root);
         }
 
-        private static void AssignToGrabPoint(HandsPackPoseRecipe recipe, HandsPackPoseExtractor.Sample sample, UxrHandPoseAsset pose)
+        private static void AssignToGrabPoint(HandsPackPoseRecipe recipe, HandsPackPoseExtractor.Sample sample, UxrHandPoseAsset pose,
+                                              string[] gripAvatars)
         {
             GameObject root = PrefabUtility.LoadPrefabContents(recipe.Weapon);
             try
@@ -202,7 +232,7 @@ namespace VrBattlegrounds.Editor.Avatars
                                  ?? throw new KeyNotFoundException($"{recipe.Weapon}: нет корпуса {recipe.BodyPath}");
                 UxrGrabPointInfo grabPoint = root.GetComponent<UxrGrabbableObject>().GetGrabPoint(recipe.GrabPoint);
 
-                foreach (string avatarPath in GripAvatars)
+                foreach (string avatarPath in gripAvatars)
                 {
                     // Граббер и размер кисти у аватаров разные — трансформы выравнивания свои у каждого.
                     var       avatarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(avatarPath);

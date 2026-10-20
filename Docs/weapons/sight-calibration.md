@@ -17,7 +17,7 @@
 `d6c0fded0` (2026-10-06) дополнил [H]/[M]: разделение мушки/целика MKR9, назначение маркеров, витрина аксессуаров.
 Текущие версии лежат в `Docs/tasks/weapon-sight-*.md`.
 
-Обновлено 2026-10-20. **Действующий подход — стенд Sight Auto-Zero**, [раздел 9](#9-конвейер-sight-auto-zero-2026-10-12)
+Обновлено 2026-10-20. **Действующая схема — стенд Sight Auto-Zero**, [раздел 9](#9-калибровка-прицелов-действующая-схема-принята-2026-10-20)
 (решение пользователя 2026-10-20). Разделы 1–3 (назначение, модель zero, инварианты ShotSource) и коллиматор TR15
 остаются в силе. Ручной стенд `WeaponSightManualCalibration`, маркеры R/F, копии Sight Review и доноры первого
 этапа (разделы 4, 5 кроме «В игре», 6, 8) **устарели и удалены из проекта 2026-10-20** (задача
@@ -25,7 +25,7 @@
 `SightCalibrationBench`, копии `*_SightReview` с записями в реестре, каталоге, MANAGERS и BotCombatStand); описание оставлено
 как история. Точка входа — окно `Tools/VR Battlegrounds/Weapons/Настройка оружия` (вкладки «Калибровка прицела», «Аксессуары» с витриной, «Раскладка в слоте», «Урон и разброс»);
 где лежат Blender-исходники, генераторы, отчёты и доказательства — [раздел 10](#10-материалы-и-где-их-искать).
-Финальная калибровка стволов ведётся задачей [`tasks/weapon-sight-calibration/`](../../tasks/weapon-sight-calibration/Readme.md).
+Финальная калибровка арсенала выполнена задачей [`tasks/weapon-sight-calibration/`](../../tasks/weapon-sight-calibration/Readme.md) (2026-10-20).
 
 ## 1. Назначение
 
@@ -209,62 +209,73 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
   `WeaponInfo` копий, а не профили. Save жёстко пишет `_sightId = "ManualIron"` и всегда включает override.
 - `MKR9_NativeProbe_b1bbb91d.prefab` (неуспешная проба Save, не игровое оружие) всё ещё в репозитории.
 
-## 9. Конвейер Sight Auto-Zero (2026-10-12)
+## 9. Калибровка прицелов: действующая схема (принята 2026-10-20)
 
-Этапы weapon-system `sight-tr15-optic` (`5fc162060`), `sight-iron-kits` (`a3b06c637`), `sight-arsenal-dedupe`
-(`b624fdb3c`); решения — [decisions.md](decisions.md) (2026-10-11/12), журнал —
-`experts/weapon-system/journal/2026-10-12-sight-tools.md`. Пользователь 2026-10-12: «пока только инструменты,
-финальная калибровка — отдельной задачей».
+Стенд Sight Auto-Zero создан weapon-system 2026-10-12 (`a3b06c637`, решения 2026-10-11/12 в [decisions.md](decisions.md),
+журнал `experts/weapon-system/journal/2026-10-12-sight-tools.md`). 2026-10-20 задача `weapon-sight-calibration`
+перевела на него весь арсенал: прицелы сведены на Z = 15 м и записаны в игровые префабы; решения — decisions.md
+(2026-10-20), журналы — `tasks/weapon-sight-calibration/changelog/2026-10-20-*`.
 
-**Механика (решения 2026-10-12).** Регулировочные детали (столбик мушки, блок целика) — отдельные статические
-объекты, не skinned; pivot ровно на точке прицеливания (F — вершина мушки, R — центр отверстия/прорези). Сведение —
-одной деталью и только по высоте: решатель двигает деталь, чтобы линия R→F прошла через ShotSource + Z (Z = 15 м);
-боковая ошибка показывается, но не исправляется. Рамки только в поднятом положении. Ход: TR15 −8/+3 мм, Mk14 +8 мм,
-Viper −4 мм, остальные ±3 мм.
+**Механика.** Регулировочная деталь (столбик мушки, блок целика, лопатка) — отдельный статический объект, не skinned,
+pivot на точке прицеливания (F — вершина мушки, R — центр отверстия/прорези). «Свести» аналитически сдвигает одну
+подвижную деталь по её локальной Y, чтобы линия R→F прошла через ShotSource + Z; боковая ошибка показывается, но не
+исправляется. Рамки — только в поднятом положении. Коллиматор (`SightKit_XPS2`) подвижной детали не имеет: сетка
+конечного фокуса (`WeaponOpticView`) привязывается к ShotSource и Z.
 
-| Часть | Где | Что |
+**Где хранится калибровка (два слоя).**
+- Источник — `Assets/Data/WeaponSystem/Sights/WeaponSightTable.asset` (только редактор): запись на `WeaponInfo` —
+  комплект (`null` — родной прицел), поза комплекта под `MeshContainer`, положения половин вдоль планки, сдвиг подвижной
+  детали, Z и отпечаток ShotSource (не совпал — запись не применяется, ствол надо пересвести). Пишет только кнопка стенда
+  «Сохранить в таблицу».
+- Результат — префаб оружия. Узлы прицела пишет один писатель `WeaponSightAuthoring`: родной прицел — постоянное
+  разделение меша корпуса по `SightSplitTable` (mesh-ассеты `<ствол>_<узел>_SightSplit` и `<ствол>_Sight{Front|Rear}`
+  рядом с мешами пака, исходные меши не перезаписываются; узлы `Sight{Role}Frame/Sight{Role}` с `SightAdjustablePart`);
+  комплект — вложенный `SightKit_*` под `MeshContainer`. Канонический `_assetId` сохраняется, TRS прочих узлов сверяются.
+  Игра читает только префаб.
+
+**Сборка ствола** (один запуск сборщика; `KinemationWeaponBuilder`, `HandsPackWeaponBuilder`, `HandsPackLegacyRebuild`,
+кнопки пересборки Редактора арсенала): собрать из пака → позы хвата по режиму `WeaponGripPoseMode` («Оставить текущие» —
+по умолчанию, записи хвата MEF и Cyborg переносятся из префаба; «Перезаписать из пака» — импорт MEF, Cyborg всё равно
+переносится) → механика и отклик → общий конец `WeaponRebuildFinish.Complete`: прицел из таблицы → `MigrateWeapons`
+(хост `WeaponSystem`) → баланс. Кнопка стенда «Применить к префабу» выполняет тот же шаг прицела, что и сборщик.
+
+**Посадка комплекта — в паз планки** (decisions.md 2026-10-20). У половин комплекта узел `RailMount` (плоскость контакта
+внутри канала, ширина канала, точка упора), у ствола планка определяется по мешу (вершины зубцов, ось, пазы).
+Кнопка «Посадить на планку» кладёт контакт на вершины зубцов, ось — по оси планки, упор — в центр ближайшего паза;
+проверка посадки отказывает, если комплект висит над планкой, врезан, смещён с оси или упор не у паза
+(`Core/SightRailMount.cs`).
+
+| Часть | Где |
+|---|---|
+| Окно | вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`WeaponSetupWindow`, `SightAutoZeroPanel`) |
+| Комплекты | `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68,XPS2}.prefab`; FBX механики — `Assets/Art/Weapons/Sights/IronKits/`; сборка — `…/Weapons/Sights/Build Iron Sight Kits`, `Build Optic Sight Kits` (`SightKitBuilder`) |
+| Решатель / подвижная деталь | `Weapons/Sights/Core/SightAutoZeroSolver.cs` / `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` |
+| Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, генерируемая `SightSplitTable`) |
+| Писатель | `Weapons/Sights/WeaponSightAuthoring.cs` |
+| Сборщики | `Gameplay/KinemationWeaponBuilder.cs`, `HandsPackWeaponBuilder.cs`, `HandsPackLegacyRebuild.cs`, `WeaponRebuildFinish.cs`; перенос хватов — `Avatars/WeaponGripCarryOver.cs` |
+
+**Стволы** (Z = 15 м; вертикальная ошибка после сведения 0 у всех, кроме PPK):
+
+| Ствол | Прицел | Подвижная деталь, сдвиг |
 |---|---|---|
-| Комплекты | `Assets/Art/Weapons/Sights/IronKits/*.fbx`, `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68}.prefab`; сборщик — меню `…/Weapons/Sights/Build Iron Sight Kits` (`SightKitBuilder`) | Нарезаны в Blender из пака. TR15: R→F 300 мм, F выше R на 4,44 мм; MX68: R→F 365,9 мм. Комплект — один объект на планке, масштаб через `SightKitScale` |
-| Подвижная деталь | `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` | Ход только по локальной Y (travelDown/Up) |
-| Решатель | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/SightAutoZeroSolver.cs` | Аналитическое «Свести» |
-| Окно | вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`WeaponSetupWindow` + `SightAutoZeroPanel`; до 2026-10-20 — отдельное окно Sight Auto-Zero) | Режимы «комплект на планке» и «Родной прицел»; стенд — несохраняемая сцена. `SaveUnlocked`/`ApplyUnlocked` = false до задачи калибровки; у «Родного прицела» Apply не написан |
-| Таблица | `Assets/Data/WeaponSystem/Sights/WeaponSightTable.asset` | Пуста (`_entries: []`) |
-| Writer комплекта | `Assets/Editor/VR_Battlegrounds/Weapons/Sights/WeaponSightAuthoring.cs` | Вставка nested `SightKit_*` под `MeshContainer`, компенсация масштаба корня, канонический `_assetId`. Третий писатель префабов — см. инвариант 6 |
-| Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, `SightSplitTable` …) | Выносит подвижный остров вшитого прицела на копии ствола (меши в памяти), 11 стволов. Таблица **генерируется** (раздел 10), привязана к GUID/localFileId и числу вершин меша. Встроить в `KinemationWeaponBuilder`/`HandsPackWeaponBuilder` — не сделано |
-| Оптика TR15 | `Assets/Editor/VR_Battlegrounds/Gameplay/Tr15OpticBuilder.cs` | Коллиматор XPS2 в основном TR15, принят в шлеме |
-| Тесты | `Assets/Tests/EditMode/Sights/*`, `Assets/Tests/EditMode/SightSplit/*` | 104/104 на 2026-10-12 |
+| AK105 | родной | столбик мушки +0,91 мм (как у реального; планка целика на «П») |
+| Mk14 | родной | мушка вниз −6,41 мм (диоптр парил бы) |
+| Viper / R08 / Revolver | родной | целик −3,07 / +0,57 / +0,39 мм (у Viper — на затворе) |
+| MP5K / Uzi / BrowningHiPower | родной | мушка −0,90 / −0,90 / −0,19 мм; у Uzi боковая 32,5 мм на 15 м принята |
+| Herrington (Remington 11-87) | родной | только передняя лопатка +1,65 мм |
+| Scar | родной | рамки подняты, столбик мушки −2,03 мм |
+| SRM12 | родной | столбик мушки −5,16 мм |
+| PPK | родной, без подвижной детали | только показ ошибки (+14,7 мм) |
+| M16 (`AR15.prefab`) / SniperRifle | `SightKit_TR15` в пазу | −5,24 / −6,34 мм; сложенный BUIS M16 оставлен |
+| MKR9 | `SightKit_MX68` в пазу | +0,08 мм; канал MX68 уже планки — принято; бюджет треугольников 32 000 |
+| TR15 | `SightKit_XPS2` в пазу | сетка на 15 м |
+| ShotgunReal (FABARM) | не калибруется | — |
+| SDKGun, SDK ShotGun, Machinegun | убраны из арсенала | ассеты в `Assets/Unused/Weapons/` (README) |
 
-**Три варианта прицела в окне:** `SightKit_MX68`, `SightKit_TR15`, «Родной прицел».
-
-- **Родной прицел** — целик и мушка вшиты в меш корпуса. В Blender (`iron-split*.blend`, через Blender MCP) меш
-  разбит на острова и размечено, какие острова — целик, мушка, подвижная деталь, где R/F и ход; результат —
-  `islands*.json` → генератор → `SightSplitTable.cs` (11 стволов). `SightPartSplitter` выносит остров детали в
-  отдельный объект `SightRearFrame/SightRear` или `SightFrontFrame/SightFront` с pivot на точке, остаток — меш
-  корпуса. Сейчас это делается **только на временной копии стенда, меши в памяти**; постоянное разделение в
-  сборщиках и сохранение мешей — работа задачи финальной калибровки.
-- **Комплект** — для ствола без своего прицела или с непригодным: механические прицелы TR15 и MX68, вырезанные из
-  FBX пака в Blender (`iron-kits.blend`) с отдельными подвижными деталями. Ставится одним объектом на планку.
-
-| Ствол | Вариант | Подвижная деталь | Сдвиг на 15 м (не применён) |
-|---|---|---|---|
-| AK105 / MP5K / Scar | Родной | столбик мушки (у Scar — после подъёма рамок) | +0,91 / −0,90 / −2,03 мм |
-| R08 / Revolver | Родной | целик | +0,57 / +0,39 мм |
-| Mk14 | Родной | диоптр целика, ход до +8 | +6,67 мм |
-| Viper | Родной | целик на затворе, ход до −4 | −3,07 мм |
-| Uzi | Родной | мушка целым островом с ушками | −0,90 мм |
-| Herrington (Remington 11-87) | Родной | передняя лопатка | +1,65 мм |
-| Gun (BrowningHiPower) | Родной | мушка; обе половины на затворе | −0,19 мм |
-| PPK | Родной, без подвижной детали | — | только показ ошибки, +14,7 мм |
-| M16 (`AR15.prefab`) | Комплект TR15 (мушки нет) | столбик мушки комплекта | −5,6 мм |
-| MKR9 / SRM12 / SniperRifle | Комплект (сейчас донорные детали в копиях Sight Review) | столбик мушки | −3,71 / −5,16 / −7,14 мм (по разбору Blender) |
-| TR15 | Коллиматор XPS2, принят | — | — |
-| ShotgunReal (FABARM) | Не калибруется | — | — |
-| SDKGun, SDK ShotGun, Machinegun | Решения нет | — | — |
-
-**Ловушки:** `SaveAsPrefabAsset` обнуляет `NetworkIdentity._assetId` (тест `NetworkAssetIdOnDiskTests`); пересборка
-сборщиком пака ломает `SightSplitTable` и баланс (`WeaponBalanceApplier.Apply`); целик Viper и обе половины Browning
-сидят на затворе и едут с ним; копии `*_SightReview` сняты со стены лобби, но ещё в `WeaponRegistry.asset` и
-`ArsenalCompositionCatalog.asset`.
+**Ловушки:** `SaveAsPrefabAsset` обнуляет `_assetId` (писатель восстанавливает, `NetworkAssetIdOnDiskTests`);
+`EditorUtility.CopySerialized` терял вершины у многопоточных мешей пака Hands — копировать через Mesh API;
+`SightSplitTable` привязан к GUID/localFileId и числу вершин исходного меша — правится только через разбор и
+`gen_table.py`; после смены ShotSource ствол надо пересвести (запись таблицы не применится).
 
 ## 10. Материалы и где их искать
 

@@ -17,7 +17,9 @@ namespace VrBattlegrounds.Editor.PuppetStand
     {
         public const string ScenePath = "Assets/Scenes/Dev/ClipScrub.unity";
         public const string ListPath = "Assets/Scenes/Dev/ClipScrub.asset";
-        private const string PuppetPrefab = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        // MEF_Base_Avatar — по GUID (как HandsPackPoseImporter.MefBaseAvatarGuid: своя сборка его не видит);
+        // префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
+        private static string PuppetPrefab => AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032");
         private const float HeadHeight = 1.1f; // камера (глаза) около колена — середина переходов «присед ↔ сидение»
         private const string LivePrefab = "Assets/Prefabs/Player/Optimized_MEF_Player.prefab";
         private const string FloorMaterial = "Assets/ThirdParty/UnityStarter_Robot/Environment/Materials/GridBlue_01_Mat.mat";

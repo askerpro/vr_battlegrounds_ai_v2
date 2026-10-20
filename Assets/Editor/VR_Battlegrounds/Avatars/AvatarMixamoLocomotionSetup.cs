@@ -57,7 +57,8 @@ namespace VrBattlegrounds.Editor.Avatars
         public const float SetUnarmed = 0f, SetPistol = 1f, SetRifle = 2f;
 
         /// <summary>Аватар, на копии рига которого меряется фаза шага и разворот стойки клипов.</summary>
-        public const string MainAvatarPrefab = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        // MEF_Base_Avatar — по GUID: префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
+        public static string MainAvatarPrefab => HandsPackPoseImporter.MefBaseAvatarPath;
 
         private static readonly string[] Directions =
             { "Forward", "ForwardRight", "Right", "BackwardRight", "Backward", "BackwardLeft", "Left", "ForwardLeft" };

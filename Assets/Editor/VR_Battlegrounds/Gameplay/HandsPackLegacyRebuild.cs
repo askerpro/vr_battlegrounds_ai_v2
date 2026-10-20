@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Editor.Avatars;
 using VrBattlegrounds.Weapons;
 using Object = UnityEngine.Object;
 
@@ -45,7 +46,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>Единственная entry point для writer под Unity lock. Сначала все доноры и preflight, затем три сборки.</summary>
         private static void OpenWorkbench() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenMaintenance(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build);
 
-        public static void RebuildAll()
+        /// <param name="poses">
+        /// Хваты: по умолчанию переносятся из текущих префабов; перезапись — позы пака <see cref="HandsPackPoseImporter" />
+        /// (рецепты есть у BrowningHiPower), записи остальных аватаров всё равно переносятся.
+        /// </param>
+        public static void RebuildAll(WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Пересборка Hands запрещена в Play Mode");
@@ -64,15 +69,20 @@ namespace VrBattlegrounds.Editor.Gameplay
             foreach (var recipe in recipes)
             {
                 using var source = new HandsPackWeapon(recipe.Folder, recipe.BodyPart);
-                HandsPackWeaponBuilder.Build(recipe, source);
                 string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
                 string magPath = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName}.prefab";
+                // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
+                WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magPath);
+                HandsPackWeaponBuilder.Build(recipe, source);
                 ApplyMagazine(magPath);
                 InstallMotion(path, recipe, source);
                 foreach (string saved in new[] { path, magPath })
                     if (AssetDatabase.AssetPathToGUID(saved) != guids[saved] || ReadAssetId(saved) != ids[saved] || ReadRootLocalId(saved) != rootIds[saved])
                         throw new InvalidOperationException($"Изменён GUID/root localFileID/NetworkIdentity assetId: {saved}");
                 ValidateReferences(path, magPath);
+                if (poses == WeaponGripPoseMode.ReimportFromPack) HandsPackPoseImporter.ImportFor(path);
+                WeaponGripCarryOver.Restore(grips, poses);
+                WeaponRebuildFinish.Complete(path, magPath, "HandsPackLegacyRebuild");
                 GameLog.WeaponSystem.Info($"[HandsPackLegacyRebuild] {recipe.Name}: FBX, baseline config и generic motion сохранены");
             }
             AssetDatabase.SaveAssets();
@@ -127,6 +137,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                 throw new InvalidOperationException($"Нет persistent root localFileID: {path}");
             return localId;
         }
+
+        /// <summary>Immutable снимок донора сборщика (AR15, BrowningHiPower, FABARM и их магазины); null — снимка нет.</summary>
+        internal static string DonorSnapshot(string original) =>
+            Targets.Contains(original) ? Donor(original) : null;
 
         private static string Donor(string original)
         {

@@ -39,7 +39,8 @@ namespace VrBattlegrounds.Editor
         private const string LegsPanelType = "VrBattlegrounds.DevTools.LegsCompare.LegsDebugPanel, VrBattlegrounds.LegsCompare";
         private const string PreviewType ="VrBattlegrounds.DevTools.LegsCompare.ClipFeetPreview, VrBattlegrounds.LegsCompare";
         private const string MefRigPath = "Assets/Art/Avatars/Locomotion/MEF_Base_Avatar_LocomotionRig.prefab";
-        private const string MefMeshPath = "Assets/Prefabs/Player/MEF_Base_Avatar.prefab";
+        // MEF_Base_Avatar — по GUID: префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
+        private static string MefMeshPath => VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.MefBaseAvatarPath;
         private const string MannequinPath = "Assets/ThirdParty/FImpossible Creations/Plugins - Animating/Legs Animator/Demos - Legs Animator/Demos Resources/Prefabs/FAnnequin_IdleGlue.prefab";
         private const string RiflePath = "Assets/Prefabs/Weapons/AK105/AK105.prefab";
         private const string PistolPath = "Assets/Prefabs/Weapons/PPK/PPK.prefab";

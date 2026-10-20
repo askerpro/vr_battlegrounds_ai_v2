@@ -1,4 +1,4 @@
-# Скриншот окна E2E-клиента (VrBattlegrounds.exe с -e2eRole client-1) без перехвата фокуса: PrintWindow
+﻿# Скриншот окна E2E-клиента (VrBattlegrounds.exe с -e2eRole client-1) без перехвата фокуса: PrintWindow
 # с PW_RENDERFULLCONTENT читает содержимое DirectX-окна даже под другими окнами. Для визуального сравнения
 # вариантов render_diag; это не замер.
 param(

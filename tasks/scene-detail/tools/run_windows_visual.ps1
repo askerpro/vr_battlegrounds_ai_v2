@@ -1,4 +1,4 @@
-# Визуальное сравнение вариантов render_diag на Windows e2e-плеере: штатный Run-E2E по каждому bundle,
+﻿# Визуальное сравнение вариантов render_diag на Windows e2e-плеере: штатный Run-E2E по каждому bundle,
 # во время измеряемой фазы — скриншот окна клиента (capture_client_window.ps1). Не замер.
 param(
     [Parameter(Mandatory = $true)][string] $SeriesDir,

@@ -74,3 +74,17 @@ accepted, paths пусто, receive ок. Метрика m_per_uv = sqrt(пло�
   UV0 — островок атласа (wall_4x4: [0.38..0.62]x[0..0.25]); пак рассчитан на мировую проекцию → единый повтор
   стандартного шейдера даст несогласованный масштаб. Нужен свой дешёвый шейдер с проекцией по основной оси нормали
   (1 выборка + лайтмапа) или пере-развёртка мешей.
+
+## Box-UV + URP Baked Lit вместо S_VPWorldAligned (решение пользователя: скрипт, без своих шейдеров)
+
+Пользователь выбрал AssetPostprocessor (разовый переимпорт всех моделей в каждой Library) вместо сгенерированных
+мешей. Код: Assets/Editor/VR_Battlegrounds/Performance/BoxUv/ (Projector, ModelPostprocessor с custom dependency
+`VrbBoxUv/<модель>`, TargetScanner, BakedLitMaterialConverter, конфиг BoxUvTargets.json — пишет только сканер).
+Ticket 899 (input 01a92150, база 911f93b3): компиляция чистая; Scan — 53 сабмеша в 23 моделях, пропущен только
+встроенный Cube (UpperWindowWall__ProceduralFiller), unverifiedScenes пусто; Apply — 3 материала на Baked Lit
+(M_Concrete_01 тайлинг 0,286, тинт 1,5; M_Tiles_ObjectSpace 1; WornGround 19,795, тинт 0,6/0,6/0,55);
+проверка плотности: 53/53 = 1,0 м на единицу UV. finish accepted 162ab935, receive ок. Кадры редактора —
+reports/boxuv-apply-20261020/*.png (временная камера, не вид center-north). Ошибки консоли NaN localRotation
+у Link/Cartridge — от загрузки префабов ленты при сканировании, к BoxUv не относятся (не разбирались).
+Коммит 3cc74cf59 (технический). Дальше: Windows e2e для показа, затем APK и normal A/B на Quest.
+Слои R/G по vertex paint, нормали, краевой шум и насыщенность не переносятся (это и есть экономия).

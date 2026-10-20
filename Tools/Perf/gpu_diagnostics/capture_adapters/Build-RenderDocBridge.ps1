@@ -1,4 +1,4 @@
-# Сборка узкого headless adapter против официального SDK, без установки backend.
+﻿# Сборка узкого headless adapter против официального SDK, без установки backend.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$BackendRoot,

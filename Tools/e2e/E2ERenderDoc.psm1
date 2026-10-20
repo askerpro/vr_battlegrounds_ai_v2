@@ -1,4 +1,4 @@
-# Actuator официального SDK. Сетевой сценарий и жизненный цикл остаются в Run-E2E.
+﻿# Actuator официального SDK. Сетевой сценарий и жизненный цикл остаются в Run-E2E.
 function ConvertTo-RenderDocCommandLine([string[]]$Tokens) {
     (@($Tokens | ForEach-Object {
         if ($_ -notmatch '[\s"]') { $_ }

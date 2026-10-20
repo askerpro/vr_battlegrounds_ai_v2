@@ -117,10 +117,11 @@ namespace VrBattlegrounds.Player.Input
         // ── Намерения ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Шаг ходьбы к мировой точке пола за <paramref name="deltaTime"/>: курс поворачивается к цели, голова идёт не
-        /// быстрее <paramref name="speed"/>. true — дошёл (ближе <paramref name="tolerance"/>).
+        /// Шаг ходьбы к мировой точке пола за <paramref name="deltaTime"/>: голова идёт не быстрее <paramref name="speed"/>;
+        /// <paramref name="turn"/> — курс поворачивается к цели (иначе шаг вбок/назад, курс задаёт взгляд). true — дошёл
+        /// (ближе <paramref name="tolerance"/>).
         /// </summary>
-        public bool StepTowards(Vector3 floorTarget, float speed, float deltaTime, float tolerance = 0.05f)
+        public bool StepTowards(Vector3 floorTarget, float speed, float deltaTime, float tolerance = 0.05f, bool turn = true)
         {
             if (_avatar == null || !_placed) return false;
 
@@ -129,8 +130,11 @@ namespace VrBattlegrounds.Player.Input
             float distance = delta.magnitude;
             if (distance <= tolerance) return true;
 
-            float targetYaw = Mathf.Atan2(delta.x, delta.z) * Mathf.Rad2Deg;
-            _yaw = Mathf.MoveTowardsAngle(_yaw, targetYaw, TurnSpeed * deltaTime);
+            if (turn)
+            {
+                float targetYaw = Mathf.Atan2(delta.x, delta.z) * Mathf.Rad2Deg;
+                _yaw = Mathf.MoveTowardsAngle(_yaw, targetYaw, TurnSpeed * deltaTime);
+            }
 
             float step = Mathf.Min(distance, Mathf.Clamp(speed, 0.05f, MaxWalkSpeed) * deltaTime);
             _headWorld += delta / distance * step;

@@ -75,6 +75,11 @@ namespace VrBattlegrounds.Bots
         /// <summary>Исход последнего решения «жать курок» (диагностика).</summary>
         public BotShotOutcome LastDecision { get; private set; }
 
+        /// <summary>Диагностика наведения (только чтение): цель правой кисти и желаемая поза оружия последнего кадра.</summary>
+        public Pose LastRightTarget { get; private set; }
+        public Pose LastWeaponWanted { get; private set; }
+        public Vector3 LastAimPoint { get; private set; }
+
         public void Bind(UxrAvatar avatar, bool keepHead)
         {
             _avatar = avatar;
@@ -149,7 +154,8 @@ namespace VrBattlegrounds.Bots
             }
             else if (lag.sqrMagnitude > 1e-6f)
             {
-                _pilot.StepTowards(feet, AvatarPilot.MaxWalkSpeed, dt, 0.01f);
+                // Курс задаёт взгляд мозга ниже (стрейф в укрытиях, взгляд на цель), не направление шага.
+                _pilot.StepTowards(feet, AvatarPilot.MaxWalkSpeed, dt, 0.01f, turn: false);
             }
 
             // Взгляд и курс головы — от мозга (цель, по ходу, осмотр).
@@ -312,6 +318,9 @@ namespace VrBattlegrounds.Bots
             position = hold - rotation * rightInWeapon;
 
             rightTarget = new Pose(position + rotation * rightInWeapon, rotation * rightInWeaponRotation);
+            LastRightTarget = rightTarget;
+            LastWeaponWanted = new Pose(position, rotation);
+            LastAimPoint = target;
             if (hasLeft) leftTarget = new Pose(position + rotation * leftInWeapon, rotation * leftInWeaponRotation);
             return true;
         }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -33,6 +34,9 @@ namespace VrBattlegrounds.EditorTools
         private const string ProbeGroupName = "NightLightProbes";
         private const string WindowGlowPrefix = "WindowGlow__";
 
+        // Сокет светильника шатра: группа светильника — его родитель с тем же именем.
+        private static readonly Regex TentFixtureSocket = new Regex("^LightingSocket__((?:BayLamp|Pendant)_[A-Za-z0-9]+)__CommonLightingOwner$", RegexOptions.CultureInvariant);
+
         // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
         private static readonly Color FogColor = new Color(.050f, .062f, .088f);
         private static readonly Color AmbientSky = new Color(.12f, .15f, .24f);
@@ -41,6 +45,10 @@ namespace VrBattlegrounds.EditorTools
         private static readonly Color MoonColor = new Color(.62f, .71f, .95f);
         private static readonly Color WarmLamp = new Color(1f, .74f, .46f);
         private static readonly Color FloodWhite = new Color(1f, .93f, .80f);
+        private static readonly Color BulbGlass = new Color(1f, .86f, .62f);
+        // Эмиссия рассеивателя ярче оттенка лампы: без bloom насыщенный тёплый почти белый читается как свет.
+        private const float LampGlowBoost = 1.6f;
+        private const string BulbGlassPath = "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Materials/Instances/M_Emissive.mat";
 
         // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
         private static readonly Dictionary<string, float> ZoneLightmapScale = new Dictionary<string, float>(StringComparer.Ordinal)
@@ -93,6 +101,7 @@ namespace VrBattlegrounds.EditorTools
             Undo.SetCurrentGroupName(bake ? "Ночь: подготовка запекания Lobby" : "Ночной пресет освещения Lobby");
             try
             {
+                EnsureTentFixtureLights(environment.transform, log);
                 var moon = ApplyLights(environment.transform, bake, log);
                 ApplyRenderSettings(materials.Sky, moon, bake, log);
                 ApplyEmissiveMaterials(environment.transform, materials, log);
@@ -165,6 +174,7 @@ namespace VrBattlegrounds.EditorTools
             if (result.LampLong != null) result.SwapByName["M_Lamp_long"] = result.LampLong;
             if (result.DoorLamp != null) result.SwapByName["M_Door_lamp"] = result.DoorLamp;
             result.SwapByName["PlaceholderFloodlightFace"] = result.FloodFace;
+            ApplyLampGlow(result.LampLong, log);
             AssetDatabase.SaveAssets();
             return result;
         }
@@ -200,6 +210,59 @@ namespace VrBattlegrounds.EditorTools
             AssetDatabase.CreateAsset(material, path);
             log.AppendLine("Создан материал " + path + " из " + sourcePath);
             return material;
+        }
+
+        // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому ярус материалов
+        // (LobbyGpuMaterialTier) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
+        // освещён, светится только рассеиватель), стекло SM_TopLight/SM_LampPost/SM_Lamp_02 — непрозрачный Unlit.
+        // EmissiveIsBlack: свет ламп запекают настоящие источники, эмиссия в GI второй раз не идёт.
+        private static void ApplyLampGlow(Material lampLong, StringBuilder log)
+        {
+            if (lampLong != null)
+            {
+                var simpleLit = Shader.Find("Universal Render Pipeline/Simple Lit") ?? throw new InvalidOperationException("Нет шейдера URP Simple Lit.");
+                var emissionMap = lampLong.HasProperty("_EmissionMap") ? lampLong.GetTexture("_EmissionMap") : null;
+                lampLong.shader = simpleLit;
+                lampLong.shaderKeywords = Array.Empty<string>();
+                OpaqueSurface(lampLong);
+                lampLong.SetFloat("_SpecularHighlights", 0f);
+                lampLong.SetFloat("_ReceiveShadows", 0f);
+                lampLong.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+                lampLong.SetTexture("_BumpMap", null);
+                lampLong.SetTexture("_EmissionMap", emissionMap);
+                lampLong.SetColor("_EmissionColor", WarmLamp * LampGlowBoost);
+                lampLong.EnableKeyword("_EMISSION");
+                lampLong.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+                EditorUtility.SetDirty(lampLong);
+                log.AppendLine("Плафон: " + AssetDatabase.GetAssetPath(lampLong) + " — Simple Lit, эмиссия по карте " + (emissionMap != null ? emissionMap.name : "нет") + ".");
+            }
+
+            var glass = AssetDatabase.LoadAssetAtPath<Material>(BulbGlassPath);
+            if (glass == null) { log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: нет " + BulbGlassPath + "; стекло плафонов не светится."); return; }
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new InvalidOperationException("Нет шейдера URP Unlit.");
+            glass.shader = unlit;
+            glass.shaderKeywords = Array.Empty<string>();
+            OpaqueSurface(glass);
+            glass.SetTexture("_BaseMap", null);
+            glass.SetColor("_BaseColor", BulbGlass);
+            glass.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            EditorUtility.SetDirty(glass);
+            log.AppendLine("Стекло плафонов: " + BulbGlassPath + " — непрозрачный Unlit " + BulbGlass + ".");
+        }
+
+        private static void OpaqueSurface(Material m)
+        {
+            m.SetFloat("_Surface", 0f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_AlphaClip", 0f);
+            m.SetFloat("_SrcBlend", 1f);
+            m.SetFloat("_DstBlend", 0f);
+            m.SetFloat("_SrcBlendAlpha", 1f);
+            m.SetFloat("_DstBlendAlpha", 0f);
+            m.SetFloat("_ZWrite", 1f);
+            m.SetFloat("_Cull", 2f);
+            m.SetOverrideTag("RenderType", "Opaque");
+            m.renderQueue = (int)RenderQueue.Geometry;
         }
 
         private static void EnsureFolder(string path)
@@ -327,7 +390,9 @@ namespace VrBattlegrounds.EditorTools
                     light.transform.rotation = Quaternion.Euler(32f, 135f, 0f); // луна на северо-западе, над стрельбищем.
                     if (bake) baked++; else realtime++;
                 }
-                else if (name == "InteriorWarmLight") { Warm(light, bake, 4.5f, 6.5f); if (bake) baked++; else realtime++; }
+                // Шатёр: дальность 10 м дотягивает четыре центральные лампы до середины пола (2026-10-20,
+                // «шатёр освещён одной свечкой»); в запечённой ночи runtime-стоимость та же — ноль.
+                else if (name == "InteriorWarmLight") { Warm(light, bake, 6f, 10f); if (bake) baked++; else realtime++; }
                 else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
                 {
                     if (SnapToFixture(light, environment, log)) snapped++;
@@ -365,6 +430,32 @@ namespace VrBattlegrounds.EditorTools
             if (mixed > 4) throw new InvalidOperationException("Больше четырёх realtime-прожекторов стрельбищ: на мишень с одной стороны должно приходиться не больше двух (лимит URP на объект).");
             log.AppendLine("Свет: realtime " + realtime + ", прожекторы стрельбищ (mixed) " + mixed + ", baked " + baked + "; перенесено к светильникам " + snapped + ".");
             return moon;
+        }
+
+        // Светильники шатра от LobbyCanopyBaysBuilder (BayLamp_N, Pendant_XX) приходят без Light: источник ставит
+        // этот пресет к их сокету «LightingSocket__<светильник>__CommonLightingOwner». Имя — InteriorWarmLight,
+        // поэтому значения задаёт то же правило, что у ламп шатра (ApplyLights).
+        private static void EnsureTentFixtureLights(Transform environment, StringBuilder log)
+        {
+            int created = 0, present = 0;
+            foreach (var socket in environment.GetComponentsInChildren<Transform>(true))
+            {
+                var match = TentFixtureSocket.Match(socket.name);
+                if (!match.Success) continue;
+                var fixture = socket.parent;
+                if (fixture == null || fixture.name != match.Groups[1].Value) continue;
+                if (fixture.GetComponentsInChildren<Light>(true).Length > 0) { present++; continue; }
+                var go = new GameObject("InteriorWarmLight");
+                Undo.RegisterCreatedObjectUndo(go, "Свет светильника шатра");
+                Undo.SetTransformParent(go.transform, fixture, "Свет светильника шатра");
+                go.transform.SetPositionAndRotation(socket.position + Vector3.down * .1f, Quaternion.identity);
+                go.isStatic = false;
+                var light = Undo.AddComponent<Light>(go);
+                light.type = LightType.Point;
+                created++;
+                log.AppendLine("Свет светильника шатра создан: " + HierarchyPath(go.transform, environment) + " " + go.transform.position.ToString("F2"));
+            }
+            log.AppendLine("Светильники шатра: создано источников " + created + ", уже со светом " + present + ".");
         }
 
         // Тёплая лампа: в превью — realtime без теней, при подготовке запекания — Baked с мягкими тенями.

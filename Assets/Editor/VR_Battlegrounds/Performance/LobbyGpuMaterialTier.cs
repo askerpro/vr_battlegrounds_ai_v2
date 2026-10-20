@@ -19,7 +19,8 @@ namespace VrBattlegrounds.Editor.Performance
     /// URP Baked Lit (одна текстура + лайтмап/пробы; свет в Lobby весь запечён), материалы с эмиссией —
     /// на URP Simple Lit без бликов. Исходный шейдер и перезаписанные поля хранятся в userData .meta
     /// материала — «Revert» возвращает их. Отчёт — в tasks/scene-detail/reports/ (вне Git).
-    /// Пол и его материалы (WornGround, M_Concrete_01, M_Tiles_ObjectSpace, S_VP*) не трогаются.
+    /// Пол и его материалы (WornGround, M_Concrete_01, M_Tiles_ObjectSpace, S_VP*) и светящиеся плафоны
+    /// (LobbyNightLampLong, M_Emissive — их ведёт ночной пресет) не трогаются.
     /// </summary>
     public static class LobbyGpuMaterialTier
     {
@@ -40,6 +41,10 @@ namespace VrBattlegrounds.Editor.Performance
 
         // Пол и связанные с ним материалы меняет главный агент задачи (S_VPWorldAligned).
         static readonly string[] ExcludedMaterialPrefixes = { "WornGround", "M_Concrete_01", "M_Tiles_ObjectSpace" };
+
+        // Светящиеся плафоны ламп ведёт ночной пресет (LobbyNightLighting.ApplyLampGlow): Simple Lit/Unlit с эмиссией.
+        // Baked Lit эмиссии не имеет, а Revert вернул бы им исходный шейдер без свечения.
+        static readonly string[] LampGlowMaterials = { "LobbyNightLampLong", "M_Emissive" };
 
         // Корни сцены с игровыми/интерактивными объектами — их материалы не трогаются.
         static readonly string[] DynamicRoots = { "Gameplay" };
@@ -140,6 +145,7 @@ namespace VrBattlegrounds.Editor.Performance
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 AssetImporter importer = AssetImporter.GetAtPath(path);
                 if (importer == null || string.IsNullOrEmpty(importer.userData) || !importer.userData.Contains(Marker)) continue;
+                if (LampGlowMaterials.Contains(System.IO.Path.GetFileNameWithoutExtension(path))) continue;
                 RevertData data = JsonUtility.FromJson<RevertData>(importer.userData);
                 var material = AssetDatabase.LoadAssetAtPath<Material>(path);
                 Shader shader = LoadShader(data.shaderName, data.shaderPath);
@@ -206,6 +212,8 @@ namespace VrBattlegrounds.Editor.Performance
                     c.Skip = "вне папок окружения лобби";
                 else if (ExcludedMaterialPrefixes.Any(p => m.name.StartsWith(p, StringComparison.Ordinal)))
                     c.Skip = "пол (задача главного агента)";
+                else if (LampGlowMaterials.Contains(m.name))
+                    c.Skip = "светящийся плафон (ночной пресет LobbyNightLighting)";
                 else if (foreign.Contains(c.Path))
                     c.Skip = "используется вне лобби (другие сцены/префабы)";
                 else if (pair.Value.Any(IsDynamicUser))

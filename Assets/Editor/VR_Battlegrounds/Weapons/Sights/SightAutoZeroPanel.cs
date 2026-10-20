@@ -19,9 +19,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// <item>«Родной прицел» — вшитый прицел ствола из <see cref="SightSplitTable"/>, разделённый
     /// <see cref="SightPartSplitter"/> на копии (<see cref="NativeSightStand"/>, меши только в памяти).</item>
     /// </list>
-    /// «Свести» двигает подвижную деталь только по её локальной Y. Решение «Только инструменты» (2026-10-12):
-    /// «Сохранить в таблицу» и «Применить к префабу» выключены — финальная калибровка отдельной задачей; код их
-    /// сохранён (<see cref="WeaponSightTable"/>, <see cref="WeaponSightAuthoring"/>).
+    /// «Свести» двигает подвижную деталь только по её локальной Y. У комплекта-коллиматора (SightKit_XPS2) подвижной
+    /// детали нет: «Свести» привязывает сетку конечного фокуса к ShotSource и дистанции пристрелки и показывает, где
+    /// точка пристрелки видна в окне (<see cref="SolveOptic"/>).
+    /// Ствол со своим прицелом (<see cref="SightSplitTable"/>) калибруется только им — комплекты для него недоступны
+    /// (раунд 1, 2026-10-20). «Сохранить в таблицу» и «Применить к префабу» включены для комплектов (решение
+    /// пользователя 2026-10-20; писатель префаба — <see cref="WeaponSightAuthoring"/>); для родного прицела — следующим шагом.
     /// Панель вкладки «Калибровка прицела» окна «Настройка оружия»: оружие выбирает окно, панель хранит стенд.
     /// </summary>
     [Serializable]
@@ -29,10 +32,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     {
         private const string SettingsPath = WeaponSightAuthoring.SettingsPath;
         private const string NativeOption = "Родной прицел";
-        private const string LockedHint = "Финальная калибровка — отдельная задача (решение 2026-10-12 «Только инструменты»)";
-        // Запись таблицы и применение к префабам выключены в этой задаче; включит отдельная задача калибровки.
-        private static readonly bool SaveUnlocked = false;
-        private static readonly bool ApplyUnlocked = false;
+        private const string NativeLockedHint = "Родной прицел: запись в таблицу и применение к префабу — следующим шагом калибровки";
+        // Решение пользователя 2026-10-20: запись таблицы и применение к префабу включены для комплектов SightKit_*.
+        private static readonly bool SaveUnlocked = true;
+        private static readonly bool ApplyUnlocked = true;
+        /// <summary>Расстояние глаза за окном коллиматора для отчёта и «Вида через прицел», м.</summary>
+        private const float OpticEyeRelief = .10f;
         private const float RailTolerance = .00001f; // 0,01 мм
         private const float ViewDistance = .18f;
 
@@ -43,6 +48,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         [SerializeField] private bool _standNative;
         [SerializeField] private string _message = "";
         [NonSerialized] private SightAutoZeroResult _last;
+        [NonSerialized] private string _opticReport;
         [NonSerialized] private NativeSightStand _native;
         [NonSerialized] private Action _repaint;
 
@@ -63,6 +69,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         /// <summary>Объект, внутри которого ищутся половины: комплект или (в режиме родного прицела) копия ствола.</summary>
         private GameObject Scope => _standNative ? _standWeapon : _standKit;
 
+        /// <summary>На стенде комплект-коллиматор (без механики).</summary>
+        private bool StandOptic => !_standNative && _standKitPrefab != null && SightParts.IsOpticKit(_standKitPrefab);
+
         private bool StandAlive => _standWeapon != null && _standInfo != null
             && (_standNative ? _standWeapon.GetComponentsInChildren<SightAdjustablePart>(true).Length == 2 : _standKit != null && _standKitPrefab != null);
 
@@ -82,21 +91,27 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 WeaponSightTable table = WeaponSightTable.Load();
                 var entry = selected != null && table != null ? table.Find(selected) : null;
 
-                // Список: комплекты + «Родной прицел» (только для стволов из SightSplitTable).
-                var options = _kits.Select(k => k.name).ToList();
-                if (nativeSpec != null) options.Add(NativeOption);
+                // Список: ствол со своим прицелом (SightSplitTable) — только «Родной прицел»; иначе — комплекты SightKit_*.
                 bool nativeSelected = false;
                 GameObject kitSelected = null;
-                if (options.Count > 0)
+                if (nativeSpec != null)
                 {
-                    _kitIndex = EditorGUILayout.Popup("Прицел", Mathf.Clamp(_kitIndex, 0, options.Count - 1), options.ToArray());
-                    nativeSelected = nativeSpec != null && Mathf.Clamp(_kitIndex, 0, options.Count - 1) == _kits.Length;
-                    if (!nativeSelected && _kits.Length > 0) kitSelected = _kits[Mathf.Clamp(_kitIndex, 0, _kits.Length - 1)];
+                    using (new EditorGUI.DisabledScope(true))
+                        EditorGUILayout.Popup("Прицел", 0, new[] { NativeOption });
+                    nativeSelected = true;
+                }
+                else if (_kits.Length > 0)
+                {
+                    _kitIndex = EditorGUILayout.Popup("Прицел", Mathf.Clamp(_kitIndex, 0, _kits.Length - 1), _kits.Select(k => k.name).ToArray());
+                    kitSelected = _kits[Mathf.Clamp(_kitIndex, 0, _kits.Length - 1)];
                 }
                 else EditorGUILayout.HelpBox("Нет префабов SightKit_* в " + SightKitBuilder.PrefabFolder, MessageType.Warning);
+                if (nativeSpec != null)
+                    EditorGUILayout.HelpBox("У ствола свой прицел — он и калибруется; комплекты для него недоступны.", MessageType.None);
                 if (nativeSpec != null) EditorGUILayout.LabelField("Родной прицел", nativeSpec.Note, EditorStyles.wordWrappedMiniLabel);
                 EditorGUILayout.LabelField("В таблице", entry == null ? "записи нет" :
-                    $"{(entry.Kit != null ? entry.Kit.name : "встроенный")}, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм, {entry.ZeroDistance} м");
+                    $"{(entry.Kit != null ? entry.Kit.name : "встроенный")}, " +
+                    (SightParts.IsOpticKit(entry.Kit) ? "коллиматор" : $"сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм") + $", {entry.ZeroDistance} м");
 
                 using (new EditorGUI.DisabledScope(selected == null || (!nativeSelected && kitSelected == null)))
                     if (GUILayout.Button("Открыть стенд"))
@@ -111,19 +126,23 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     if (!_standNative)
                     {
                         if (GUILayout.Button("Выделить корень комплекта")) { Selection.activeGameObject = _standKit; SceneView.lastActiveSceneView?.FrameSelected(); }
-                        if (GUILayout.Button("Вернуть половины на планку (X/Y и поворот как в префабе)")) Run(ResetHalves);
+                        if (StandOptic) { if (GUILayout.Button("Вернуть масштаб комплекта")) Run(ResetHalves); }
+                        else if (GUILayout.Button("Вернуть половины на планку (X/Y и поворот как в префабе)")) Run(ResetHalves);
                     }
                     else if (GUILayout.Button("Вернуть деталь в нейтраль")) Run(ResetPartsToNeutral);
-                    if (GUILayout.Button("Свести")) Run(() => Solve(settings, true));
+                    if (GUILayout.Button("Свести")) Run(() => { if (StandOptic) SolveOptic(settings, true); else Solve(settings, true); });
                     if (GUILayout.Button("Вид через прицел")) Run(ViewThroughSights);
-                    DrawResult();
+                    if (StandOptic) { if (!string.IsNullOrEmpty(_opticReport)) EditorGUILayout.HelpBox(_opticReport, MessageType.None); }
+                    else DrawResult();
                     EditorGUILayout.Space();
-                    using (new EditorGUI.DisabledScope(!SaveUnlocked || _standNative || _last == null || !_last.Ok))
-                        if (GUILayout.Button(new GUIContent("Сохранить в таблицу", LockedHint))) Run(() => SaveToTable(settings));
+                    bool solved = StandOptic ? _opticReport != null : _last != null && _last.Ok;
+                    using (new EditorGUI.DisabledScope(!SaveUnlocked || _standNative || !solved))
+                        if (GUILayout.Button(new GUIContent("Сохранить в таблицу", _standNative ? NativeLockedHint : "Поза комплекта и сведение → WeaponSightTable")))
+                            Run(() => SaveToTable(settings));
                     using (new EditorGUI.DisabledScope(!ApplyUnlocked || _standNative))
-                        if (GUILayout.Button(new GUIContent("Применить к префабу", LockedHint)))
+                        if (GUILayout.Button(new GUIContent("Применить к префабу", _standNative ? NativeLockedHint : "Запись таблицы → префаб оружия (WeaponSightAuthoring)")))
                             Run(() => _message = WeaponSightAuthoring.Apply(_standInfo));
-                    if (!SaveUnlocked || !ApplyUnlocked) EditorGUILayout.HelpBox(LockedHint + ": сохранение и применение выключены.", MessageType.None);
+                    if (_standNative) EditorGUILayout.HelpBox(NativeLockedHint + ".", MessageType.None);
                     if (!_standNative && GUILayout.Button("Проверить запись таблицы (без записи)")) Run(() => _message = WeaponSightAuthoring.Preflight(_standInfo));
                 }
             }
@@ -160,7 +179,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return null;
             DisposeNative();
             EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            _standWeapon = null; _standKit = null; _standKitPrefab = null; _standInfo = null; _last = null;
+            _standWeapon = null; _standKit = null; _standKitPrefab = null; _standInfo = null; _last = null; _opticReport = null;
             return new GameObject("SightAutoZero_Stand (не сохранять)");
         }
 
@@ -180,26 +199,31 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             Transform container = WeaponSightAuthoring.FindContainer(weapon.transform);
             foreach (Transform child in container.Cast<Transform>().ToArray())
                 if (child.name.StartsWith("SightKit_", StringComparison.Ordinal)) UnityEngine.Object.DestroyImmediate(child.gameObject); // прежний комплект заменяется
-            if (weapon.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0)
-                throw new InvalidOperationException($"{weapon.name}: у оружия уже есть детали прицела вне комплекта — стенд комплекта не открыт");
+            if (weapon.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0 || weapon.GetComponentsInChildren<WeaponOpticView>(true).Length > 0)
+                throw new InvalidOperationException($"{weapon.name}: у оружия уже есть прицел вне комплекта (механика или коллиматор) — стенд комплекта не открыт");
             GameObject kit = UnityEngine.Object.Instantiate(kitPrefab, container, false);
             kit.name = kitPrefab.name;
             SightKitScale.Apply(kit.transform); // реальный размер при любом масштабе корня оружия
             Transform muzzle = SightParts.FindShotSource(weapon);
+            bool optic = SightParts.IsOpticKit(kitPrefab);
             if (entry != null && entry.Kit == kitPrefab)
             {
                 kit.transform.localPosition = entry.KitLocalPosition;
                 kit.transform.localRotation = entry.KitLocalRotation;
-                SetZ(kit.transform.Find("Rear"), entry.RearAlongRail);
-                SetZ(kit.transform.Find("Front"), entry.FrontAlongRail);
-                SightAdjustablePart moving = WeaponSightAuthoring.Moving(kit);
-                moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
+                if (!optic)
+                {
+                    SetZ(kit.transform.Find("Rear"), entry.RearAlongRail);
+                    SetZ(kit.transform.Find("Front"), entry.FrontAlongRail);
+                    SightAdjustablePart moving = WeaponSightAuthoring.Moving(kit);
+                    moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
+                }
             }
             else PlaceAboveBore(weapon, kit.transform, muzzle);
             _standWeapon = weapon; _standKit = kit; _standKitPrefab = kitPrefab; _standInfo = info; _standNative = false;
             Selection.activeGameObject = kit;
             SceneView.lastActiveSceneView?.FrameSelected();
-            _message = entry != null && entry.Kit == kitPrefab ? "Стенд открыт с позой из таблицы." : "Стенд открыт: комплект поставлен над осью ствола — посадите его на планку.";
+            _message = (entry != null && entry.Kit == kitPrefab ? "Стенд открыт с позой из таблицы." : "Стенд открыт: комплект поставлен над осью ствола — посадите его на планку.")
+                + (optic ? " Коллиматор: после посадки «Свести» привяжет сетку к ShotSource (до этого сетка выключена)." : "");
         }
 
         /// <summary>Стенд родного прицела: копия ствола, разделённая SightPartSplitter (меши в памяти, префаб не меняется).</summary>
@@ -247,6 +271,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             RequireStand();
             Undo.RecordObject(_standKit.transform, "Вернуть масштаб комплекта");
             SightKitScale.Apply(_standKit.transform);
+            _opticReport = null;
+            if (StandOptic) return;
             foreach (string name in new[] { "Rear", "Front" })
             {
                 Transform half = _standKit.transform.Find(name), source = _standKitPrefab.transform.Find(name);
@@ -287,7 +313,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             if (!_standNative)
             {
                 string scale = SightKitScale.Problem(_standKit.transform);
-                if (scale != null) return scale + " («Вернуть половины на планку» восстановит)";
+                if (scale != null) return scale + (StandOptic ? " («Вернуть масштаб комплекта» восстановит)" : " («Вернуть половины на планку» восстановит)");
+                if (StandOptic) return null;
                 foreach (string name in new[] { "Rear", "Front" })
                 {
                     Transform half = _standKit.transform.Find(name), source = _standKitPrefab.transform.Find(name);
@@ -332,37 +359,98 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             return result;
         }
 
-        /// <summary>Запись в таблицу (в этой задаче кнопка выключена: финальная калибровка — отдельно).</summary>
+        /// <summary>
+        /// «Свести» коллиматор: подвижной детали нет, сетка конечного фокуса рисует точку пристрелки T = ShotSource +
+        /// forward·Z в мире, поэтому сведение — привязка WeaponOpticView экземпляра к ShotSource и Z. Отчёт: угол оси
+        /// окна к T и где точка видна в окне глазу на оси за <see cref="OpticEyeRelief"/>. <paramref name="write"/> = false —
+        /// только проверка (для «Сохранить в таблицу»).
+        /// </summary>
+        private void SolveOptic(WeaponSightCalibrationSettings settings, bool write)
+        {
+            RequireStand();
+            if (settings == null) throw new InvalidOperationException("Нет настроек калибровки: " + SettingsPath);
+            string problem = LayoutProblem();
+            if (problem != null) throw new InvalidOperationException(problem);
+            WeaponOpticView view = SightParts.FindOptic(_standKit);
+            Transform muzzle = SightParts.FindShotSource(_standWeapon);
+            var source = _standWeapon.GetComponentsInChildren<UltimateXR.Mechanics.Weapons.UxrProjectileSource>(true).Single();
+            float z = settings.DefaultZeroDistance;
+            if (write)
+            {
+                Undo.RecordObject(view, "Свести коллиматор");
+                SightParts.BindOptic(view, source, _standInfo, settings, z);
+            }
+            else
+            {
+                string binding = SightParts.OpticBindingProblem(view, source, _standInfo, z);
+                if (binding != null) throw new InvalidOperationException("Не сведено: " + binding + " — нажмите «Свести»");
+            }
+            Vector3 lens = SightParts.OpticLensCenter(view), axis = _standKit.transform.forward, target = muzzle.position + muzzle.forward * z;
+            if (Vector3.Dot(target - lens, axis) <= 0f) throw new InvalidOperationException("Окно коллиматора смотрит не к точке пристрелки");
+            Vector3 toTarget = (target - lens).normalized;
+            float vertical = Vector3.Dot(toTarget, _standKit.transform.up), horizontal = Vector3.Dot(toTarget, _standKit.transform.right);
+            float tilt = Vector3.Angle(_standKit.transform.up, muzzle.up);
+            // Глаз на оси окна за ним: точка T видна в окне со смещением ≈ угол·eye relief (для конечного фокуса без параллакса оси).
+            _opticReport = $"Сетка привязана: точка пристрелки {z} м (ShotSource + forward·Z), сдвига деталей нет.\n" +
+                           $"Ось окна → точка: верт. {vertical * 1000:+0.0;-0.0;0.0} мрад, гор. {horizontal * 1000:+0.0;-0.0;0.0} мрад; " +
+                           $"в окне при глазе в {OpticEyeRelief * 100:0} см: {vertical * OpticEyeRelief * 1000:+0.0;-0.0;0.0} / {horizontal * OpticEyeRelief * 1000:+0.0;-0.0;0.0} мм от центра. " +
+                           $"Окно над осью ствола: {Vector3.Dot(lens - muzzle.position, muzzle.up) * 1000:0.0} мм. Крен комплекта {tilt:0.00}°.";
+            if (write) _message = "Коллиматор сведён (сетка привязана к ShotSource). Проверьте «Вид через прицел».";
+        }
+
+        /// <summary>Запись позы комплекта и сведения в таблицу. Префаб оружия не меняется.</summary>
         private void SaveToTable(WeaponSightCalibrationSettings settings)
         {
-            if (_standNative) throw new InvalidOperationException("Таблица хранит только комплекты; родной прицел — задача финальной калибровки");
+            if (_standNative) throw new InvalidOperationException("Таблица хранит только комплекты; родной прицел — следующим шагом калибровки");
+            bool optic = StandOptic;
             // Повторный расчёт без записи: состояние стенда должно быть сведённым прямо сейчас.
-            var check = Solve(settings, false);
-            if (!check.Ok) throw new InvalidOperationException("Не сведено: " + check.Error);
-            if (Math.Abs(check.RequiredWorldShift) > 1e-6) throw new InvalidOperationException("Стенд изменился после сведения — нажмите «Свести» ещё раз");
+            if (optic) SolveOptic(settings, false);
+            else
+            {
+                var check = Solve(settings, false);
+                if (!check.Ok) throw new InvalidOperationException("Не сведено: " + check.Error);
+                if (Math.Abs(check.RequiredWorldShift) > 1e-6) throw new InvalidOperationException("Стенд изменился после сведения — нажмите «Свести» ещё раз");
+            }
             Transform muzzleAsset = SightParts.FindShotSource(_standInfo.WeaponPrefab);
             var fingerprint = ShotSourceFingerprint.Capture(muzzleAsset, _standInfo.WeaponPrefab.transform);
             string drift = fingerprint.Compare(ShotSourceFingerprint.Capture(SightParts.FindShotSource(_standWeapon), _standWeapon.transform));
             if (drift != null) throw new InvalidOperationException("Копия оружия на стенде отличается от префаба (" + drift + ") — откройте стенд заново");
-            SightAdjustablePart moving = WeaponSightAuthoring.Moving(_standKit);
+            SightAdjustablePart moving = optic ? null : WeaponSightAuthoring.Moving(_standKit);
             var entry = new WeaponSightTable.Entry
             {
                 Weapon = _standInfo, Kit = _standKitPrefab,
                 KitLocalPosition = _standKit.transform.localPosition, KitLocalRotation = _standKit.transform.localRotation,
-                RearAlongRail = _standKit.transform.Find("Rear").localPosition.z, FrontAlongRail = _standKit.transform.Find("Front").localPosition.z,
-                MovingOffset = moving.Offset, ZeroDistance = settings.DefaultZeroDistance, ShotSource = fingerprint
+                RearAlongRail = optic ? 0f : _standKit.transform.Find("Rear").localPosition.z,
+                FrontAlongRail = optic ? 0f : _standKit.transform.Find("Front").localPosition.z,
+                MovingOffset = optic ? 0f : moving.Offset, ZeroDistance = settings.DefaultZeroDistance, ShotSource = fingerprint
             };
             WeaponSightTable table = WeaponSightTable.LoadOrCreate();
             Undo.RecordObject(table, "Сохранить сведение прицела");
             table.Set(entry);
             EditorUtility.SetDirty(table);
             AssetDatabase.SaveAssetIfDirty(table);
-            _message = $"Сохранено в таблицу: {_standInfo.WeaponId}, сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм. Префаб оружия не менялся.";
+            _message = $"Сохранено в таблицу: {_standInfo.WeaponId}, {_standKitPrefab.name}" +
+                       (optic ? "" : $", сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм") + ". Префаб оружия не менялся — «Применить к префабу».";
         }
 
         private void ViewThroughSights()
         {
             RequireStand();
+            if (StandOptic)
+            {
+                // Глаз на оси окна коллиматора за ним, взгляд на точку пристрелки.
+                Vector3 lens = SightParts.OpticLensCenter(SightParts.FindOptic(_standKit));
+                Transform shot = SightParts.FindShotSource(_standWeapon);
+                var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+                Vector3 target = shot.position + shot.forward * (settings != null ? settings.DefaultZeroDistance : 15f);
+                var sceneView = SceneView.lastActiveSceneView ?? EditorWindow.GetWindow<SceneView>();
+                sceneView.orthographic = false;
+                sceneView.LookAtDirect(lens, Quaternion.LookRotation((target - lens).normalized, shot.up), .1f);
+                sceneView.size *= (OpticEyeRelief + .05f) / Mathf.Max(sceneView.cameraDistance, .0001f);
+                sceneView.Focus();
+                sceneView.Repaint();
+                return;
+            }
             SightParts.Find(Scope, out var rearPart, out var frontPart, out _);
             Vector3 rear = rearPart.transform.position, front = frontPart.transform.position;
             Transform muzzle = SightParts.FindShotSource(_standWeapon);
@@ -384,11 +472,13 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
             if (settings == null) return;
             Transform muzzle;
-            SightAdjustablePart rear, front;
+            SightAdjustablePart rear = null, front = null;
+            WeaponOpticView optic = null;
             try
             {
                 muzzle = SightParts.FindShotSource(_standWeapon);
-                SightParts.Find(Scope, out rear, out front, out _);
+                if (StandOptic) optic = SightParts.FindOptic(_standKit);
+                else SightParts.Find(Scope, out rear, out front, out _);
             }
             catch (InvalidOperationException) { return; }
             float z = settings.DefaultZeroDistance;
@@ -401,6 +491,16 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 Handles.color = Color.green;
                 Handles.DrawLine(muzzle.position, target, 2f);
                 Handles.DrawWireDisc(target, muzzle.forward, .01f);
+                if (optic != null)
+                {
+                    Vector3 lens;
+                    try { lens = SightParts.OpticLensCenter(optic); }
+                    catch (InvalidOperationException) { return; }
+                    Handles.color = Color.cyan;
+                    Handles.DrawLine(lens, target, 2f);
+                    Handles.DrawWireDisc(lens, muzzle.forward, .003f);
+                    return;
+                }
                 Vector3 dir = front.transform.position - rear.transform.position;
                 float du = Vector3.Dot(dir, muzzle.forward);
                 if (du <= 0f) return;

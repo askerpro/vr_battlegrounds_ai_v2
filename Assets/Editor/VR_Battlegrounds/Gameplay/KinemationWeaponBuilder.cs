@@ -217,7 +217,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Винтовка с глушителем (роль M4A1-S): TR15 (AR-15/M4), магазин на 20 как у M4A1-S (модель магазина — на 30).
-        /// Глушитель AR и корпус коллиматора XPS2 — обвесы пака, статичными деталями; дуло — срез глушителя
+        /// Глушитель AR — обвес пака, статичной деталью; дуло — срез глушителя
         /// (<see cref="HandsPackWeaponRecipe.MuzzlePart" />). Голограмма прицела (свой шейдер пака, не URP Lit) и вертикальная
         /// рукоять не берутся — хват рук снят с клипа без рукояти (<c>Idle_Pose_Non_Grip</c>). Затвор — <c>Bolt</c>, рукоятка
         /// взведения (<c>Charger</c>) ходит с ним (в клипах пака она неподвижна, как у MKR9). Выстрел — вариант пака
@@ -239,7 +239,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 return new KinemationWeaponRecipe
                 {
                     Weapon = r, PackPrefab = "W_TR15", AnimFolder = "TR15", RestClip = "A_W_TR15_Idle", PoseClip = "A_FP_TR15_Idle_Pose_Non_Grip",
-                    Attachments = new[] { Silencer, "SM_Attach_AR15_XPS2" },
+                    // Коллиматор XPS2 с раунда 1 (2026-10-20) — комплект SightKit_XPS2 из таблицы прицелов, не обвес пака.
+                    Attachments = new[] { Silencer },
                     Excluded = new[] { "Cartridge_*", "Follower", "Spring" }, ReloadClip = "A_W_TR15_Reload_Empty",
                     ShotSound = Sfx + "TR15/Fire/S_TR15_V1_Suppressed_With_Tail_0.WAV",
                     ReloadSound = Sfx + "TR15/Actions/S_TR15_Reload_Empty.WAV"
@@ -326,10 +327,32 @@ namespace VrBattlegrounds.Editor.Gameplay
             HandsPackWeaponBuilder.AlignRecoilToMainGrip(path);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
-            if (r.Name == "TR15") Tr15OpticBuilder.Apply();
+            if (r.Name == "TR15") Tr15OpticBuilder.Apply(); // ассеты окна XPS2 для SightKit_XPS2
+            RestoreSight(path);
             AssetDatabase.SaveAssets();
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
             return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>
+        /// Пересборка пишет префаб заново — комплект прицела из таблицы сведения ставит обратно его писатель
+        /// (<see cref="VrBattlegrounds.Editor.Weapons.Sights.WeaponSightAuthoring"/>). Без записи — ничего.
+        /// </summary>
+        private static void RestoreSight(string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            var info = AssetDatabase.FindAssets("t:WeaponInfo").Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>).FirstOrDefault(i => i != null && i.WeaponPrefab == prefab);
+            try
+            {
+                string report = VrBattlegrounds.Editor.Weapons.Sights.WeaponSightAuthoring.ApplyIfRecorded(info);
+                if (report != null) GameLog.WeaponSystem.Info($"[KinemationWeaponBuilder] прицел из таблицы: {report}");
+            }
+            catch (System.Exception e)
+            {
+                GameLog.WeaponSystem.Warning($"[KinemationWeaponBuilder] {prefabPath}: прицел из таблицы не поставлен — {e.Message}. " +
+                                             "Откройте стенд «Калибровка прицела», сведите и примените заново.", prefab);
+            }
         }
 
         /// <summary>Звуки ствола: выстрел, затвор назад/вперёд, магазин снять/вставить — куски звуков пака.</summary>

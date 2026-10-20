@@ -11,9 +11,12 @@ using VrBattlegrounds.Weapons.Sights;
 namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
-    /// Единственный writer коллиматора XPS2 у TR15: source alpha выделяет окно в отдельный submesh, в окне —
-    /// сетка конечного фокуса (<see cref="WeaponOpticView"/>), сведённая на дистанцию пристрелки по умолчанию.
-    /// Решение пользователя 2026-10-11: эталон — проверочная копия TR15 Sight Review; её прицел переходит в TR15.
+    /// Writer ассетов коллиматора XPS2: source alpha выделяет окно в отдельный submesh (<see cref="MeshPath"/>), в окне —
+    /// материал сетки конечного фокуса (<see cref="ReticleMaterialPath"/>). Это входы комплекта <c>SightKit_XPS2</c>
+    /// (<c>SightKitBuilder.Optics</c>).
+    /// Раунд 1 (2026-10-20, решение пользователя): коллиматор больше не вшит в TR15 — он ставится комплектом через стенд
+    /// калибровки (<c>WeaponSightAuthoring</c>). <see cref="Apply"/> поэтому только обновляет ассеты и убирает из TR15
+    /// прежний узел <see cref="OpticName"/> (если он ещё есть): этот writer его и ставил (2026-10-11/12).
     /// </summary>
     public static class Tr15OpticBuilder
     {
@@ -34,13 +37,16 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public static string[] InputPaths() => new[] { WeaponPath, RawMeshPath, HousingMaterialPath,
             SourceTextures + "T_TR15_Attachments_Alpha.TGA", ReticleShaderPath, WeaponInfoPath, SettingsPath };
+        /// <summary>WeaponPath — только для снятия прежнего узла коллиматора из TR15.</summary>
         public static string[] OutputPaths() => new[] { WeaponPath, MeshPath, ReticleMaterialPath };
 
         /// <summary>Read-only: проверяет binding, маску и данные сведения до первого writer, не импортирует источник.</summary>
         public static string Preflight()
         {
             ReadInputs(out _, out _, out _, out _, out WeaponInfo info, out WeaponSightCalibrationSettings settings);
-            return $"TR15 XPS2: housing=1648, lens=52; сетка конечного фокуса {settings.DefaultZeroDistance} м, {info.WeaponId}";
+            bool legacy = LegacyNode(AssetDatabase.LoadAssetAtPath<GameObject>(WeaponPath)) != null;
+            return $"TR15 XPS2: housing=1648, lens=52; материал сетки конечного фокуса для SightKit_XPS2; " +
+                   (legacy ? $"прежний узел {OpticName} будет снят с {info.WeaponId}" : $"в {info.WeaponId} вшитого коллиматора нет");
         }
 
         private static void ReadInputs(out Mesh raw, out Shader shader, out List<int> housing, out List<int> lens,
@@ -63,7 +69,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             if ((File.Exists(MeshPath) && AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath) == null) ||
                 (File.Exists(ReticleMaterialPath) && AssetDatabase.LoadAssetAtPath<Material>(ReticleMaterialPath) == null))
                 throw new InvalidOperationException("TR15 XPS2: output path занят чужим типом ассета или неимпортированным файлом");
-            ValidateBinding(asset);
+            GameObject legacyNode = LegacyNode(asset);
+            if (legacyNode != null) ValidateBinding(legacyNode);
             Color32[] mask = Read(maskTexture, maskTexture.width, maskTexture.height);
             Vector2[] uv = raw.uv;
             int[] triangles = raw.GetTriangles(0);
@@ -84,9 +91,18 @@ namespace VrBattlegrounds.Editor.Gameplay
                 throw new InvalidOperationException($"TR15 XPS2: изменённая геометрия/UV, housing={housing.Count / 3}, lens={lens.Count / 3}");
         }
 
-        private static MeshFilter ValidateBinding(GameObject root)
+        /// <summary>Прежний вшитый узел коллиматора (не внутри экземпляра комплекта SightKit_*); null — его нет.</summary>
+        private static GameObject LegacyNode(GameObject root)
         {
-            MeshFilter filter = root.GetComponentsInChildren<MeshFilter>(true).Single(f => f.name == OpticName);
+            var nodes = root.GetComponentsInChildren<MeshFilter>(true)
+                .Where(f => f.name == OpticName && !PrefabUtility.IsPartOfPrefabInstance(f.gameObject)).Select(f => f.gameObject).ToArray();
+            if (nodes.Length > 1) throw new InvalidOperationException($"TR15 XPS2: узлов {OpticName} {nodes.Length}");
+            return nodes.Length == 1 ? nodes[0] : null;
+        }
+
+        private static MeshFilter ValidateBinding(GameObject node)
+        {
+            MeshFilter filter = node.GetComponent<MeshFilter>();
             MeshRenderer renderer = filter.GetComponent<MeshRenderer>();
             if (renderer == null || renderer.sharedMaterials.Length < 1 || renderer.sharedMaterials[0] == null ||
                 (AssetDatabase.GetAssetPath(filter.sharedMesh) != RawMeshPath && AssetDatabase.GetAssetPath(filter.sharedMesh) != MeshPath) ||
@@ -100,29 +116,36 @@ namespace VrBattlegrounds.Editor.Gameplay
             WeaponModelPreviewScope.CheckEditor();
             ReadInputs(out Mesh raw, out Shader shader, out List<int> housing, out List<int> lens,
                        out WeaponInfo info, out WeaponSightCalibrationSettings settings);
+            KinemationWeapon.EnsureFolder("Assets/Art/Weapons/Kinemation/TR15/Materials");
+            Mesh saved = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
+            bool create = saved == null;
+            if (create) saved = new Mesh();
+            try
+            {
+                UpdateMesh(saved, raw, housing, lens);
+                if (create) AssetDatabase.CreateAsset(saved, MeshPath);
+                else EditorUtility.SetDirty(saved);
+                AssetDatabase.SaveAssetIfDirty(saved);
+            }
+            catch { if (create && !EditorUtility.IsPersistent(saved)) UnityEngine.Object.DestroyImmediate(saved); throw; }
+            BuildReticleMaterial(shader);
+            if (LegacyNode(AssetDatabase.LoadAssetAtPath<GameObject>(WeaponPath)) == null) return;
+
+            // Снятие прежнего вшитого коллиматора: на узел ссылается только его WeaponOpticView (проверено 2026-10-20).
             var root = PrefabUtility.LoadPrefabContents(WeaponPath);
             try
             {
-                MeshFilter filter = ValidateBinding(root);
-                MeshRenderer renderer = filter.GetComponent<MeshRenderer>();
-                Material housingMaterial = renderer.sharedMaterials[0];
-                KinemationWeapon.EnsureFolder("Assets/Art/Weapons/Kinemation/TR15/Materials");
-                Mesh saved = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
-                bool create = saved == null;
-                if (create) saved = new Mesh();
-                try
+                GameObject node = LegacyNode(root);
+                ValidateBinding(node);
+                foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true).Where(b => b != null && !b.transform.IsChildOf(node.transform)))
                 {
-                    UpdateMesh(saved, raw, housing, lens);
-                    if (create) AssetDatabase.CreateAsset(saved, MeshPath);
-                    else EditorUtility.SetDirty(saved);
-                    AssetDatabase.SaveAssetIfDirty(saved);
-                    filter.sharedMesh = saved;
+                    var property = new SerializedObject(behaviour).GetIterator();
+                    while (property.Next(true))
+                        if (property.propertyType == SerializedPropertyType.ObjectReference && property.objectReferenceValue != null
+                            && (property.objectReferenceValue == node || (property.objectReferenceValue is Component c && c.gameObject == node)))
+                            throw new InvalidOperationException($"TR15 XPS2: {behaviour.GetType().Name} на {behaviour.name} ссылается на {OpticName} — снятие отменено");
                 }
-                catch { if (create && !EditorUtility.IsPersistent(saved)) UnityEngine.Object.DestroyImmediate(saved); throw; }
-                Material reticle = BuildReticleMaterial(shader);
-                renderer.sharedMaterials = new[] { housingMaterial, reticle };
-                ConfigureOpticView(root, renderer, info, settings);
-                // Collider geometry остаётся прежней: объединение двух render submeshes точно равно исходному мешу.
+                UnityEngine.Object.DestroyImmediate(node);
                 if (PrefabUtility.SaveAsPrefabAsset(root, WeaponPath) == null)
                     throw new InvalidOperationException("TR15 XPS2: сохранение префаба не удалось");
             }
@@ -173,33 +196,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             else EditorUtility.SetDirty(material);
             AssetDatabase.SaveAssetIfDirty(material);
             return material;
-        }
-
-        /// <summary>
-        /// Один <see cref="WeaponOpticView"/> на окне XPS2. Сведение — дистанция пристрелки по умолчанию; профиль не
-        /// назначается. Смена дистанции в настройках гасит сетку до повторного запуска writer (инвариант калибровки).
-        /// </summary>
-        private static void ConfigureOpticView(GameObject root, MeshRenderer renderer, WeaponInfo info,
-                                               WeaponSightCalibrationSettings settings)
-        {
-            UxrProjectileSource source = root.GetComponentsInChildren<UxrProjectileSource>(true).Single();
-            if (source.ShotTypes == null || source.ShotTypes.Count == 0 || source.ShotTypes[0].ShotSource == null)
-                throw new InvalidOperationException("TR15 XPS2: у UxrProjectileSource нет ShotSource для типа выстрела 0");
-            WeaponOpticView[] existing = root.GetComponentsInChildren<WeaponOpticView>(true);
-            if (existing.Length > 1 || (existing.Length == 1 && existing[0].gameObject != renderer.gameObject))
-                throw new InvalidOperationException("TR15 XPS2: чужой или повторный WeaponOpticView; writer его не перезаписывает");
-            WeaponOpticView view = existing.Length == 1 ? existing[0] : renderer.gameObject.AddComponent<WeaponOpticView>();
-            var so = new SerializedObject(view);
-            so.FindProperty("_lensRenderer").objectReferenceValue = renderer;
-            so.FindProperty("_lensMaterialIndex").intValue = LensMaterialIndex;
-            so.FindProperty("_source").objectReferenceValue = source;
-            so.FindProperty("_shotTypeIndex").intValue = 0;
-            so.FindProperty("_weapon").objectReferenceValue = info;
-            so.FindProperty("_sightId").stringValue = SightId;
-            so.FindProperty("_settings").objectReferenceValue = settings;
-            so.FindProperty("_profile").objectReferenceValue = null;
-            so.FindProperty("_calibratedZeroDistance").floatValue = settings.DefaultZeroDistance;
-            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static Color32[] Read(Texture source, int width, int height)

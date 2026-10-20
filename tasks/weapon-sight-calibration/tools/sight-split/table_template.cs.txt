@@ -11,8 +11,8 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
     /// AK105/Mk14/Viper/R08, меши Kinemation .asset; islands-2.json — стволы пака Hands и Herrington).
     /// Точки и окна селекторов — в единицах меша узла; ход — метры мира (по умолчанию 3 мм: оценок хода в разборах нет).
     /// Не входят: ShotgunReal (FABARM не калибруется), M16 (мушки нет — будет комплект),
-    /// SRM12 / SniperRifle / MKR9 (донорские половины пересаживаются комплектом; у островов нет отдельных GO).
-    /// Таблица сгенерирована из разборов (tasks/weapon-system/reports/sight-split/gen_table.py); правка — через разбор.
+    /// SniperRifle / MKR9 (донорские половины пересаживаются комплектом; у островов нет отдельных GO).
+    /// Таблица сгенерирована из разборов (tasks/weapon-sight-calibration/tools/sight-split/gen_table.py); правка — через разбор.
     /// </summary>
     public static class SightSplitTable
     {

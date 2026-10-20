@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
@@ -16,7 +17,10 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// корень, детали оружия) не трогает: TRS сверяются до/после. Без записи в таблице — отказ.
     /// Комплект всегда в реальном размере: его localScale компенсирует масштаб MeshContainer (<see cref="SightKitScale"/>),
     /// поэтому ход и сдвиг подвижной детали — метры мира.
-    /// На этапе sight-iron-kits Apply ни к одному оружию не запускается (окно держит кнопку выключенной).
+    /// Комплект-коллиматор (<see cref="SightParts.IsOpticKit"/>, раунд 1 2026-10-20): половин и подвижной детали нет;
+    /// writer ставит комплект и привязывает сетку конечного фокуса экземпляра к ShotSource оружия и дистанции записи
+    /// (<see cref="SightParts.BindOptic"/>). Второй прицел (механика или коллиматор вне комплекта) — отказ.
+    /// С раунда 1 «Применить к префабу» включено для комплектов; встроенный (родной) прицел — следующим шагом.
     /// </summary>
     public static class WeaponSightAuthoring
     {
@@ -35,6 +39,13 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         {
             Resolve(info, out string path, out WeaponSightTable.Entry entry);
             return ApplyToPrefab(path, entry);
+        }
+
+        /// <summary>Применить запись таблицы, если она есть (для сборщика после пересборки ствола); null — записи нет.</summary>
+        public static string ApplyIfRecorded(WeaponInfo info)
+        {
+            WeaponSightTable table = WeaponSightTable.Load();
+            return info != null && table != null && table.Find(info) != null ? Apply(info) : null;
         }
 
         private static void Resolve(WeaponInfo info, out string path, out WeaponSightTable.Entry entry)
@@ -67,6 +78,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 GameObject kit = ExistingKit(container);
                 // Встроенный прицел: двигается только его подвижная деталь; у комплекта — только узлы комплекта.
                 Transform builtInMoving = entry.Kit == null ? Moving(root).transform : null;
+                bool optic = SightParts.IsOpticKit(entry.Kit);
                 var untouched = Snapshot(root.transform, kit != null ? kit.transform : null, builtInMoving);
 
                 if (entry.Kit != null)
@@ -80,11 +92,22 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     kit.transform.localPosition = entry.KitLocalPosition;
                     kit.transform.localRotation = entry.KitLocalRotation;
                     SightKitScale.Apply(kit.transform); // lossyScale комплекта = 1 при любом масштабе корня оружия
-                    SetAlongRail(kit.transform.Find("Rear"), entry.RearAlongRail);
-                    SetAlongRail(kit.transform.Find("Front"), entry.FrontAlongRail);
+                    if (!optic)
+                    {
+                        SetAlongRail(kit.transform.Find("Rear"), entry.RearAlongRail);
+                        SetAlongRail(kit.transform.Find("Front"), entry.FrontAlongRail);
+                    }
                 }
-                SightAdjustablePart moving = Moving(kit != null ? kit : root);
-                moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
+                if (optic)
+                {
+                    var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+                    SightParts.BindOptic(SightParts.FindOptic(kit), SourceOf(root), entry.Weapon, settings, entry.ZeroDistance);
+                }
+                else
+                {
+                    SightAdjustablePart moving = Moving(kit != null ? kit : root);
+                    moving.transform.localPosition = moving.NeutralLocalPosition + Vector3.up * entry.MovingOffset;
+                }
 
                 foreach (var pair in untouched)
                     if (pair.Key == null || !Same(pair.Key, pair.Value))
@@ -123,12 +146,21 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             GameObject kit = ExistingKit(container);
             var outside = root.GetComponentsInChildren<SightAdjustablePart>(true)
                 .Where(p => kit == null || !p.transform.IsChildOf(kit.transform)).ToArray();
+            var outsideOptics = root.GetComponentsInChildren<WeaponOpticView>(true)
+                .Where(v => kit == null || !v.transform.IsChildOf(kit.transform)).ToArray();
             SightAdjustablePart moving;
             if (entry.Kit != null)
             {
                 if (!IsKitPrefab(entry.Kit)) throw new InvalidOperationException("Комплект записи — не префаб SightKit_* из " + SightKitBuilder.PrefabFolder);
                 SightKitScale.ParentScale(container); // неравномерный масштаб или скос MeshContainer — отказ
-                if (outside.Length > 0) throw new InvalidOperationException("У оружия уже есть детали прицела вне комплекта — два прицела недопустимы");
+                if (outside.Length > 0 || outsideOptics.Length > 0)
+                    throw new InvalidOperationException("У оружия уже есть прицел вне комплекта (" +
+                        string.Join(", ", outside.Select(p => p.name).Concat(outsideOptics.Select(v => v.name))) + ") — два прицела недопустимы");
+                if (SightParts.IsOpticKit(entry.Kit))
+                {
+                    if (entry.MovingOffset != 0f) throw new InvalidOperationException("У коллиматора нет подвижной детали — сдвиг в записи должен быть 0");
+                    return $"{root.name}: {entry.Kit.name} (коллиматор), сетка на {entry.ZeroDistance} м, ShotSource {shotSource.name}";
+                }
                 moving = Moving(entry.Kit);
                 Transform rear = entry.Kit.transform.Find("Rear"), front = entry.Kit.transform.Find("Front");
                 if (rear == null || front == null) throw new InvalidOperationException("У комплекта нет половин Rear/Front");
@@ -181,6 +213,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             return moving[0];
         }
 
+        /// <summary>Источник выстрела оружия (тот, чей тип 0 даёт ShotSource), для привязки сетки коллиматора.</summary>
+        private static UxrProjectileSource SourceOf(GameObject root) => root.GetComponentsInChildren<UxrProjectileSource>(true).Single();
+
         private static void SetAlongRail(Transform half, float z)
         {
             if (half == null) throw new InvalidOperationException("У экземпляра комплекта нет половины Rear/Front");
@@ -207,24 +242,31 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Transform container = FindContainer(asset.transform);
             GameObject kit = ExistingKit(container);
+            bool optic = SightParts.IsOpticKit(entry.Kit);
             if (entry.Kit != null)
             {
                 if (kit == null || PrefabUtility.GetCorrespondingObjectFromOriginalSource(kit) != entry.Kit)
                     throw new InvalidOperationException("Readback: экземпляр комплекта не найден");
                 if ((kit.transform.localPosition - entry.KitLocalPosition).magnitude > 1e-6f
                     || Quaternion.Angle(kit.transform.localRotation, entry.KitLocalRotation) > 1e-3f
-                    || Mathf.Abs(kit.transform.Find("Rear").localPosition.z - entry.RearAlongRail) > 1e-6f
-                    || Mathf.Abs(kit.transform.Find("Front").localPosition.z - entry.FrontAlongRail) > 1e-6f)
+                    || (!optic && Mathf.Abs(kit.transform.Find("Rear").localPosition.z - entry.RearAlongRail) > 1e-6f)
+                    || (!optic && Mathf.Abs(kit.transform.Find("Front").localPosition.z - entry.FrontAlongRail) > 1e-6f))
                     throw new InvalidOperationException("Readback: поза комплекта не совпала с таблицей");
                 string scale = SightKitScale.Problem(kit.transform);
                 if (scale != null) throw new InvalidOperationException("Readback: " + scale);
             }
-            SightAdjustablePart moving = Moving(kit != null ? kit : asset);
-            if (Mathf.Abs(moving.Offset - entry.MovingOffset) > 1e-6f)
-                throw new InvalidOperationException("Readback: сдвиг подвижной детали не совпал с таблицей");
             Transform shotSource = FindShotSource(asset);
             if (entry.ShotSource.Compare(ShotSourceFingerprint.Capture(shotSource, asset.transform)) != null)
                 throw new InvalidOperationException("Readback: отпечаток ShotSource изменился");
+            if (optic)
+            {
+                string binding = SightParts.OpticBindingProblem(SightParts.FindOptic(kit), SourceOf(asset), entry.Weapon, entry.ZeroDistance);
+                if (binding != null) throw new InvalidOperationException("Readback: " + binding);
+                return $"{prefabPath}: комплект {entry.Kit.name} (коллиматор), сетка сведена на {entry.ZeroDistance} м";
+            }
+            SightAdjustablePart moving = Moving(kit != null ? kit : asset);
+            if (Mathf.Abs(moving.Offset - entry.MovingOffset) > 1e-6f)
+                throw new InvalidOperationException("Readback: сдвиг подвижной детали не совпал с таблицей");
             return $"{prefabPath}: комплект {(entry.Kit != null ? entry.Kit.name : "встроенный")}, сдвиг {moving.Offset * 1000:+0.00;-0.00;0.00} мм";
         }
     }

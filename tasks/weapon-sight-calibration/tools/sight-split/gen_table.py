@@ -7,6 +7,12 @@ out = sys.argv[2]
 d1 = json.load(open(base + '/islands.json', encoding='utf-8'))
 d2 = json.load(open(base + '/islands-2.json', encoding='utf-8'))
 TRAVEL = 0.003
+# Ход подвижной детали, отличный от 3 мм: (вниз, вверх) в метрах мира и комментарий в таблицу.
+TRAVEL_OVERRIDES = {
+    'Viper': (0.004, 0.003, 'Ход вниз 4 мм: на стенде нужно −3,07 мм (решение 2026-10-12).'),
+    'Mk14': (0.007, 0.003, 'Ход вниз 7 мм: столбик мушки опускается на 6,41 мм из 10,5 мм (раунд 1, 2026-10-20: диоптр +6,67 мм парил над основанием).'),
+    'SRM12': (0.006, 0.003, 'Ход вниз 6 мм: столбик AR-типа вкручивается на 5,16 мм (разбор islands-2.json, zeroing).'),
+}
 
 
 def f(x):
@@ -27,12 +33,14 @@ def sel(i):
     return 'S(%s, %d, %d, %s, %s)' % (cs(i['role']), s['unity_vertices'], s['triangles'], v3(s['window_min']), v3(s['window_max']))
 
 
-def part(role, node, mesh_path, mesh_name, nv, nt, movable, point, point_pref, shift, islands):
-    td = f(TRAVEL) if movable else '0f'
+def part(wid, role, node, mesh_path, mesh_name, nv, nt, movable, point, point_pref, shift, islands):
+    down, up, why = TRAVEL_OVERRIDES.get(wid, (TRAVEL, TRAVEL, None))
+    td, tu = (f(down), f(up)) if movable else ('0f', '0f')
+    comment = ('                  // %s\n' % why) if (movable and why) else ''
     sels = ''.join(',\n                    ' + sel(i) for i in islands)
-    return ('P(SightPartRole.%s, %s, %s, %s, %d, %d, %s,\n                  %s, %s, %s, %s, %s%s)'
-            % (role, cs(node), cs(mesh_path), '%dL' % mesh_name, nv, nt, 'true' if movable else 'false',
-               v3(point), v3(point_pref) if point_pref else 'null', td, td,
+    return ('P(SightPartRole.%s, %s, %s, %s, %d, %d, %s,\n%s                  %s, %s, %s, %s, %s%s)'
+            % (role, cs(node), cs(mesh_path), '%dL' % mesh_name, nv, nt, 'true' if movable else 'false', comment,
+               v3(point), v3(point_pref) if point_pref else 'null', td, tu,
                f(shift) if (movable and shift is not None) else 'null', sels))
 
 
@@ -41,8 +49,9 @@ weapons = []
 cfg1 = {
     'AK105': ('AK105', 'Front', {'RearSight': 'MeshContainer/Base', 'FrontSight': 'MeshContainer/Base'},
               'AK-105: высота сводится мушкой (столбик, остров 49); целик-планка — неподвижная опорная точка'),
-    'Mk14': ('Mk14', 'Rear', {'RearSight': 'MeshContainer/Base', 'FrontSight': 'MeshContainer/Base'},
-             'Mk14: высота — диоптр целика (острова 13+11); мушка M14 по высоте неподвижна'),
+    # Mk14: раунд 1 (2026-10-20) — подвижна мушка (остров 48, вниз): диоптр (13+11) при +6,67 мм парил над основанием.
+    'Mk14': ('Mk14', 'Front', {'RearSight': 'MeshContainer/Base', 'FrontSight': 'MeshContainer/Base'},
+             'Mk14: высота — столбик мушки (остров 48, опускается); диоптр целика (острова 13+11) неподвижен'),
     'Viper': ('Viper', 'Rear', {'RearSight': 'Slide/Bolt', 'FrontSight': 'MeshContainer/Base'},
               'Viper: регулируемый целик на затворе (острова 3+4+2, едет с Slide/Bolt); мушка в пазу неподвижна по высоте'),
     'R08': ('R08', 'Rear', {'RearSight': 'MeshContainer/Base', 'FrontSight': 'MeshContainer/Base'},
@@ -57,21 +66,22 @@ for wid, (folder, moving, nodes, note) in cfg1.items():
         asset = p['asset']
         c = counts[asset]
         mesh_path = 'Assets/Art/Weapons/Kinemation/%s/Meshes/%s.asset' % (folder, asset)
-        ps[role] = part(role, nodes[key], mesh_path, 4300000, c['vertices'], c['triangles'], role == moving,
+        ps[role] = part(wid, role, nodes[key], mesh_path, 4300000, c['vertices'], c['triangles'], role == moving,
                         p['aim_point']['point'], None, None, p['islands'])
     weapons.append((wid, 'Assets/Prefabs/Weapons/%s/%s.prefab' % (folder, folder), note, [], ps))
 
 # islands-2.json — подвижность и подъёмы из разбора; исключены ShotgunReal (не калибруется), M16 (будет комплект),
-# SRM12/SniperRifle/MKR9 (донорские половины пересадит пользователь комплектом).
-skip = {'ShotgunReal', 'M16', 'SRM12', 'SniperRifle', 'MKR9'}
+# SniperRifle/MKR9 (донорские половины пересадит пользователь комплектом). SRM12 — родной прицел с раунда 1 (2026-10-20).
+skip = {'ShotgunReal', 'M16', 'SniperRifle', 'MKR9'}
 notes2 = {
     'MP5K': 'MP5K: высота — столбик мушки (остров 16); барабан целика неподвижен',
     'Uzi': 'Uzi: мушка двигается целым островом 10 вместе с защитными ушками (решение пользователя)',
-    'Herrington': 'Remington 11-87: подвижная передняя лопатка (острова 1+2), V-целик неподвижен (решение пользователя)',
+    'Herrington': 'Remington 11-87: подвижна только передняя лопатка (остров 1), V-целик неподвижен (решение пользователя)',
     'Revolver': 'Revolver: подвижный целик (острова 2+4); мушка — гребень ствола, только точка',
     'Gun': 'Browning Hi-Power: подвижная мушка (остров 2), обе половины в затворе Slide/Gate',
     'PPK': 'PPK: прицел — одна оболочка с затвором; без подвижной детали, только точки (решение пользователя)',
     'Scar': 'SCAR-L: сначала подъём рамок целика и мушки, затем подвижный столбик мушки (остров 2)',
+    'SRM12': 'SRM12 (Desert Tech SRS): высота — столбик мушки AR-типа (остров 0 узла Sight); диоптр откидного целика (Switch) неподвижен',
 }
 for wid, w in d2['weapons'].items():
     if wid in skip:
@@ -101,7 +111,7 @@ for wid, w in d2['weapons'].items():
             movable = False
             islands = []
         ap = p['aim_point']
-        ps[role] = part(role, node, mesh['mesh_asset'], int(mesh['mesh_local_file_id']), mesh['vertices'], mesh['triangles'], movable,
+        ps[role] = part(wid, role, node, mesh['mesh_asset'], int(mesh['mesh_local_file_id']), mesh['vertices'], mesh['triangles'], movable,
                         ap['point'], ap['point_prefab_m'], shift, islands)
         if 'raise' in p:
             r = p['raise']

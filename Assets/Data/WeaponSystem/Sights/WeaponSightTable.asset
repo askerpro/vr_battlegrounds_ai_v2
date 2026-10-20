@@ -12,4 +12,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 946a2d54691ace246a9eae1b446e582b, type: 3}
   m_Name: WeaponSightTable
   m_EditorClassIdentifier: VrBattlegrounds.SightTools.Editor::VrBattlegrounds.Editor.Weapons.Sights.WeaponSightTable
-  _entries: []
+  _entries:
+  - Weapon: {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
+    WeaponId: TR15
+    Kit: {fileID: 3461758466485114572, guid: 1f70cec2f0f5ad341bd513822d1098e8, type: 3}
+    KitLocalPosition: {x: 0.00028601848, y: 0.06843856, z: 0.02373872}
+    KitLocalRotation: {x: 0, y: 0, z: 0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - TR15
+      LocalPositions:
+      - {x: 0.0002949359, y: 0.045662507, z: 0.5668245}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}

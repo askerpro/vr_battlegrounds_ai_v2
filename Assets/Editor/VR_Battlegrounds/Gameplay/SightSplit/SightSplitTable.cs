@@ -11,8 +11,8 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
     /// AK105/Mk14/Viper/R08, меши Kinemation .asset; islands-2.json — стволы пака Hands и Herrington).
     /// Точки и окна селекторов — в единицах меша узла; ход — метры мира (по умолчанию 3 мм: оценок хода в разборах нет).
     /// Не входят: ShotgunReal (FABARM не калибруется), M16 (мушки нет — будет комплект),
-    /// SRM12 / SniperRifle / MKR9 (донорские половины пересаживаются комплектом; у островов нет отдельных GO).
-    /// Таблица сгенерирована из разборов (tasks/weapon-system/reports/sight-split/gen_table.py); правка — через разбор.
+    /// SniperRifle / MKR9 (донорские половины пересаживаются комплектом; у островов нет отдельных GO).
+    /// Таблица сгенерирована из разборов (tasks/weapon-sight-calibration/tools/sight-split/gen_table.py); правка — через разбор.
     /// </summary>
     public static class SightSplitTable
     {
@@ -31,15 +31,15 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
                   new Vector3(0.001442f, 0.477916f, -0.036423f), null, 0.003f, 0.003f, null,
                     S("мушка (столбик с квадратным основанием) в намушнике", 60, 26, new Vector3(-0.00045f, 0.476557f, -0.036923f), new Vector3(0.003334f, 0.480796f, -0.027871f)))),
             new SightSplitSpec("Mk14", "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
-                "Mk14: высота — диоптр целика (острова 13+11); мушка M14 по высоте неподвижна",
+                "Mk14: высота — столбик мушки (остров 48, опускается); диоптр целика (острова 13+11) неподвижен",
                 null,
-                P(SightPartRole.Rear, "MeshContainer/Base", "Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Body.asset", 4300000L, 28785, 30555, true,
-                  // Ход вверх 8 мм: диоптр M14 регулируется по высоте в большом диапазоне; на стенде нужно +6,67 мм (решение 2026-10-12).
-                  new Vector3(0.0f, 0.042082f, -0.043092f), null, 0.003f, 0.008f, null,
+                P(SightPartRole.Rear, "MeshContainer/Base", "Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Body.asset", 4300000L, 28785, 30555, false,
+                  new Vector3(0.0f, 0.042082f, -0.043092f), null, 0f, 0f, null,
                     S("диоптр (диск с отверстием)", 286, 282, new Vector3(-0.005077f, 0.041582f, -0.048169f), new Vector3(0.005077f, 0.045554f, -0.034975f)),
-                    S("полудиск-основание перед диоптром (едет вместе с ним)", 24, 16, new Vector3(-0.006324f, 0.044591f, -0.039471f), new Vector3(0.006324f, 0.05145f, -0.032862f))),
-                P(SightPartRole.Front, "MeshContainer/Base", "Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Body.asset", 4300000L, 28785, 30555, false,
-                  new Vector3(0.0f, 0.667011f, -0.048577f), null, 0f, 0f, null,
+                    S("полудиск-основание перед диоптром (с раунда 1 неподвижен вместе с диоптром)", 24, 16, new Vector3(-0.006324f, 0.044591f, -0.039471f), new Vector3(0.006324f, 0.05145f, -0.032862f))),
+                P(SightPartRole.Front, "MeshContainer/Base", "Assets/Art/Weapons/Kinemation/Mk14/Meshes/Mk14_Body.asset", 4300000L, 28785, 30555, true,
+                  // Ход вниз 7 мм: столбик мушки опускается на 6,41 мм из 10,5 мм (раунд 1, 2026-10-20: диоптр +6,67 мм парил над основанием).
+                  new Vector3(0.0f, 0.667011f, -0.048577f), null, 0.007f, 0.003f, null,
                     S("столбик мушки", 62, 50, new Vector3(-0.003661f, 0.664077f, -0.049076f), new Vector3(0.003661f, 0.671398f, -0.037534f)))),
             new SightSplitSpec("Viper", "Assets/Prefabs/Weapons/Viper/Viper.prefab",
                 "Viper: регулируемый целик на затворе (острова 3+4+2, едет с Slide/Bolt); мушка в пазу неподвижна по высоте",
@@ -84,7 +84,7 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
                   new Vector3(-0.002843108f, 0.156582415f, 0.255283713f), new Vector3(-0.000593f, 0.075261f, 0.05737f), 0.003f, 0.003f, -0.904f,
                     S("мушка: столбик на трапециевидном основании между защитными ушками (один остров)", 342, 362, new Vector3(-0.069915852f, 0.073998654f, 0.195326091f), new Vector3(0.064264617f, 0.169659181f, 0.284653066f)))),
             new SightSplitSpec("Herrington", "Assets/Prefabs/Weapons/Herrington/Herrington.prefab",
-                "Remington 11-87: подвижная передняя лопатка (острова 1+2), V-целик неподвижен (решение пользователя)",
+                "Remington 11-87: подвижна только передняя лопатка (остров 1), V-целик неподвижен (решение пользователя)",
                 null,
                 P(SightPartRole.Rear, "MeshContainer/Herrington_1187_Skeleton", "Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Herrington_1187_Skeleton.asset", 4300000L, 1199, 1140, false,
                   new Vector3(-4.800000000e-08f, -0.125680938f, 0.052147239f), new Vector3(-0.0f, 0.059549f, 0.288004f), 0f, 0f, null,
@@ -94,8 +94,7 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
                     S("вставка-точка на верхней грани лопатки", 96, 118, new Vector3(-0.002401224f, -0.134984679f, 0.046544106f), new Vector3(0.002401224f, -0.130182275f, 0.048692181f))),
                 P(SightPartRole.Front, "MeshContainer/Herrington_1187_Skeleton", "Assets/Art/Weapons/Kinemation/Herrington/Meshes/Herrington_Herrington_1187_Skeleton.asset", 4300000L, 1199, 1140, true,
                   new Vector3(-4.800000000e-08f, -0.426644057f, 0.04995976f), new Vector3(-0.0f, 0.057361f, 0.588968f), 0.003f, 0.003f, 1.65f,
-                    S("мушка-лопатка (рампа) — «передняя бусина» из разбора", 130, 108, new Vector3(-0.003508605f, -0.442084349f, 0.041762014f), new Vector3(0.003508605f, -0.424669379f, 0.050459768f)),
-                    S("фрагмент основания (ласточкин хвост), едет с лопаткой", 16, 6, new Vector3(-0.003587399f, -0.441465533f, 0.035770577f), new Vector3(0.003587319f, -0.429712349f, 0.044878642f)))),
+                    S("мушка-лопатка (рампа) — «передняя бусина» из разбора", 130, 108, new Vector3(-0.003508605f, -0.442084349f, 0.041762014f), new Vector3(0.003508605f, -0.424669379f, 0.050459768f)))),
             new SightSplitSpec("Revolver", "Assets/Prefabs/Weapons/Revolver/Revolver.prefab",
                 "Revolver: подвижный целик (острова 2+4); мушка — гребень ствола, только точка",
                 null,
@@ -138,7 +137,18 @@ namespace VrBattlegrounds.Editor.Gameplay.SightSplit
                     S("маховик левый (на оси шарнира)", 270, 252, new Vector3(-0.024908188f, -0.011526662f, -0.011529885f), new Vector3(-0.01333758f, 0.011642085f, 0.01153082f))),
                 P(SightPartRole.Front, "MeshContainer/Scar_Detail_03", "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/Hands_Automatic_Rifle01/Mesh/Hands_Automatic_Rifle01.FBX", -8593926231563432924L, 744, 704, true,
                   new Vector3(0.000316833f, 0.000377283f, 0.052226502f), new Vector3(-0.004439f, 0.134384f, 0.274307f), 0.003f, 0.003f, -2.025f,
-                    S("столбик мушки (внутри кольца-намушника)", 113, 100, new Vector3(-0.004469367f, -0.005692025f, 0.03611593f), new Vector3(0.004906299f, 0.00417862f, 0.052944887f))))
+                    S("столбик мушки (внутри кольца-намушника)", 113, 100, new Vector3(-0.004469367f, -0.005692025f, 0.03611593f), new Vector3(0.004906299f, 0.00417862f, 0.052944887f)))),
+            new SightSplitSpec("SRM12", "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+                "SRM12 (Desert Tech SRS): высота — столбик мушки AR-типа (остров 0 узла Sight); диоптр откидного целика (Switch) неподвижен",
+                null,
+                P(SightPartRole.Rear, "MeshContainer/Switch", "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Switch.asset", 4300000L, 524, 496, false,
+                  new Vector3(0.005650757f, 0.01819826f, -0.000532886f), new Vector3(-4.000000000e-06f, 0.106336f, -0.094019f), 0f, 0f, null,
+                    S("откидная пластина с двумя диоптрами (рабочий — верхний)", 376, 356, new Vector3(-0.008414029f, 0.01406773f, -0.003059515f), new Vector3(0.009374672f, 0.022328795f, 0.005405847f)),
+                    S("маховик горизонтали", 148, 140, new Vector3(-0.004945057f, 0.003874547f, -0.004945036f), new Vector3(0.004945051f, 0.008239759f, 0.004945079f))),
+                P(SightPartRole.Front, "MeshContainer/Sight", "Assets/Art/Weapons/Kinemation/SRM12/Meshes/SRM12_Sight.asset", 4300000L, 754, 666, true,
+                  // Ход вниз 6 мм: столбик AR-типа вкручивается на 5,16 мм (разбор islands-2.json, zeroing).
+                  new Vector3(0.001793524f, 0.032512408f, -6.043000000e-06f), new Vector3(-1.000000000e-05f, 0.109517f, 0.365989f), 0.006f, 0.003f, -5.163f,
+                    S("столбик мушки", 58, 38, new Vector3(-0.00112035f, 0.022241791f, -0.002212396f), new Vector3(0.003304409f, 0.033012408f, 0.002212361f))))
         };
 
         public static SightSplitSpec Get(string weaponId) =>

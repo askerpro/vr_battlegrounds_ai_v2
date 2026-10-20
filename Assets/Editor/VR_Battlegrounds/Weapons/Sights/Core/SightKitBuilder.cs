@@ -12,7 +12,8 @@ using VrBattlegrounds.Weapons.Sights;
 namespace VrBattlegrounds.Editor.Weapons.Sights
 {
     /// <summary>
-    /// Единственный writer префабов комплектов механических прицелов <c>SightKit_*</c> и импорта их FBX.
+    /// Единственный writer префабов комплектов прицелов <c>SightKit_*</c> (механика и коллиматоры, <see cref="Optics"/>)
+    /// и импорта FBX механических комплектов.
     ///
     /// <para>
     /// Комплект — один объект на планке: корень → <c>Rear</c> (основание целика) → деталь целика и <c>Front</c>
@@ -102,9 +103,38 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             }
         };
 
+        /// <summary>
+        /// Комплект-коллиматор (раунд 1, 2026-10-20): корень → узел оптики с мешем окна (2 submesh: корпус, окно) и
+        /// <see cref="WeaponOpticView"/>. Подвижной детали нет. Меш окна и материал сетки делает <c>Tr15OpticBuilder</c>
+        /// (входы этого writer). Привязку сетки к ShotSource оружия (<c>_source</c>, <c>_weapon</c>, дистанция) пишет
+        /// <c>WeaponSightAuthoring</c> в экземпляр комплекта — в префабе комплекта сетка не привязана и выключена.
+        /// </summary>
+        public sealed class OpticKitSpec
+        {
+            public string Name, PrefabPath, NodeName, SightId, MeshPath, HousingMaterialPath, ReticleMaterialPath;
+            /// <summary>Поворот меша относительно корня комплекта (+Z корня — вдоль планки к дулу, +Y — вверх).</summary>
+            public Vector3 MeshEuler;
+            public int LensMaterialIndex;
+        }
+
+        public const string SettingsPath = "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset";
+
+        public static readonly OpticKitSpec[] Optics =
+        {
+            new OpticKitSpec
+            {
+                Name = "SightKit_XPS2", PrefabPath = PrefabFolder + "/SightKit_XPS2.prefab", NodeName = "XPS2", SightId = "XPS2",
+                MeshPath = "Assets/Art/Weapons/Kinemation/TR15/Meshes/TR15_XPS2_Optic.asset",
+                HousingMaterialPath = "Assets/Art/Weapons/Kinemation/Materials/M_TR15_Attachments.mat",
+                ReticleMaterialPath = "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat",
+                // Как стоял узел SM_Attach_AR15_XPS2 в TR15 относительно ShotSource (до раунда 1): поворот X 90°.
+                MeshEuler = new Vector3(90f, 0f, 0f), LensMaterialIndex = 1
+            }
+        };
+
         public static string[] OutputPaths()
         {
-            var paths = new List<string>();
+            var paths = new List<string>(Optics.Select(o => o.PrefabPath));
             foreach (var kit in Kits)
             {
                 paths.Add(kit.PrefabPath);
@@ -162,7 +192,125 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 WritePrefab(Kits[i], layouts[i], material);
                 report.Append(Readback(Kits[i], layouts[i], material)).Append('\n');
             }
+            report.Append(BuildOptics());
             return report.ToString().TrimEnd();
+        }
+
+        // ── Коллиматоры ─────────────────────────────────────────
+
+        [MenuItem("Tools/VR Battlegrounds/Weapons/Sights/Build Optic Sight Kits")]
+        private static void BuildOpticsMenu()
+        {
+            try { GameLog.WeaponSystem.Info("[SightKitBuilder] " + BuildOptics()); }
+            catch (Exception e) { GameLog.Error("[SightKitBuilder] " + e.Message); throw; }
+        }
+
+        /// <summary>Только комплекты-коллиматоры: проверка входов → префаб → readback. FBX не импортирует.</summary>
+        public static string BuildOptics()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Сборка комплектов прицелов — только в Edit Mode");
+            var report = new StringBuilder();
+            foreach (var optic in Optics)
+            {
+                ReadOptic(optic, out Mesh mesh, out Material housing, out Material reticle, out WeaponSightCalibrationSettings settings);
+                EnsureFolder(PrefabFolder);
+                Vector3 nodePosition = OpticNodePosition(optic, mesh);
+                bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(optic.PrefabPath) != null;
+                if (File.Exists(optic.PrefabPath) && !exists) throw new InvalidOperationException("Путь префаба занят не префабом: " + optic.PrefabPath);
+                GameObject root = exists ? PrefabUtility.LoadPrefabContents(optic.PrefabPath) : new GameObject(optic.Name);
+                try
+                {
+                    ValidateOwnedOptic(optic, root);
+                    Node(root.transform, Vector3.zero, null, null);
+                    Transform node = Node(Child(root.transform, optic.NodeName), nodePosition, mesh, housing);
+                    node.localRotation = Quaternion.Euler(optic.MeshEuler);
+                    var renderer = node.GetComponent<MeshRenderer>();
+                    var materials = Enumerable.Repeat(housing, mesh.subMeshCount).ToArray();
+                    materials[optic.LensMaterialIndex] = reticle;
+                    renderer.sharedMaterials = materials;
+                    var view = node.GetComponent<WeaponOpticView>();
+                    if (view == null) view = node.gameObject.AddComponent<WeaponOpticView>();
+                    var so = new SerializedObject(view);
+                    so.FindProperty("_lensRenderer").objectReferenceValue = renderer;
+                    so.FindProperty("_lensMaterialIndex").intValue = optic.LensMaterialIndex;
+                    so.FindProperty("_source").objectReferenceValue = null;      // привязка — в экземпляре на оружии
+                    so.FindProperty("_shotTypeIndex").intValue = 0;
+                    so.FindProperty("_weapon").objectReferenceValue = null;
+                    so.FindProperty("_sightId").stringValue = optic.SightId;
+                    so.FindProperty("_settings").objectReferenceValue = settings;
+                    so.FindProperty("_profile").objectReferenceValue = null;
+                    so.FindProperty("_calibratedZeroDistance").floatValue = 0f;  // не сведён: сетка выключена
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    if (PrefabUtility.SaveAsPrefabAsset(root, optic.PrefabPath) == null)
+                        throw new InvalidOperationException("Не удалось сохранить " + optic.PrefabPath);
+                }
+                finally
+                {
+                    if (exists) PrefabUtility.UnloadPrefabContents(root);
+                    else UnityEngine.Object.DestroyImmediate(root);
+                }
+                report.Append(ReadbackOptic(optic, nodePosition)).Append('\n');
+            }
+            return report.ToString().TrimEnd();
+        }
+
+        private static void ReadOptic(OpticKitSpec optic, out Mesh mesh, out Material housing, out Material reticle, out WeaponSightCalibrationSettings settings)
+        {
+            mesh = AssetDatabase.LoadAssetAtPath<Mesh>(optic.MeshPath);
+            housing = AssetDatabase.LoadAssetAtPath<Material>(optic.HousingMaterialPath);
+            reticle = AssetDatabase.LoadAssetAtPath<Material>(optic.ReticleMaterialPath);
+            settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            if (mesh == null || housing == null || reticle == null || settings == null)
+                throw new InvalidOperationException($"{optic.Name}: нет меша окна, материала корпуса/сетки или настроек калибровки " +
+                                                    "(меш и сетку делает «Обновить линзу прицела TR15» — Tr15OpticBuilder)");
+            if (mesh.subMeshCount <= optic.LensMaterialIndex)
+                throw new InvalidOperationException($"{optic.Name}: у меша {mesh.subMeshCount} submesh, окно — {optic.LensMaterialIndex}");
+            if (reticle.shader == null || reticle.shader.name != WeaponOpticView.ShaderName)
+                throw new InvalidOperationException($"{optic.Name}: материал сетки не на шейдере {WeaponOpticView.ShaderName}");
+        }
+
+        /// <summary>Точка посадки корня: низ корпуса (y = 0), задняя кромка (z = 0), ось окна в x = 0.</summary>
+        private static Vector3 OpticNodePosition(OpticKitSpec optic, Mesh mesh)
+        {
+            Quaternion rotation = Quaternion.Euler(optic.MeshEuler);
+            Bounds b = mesh.bounds;
+            var min = Vector3.positiveInfinity; var max = Vector3.negativeInfinity;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = rotation * new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                min = Vector3.Min(min, corner); max = Vector3.Max(max, corner);
+            }
+            return new Vector3(-(min.x + max.x) * .5f, -min.y, -min.z);
+        }
+
+        private static void ValidateOwnedOptic(OpticKitSpec optic, GameObject root)
+        {
+            var allowed = new HashSet<string> { root.name, optic.NodeName };
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (!allowed.Contains(t.name))
+                    throw new InvalidOperationException($"{optic.PrefabPath}: чужой узел «{t.name}» — writer его не перезаписывает");
+                foreach (var c in t.GetComponents<Component>())
+                    if (c == null || !(c is Transform || c is MeshFilter || c is MeshRenderer || c is WeaponOpticView))
+                        throw new InvalidOperationException($"{optic.PrefabPath}: чужой компонент на «{t.name}»");
+            }
+        }
+
+        private static string ReadbackOptic(OpticKitSpec optic, Vector3 nodePosition)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(optic.PrefabPath);
+            if (asset == null) throw new InvalidOperationException("Readback: нет " + optic.PrefabPath);
+            if (asset.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0 || asset.GetComponentsInChildren<Collider>(true).Length > 0)
+                throw new InvalidOperationException("Readback: у коллиматора не должно быть деталей механики и коллайдеров");
+            var views = asset.GetComponentsInChildren<WeaponOpticView>(true);
+            if (views.Length != 1) throw new InvalidOperationException("Readback: нужен ровно один WeaponOpticView");
+            Transform node = asset.transform.Find(optic.NodeName);
+            if (node == null || (node.localPosition - nodePosition).magnitude > 1e-7f || Quaternion.Angle(node.localRotation, Quaternion.Euler(optic.MeshEuler)) > 1e-3f)
+                throw new InvalidOperationException("Readback: поза узла оптики не совпала");
+            Vector3 size = node.localRotation * node.GetComponent<MeshFilter>().sharedMesh.bounds.size;
+            return $"{optic.Name}: корпус {Mathf.Abs(size.x) * 1000:0.0}×{Mathf.Abs(size.y) * 1000:0.0}×{Mathf.Abs(size.z) * 1000:0.0} мм (ш×в×д), " +
+                   $"узел {optic.NodeName} {Format(nodePosition)}, сетка не привязана";
         }
 
         // ── Импорт ──────────────────────────────────────────────

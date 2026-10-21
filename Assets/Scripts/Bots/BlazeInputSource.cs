@@ -45,8 +45,8 @@ namespace VrBattlegrounds.Bots
         private const float CrouchAboveItem = 0.55f;
         private const int ReachStableFrames = 3;
         /// <summary>Grip нажат столько кадров без хвата — разжать и сжать снова (SDK берёт по фронту нажатия).</summary>
-        private const int GripRetryFrames = 10;
-        private const int GripReleaseFrames = 3;
+        internal const int GripRetryFrames = 10;
+        internal const int GripReleaseFrames = 3;
         private const int TriggerReleaseFrames = 2;
         private const int TriggerPressFrames = 3;
         private const int SeesIntervalFrames = BotPlayerFlowSettings.SeesIntervalFrames;
@@ -407,7 +407,7 @@ namespace VrBattlegrounds.Bots
         /// разжать на <see cref="GripReleaseFrames"/> и сжать снова (прогон iter2-11: кисть на рукояти, Grip зажат, хвата
         /// нет — первый фронт пришёлся до досягаемости).
         /// </summary>
-        private static bool GripWithRetry(bool want, ref int pressed, ref int released)
+        internal static bool GripWithRetry(bool want, ref int pressed, ref int released)
         {
             if (!want)
             {

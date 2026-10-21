@@ -6,30 +6,45 @@ using UnityEngine;
 namespace VrBattlegrounds.Tests.Bots
 {
     /// <summary>
-    /// Issue 23 для ботов (T-48): спуск бота жмётся в <c>Update</c> — синхронизируемый выстрел обязан пройти
-    /// проверку автора предмета (<c>StateEventAuthority.IsAuthorOfItem</c>), иначе машина, исполнившая тот же код
-    /// не как автор, выстрелит второй раз и удвоит урон. Сторож по исходнику (player-flow, clip-cutover cc-1):
-    /// проверка стоит перед подготовкой оружия (<c>RequestAutomationPreparation</c>) и <c>TryToShootRound</c>;
-    /// магазин бот не доливает сеттером — патроны ведёт штатный учёт оружия.
+    /// Бот на вводе устройства (bot-input, принято пользователем 2026-10-21): мозг бота решает только намерения, а хват,
+    /// выстрел и подготовку оружия делает код человека по кнопкам ввода. Сторож по исходникам: в коде ботов нет прямых
+    /// действий SDK — <c>TryToShootRound</c>, <c>GrabObject</c>/<c>ReleaseObject</c>, <c>RequestAutomationPreparation</c>,
+    /// долива магазина сеттером. Issue 23 (один автор выстрела) обеспечивает штатный <c>UxrFirearmWeapon</c> автора
+    /// предмета (у бота — сервер).
     /// </summary>
     public class BotAuthorityTests
     {
+        private static readonly string[] ForbiddenCalls =
+        {
+            ".TryToShootRound(", ".RequestAutomationPreparation(", ".GrabObject(", ".ReleaseObject(", "SetAmmoLeft(",
+            ".PlaceObject("
+        };
+
         [Test]
-        public void Стрелок_бота_жмёт_спуск_только_как_автор_предмета()
+        public void Код_ботов_не_вызывает_действий_SDK_только_ввод()
+        {
+            string folder = Path.Combine(Application.dataPath, "Scripts/Bots");
+            foreach (string file in Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories))
+            {
+                string code = File.ReadAllText(file);
+                foreach (string call in ForbiddenCalls)
+                    Assert.AreEqual(-1, code.IndexOf(call, StringComparison.Ordinal),
+                        $"{Path.GetFileName(file)}: прямой вызов SDK {call} — бот действует только вводом устройства.");
+            }
+        }
+
+        [Test]
+        public void Решение_жать_курок_гасит_запрос_и_не_стреляет_само()
         {
             string code = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Bots/BotGunner.cs"));
-
-            int check = code.IndexOf("StateEventAuthority.IsAuthorOfItem(_firearm)", StringComparison.Ordinal);
-            int prepare = code.IndexOf(".RequestAutomationPreparation(", StringComparison.Ordinal);
-            int shot = code.IndexOf("_firearm.TryToShootRound(", StringComparison.Ordinal);
-
-            Assert.GreaterOrEqual(check, 0, "BotGunner не проверяет автора предмета перед выстрелом.");
-            Assert.GreaterOrEqual(prepare, 0, "BotGunner готовит оружие не через RequestAutomationPreparation.");
-            Assert.GreaterOrEqual(shot, 0, "BotGunner не стреляет через TryToShootRound.");
-            Assert.Less(check, prepare, "Проверка автора должна стоять до подготовки оружия.");
-            Assert.Less(check, shot, "Проверка автора должна стоять до TryToShootRound.");
-            Assert.AreEqual(-1, code.IndexOf("SetAmmoLeft(", StringComparison.Ordinal),
-                "Бот не доливает магазин сеттером: патроны ведёт учёт оружия.");
+            int decide = code.IndexOf("public BotShotOutcome DecideTriggerPress()", StringComparison.Ordinal);
+            Assert.GreaterOrEqual(decide, 0, "У стрелка нет решения «жать курок».");
+            int consume = code.IndexOf("_shotRequested = false;", decide, StringComparison.Ordinal);
+            int aim = code.IndexOf("MaxShotAimErrorDegrees", decide, StringComparison.Ordinal);
+            int path = code.IndexOf("IsPathBlocked(", decide, StringComparison.Ordinal);
+            Assert.Greater(consume, decide, "Запрос Blaze гасится при любом исходе.");
+            Assert.Less(consume, aim, "Запрос гасится до проверок наведения.");
+            Assert.Greater(path, aim, "Путь пули проверяется после наведения.");
         }
     }
 }

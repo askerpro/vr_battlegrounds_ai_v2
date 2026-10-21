@@ -131,3 +131,11 @@ GameTagsTests.Prefabs_TagsMatchRules, HandsPackWeaponTests(Scar)). Те же т�
 той же dev (её reports/heavy-all-1, 21.10 02:25); два новых красных e2e-combat относит к пересборке стволов в dev
 (200236fe7, 331048228). Ветка scene-detail префабы оружия и e2e-сценарии боя не меняет → регрессия dev, не этой
 задачи. Отчёт: reports/heavy-20261021/verdict.json.
+Повтор heavy после rebase (ticket 981, база 670741f53): scripted-combat-hit стал GREEN (dev починила), но полный
+EditMode нашёл новый красный LobbyQuestRenderStateTests.BoxUvTargetsAreImportedInMetres — модели без развёртки.
+Причина: конфиг искался от текущего каталога процесса (процесс импорта может иметь другой), а без найденного конфига
+зависимость не записывалась. Исправление: путь от Application.dataPath, DependsOnSourceAsset(конфиг) для всех моделей
+Assets/Art/Lobby, BoxUvModelPostprocessor v3. Heavy ticket 985 (код a53029f51, база b681a938f в ветке): все три
+сценария GREEN; EditMode 2890, красных 19, новых 2 — GameTagsTests и HandsPackWeaponTests(Scar) из dev (см. выше);
+наш тест зелёный. Проверка «код worker содержит dev» FAIL из-за отставания базы брокера от origin/dev, не кода ветки.
+Отчёт: reports/heavy-20261021c/verdict.json.

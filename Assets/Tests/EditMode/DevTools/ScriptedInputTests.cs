@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.DevTools.E2E;
 using VrBattlegrounds.DevTools.E2E.Input;
+using VrBattlegrounds.Managers;
 
 namespace VrBattlegrounds.Tests.DevTools
 {
@@ -15,12 +16,13 @@ namespace VrBattlegrounds.Tests.DevTools
     /// Скриптовый ввод сетевого клиента (контракт tasks/bots-control-modes/contracts/xr-input.md), принятая веха 1.
     /// Поведение в сети проверяют e2e-сценарии <c>scripted-input-smoke</c>, <c>scripted-wall-purchase</c> и
     /// <c>scripted-combat-hit</c> (этап 2 эпика e2e-regression, итерация 1 принята 2026-10-20) на стенде; здесь —
-    /// статические инварианты: встроенные сценарии, шаги по клиентам, кадр «покоя», защита релиза и состав префабов.
+    /// статические инварианты: встроенные сценарии (включая клиента-админа <c>scripted-admin-pause</c>, этап 3), шаги по
+    /// клиентам, кадр «покоя», защита релиза и состав префабов.
     /// </summary>
     public class ScriptedInputTests
     {
         private static readonly string[] BuiltInScripts =
-            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round" };
+            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round", "admin-pause" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -71,7 +73,9 @@ namespace VrBattlegrounds.Tests.DevTools
         [TestCase("{\"op\":\"grab-wall-item\",\"item\":\"rifle\"}", "rifle")]
         [TestCase("{\"op\":\"hold\",\"client\":-1}", "client")]
         [TestCase("{\"op\":\"shoot-enemy\",\"until\":\"wound\"}", "wound")]
-        public void Load_RejectsUnknownItemFilterAndNegativeClient(string step, string expected)
+        [TestCase("{\"op\":\"admin-command\",\"target\":\"Kick\"}", "Kick")]
+        [TestCase("{\"op\":\"admin-command-denied\"}", "команда админа")]
+        public void Load_RejectsUnknownStepValuesAndNegativeClient(string step, string expected)
         {
             string file = Path.Combine(Path.GetTempPath(), "scripted-input-bad-step.json");
             File.WriteAllText(file, "{\"name\":\"x\",\"steps\":[{\"op\":\"activate\"}," + step + "]}");
@@ -186,6 +190,42 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(zone, Is.GreaterThan(tag), "Countdown держится, пока живой игрок вне своей зоны");
         }
 
+        [Test]
+        public void AdminPause_ClientOneIsAdmin_ClientTwoDenied_PauseThenResume()
+        {
+            InputScript script = InputScript.Load("admin-pause", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int rights = Index(script, s => s.op == "admin-rights");
+            int teams = Index(script, s => s.op == "wait-server" && s.name == "teams-ok");
+            int goLive = Index(script, s => s.op == "admin-command" && s.target == "GoLive");
+            int live = Index(script, s => s.op == "wait-server" && s.name == "match-live");
+            int bought = Index(script, s => s.op == "wait-server" && s.name == "oracle-done");
+            int denied = Index(script, s => s.op == "admin-command-denied");
+            int pause = Index(script, s => s.op == "admin-command" && s.target == "Pause");
+            int resume = Index(script, s => s.op == "admin-command" && s.target == "Resume");
+            int home = Index(script, s => s.op == "walk" && s.target == "own-spawn-point", resume);
+
+            Assert.That(rights, Is.GreaterThan(0).And.LessThan(teams), "права — до проверки сервера «у одного клиента»");
+            Assert.That(script.steps[rights].client, Is.EqualTo(1), "админ — клиент 1, клиент 2 — обычный игрок");
+            Assert.That(goLive, Is.GreaterThan(teams).And.LessThan(live), "матч начинает админ, а не сервер");
+            Assert.That(denied, Is.GreaterThan(bought).And.LessThan(pause), "отказ проверяется в Live, до паузы админа");
+            Assert.That(script.steps[denied].client, Is.EqualTo(2));
+            Assert.That(script.steps[denied].target, Is.EqualTo("Pause"));
+            Assert.That(resume, Is.GreaterThan(pause));
+            Assert.That(home, Is.GreaterThan(resume), "переигранный раунд ждёт всех в своих зонах");
+            foreach (InputStep step in script.steps)
+                if (step.op == "admin-command" || step.op == "admin-rights")
+                    Assert.That(step.client, Is.EqualTo(1), $"{step.op} {step.target}: команды планшета — только у админа");
+        }
+
+        [Test]
+        public void AdminCommands_MatchMapCommand()
+        {
+            Assert.That(InputScript.AdminCommands, Is.EquivalentTo(System.Enum.GetNames(typeof(MapCommand))),
+                "проверка сценария знает ровно команды планшета");
+        }
+
         private static int Index(InputScript script, System.Func<InputStep, bool> match, int after = -1)
         {
             for (int i = after + 1; i < script.steps.Length; i++)
@@ -260,6 +300,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(E2ERunner.IsRegistered("scripted-combat-hit"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-round"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-next-round"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-admin-pause"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

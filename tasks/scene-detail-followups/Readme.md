@@ -43,15 +43,23 @@ Baked Lit в один фиксер аудитора ассетов (QPM-SHADER-0
   «свечение потеряно» (GlowMat_URP ушёл), фиксер эмиссии меняет только корни окружения — в плане по Lobby остался только
   M_Glass_Inst (не применён, решение пользователя). Скриншоты «до/после» дверных ламп (казарма A, ворота склада) —
   `reports/door-lamp-shots/` (вне Git).
-- [ ] Не проверено: Development/Prod-сборка с PerfDiagnosticShaderBuildProcessor (шейдер в Test есть, в Prod нет);
-  Run-QuestE2E на шлеме (сон в конце finally, readlink в try) — только парсер PowerShell и чтение кода.
-- [ ] Приёмка пользователем (лампа, фиксер), затем тесты, heavy, ревью зон, merge.
+- [x] Приёмка пользователем 2026-10-22 (скриншоты дверных ламп до/после), затем тесты: MaterialFixerTests (5),
+  PerfDiagnosticShaderTests, LampMaterialsGlowWithoutGiAndHighlights на обе лампы. EditMode затронутых групп 66/66
+  (ticket 1004, кандидат 7f3b36160).
+- [x] Heavy editor/default --editmode also (ticket 1002, e8bcc00ab): сценарии GREEN; код 1 — 2 новых красных EditMode вне путей
+  задачи (GameTagsTests.Prefabs_TagsMatchRules, HandsPackWeaponTests Scar), те же красные в heavy e2e-combat 2026-10-21
+  без этой ветки; 18 известных красных позеленели (список known-red не правил — не моя зона).
+- [x] Heavy windows/default (7f3b36160): код 0; в Development-сборку вошёл PerfPlanarFloor из нового пути (лог компилятора
+  шейдеров build-test-win64) — build-процессор работает. Отсутствие в Prod сборкой не проверено.
+- [x] Ревью раунд 1 (52e28dcfd): performance, launch-infra, gameplay, level-design — approve. По P2 performance исправлено:
+  держатель шейдера в каждой сцене Development-сборки (Shader.Find после выгрузки Offline), RealtimeEmissive в
+  BakedLitMaterialFixer; EmissionOffFixer сохраняет alpha clip. Не сделано (follow-up): сон шлема во вложенном
+  try/finally; rev3 контракта у владельца quest-perf-pipeline; Run-QuestE2E на шлеме не прогонялся.
+- [ ] Ревью раунд 2, вливание (решение пользователя по heavy код 1), task-close.
 
 ## Статус
 
-2026-10-22: всё сделано и проверено в Unity, кроме сборок и шлема; ничего не закоммичено. Ждём проверки пользователем
-(дверные лампы Lobby светятся; аудит/фиксер). После неё — тесты правила/фиксеров/лампы, heavy, ревью зон
-(performance, launch-infra, gameplay, level-design), merge.
+2026-10-22: принято пользователем, тесты и heavy выполнены, ревью раунда 1 approve; правки по ревью — раунд 2.
 
 Найдено попутно (вне задачи): `material.emission-off` ловит ещё M_Glass_Inst (Lobby), OwnerIndicator (станция арсенала),
 DustPuffParticle_NoSoft и 2 сэмпла UXR; в Lobby 3 розовых материала (MI_Emissive, MI_TopLight, «No Name» —

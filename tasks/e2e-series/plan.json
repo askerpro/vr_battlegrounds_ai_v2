@@ -1,0 +1,32 @@
+{
+  "task_id": "e2e-series",
+  "owner": "e2e-series",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/e2e-series",
+  "base_sha": "670741f536641009e1d336d9a584c00f04606363",
+  "doc_path": "tasks/e2e-series/Readme.md",
+  "title": "E2E этап 3: серия и админ скриптовым клиентом",
+  "branch": "task/e2e-series",
+  "stages": [
+    {
+      "id": "admin",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "tasks/e2e-series/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
+      "id": "work",
+      "writes": [
+        "tasks/e2e-series/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

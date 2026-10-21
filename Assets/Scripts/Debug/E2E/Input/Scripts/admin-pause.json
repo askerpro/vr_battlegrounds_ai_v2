@@ -1,0 +1,31 @@
+{
+  "name": "admin-pause",
+  "steps": [
+    { "op": "activate", "timeoutS": 60 },
+    { "op": "step", "name": "input-active" },
+    { "op": "admin-rights", "client": 1, "timeoutS": 30 },
+    { "op": "choose-team", "timeoutS": 30 },
+    { "op": "step", "name": "team-requested" },
+    { "op": "wait-server", "name": "teams-ok", "timeoutS": 60 },
+    { "op": "admin-command", "client": 1, "target": "GoLive", "timeoutS": 30 },
+    { "op": "wait-server", "name": "match-live", "timeoutS": 120 },
+    { "op": "walk", "target": "own-spawn-zone", "speed": 1.2, "timeoutS": 120 },
+    { "op": "wait-server", "name": "equipment", "timeoutS": 150 },
+    { "op": "walk", "target": "own-wall", "speed": 1.2, "timeoutS": 30 },
+    { "op": "grab-wall-item", "hand": "right", "item": "pistol", "speed": 0.5, "timeoutS": 20 },
+    { "op": "expect-held", "hand": "right" },
+    { "op": "step", "name": "grabbed" },
+    { "op": "wait-server", "name": "oracle-done", "timeoutS": 60 },
+    { "op": "admin-command-denied", "client": 2, "target": "Pause", "seconds": 2 },
+    { "op": "step", "name": "denied-tried" },
+    { "op": "wait-server", "name": "denied-verified", "timeoutS": 60 },
+    { "op": "admin-command", "client": 1, "target": "Pause", "timeoutS": 30 },
+    { "op": "step", "name": "paused" },
+    { "op": "wait-server", "name": "pause-verified", "timeoutS": 60 },
+    { "op": "admin-command", "client": 1, "target": "Resume", "timeoutS": 30 },
+    { "op": "walk", "target": "own-spawn-point", "speed": 1.2, "timeoutS": 90 },
+    { "op": "step", "name": "home" },
+    { "op": "wait-server", "name": "resume-verified", "timeoutS": 150 },
+    { "op": "step", "name": "done" }
+  ]
+}

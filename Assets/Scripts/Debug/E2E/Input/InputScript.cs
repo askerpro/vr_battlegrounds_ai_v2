@@ -28,6 +28,10 @@ namespace VrBattlegrounds.DevTools.E2E.Input
     ///       его торс и жать Trigger до попадания (<c>until</c> = <c>hit</c>) или до его смерти (<c>kill</c>), не
     ///       больше <c>shots</c> нажатий;</item>
     /// <item><c>expect-eliminated</c> — свой игрок выбыл, ввод перенесён на новый аватар (призрак);</item>
+    /// <item><c>admin-rights</c> — права админа этому клиенту (режим отладки, права выдаёт сервер);</item>
+    /// <item><c>admin-command</c> — команда админа <c>target</c> (<c>GoLive</c>, <c>Pause</c>, <c>Resume</c>, <c>Stop</c>,
+    ///       <c>NextMap</c>) тем же Command, что кнопка планшета; <c>admin-command-denied</c> — то же от не-админа:
+    ///       сервер отказывает, состояние карты не меняется (<c>seconds</c> ожидания);</item>
     /// <item><c>expect-held</c>, <c>expect-peers-holding</c> — проверки реплицированного состояния;</item>
     /// <item><c>release</c>, <c>hold</c> (<c>seconds</c>);</item>
     /// <item><c>step</c> / <c>wait-server</c> — барьер шагов e2e (<c>name</c>, <c>timeoutS</c>).</item>
@@ -49,8 +53,11 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         {
             "activate", "measure-start", "measure-check", "walk", "turn", "choose-team", "grab-wall-item",
             "grab-dog-tag", "carry", "shoot-enemy", "expect-eliminated", "release", "hold", "expect-held",
-            "expect-peers-holding", "step", "wait-server"
+            "expect-peers-holding", "admin-rights", "admin-command", "admin-command-denied", "step", "wait-server"
         };
+
+        /// <summary>Команды админа (<c>MapCommand</c>) для <c>admin-command</c> и <c>admin-command-denied</c>.</summary>
+        public static readonly string[] AdminCommands = { "GoLive", "Pause", "Resume", "Stop", "NextMap" };
 
         /// <summary>Фильтры предмета <see cref="InputStep.item"/> для <c>grab-wall-item</c>.</summary>
         public static readonly string[] ItemFilters = { "", "pistol" };
@@ -106,6 +113,13 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                     if (Array.IndexOf(ShootGoals, script.steps[i].until ?? "") < 0)
                     {
                         error = $"шаг {i + 1} сценария {file}: неизвестная цель стрельбы '{script.steps[i].until}'";
+                        return null;
+                    }
+
+                    if (script.steps[i].op.StartsWith("admin-command", StringComparison.Ordinal) &&
+                        Array.IndexOf(AdminCommands, script.steps[i].target ?? "") < 0)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: неизвестная команда админа '{script.steps[i].target}'";
                         return null;
                     }
 

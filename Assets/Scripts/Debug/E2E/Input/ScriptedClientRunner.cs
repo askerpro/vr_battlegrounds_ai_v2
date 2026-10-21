@@ -13,6 +13,7 @@ using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.Economy;
+using VrBattlegrounds.Managers;
 using VrBattlegrounds.Maps;
 using VrBattlegrounds.Player;
 
@@ -108,6 +109,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 case "carry": return Carry(step, label);
                 case "shoot-enemy": return ShootEnemy(step, label);
                 case "expect-eliminated": return ExpectEliminated(step, label);
+                case "admin-rights": return AdminRights(step, label);
+                case "admin-command": return AdminCommand(step, label);
+                case "admin-command-denied": return AdminCommandDenied(step, label);
                 case "release": return Release(step, label);
                 case "hold": return Hold(step, label);
                 case "expect-held": return Instant(() => ExpectHeld(step, label));
@@ -556,6 +560,102 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
             if (peers == 0) Fail(label, "других игроков на клиенте нет");
             Pass(label, string.Join("; ", report));
+        }
+
+        // ── Админ ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Права админа скриптовому клиенту: режим отладки этого процесса (как меню редактора); права выдаёт
+        /// штатный сервер (<c>DebugModeNetwork</c> по <c>DebugAdminPolicy</c>) — шаг ждёт реплицированный
+        /// <c>PlayerSession.IsAdmin</c>. Решение пользователя 2026-10-22: админ — один из сетевых клиентов, права скриптом.
+        /// </summary>
+        private IEnumerator AdminRights(InputStep step, string label)
+        {
+            PlayerSession session = PlayerSession.LocalSession;
+            if (session == null) Fail(label, "локальной сессии нет");
+
+            DebugMode.Set(true, "e2e: скриптовый клиент-админ");
+            E2EWaitOutcome granted = new E2EWaitOutcome();
+            yield return E2EWait.Until(granted, "сервер выдал права админа", step.timeoutS,
+                () => session.IsAdmin,
+                () => $"DebugMode={DebugMode.Enabled}, IsAdmin={session.IsAdmin}");
+            Require(label, granted, $"{session.PlayerName}: режим отладки включён, сервер выдал права");
+        }
+
+        /// <summary>
+        /// Команда админа — тот же Command, что кнопка планшета (<c>MenuMatchManager</c>): дождаться, когда кнопка имеет
+        /// смысл (<see cref="AdminMapCommands.IsAvailable(MapCommand)"/>), отправить и дождаться реплицированного итога.
+        /// </summary>
+        private IEnumerator AdminCommand(InputStep step, string label)
+        {
+            PlayerSession session = PlayerSession.LocalSession;
+            MapCommand command = Command(step, label);
+            if (session == null || !session.IsAdmin) Fail(label, $"{command}: у клиента нет прав админа");
+
+            E2EWaitOutcome available = new E2EWaitOutcome();
+            yield return E2EWait.Until(available, $"кнопка {command} имеет смысл", step.timeoutS,
+                () => AdminMapCommands.IsAvailable(command),
+                () => $"состояние карты {Describe()}");
+            if (!available.Succeeded) Fail(label, available.Diagnosis);
+
+            MapState before = MapReferee.Instance != null ? MapReferee.Instance.CurrentState : MapState.Warmup;
+            session.CmdAdminMapCommand(command);
+
+            if (!TryExpected(command, out MapState expected))
+            {
+                Pass(label, $"{command} отправлена из состояния {before}");
+                yield break;
+            }
+
+            E2EWaitOutcome applied = new E2EWaitOutcome();
+            yield return E2EWait.Until(applied, $"{command}: карта в состоянии {expected}", step.timeoutS,
+                () => MapReferee.Instance != null && MapReferee.Instance.CurrentState == expected,
+                () => $"состояние карты {Describe()}");
+            Require(label, applied, $"{command}: {before} → {expected}");
+        }
+
+        /// <summary>Не-админ жмёт ту же кнопку: сервер отказывает, состояние карты не меняется.</summary>
+        private IEnumerator AdminCommandDenied(InputStep step, string label)
+        {
+            PlayerSession session = PlayerSession.LocalSession;
+            MapCommand command = Command(step, label);
+            if (session == null) Fail(label, "локальной сессии нет");
+            if (session.IsAdmin) Fail(label, $"{command}: клиент — админ, отказ проверить нельзя");
+
+            MapState before = MapReferee.Instance != null ? MapReferee.Instance.CurrentState : MapState.Warmup;
+            session.CmdAdminMapCommand(command);
+            yield return E2EWait.Hold(step.seconds > 0f ? step.seconds : 2f);
+
+            MapState after = MapReferee.Instance != null ? MapReferee.Instance.CurrentState : MapState.Warmup;
+            if (after != before) Fail(label, $"{command} от не-админа изменила карту: {before} → {after}");
+            Pass(label, $"{command} от не-админа {session.PlayerName}: состояние {after} не изменилось");
+        }
+
+        private MapCommand Command(InputStep step, string label)
+        {
+            if (!System.Enum.TryParse(step.target, false, out MapCommand command))
+                Fail(label, $"неизвестная команда админа '{step.target}'");
+            return command;
+        }
+
+        /// <summary>Состояние карты после команды, которое видно этому клиенту; false — проверяет следующий шаг.</summary>
+        private static bool TryExpected(MapCommand command, out MapState state)
+        {
+            switch (command)
+            {
+                case MapCommand.GoLive:
+                case MapCommand.Resume: state = MapState.Live; return true;
+                case MapCommand.Pause: state = MapState.Paused; return true;
+                default: state = MapState.Warmup; return false;
+            }
+        }
+
+        private static string Describe()
+        {
+            MapReferee referee = MapReferee.Instance;
+            Series series = Series.Instance;
+            return $"{(referee != null ? referee.CurrentState.ToString() : "нет судьи")}, серия " +
+                   $"{(series != null && series.IsRunning ? "идёт" : "не идёт")}";
         }
 
         // ── Барьер ───────────────────────────────────────────────────────────

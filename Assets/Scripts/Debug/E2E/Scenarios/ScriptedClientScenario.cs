@@ -48,6 +48,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         public const string CombatHitName = "scripted-combat-hit";
         public const string CombatRoundName = "scripted-combat-round";
         public const string CombatSeriesName = "scripted-combat-next-round";
+        public const string AdminPauseName = "scripted-admin-pause";
 
         private const string CheckClients = "сервер: клиенты подключены обычными соединениями, ботов нет";
         private const string CheckWalked = "сервер: голова каждого клиента ушла от корня (поза реплицирована)";
@@ -67,6 +68,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckCarryOver = "сервер: деньги раунда 1 перенесены в раунд 2 без сброса";
         private const string CheckRebuy = "сервер: касса провела покупку каждого клиента в раунде 2";
         private const string CheckReadyAgain = "сервер: готовность раунда 2 — снова жетонами, бой не по пределу ожидания";
+        private const string CheckAdminRights = "сервер: права админа — у одного клиента (режим отладки), у другого нет";
+        private const string CheckLiveByAdmin = "сервер: матч начал клиент-админ командой планшета GoLive";
+        private const string CheckAdminDenied = "сервер: команда не-админа отклонена, карта не изменилась";
+        private const string CheckPaused = "сервер: пауза админа — разминка, все живы, руки пусты, экономики нет";
+        private const string CheckResumed = "сервер: продолжение — раунд переигран, деньги на начало раунда, готовность сброшена";
 
         private const string ShooterRole = "client-1";
         private const string TargetRole = "client-2";
@@ -78,6 +84,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private readonly List<string> _combatLog = new List<string>();
         private readonly List<UxrDamageEventArgs> _damage = new List<UxrDamageEventArgs>();
         private readonly List<(PlayerSession victim, PlayerSession killer)> _kills = new List<(PlayerSession, PlayerSession)>();
+        private readonly List<string> _adminLog = new List<string>();
         private int _serverShots;
 
         /// <summary>Что купил клиент: предмет и сессия, которая его держит (по данным сервера).</summary>
@@ -171,7 +178,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             bool series = _name == CombatSeriesName;
             bool round = series || _name == CombatRoundName;
             bool combat = round || _name == CombatHitName;
-            result.Declare(CheckClients, CheckTeams, CheckLive, CheckEquipment, CheckWalls, CheckPurchase);
+            bool admin = _name == AdminPauseName;
+            result.Declare(CheckClients, CheckTeams, admin ? CheckLiveByAdmin : CheckLive, CheckEquipment, CheckWalls, CheckPurchase);
+            if (admin) result.Declare(CheckAdminRights, CheckAdminDenied, CheckPaused, CheckResumed);
             if (combat) result.Declare(CheckCombat, CheckShotReplayed, CheckDamage);
             if (round) result.Declare(CheckReadiness, CheckKill, CheckKillReward, CheckRound);
             if (series) result.Declare(CheckNextRound, CheckCarryOver, CheckRebuy, CheckReadyAgain);
@@ -188,21 +197,42 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Set(CheckTeams, teams.Succeeded, DescribeTeams() + " — " + teams.Diagnosis);
             if (!teams.Succeeded) Abort(result, "команды не выбраны — матч не стартует (minPlayers и обе команды)");
 
-            // Эквивалент кнопки админа «Начать»: то же правило доступности и тот же вызов, без проверки прав сессии.
-            bool available = AdminMapCommands.IsAvailable(MapCommand.GoLive);
-            bool live = available && MapReferee.Instance != null && MapReferee.Instance.GoLive();
-            result.Set(CheckLive, live, $"IsAvailable(GoLive)={available}, GoLive()={live}");
-            if (!live) Abort(result, "матч не начат");
-
-            EliminationMode mode = null;
-            float deadline = Now + 30f;
-            while ((mode = MapReferee.Instance.ActiveGameMode as EliminationMode) == null && Now < deadline)
-                yield return null;
-            if (mode == null) Abort(result, "ActiveGameMode не стал EliminationMode");
-
+            _adminLog.Clear();
+            Application.logMessageReceived += OnLog;
             MatchEconomy.TransactionServer += OnTransaction;
             try
             {
+                if (admin)
+                {
+                    // Матч начинает клиент-админ кнопкой планшета; сервер только проверяет права и итог.
+                    // Лог исполнения (уровень Info канала Match) — диагностика, не условие: уровень канала настраивается.
+                    CheckRights(result);
+                    context.ServerStep("teams-ok");
+                    E2EWaitOutcome started = new E2EWaitOutcome();
+                    yield return E2EWait.Until(started, "матч начат админом", 60f,
+                        () => MapReferee.Instance != null && MapReferee.Instance.IsLive,
+                        () => $"состояние {(MapReferee.Instance != null ? MapReferee.Instance.CurrentState.ToString() : "нет судьи")}");
+                    PlayerSession adminSession = AdminSession();
+                    bool logged = adminSession != null && HasAdminLog($"{adminSession.PlayerName}: {MapCommand.GoLive}.");
+                    result.Set(CheckLiveByAdmin, started.Succeeded && adminSession != null,
+                        $"{started.Diagnosis}; лог исполнения от {(adminSession != null ? adminSession.PlayerName : "?")}: {logged}");
+                    if (!started.Succeeded) Abort(result, "админ не начал матч");
+                }
+                else
+                {
+                    // Эквивалент кнопки админа «Начать»: то же правило доступности и тот же вызов, без проверки прав сессии.
+                    bool available = AdminMapCommands.IsAvailable(MapCommand.GoLive);
+                    bool live = available && MapReferee.Instance != null && MapReferee.Instance.GoLive();
+                    result.Set(CheckLive, live, $"IsAvailable(GoLive)={available}, GoLive()={live}");
+                    if (!live) Abort(result, "матч не начат");
+                }
+
+                EliminationMode mode = null;
+                float deadline = Now + 30f;
+                while ((mode = MapReferee.Instance.ActiveGameMode as EliminationMode) == null && Now < deadline)
+                    yield return null;
+                if (mode == null) Abort(result, "ActiveGameMode не стал EliminationMode");
+
                 context.ServerStep("match-live");
 
                 E2EWaitOutcome equipment = new E2EWaitOutcome();
@@ -233,14 +263,17 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 context.ServerStep("oracle-done");
                 if (combat) yield return RunCombatHit(context, result, mode, round);
                 if (series) yield return RunNextRound(context, result, mode);
+                if (admin) yield return RunAdminPause(context, result, mode, before);
                 yield return E2EBarrier.WaitClients(context, "done", 90f);
             }
             finally
             {
                 MatchEconomy.TransactionServer -= OnTransaction;
+                Application.logMessageReceived -= OnLog;
             }
 
             result.Summary = !result.AllChecksGreen ? "см. проверки"
+                : admin ? "клиент-админ вёл матч командами планшета: старт, пауза, продолжение; не-админу отказано"
                 : series ? "два раунда вводом: убийство и Resolution, затем раунд 2 — возрождение, перенос денег, покупка, жетоны"
                 : round ? "раунд сыгран вводом: жетоны, убийство курком, Resolution — счёт и деньги за командой стрелка"
                 : combat ? "скриптовый клиент выстрелил курком в противника, сервер увидел урон от его актора"
@@ -445,6 +478,120 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                 $"{fight.Diagnosis}; предел ожидания истёк={limit}; " + string.Join(", ", ready));
             context.ServerStep("series-verified");
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  Сервер: команды админа
+        // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Не-админ жмёт «Пауза» — отказ; админ ставит паузу (разминка, все живы, снаряжение изъято, экономики нет) и
+        /// продолжает (новый режим, раунд переигран, деньги — на начало раунда, готовность сброшена).
+        /// </summary>
+        private IEnumerator RunAdminPause(E2EContext context, E2EResult result, EliminationMode mode,
+            Dictionary<PlayerSession, int> roundStart)
+        {
+            PlayerSession adminSession = AdminSession();
+            var sessions = new List<PlayerSession>(HumanSessions());
+            PlayerSession other = sessions.Find(s => s != adminSession);
+            int round = mode.CurrentRoundNumber;
+            uint modeNetId = mode.netId;
+
+            yield return E2EBarrier.WaitClients(context, "denied-tried", 60f);
+            yield return E2EWait.Hold(0.5f);
+            bool stillLive = MapReferee.Instance != null && MapReferee.Instance.IsLive && mode != null && mode.netId == modeNetId;
+            bool denied = other != null && HasAdminLog($"{MapCommand.Pause} отклонена: {other.PlayerName} не админ");
+            result.Set(CheckAdminDenied, stillLive && denied,
+                $"{(other != null ? other.PlayerName : "?")}: Pause; карта Live={stillLive}; лог отказа={denied}; {AdminLogTail()}");
+            context.ServerStep("denied-verified");
+
+            yield return E2EBarrier.WaitClients(context, "paused", 60f);
+            yield return E2EWait.Hold(0.5f);
+            MapReferee referee = MapReferee.Instance;
+            bool paused = referee != null && referee.IsPaused && referee.ActiveGameMode != null && referee.ActiveGameMode.IsWarmup;
+            bool alive = true, empty = true;
+            var report = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                bool a = session.ActiveAvatar != null && session.ActiveAvatar.IsAlive && !session.IsEliminated;
+                bool e = HandsEmpty(session);
+                alive &= a;
+                empty &= e;
+                report.Add($"{session.PlayerName}: жив={a}, руки пусты={e}");
+            }
+
+            bool noEconomy = MatchEconomy.Current == null;
+            bool pauseLogged = adminSession != null && HasAdminLog($"{adminSession.PlayerName}: {MapCommand.Pause}.");
+            result.Set(CheckPaused, paused && alive && empty && noEconomy,
+                $"Paused={paused}, режим {(referee != null && referee.ActiveGameMode != null ? referee.ActiveGameMode.GetType().Name : "нет")}, " +
+                $"экономики нет={noEconomy}, лог={pauseLogged}; " + string.Join("; ", report));
+            context.ServerStep("pause-verified");
+
+            yield return E2EBarrier.WaitClients(context, "home", 90f);
+            EliminationMode resumed = null;
+            E2EWaitOutcome back = new E2EWaitOutcome();
+            yield return E2EWait.Until(back, "матч продолжен: новый режим в Equipment", 90f,
+                () => (resumed = MapReferee.Instance != null ? MapReferee.Instance.ActiveGameMode as EliminationMode : null) != null &&
+                      MapReferee.Instance.IsLive && resumed.CurrentRoundPhase == RoundPhase.Equipment,
+                () => $"состояние {(MapReferee.Instance != null ? MapReferee.Instance.CurrentState.ToString() : "нет")}, " +
+                      $"фаза {(resumed != null ? resumed.CurrentRoundPhase.ToString() : "нет режима")}; {DescribeZones()}");
+
+            bool fresh = resumed != null && resumed.netId != modeNetId;
+            bool replay = resumed != null && resumed.CurrentRoundNumber == round;
+            bool money = true, reset = true;
+            var state = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                int now = Money(session);
+                roundStart.TryGetValue(session, out int start);
+                money &= now == start;
+                reset &= !session.ReadyState && !session.HasGrabbedDogTag;
+                state.Add($"{session.PlayerName}: деньги {now} (начало раунда {start}), готовность {session.ReadyState}");
+            }
+
+            bool resumeLogged = adminSession != null && HasAdminLog($"{adminSession.PlayerName}: {MapCommand.Resume}.");
+            result.Set(CheckResumed, back.Succeeded && fresh && replay && money && reset,
+                $"{back.Diagnosis}; новый режим={fresh}, раунд {(resumed != null ? resumed.CurrentRoundNumber : -1)} (был {round}), " +
+                $"деньги на начало раунда={money}, готовность сброшена={reset}, лог={resumeLogged}; " +
+                string.Join("; ", state));
+            context.ServerStep("resume-verified");
+        }
+
+        /// <summary>Ровно у одного клиента права админа (выдал режим отладки), у другого — нет.</summary>
+        private static void CheckRights(E2EResult result)
+        {
+            var parts = new List<string>();
+            int admins = 0, players = 0;
+            foreach (PlayerSession session in HumanSessions())
+            {
+                players++;
+                if (SessionPermissions.IsAdmin(session)) admins++;
+                parts.Add($"{session.PlayerName}: IsAdmin={session.IsAdmin}");
+            }
+
+            result.Set(CheckAdminRights, players >= 2 && admins == 1, string.Join(", ", parts));
+        }
+
+        private static PlayerSession AdminSession()
+        {
+            foreach (PlayerSession session in HumanSessions())
+                if (SessionPermissions.IsAdmin(session)) return session;
+            return null;
+        }
+
+        private void OnLog(string condition, string stackTrace, LogType type)
+        {
+            if (condition != null && condition.Contains("[AdminMapCommands]") && _adminLog.Count < 64) _adminLog.Add(condition);
+        }
+
+        private bool HasAdminLog(string fragment)
+        {
+            foreach (string line in _adminLog)
+                if (line.Contains(fragment)) return true;
+            return false;
+        }
+
+        private string AdminLogTail() =>
+            _adminLog.Count > 0 ? "лог: " + string.Join(" | ", _adminLog.GetRange(Mathf.Max(0, _adminLog.Count - 3), Mathf.Min(3, _adminLog.Count))) : "лога команд нет";
 
         private static int Money(PlayerSession session) =>
             MatchEconomy.Current != null && session != null ? MatchEconomy.Current.GetMoney(session) : -1;

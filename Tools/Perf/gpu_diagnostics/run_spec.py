@@ -12,6 +12,13 @@ RENDER_DIAGNOSTICS = ("none", "floor-basic", "floor-unlit", "floor-planar-unlit"
                       "floor-basic+skybox-color", "floor-unlit+skybox-color")
 
 
+def _dirty_evidence(entry):
+    """Запись dirty build manifest: прежний плоский вид {status, path, sha256} или вид Build-Game
+    {checkout, evidence: {status, path, sha256}, generated}. Возвращает сами evidence без пути checkout."""
+    evidence = entry.get("evidence") if isinstance(entry.get("evidence"), dict) else entry
+    return {key: evidence.get(key) for key in ("status", "path", "sha256")}
+
+
 def _prepare_run(build: Path, views: Path, out: Path, variant, fingerprint,
                  discovery, pair_id, repetition, phase_seconds=10.0, view_name=None, capture_kind="none", target="windows",
                  render_diag=None, head_pose="eye"):
@@ -66,8 +73,8 @@ def _prepare_run(build: Path, views: Path, out: Path, variant, fingerprint,
     out.mkdir(parents=True)
     dirty_evidence = []
     # Архивируем только реально известный generated lock; dirty не превращается в clean.
-    for entry in (manifest.get("dirty") or {}).get("entries", []):
-        if entry.get("path") != "Packages/packages-lock.json":
+    for entry in (_dirty_evidence(row) for row in (manifest.get("dirty") or {}).get("entries", [])):
+        if entry["path"] != "Packages/packages-lock.json":
             continue
         lock_path = build.parent / "source-evidence" / "packages-lock.json"
         if not lock_path.is_file():
@@ -130,10 +137,12 @@ def prepare_quest_run(server_build: Path, quest_build: Path, views: Path, out: P
     dirty_entries = {}
     for source in (server, quest):
         for entry in (source.get("dirty") or {}).get("entries", []):
-            key = entry.get("path")
-            _require(key not in dirty_entries or dirty_entries[key] == entry,
+            # Сборочные checkout у e2e и quest разные: сравниваются evidence (status/path/sha256), не путь checkout.
+            evidence = _dirty_evidence(entry)
+            key = evidence["path"]
+            _require(key not in dirty_entries or _dirty_evidence(dirty_entries[key]) == evidence,
                      "Один dirty path имеет разные evidence в двух build roots; плоская композиция неоднозначна")
-            dirty_entries[key] = entry
+            dirty_entries.setdefault(key, entry)
     combined = {"schemaVersion": 1, "sourceSha": server["sourceSha"], "sourceKind": "unknown",
                 "sourceKindReason": "Композиция исходных builder profiles; accepted/checkpoint proof не подменяется Git SHA",
                 "dirty": {"value": dirty_value, "entries": list(dirty_entries.values()),

@@ -1,0 +1,24 @@
+{
+  "task_id": "lobby-gpu-tour",
+  "owner": "lobby-gpu-tour",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/lobby-gpu-tour",
+  "base_sha": "c7b8d6ab3dbbaeb3106036405727e3b1747082c0",
+  "doc_path": "tasks/lobby-gpu-tour/Readme.md",
+  "title": "Тур GPU Lobby по 8 видам на Quest 3 после scene-detail",
+  "branch": "task/lobby-gpu-tour",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/lobby-gpu-tour/**",
+        "experts/performance/AGENT.md",
+        "experts/performance/journal/**",
+        "Docs/quest-performance-manifest.md",
+        "Tools/Perf/gpu_diagnostics/run_spec.py"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -3,9 +3,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using VrBattlegrounds.Editor.Performance.AssetAudit;
 using VrBattlegrounds.Editor.Performance.AssetAudit.Fixers;
 using VrBattlegrounds.Editor.Performance.AssetAudit.Rules;
@@ -28,7 +26,8 @@ namespace VrBattlegrounds.Tests.AssetAudit
         private const string LitName = "Universal Render Pipeline/Lit";
         private static readonly Color Warm = new Color(1f, .74f, .46f, 1f);
 
-        private Scene _scene;
+        // Рендереры живут в активной (временной) сцене test runner и удаляются в TearDown.
+        private readonly List<GameObject> _objects = new List<GameObject>();
 
         [SetUp]
         public void SetUp()
@@ -44,8 +43,8 @@ namespace VrBattlegrounds.Tests.AssetAudit
         [TearDown]
         public void TearDown()
         {
-            if (_scene.IsValid())
-                EditorSceneManager.CloseScene(_scene, true);
+            _objects.ForEach(Object.DestroyImmediate);
+            _objects.Clear();
             AssetDatabase.DeleteAsset(Folder);
             AssetDatabase.DeleteAsset(OutsideFolder);
         }
@@ -102,7 +101,6 @@ namespace VrBattlegrounds.Tests.AssetAudit
             string staticPath = SaveLit(Folder + "/TmpStaticDecor.mat");
             string dynamicPath = SaveLit(Folder + "/TmpDynamicProp.mat");
             string ownedPath = SaveLit(Folder + "/WornGround_Tmp.mat");
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             AddRenderer(staticPath, isStatic: true);
             AddRenderer(dynamicPath, isStatic: false);
             AddRenderer(ownedPath, isStatic: true);
@@ -201,7 +199,7 @@ namespace VrBattlegrounds.Tests.AssetAudit
         private void AddRenderer(string materialPath, bool isStatic)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            SceneManager.MoveGameObjectToScene(go, _scene);
+            _objects.Add(go);
             go.isStatic = isStatic;
             go.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
         }

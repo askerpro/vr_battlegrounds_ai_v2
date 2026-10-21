@@ -16,8 +16,8 @@ namespace VrBattlegrounds.Bots
     /// курок, IK и ноги от головы. Корень не пишет никто.
     ///
     /// <para>
-    /// Только сервер под <see cref="StateEventAuthority.IsWorldAuthority"/>, аватар без владельца. На теле с прежним
-    /// комплектом (<see cref="BotAvatarDriver"/>) не подключается — два писателя тела запрещены. Тело уничтожено — устройство
+    /// Только сервер под <see cref="StateEventAuthority.IsWorldAuthority"/>, аватар без владельца; у аватара один источник
+    /// ввода (<see cref="AvatarInputDevice"/> отказывает второму). Тело уничтожено — устройство
     /// снимается; новое тело подключает директор (<see cref="BotDirector"/>, по <c>AvatarSpawned</c>).
     /// </para>
     /// </summary>
@@ -57,8 +57,6 @@ namespace VrBattlegrounds.Bots
             UxrAvatar avatar = GetComponent<UxrAvatar>();
             if (!NetworkServer.active || !StateEventAuthority.IsWorldAuthority)
                 Refusal = "не сервер (автор мира)";
-            else if (TryGetComponent(out BotAvatarDriver _))
-                Refusal = "на теле прежний комплект player-flow (BotAvatarDriver) — второй писатель тела запрещён";
             if (Refusal != null)
             {
                 GameLog.Player.Error($"[BotInputKit] {name}: {Refusal}. Ввод не подан.", this);

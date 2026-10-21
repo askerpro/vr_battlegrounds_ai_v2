@@ -55,6 +55,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
         private AvatarPilot _pilot;
         private PlayerSession _bot;
         private PlayerSession _target;
+        private AvatarPilot _targetPilot;
         private UxrFirearmWeapon _firearm;
         private int _shots;
         private int _hits;
@@ -143,7 +144,7 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
                 holster = anchor;
                 break;
             }
-            if (_firearm == null || !BotHands.TryResolveGrips(_firearm, out UxrGrabbableObject grip, out int primary, out _))
+            if (_firearm == null || !BotGunner.TryResolveGrips(_firearm, out UxrGrabbableObject grip, out int primary, out _))
                 throw new InvalidOperationException("в кобуре нет огнестрела с рукоятью спуска");
             Note($"в кобуре {_firearm.name} (якорь {holster.name}); учёт: {Readiness()}");
             _firearm.ProjectileShot += OnShot;
@@ -160,8 +161,16 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             Quaternion course = Quaternion.Euler(0f, courseYaw, 0f);
             until = Time.time + 3f;
             while (!_pilot.TurnTowards(course * Vector3.forward, Time.deltaTime) && Time.time < until) yield return null;
-            SpawnTarget(_bot, headStart, courseYaw);
+            Vector3 targetFeet = SpawnTarget(_bot, headStart, courseYaw);
             yield return null;
+            // Цель — тоже бот на вводе: доходит головой до своей точки напротив и разворачивается к проверяемому.
+            until = Time.time + 20f;
+            while (Time.time < until && _targetPilot.Avatar != null &&
+                   !_targetPilot.StepTowards(targetFeet, AvatarPilot.MaxWalkSpeed, Time.deltaTime, 0.1f))
+                yield return null;
+            until = Time.time + 3f;
+            while (Time.time < until && !_targetPilot.TurnTowards(headStart - _targetPilot.HeadPosition, Time.deltaTime)) yield return null;
+            Note($"цель на месте: до точки {(_targetPilot.FloorPosition - targetFeet).magnitude:0.00} м");
             if (Physics.SphereCast(_pilot.HeadPosition, 0.15f, course * Vector3.forward, out RaycastHit block, 3.5f, ~0, QueryTriggerInteraction.Ignore) &&
                 !block.collider.transform.IsChildOf(uxr.transform))
                 Note($"на пути головы препятствие {block.collider.name} в {block.distance:0.00} м — WallPass остановит бота, как человека");
@@ -327,35 +336,25 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             return head != null ? head.position - Vector3.up * 0.45f : _pilot.HeadPosition + Quaternion.Euler(0f, _pilot.Yaw, 0f) * Vector3.forward * TargetDistance;
         }
 
-        /// <summary>Контрольная цель стенда (пассивный комплект, Life=100000) на 10 м по курсу бота, лицом к нему.</summary>
-        private void SpawnTarget(PlayerSession subject, Vector3 head, float yaw)
+        /// <summary>
+        /// Контрольная цель — второй бот на вводе (свой пилот, команда противника, Life=100000). Возвращает точку пола в
+        /// 10 м по курсу проверяемого, куда цель дойдёт головой.
+        /// </summary>
+        private Vector3 SpawnTarget(PlayerSession subject, Vector3 head, float yaw)
         {
             var teams = MapReferee.Instance.ActiveGameMode.Teams;
             var opponent = teams.FirstOrDefault(t => t != null && t.teamIndex != subject.TeamIndex) ?? teams.FirstOrDefault(t => t != null);
             if (opponent == null) throw new InvalidOperationException("нет команды для цели");
-            _target = PlayersManager.Instance.CreateBotSession("Контрольная цель", "bot-stand-target-" + Guid.NewGuid().ToString("N"),
-                BotPlayerFlowSettings.Calibration);
-            SessionTeamAssigner.Apply(_target, opponent, BotSkin.PickHittable(opponent), "BotStandInputSmoke");
-            AvatarManager.Instance.SpawnAvatar(null, null, _target);
-            if (_target.ActiveAvatar == null) throw new InvalidOperationException("нет тела цели");
-            BotKitRefs kit = BotKit.Attach(_target.ActiveAvatar, BotKitKind.Passive);
-            if (kit == null) throw new InvalidOperationException("нет комплекта цели");
-            Vector3 feet = new Vector3(head.x, _target.ActiveAvatar.transform.position.y, head.z) + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * TargetDistance;
-            kit.Body.Place(feet, yaw + 180f);
+            _targetPilot = new AvatarPilot();
+            _target = BotDirector.Instance.AddBot(new BotAddOptions { AutoEquip = false, InputSource = _targetPilot });
+            if (_target == null || _target.ActiveAvatar == null) throw new InvalidOperationException("нет тела цели");
+            if (_target.TeamIndex != opponent.teamIndex)
+                SessionTeamAssigner.Apply(_target, opponent, BotSkin.PickHittable(opponent), "BotStandInputSmoke");
+            if (_target.ActiveAvatar == null) throw new InvalidOperationException("нет тела цели после смены команды");
             _target.ActiveAvatar._actor.Life = 100000f;
-            Note($"цель {_target.ActiveAvatar.name} в {TargetDistance} м по курсу");
-        }
-
-        /// <summary>Учёт готовности спуска 0 (только чтение): инициализирован, патрон в патроннике, магазин, строка машины.</summary>
-        private string Readiness()
-        {
-            if (_firearm == null) return "нет оружия";
-            UxrFirearmReadinessState state = _firearm.UsesReadinessLedger(0) ? _firearm.GetReadinessState(0) : null;
-            VrBattlegrounds.Weapons.WeaponSystem system = _firearm.GetComponent<VrBattlegrounds.Weapons.WeaponSystem>();
-            return $"ledger={_firearm.UsesReadinessLedger(0)}, init={state?.ReadinessInitialized}, chamber={state?.ChamberRound}, " +
-                   $"actionOpen={state?.ActionOpen}, ammo={_firearm.GetAmmoLeft(0)}, loaded={_firearm.IsLoaded(0)}, " +
-                   // MachineState — тип сборки Weapons.Core, на которую asmdef стенда не ссылается (CS0012): только строка машины.
-                   $"row={(system != null ? system.LastRowId : "-")}";
+            Vector3 feet = new Vector3(head.x, _target.ActiveAvatar.transform.position.y, head.z) + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * TargetDistance;
+            Note($"цель {_target.ActiveAvatar.name} идёт в {TargetDistance} м по курсу");
+            return feet;
         }
 
         // ── Наблюдение ───────────────────────────────────────────────────────

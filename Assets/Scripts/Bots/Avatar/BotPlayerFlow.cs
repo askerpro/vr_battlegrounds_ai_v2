@@ -2,7 +2,7 @@ using VrBattlegrounds.PhysicalSpaceUtils;
 
 namespace VrBattlegrounds.Bots
 {
-    /// <summary>Исход запроса выстрела Blaze (<see cref="BotGunner.ExecuteRequestedShot"/>).</summary>
+    /// <summary>Исход решения «жать курок» по запросу Blaze (<see cref="BotGunner.DecideTriggerPress"/>).</summary>
     public enum BotShotOutcome
     {
         /// <summary>Запроса не было.</summary>
@@ -13,38 +13,8 @@ namespace VrBattlegrounds.Bots
         Occluded,
         /// <summary>Фактический луч дула отклонён от точки прицеливания ИИ больше допуска (ствол ещё не наведён).</summary>
         NotAimed,
-        /// <summary>Эта машина не автор предмета.</summary>
-        NotAuthor,
-        /// <summary>Нет допустимого профиля готовности/учёта.</summary>
-        NotReady,
-        /// <summary>RequestAutomationPreparation вернул false (перезарядка/досылание идёт).</summary>
-        Preparing,
-        /// <summary>SDK отказал в выстреле (темп, CanUse).</summary>
-        Rejected,
-        /// <summary>
-        /// Первый выстрел после экипировки ждёт хвата поддержки (оружие с точкой поддержки, в т.ч. пистолет) или таймаута
-        /// <see cref="BotRuntimeController.SupportTimeoutSeconds"/> (eq-round2, решение эксперта). Запрос снят без выстрела.
-        /// </summary>
-        AwaitingSupport,
-        /// <summary>TryToShootRound(0) вернул true.</summary>
+        /// <summary>Жать курок: все условия выполнены (выстрел делает SDK по курку).</summary>
         Fired
-    }
-
-    /// <summary>Замер в момент выстрела (до TryToShootRound, поза кадра после всех стадий) — для стенда.</summary>
-    public struct BotShotSample
-    {
-        public int Frame;
-        public float Time;
-        public BotShotOutcome Outcome;
-        /// <summary>Ошибка дула к точке прицеливания ИИ; false — не измерена.</summary>
-        public bool HasError;
-        public BotAimMath.MuzzleError Error;
-        /// <summary>Применённая поправка отдачи (тангаж, курс), градусы.</summary>
-        public UnityEngine.Vector2 Compensation;
-        /// <summary>Угол фактического луча дула к точке прицеливания ИИ в гейте, градусы (NaN — гейт до угла не дошёл).</summary>
-        public float GateAimErrorDeg;
-        /// <summary>Первый коллайдер на пути пули при <see cref="BotShotOutcome.Occluded"/>; иначе null.</summary>
-        public UnityEngine.Collider Blocker;
     }
 
     /// <summary>Параметры player-flow ботов (бот — обычный аватар игрока без владельца).</summary>

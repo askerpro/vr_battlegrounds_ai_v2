@@ -11,7 +11,7 @@ namespace VrBattlegrounds.EditorTools
     /// Повторяемая сборка контроллера минимального Blaze-прокси бота (<see cref="BotCombatDriver"/>):
     /// <c>Assets/Resources/Bots/BotBlazeProxy.controller</c>, слой 0 с шестью состояниями без motion — Idle (по умолчанию),
     /// Move, Back, Left, Right, Shoot (имена, которые играет Blaze). Humanoid, клипы и маски не нужны: прокси — только
-    /// навигация и решения Blaze, позу бота пишет BotAvatarDriver. Ассет коммитится (UnityEditor.Animations в плеере нет).
+    /// навигация и решения Blaze, позу бота задаёт ввод устройства (BlazeInputSource). Ассет коммитится (UnityEditor.Animations в плеере нет).
     /// </summary>
     public static class BotBlazeProxySetup
     {

@@ -202,7 +202,7 @@ namespace VrBattlegrounds.Bots
             UxrGrabber right = _avatar.GetGrabber(UxrHandSide.Right);
             UxrGrabber left = _avatar.GetGrabber(UxrHandSide.Left);
             UxrFirearmWeapon firearm = alive && _gunner != null ? _gunner.SelectedFirearm : null;
-            bool resolved = BotHands.TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out int support);
+            bool resolved = BotGunner.TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out int support);
 
             // Чужой предмет в руке (не выбранное оружие) — отпустить, как человек разжал бы руку.
             ReleaseForeign(UxrHandSide.Right, right, resolved ? grip : null);

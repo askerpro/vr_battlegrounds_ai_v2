@@ -3,9 +3,10 @@ using UnityEngine;
 namespace VrBattlegrounds.Bots
 {
     /// <summary>
-    /// Ноги, курс и взгляд бота — <b>источник</b>, а не писатель позы. Аватар бота — обычный аватар игрока без владельца
-    /// (player-flow): корень, камеру и кисти пишет только <see cref="BotAvatarDriver"/> по кадру
-    /// <see cref="BotRuntimeController"/>; этот компонент ничего не пишет в трансформы.
+    /// Ноги, курс и взгляд мозга бота — <b>намерение</b>, а не писатель позы. Аватар бота — обычный аватар игрока без
+    /// владельца, которым управляет ввод устройства: голова пилота идёт к <see cref="Feet"/> и смотрит по
+    /// <see cref="HeadRotation"/> (<see cref="BlazeInputSource"/>), корень не пишет никто; этот компонент ничего не пишет в
+    /// трансформы. Отстала голова — источник ставит ноги к голове (<see cref="Place"/>): правда — тело.
     ///
     /// <para>
     /// <see cref="Feet"/> — где бот стоит: в бою — корень Blaze-прокси (<see cref="SetCombatLegsSource"/>), вне боя — шаги
@@ -97,7 +98,7 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>
         /// Логика кадра без записи трансформов: ноги и курс (от Blaze-прокси в бою, иначе доворот). Один раз за кадр;
-        /// зовёт <see cref="BotRuntimeController"/> перед сборкой кадра намерений.
+        /// зовёт <see cref="BlazeInputSource"/> перед кадром ввода.
         /// </summary>
         public void PrepareFrame()
         {

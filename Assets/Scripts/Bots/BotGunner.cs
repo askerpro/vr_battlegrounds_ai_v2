@@ -23,19 +23,16 @@ namespace VrBattlegrounds.Bots
     /// <b>Оружие настоящее.</b> Что взять, решает директор (<see cref="Arm"/>, T-48): купленный ствол
     /// (<see cref="BotShopper"/>) заспавнен как у стены арсенала (<see cref="NetworkUxrIdentity"/>, магазин вложен в
     /// префаб), без покупки — стартовый пистолет из своей кобуры (его выдаёт <c>StartingSidearmPolicy</c>, как всем).
-    /// Стрелок только <b>выбирает</b> оружие: кисть к снапу подводит драйвер (<see cref="BotRuntimeController"/>),
-    /// хватает <see cref="BotHands"/> штатным SDK. Захват синхронизируемый, а автор аватара без владельца — сервер
+    /// Стрелок только <b>выбирает</b> оружие: кисть к рукояти подводит и Grip жмёт ввод бота (<see cref="BlazeInputSource"/>),
+    /// хватает штатный контроллер SDK, как у человека. Захват синхронизируемый, а автор аватара без владельца — сервер
     /// (<c>StateEventAuthority</c>), поэтому клиенты видят бота с оружием в руке. Захват же делает бота владельцем
     /// оружия (<c>UxrWeapon.Owner</c>), и убийство засчитывается ему.
     /// </para>
     ///
     /// <para>
-    /// <b>Выстрел настоящий и один (Issue 23).</b> <c>UxrFirearmWeapon.TryToShootRound</c> — весь тракт:
-    /// патроны, темп, <c>CanUse</c> (оружие выключено вне фазы боя), снаряд <c>UxrWeaponManager</c>, урон по
-    /// коллайдеру, в который попал луч. Спуск жмёт этот компонент, а не контроллер: у аватара в режиме
-    /// <c>UpdateExternally</c> ввода нет. Жмёт только автор предмета в руке
-    /// (<see cref="StateEventAuthority.IsAuthorOfItem"/>; у бота — сервер): событие выстрела рассылает автор,
-    /// пересчитай его другая машина — второй выстрел и двойной урон.
+    /// <b>Выстрел — курком, как у человека (bot-input).</b> Стрелок только решает «жать или нет»
+    /// (<see cref="DecideTriggerPress"/>), курок жмёт ввод бота, выстрел делает штатный <c>UxrFirearmWeapon</c> автора
+    /// предмета (у бота — сервер, UltimateXR patch 89): патроны, темп, <c>CanUse</c>, учёт готовности.
     /// </para>
     ///
     /// <para>
@@ -47,15 +44,11 @@ namespace VrBattlegrounds.Bots
     /// </para>
     ///
     /// <para>
-    /// <b>Player-flow</b>: стрелок — владелец выбора оружия (покупка/кобура), цели и точки прицеливания и исполнитель
-    /// выстрела, но не хватает сам (<see cref="BotHands"/>), не ставит кисти (<see cref="BotWeaponAim"/> →
-    /// <see cref="BotAvatarDriver"/>) и не стреляет из обработчика стадии UXR: выстрел — <see cref="ExecuteRequestedShot"/>
-    /// из LateUpdate <see cref="BotRuntimeController"/>.
-    /// Гейт: фактический луч дула смотрит в точку прицеливания ИИ (допуск <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/>)
-    /// и путь пули до неё не перекрыт ничем, кроме цели; промах по силуэту при неточности ИИ — нормальный выстрел.
-    /// Выстрел — только после true от <c>RequestAutomationPreparation</c>. Покупка после выбора стартового пистолета
-    /// (<see cref="OfferPurchase"/>): пистолет сначала убирается в свою кобуру (<see cref="StowFirearm"/>, исполняют
-    /// <see cref="BotRuntimeController"/> и <see cref="BotHands"/>), затем покупка появляется у кисти.
+    /// Стрелок — владелец выбора оружия (покупка/кобура), цели и точки прицеливания; кисти, хват и курок — ввод бота.
+    /// Решение «жать»: фактический луч дула смотрит в точку прицеливания ИИ (допуск
+    /// <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/>) и путь пули до неё не перекрыт ничем, кроме цели;
+    /// промах по силуэту при неточности ИИ — нормальный выстрел. Покупка после выбора стартового пистолета
+    /// (<see cref="OfferPurchase"/>): пистолет отпускается (<see cref="StowFirearm"/>), затем покупка появляется у кисти.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -93,9 +86,6 @@ namespace VrBattlegrounds.Bots
         private Vector3 _aimOffset;
 
         private static readonly ProfilerMarker SeesMarker = new ProfilerMarker("BotGunner.Sees");
-        private static readonly ProfilerMarker GateMarker = new ProfilerMarker("BotGunner.ShotGate");
-        private static readonly ProfilerMarker AutomationMarker = new ProfilerMarker("BotGunner.Automation");
-        private static readonly ProfilerMarker ShootRoundMarker = new ProfilerMarker("BotGunner.TryToShootRound");
         private bool _hasAimPoint;
         private Vector3 _aimPoint;
         private Vector3 _aimCenter;
@@ -107,8 +97,6 @@ namespace VrBattlegrounds.Bots
         private UxrGrabbableObject _triggerGrip;
         private BotCombatDriver _combat;
 
-        /// <summary>Снять запрос Blaze без выстрела (правило огня порядка кадра — ждём поддержку). Зовёт только BotRuntimeController.</summary>
-        internal void DeclineRequestedShot() => _shotRequested = false;
 
         /// <summary>Выбранное оружие (купленное/из кобуры), даже если ещё не в руке; null — нет.</summary>
         public UxrFirearmWeapon SelectedFirearm => _weapon != null ? _firearm : null;
@@ -263,7 +251,7 @@ namespace VrBattlegrounds.Bots
 
             if (!IsHolding)
             {
-                // Оружие только выбирается; в руку его берёт BotHands по прибытии кисти. Пока не в руке — без прицела.
+                // Оружие только выбирается; в руку его берёт ввод бота (Grip у рукояти). Пока не в руке — без прицела.
                 if (_armRequested && Time.time >= _nextArmAttempt) SelectWeapon();
                 Idle();
                 return;
@@ -306,7 +294,7 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>
         /// Выбрать оружие (не в руке): своё выпавшее — его же, иначе покупку у кисти или стартовый пистолет из кобуры.
-        /// Стрелок только выбирает; кисть к снапу подводит драйвер, хватает <see cref="BotHands"/> через SDK.
+        /// Стрелок только выбирает; кисть к рукояти подводит и хватает ввод бота (<see cref="BlazeInputSource"/>).
         /// </summary>
         private void SelectWeapon()
         {
@@ -369,7 +357,7 @@ namespace VrBattlegrounds.Bots
         private static void AlignPrimaryToGrabber(GameObject instance, UxrGrabber grabber)
         {
             var firearm = instance.GetComponent<UxrFirearmWeapon>();
-            if (!BotHands.TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out _)) return;
+            if (!TryResolveGrips(firearm, out UxrGrabbableObject grip, out int primary, out _)) return;
             if (!grip.ComputeRequiredGrabberTransform(grabber, primary, out Vector3 snapPosition, out Quaternion snapRotation, false)) return;
 
             Transform root = instance.transform;
@@ -452,7 +440,7 @@ namespace VrBattlegrounds.Bots
 
         /// <summary>
         /// Видимость цели для директора: луч из дула в центр тела первым упирается в цель. Каденцию задаёт
-        /// <see cref="BotRuntimeController.SeesIntervalFrames"/>; гейт выстрела от неё не зависит.
+        /// <see cref="BlazeInputSource"/>; решение «жать» от неё не зависит.
         /// </summary>
         public void RefreshSees()
         {
@@ -464,81 +452,9 @@ namespace VrBattlegrounds.Bots
         }
 
         /// <summary>
-        /// Исполнить запрос Blaze. LateUpdate верхнего уровня, после всех стадий кадра. Гейт:
-        /// (а) фактический луч дула отклонён от точки прицеливания ИИ не больше
-        /// <see cref="BotPlayerFlowSettings.MaxShotAimErrorDegrees"/> — иначе <see cref="BotShotOutcome.NotAimed"/>;
-        /// (б) луч дула маской выстрела до дистанции точки прицеливания не упирается ни во что, кроме коллайдеров цели
-        /// (мир, укрытие, собственное тело/оружие — <see cref="BotShotOutcome.Occluded"/>). Промах по силуэту допустим.
-        /// Выстрел только у автора предмета, вне StateSync, после true от <c>RequestAutomationPreparation</c>; один
-        /// <c>TryToShootRound(0)</c> на запрос.
-        /// </summary>
-        public BotShotOutcome ExecuteRequestedShot()
-        {
-            _lastGateAimError = float.NaN;
-            _lastBlocker = null;
-            if (!_shotRequested) return BotShotOutcome.None;
-            _shotRequested = false;
-            // Deadline проверяется повторно: запрос до границы не разрешает поздний SDK attempt.
-            if (!DirectorAllowsShot()) return BotShotOutcome.None;
-            if (!CanFightNow()) return BotShotOutcome.Blocked;
-            Transform muzzle = Muzzle;
-            if (muzzle == null) return BotShotOutcome.Blocked;
-
-            Vector3 toAim = _aimPoint - muzzle.position;
-            float distance = toAim.magnitude;
-            if (distance < 1e-3f) return BotShotOutcome.Blocked;
-            _lastGateAimError = Vector3.Angle(muzzle.forward, toAim);
-            if (_lastGateAimError > BotPlayerFlowSettings.MaxShotAimErrorDegrees) return BotShotOutcome.NotAimed;
-
-            bool blocked;
-            using (GateMarker.Auto())
-            {
-                blocked = IsPathBlocked(muzzle.position, muzzle.forward, distance, out _lastBlocker);
-            }
-            if (blocked) return BotShotOutcome.Occluded;
-
-            // Выстрел шлёт только автор предмета в руке (Issue 23); у бота — сервер. Не изнутри replay.
-            if (!StateEventAuthority.IsAuthorOfItem(_firearm)) return BotShotOutcome.NotAuthor;
-            if (UxrManager.HasInstance && UxrManager.Instance.IsInsideStateSync) return BotShotOutcome.Blocked;
-
-            // Профиль готовности — у хоста оружия на префабе (WeaponSystem._profile), как у человека; WeaponData его не
-            // дублирует (у AK105/PPK там пусто). Без настроенного хоста бот не стреляет и патроны сеттером не доливает.
-            if (!_firearm.TryGetComponent(out VrBattlegrounds.Weapons.WeaponSystem system) || !system.IsConfigured ||
-                system.Profile == null || !system.Profile.TryValidate(out _)) return BotShotOutcome.NotReady;
-            if (system.Profile.AmmoCapability == VrBattlegrounds.Weapons.WeaponAmmoCapability.LegacyAmmo)
-            {
-                // Legacy-учёт — штатный магазин SDK, как у человека: стрелять, только если ствол готов.
-                if (_firearm.UsesReadinessLedger(0) || !_firearm.IsReadyToFire(0)) return BotShotOutcome.NotReady;
-            }
-            else
-            {
-                // Грант automation ключуется (Kind, User, Epoch): запрос — перед каждым выстрелом, после перехвата — заново.
-                if (!_firearm.UsesReadinessLedger(0)) return BotShotOutcome.NotReady;
-                bool prepared;
-                using (AutomationMarker.Auto())
-                {
-                    prepared = system.RequestAutomationPreparation();
-                }
-                if (!prepared) return BotShotOutcome.Preparing;
-            }
-
-            bool fired;
-            using (ShootRoundMarker.Auto())
-            {
-                // Весь тракт SDK и weapon-system, включая подписчиков ProjectileShot (в стенде — наблюдатели).
-                fired = _firearm.TryToShootRound(0);
-            }
-            if (!fired) return BotShotOutcome.Rejected;
-            ShotsFired++;
-            PickAimOffset();
-            return BotShotOutcome.Fired;
-        }
-
-        /// <summary>
-        /// Бот на вводе устройства (bot-input): решение мозга «нажать курок сейчас» по запросу Blaze — те же гейты, что у
-        /// <see cref="ExecuteRequestedShot"/> (директор, бой, ствол в руке, наведение ≤ допуска, путь пули свободен), но без
-        /// действий SDK: выстрел делает штатный <c>UxrFirearmWeapon</c> по курку руки. Запрос гасится при любом исходе;
-        /// <see cref="BotShotOutcome.Fired"/> — жать.
+        /// Решение мозга «нажать курок сейчас» по запросу Blaze (bot-input): директор, бой, ствол в руке, наведение ≤
+        /// допуска, путь пули свободен. Действий SDK нет: выстрел делает штатный <c>UxrFirearmWeapon</c> по курку руки.
+        /// Запрос гасится при любом исходе; <see cref="BotShotOutcome.Fired"/> — жать.
         /// </summary>
         public BotShotOutcome DecideTriggerPress()
         {
@@ -559,7 +475,31 @@ namespace VrBattlegrounds.Bots
             if (IsPathBlocked(muzzle.position, muzzle.forward, distance, out _lastBlocker)) return BotShotOutcome.Occluded;
 
             PickAimOffset();
+            ShotsFired++;
             return BotShotOutcome.Fired;
+        }
+
+        /// <summary>
+        /// Рукояти огнестрела: основная — рукоять спуска 0, поддержка — первая другая точка хвата, доступная левой руке
+        /// (−1 — нет). false — не огнестрел или нет рукояти спуска.
+        /// </summary>
+        public static bool TryResolveGrips(UxrFirearmWeapon firearm, out UxrGrabbableObject grip, out int primary, out int support)
+        {
+            grip = null;
+            primary = 0;
+            support = -1;
+            if (firearm == null || !firearm.TryGetTriggerGrip(0, out grip, out primary) || grip == null) return false;
+
+            int count = grip.GrabPointCount;
+            for (int i = 0; i < count; i++)
+            {
+                if (i == primary) continue;
+                UxrGrabPointInfo info = grip.GetGrabPoint(i);
+                if (info == null || (!info.BothHandsCompatible && info.HandSide != UxrHandSide.Left)) continue;
+                support = i;
+                break;
+            }
+            return true;
         }
 
         /// <summary>

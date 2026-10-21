@@ -228,7 +228,7 @@ namespace VrBattlegrounds.Bots
             // Источник ввода — до SpawnBody: AvatarSpawned (сборка комплекта) приходит внутри спавна.
             _minds[session] = new BotMind { HomeSlot = _bots.Count - 1, AutoEquip = options?.AutoEquip ?? true,
                                             InputSource = options?.InputSource,
-                                            Blaze = options?.InputSource == null && !(options?.LegacyBody ?? false) ? new BlazeInputSource() : null };
+                                            Blaze = options?.InputSource == null ? new BlazeInputSource() : null };
 
             // Команда — до тела: спавн берёт зону команды. Сами режимы команду не выдают
             // (у разминки команд нет, матч ждёт выбора) — выбираем.
@@ -595,30 +595,15 @@ namespace VrBattlegrounds.Bots
                 return;
             }
 
-            if (mind.Blaze != null)
-            {
-                // Ввод с мозгом Blaze: голова продолжается с прежней позы на той же карте (источник ставит ноги мозга).
-                if (mind.Kit != null && ReferenceEquals(mind.Kit.Avatar, avatar))
-                {
-                    if (mind.Kit.Passive && avatar.IsAlive) mind.Kit = BotKit.Upgrade(mind.Kit);
-                    return;
-                }
-                bool keepHead = mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle;
-                mind.Kit = BotKit.AttachInput(avatar, avatar.IsAlive ? BotKitKind.Live : BotKitKind.Passive, mind.Blaze, keepHead);
-                return;
-            }
-
+            // Ввод с мозгом Blaze: голова продолжается с прежней позы на той же карте (источник ставит ноги мозга).
             if (mind.Kit != null && ReferenceEquals(mind.Kit.Avatar, avatar))
             {
                 if (mind.Kit.Passive && avatar.IsAlive) mind.Kit = BotKit.Upgrade(mind.Kit);
                 return;
             }
-
-            mind.Kit = BotKit.Attach(avatar, avatar.IsAlive ? BotKitKind.Live : BotKitKind.Passive);
-
-            // Тело сменилось на этой же карте — бот продолжает с того места, куда дошёл.
-            if (mind.Kit != null && mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle)
-                mind.Kit.Body.Place(mind.Feet, mind.Yaw);
+            if (mind.Blaze == null) mind.Blaze = new BlazeInputSource();
+            bool keepHead = mind.HasPlace && mind.SceneHandle == SceneManager.GetActiveScene().handle;
+            mind.Kit = BotKit.Attach(avatar, avatar.IsAlive ? BotKitKind.Live : BotKitKind.Passive, mind.Blaze, keepHead);
         }
 
         private static string TeamName(PlayerSession session)

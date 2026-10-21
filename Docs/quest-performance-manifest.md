@@ -59,7 +59,7 @@ Lobby 2026-10-20, вид center-north (до правок худший): 10,81 �
 - метрика: AppGPUTime p50, база 10,8 мс;
 - схема: пары с чередованием порядка + A/A; шум A/A 0,006–0,011 мс.
 
-Сборки: da78253b (серия A), 33406814 (серия B); итог — a0432b240 против 8500240ab (в истории ветки 2f9a69b80 и 2d46a778f; блоки A-B-A, 10/10 GREEN). Журнал — `tasks/scene-detail/changelog/2026-10-20-render-diag-ab.md`. Сводка для пользователя — его документ Claude Docs «Lobby на Quest 3: замеры GPU и план оптимизаций».
+Сборки: da78253b (серия A), 33406814 (серия B); итог — a0432b240 против 8500240ab (ревизии до rebase; в истории — коммиты «WIP(scene-detail): GPU-диагностика Quest — per-draw, render_diag A/B…» и «fix(scene-detail): LobbyGpuMaterialTier — Simple Lit без бликов…»; блоки A-B-A, 10/10 GREEN). Журнал — `tasks/scene-detail/changelog/2026-10-20-render-diag-ab.md`. Сводка для пользователя — его документ Claude Docs «Lobby на Quest 3: замеры GPU и план оптимизаций».
 
 ## Правила
 

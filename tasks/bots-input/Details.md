@@ -75,3 +75,19 @@
   общем стрелке после сведения с клиентом (после вливания series у e2e-combat).
 - Не в объёме (общее с прежним путём, этап 3 rules-parity): в Elimination тела ботов появляются призраками в начале
   координат (команда ещё не выбрана), а в `WaitingForPlayers` стадия бота «нет матча» — приказа идти в зону нет.
+
+## Удаление прежнего пути (2026-10-21, решение пользователя; ticket 983 → 986)
+
+- Удалены: `BotAvatarDriver`, `BotHands`, `BotWeaponAim`, `BotHandTrajectory`, `BotArmRestGeometry`, `BotInputFrame`,
+  `BotRuntimeController`, `BotAimMath`, `BotGunner.ExecuteRequestedShot` (прямой `TryToShootRound`), опция `LegacyBody`;
+  кейсы и пробы `BotCombatStand` (T01–T10, сеть, выстрел) и их редакторские инструменты (`BotCombatStandEditor`,
+  `BotStandHarnessControls`, `BotStandRecorder`, `BotStandVisualCapture`). `BotCombatStand` — держатель ссылок сцены;
+  демо Input Smoke: цель — тоже бот на вводе (сценарный пилот). `BotGunner.TryResolveGrips` перенесён из `BotHands`.
+- Ticket 983: снимок не скомпилировался (вырезан метод журнала демо `Readiness`, CS0103) → RECOVERY_REQUIRED, владелец
+  `recover --force` (DONE), исправлено.
+- Ticket 986: компиляция чистая; EditMode 71/71 (`VrBattlegrounds.Tests.Bots` с новыми `BotInputTests` и обновлённым
+  сторожем `BotAuthorityTests` — код ботов без действий SDK, `ScriptedInputTests`, `BuildSceneResolverTests`, `BotTests`);
+  демо Input Smoke PASS (цель-бот дошла 0,06 м, ходьба 2,95 м при корне 0,0 мм, 1 нажатие — 1 выстрел — 1 попадание,
+  урон 28,2); матч Respawn + 4 бота: хват двумя руками, нажатия 5/2, 2 убийства, 0 смертей WallPass, 0 ошибок консоли.
+- `BotAuthorityTests` прежнего пути (бот сам вызывает `TryToShootRound` после проверки автора) устарел вместе с путём
+  и заменён сторожем нового инварианта.

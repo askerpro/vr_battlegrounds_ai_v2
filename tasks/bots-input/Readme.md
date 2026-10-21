@@ -23,7 +23,7 @@
 | 0 | Дизайн и согласование | сделано 2026-10-20 |
 | 1 | SDK-патчи 89 (InputDriven) и 90 (досылание при Initialize), `AvatarInputDevice`, `AvatarPilot`, `BotInputKit`, демо Input Smoke | демо PASS (прогон 6): ходьба головой, хват по Grip, выстрел и попадание первым нажатием; лог учёта оружия и без спама InteractionFeedback; heavy-2 (ticket 945) — код 0, 3/3 |
 | 2 | `BlazeInputSource`, все боты на вводе, прежний путь удалён | Blaze через ввод **принят пользователем 2026-10-21** (Respawn, 4 бота: ходьба головой, хват двумя руками, выстрелы и убийства, без дрожания); прежний путь удалён 2026-10-21 (решение пользователя; кейсы стенда прежнего пути удалены) |
-| 3 | Тесты после приёмки, heavy, ревью зон, вливание FF | тесты: EditMode 71/71 (ticket 986); heavy и ревью — идут |
+| 3 | Тесты после приёмки, heavy, ревью зон, вливание FF | тесты: EditMode 71/71 (ticket 986); патч 90 — `InitializePreparedTests` 2/2; EditMode Weapons+Bots 250/251 (ticket 989; красный только `LedgerSpawnReadyTests.Отказ_replay…` — устаревший контроль из origin/dev после 044888e1b, не связан с задачей); heavy-5 (ticket 989, f5d8819ea) — код 0, 3/3; ревью зон — повтор на новом SHA |
 | 4 | Сведение пилота/стрелка клиента и бота в продуктовый, `ScenarioInputSource` (тот же JSON) | после вливания series (e2e-combat), отдельным этапом |
 
 Этапы и области записи — [plan.json](plan.json).
@@ -35,4 +35,4 @@
 
 ## Статус
 
-2026-10-21: итерации 1 и 2 приняты пользователем, прежний путь удалён, тесты добавлены (EditMode 71/71). Идут heavy-регрессия, ревью зон (bots, avatar-ik, manipulation, weapon-system, launch-infra) и вливание этапа `input-scenario`. Затем — этап сведения пилота и `ScenarioInputSource` после вливания series у e2e-combat.
+2026-10-21: итерации 1 и 2 приняты пользователем, прежний путь удалён, тесты добавлены (EditMode 71/71, патч 90 — 2/2), heavy-5 код 0. Границы этапа `input-scenario` расширены (ревью bots). Идёт повторное ревью зон (bots, avatar-ik, manipulation, weapon-system, launch-infra) и вливание этапа `input-scenario`. Затем — этап сведения пилота и `ScenarioInputSource` после вливания series у e2e-combat.

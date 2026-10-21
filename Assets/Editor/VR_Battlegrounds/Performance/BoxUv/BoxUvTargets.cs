@@ -44,7 +44,7 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         /// <summary>Текущий конфиг с диска (кэш по времени записи файла); пустой, если файла нет.</summary>
         public static BoxUvTargets Load()
         {
-            string full = Path.GetFullPath(FilePath);
+            string full = AbsolutePath();
             if (!File.Exists(full)) return new BoxUvTargets();
             DateTime stamp = File.GetLastWriteTimeUtc(full);
             if (_cached != null && stamp == _cachedStamp) return _cached;
@@ -56,9 +56,12 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         public void Save()
         {
             string json = JsonConvert.SerializeObject(this, Formatting.Indented).Replace("\r\n", "\n") + "\n";
-            File.WriteAllText(Path.GetFullPath(FilePath), json);
+            File.WriteAllText(AbsolutePath(), json);
             _cached = null;
         }
+
+        // От корня проекта, а не от текущего каталога: процесс импорта (параллельный импорт моделей) может иметь другой.
+        private static string AbsolutePath() => Path.Combine(Path.GetDirectoryName(Application.dataPath), FilePath);
 
         public IEnumerable<Target> ForModel(string modelPath)
         {

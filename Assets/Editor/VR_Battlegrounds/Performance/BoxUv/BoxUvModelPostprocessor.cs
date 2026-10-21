@@ -16,15 +16,26 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
     {
         /// <summary>
         /// Увеличить при изменении алгоритма <see cref="BoxUvProjector"/> — переимпорт всех моделей. Версия входит в ключ
-        /// кэша артефактов: 2 отсекает артефакты v1, импортированные до появления конфига (при смене ветки модели
-        /// импортируются раньше компиляции постпроцессора, и без новой версии Unity возвращал их из кэша).
+        /// кэша артефактов: 2 отсекла артефакты v1 без конфига; 3 — артефакты v2, импортированные в процессе импорта,
+        /// где конфиг искался от текущего каталога и не находился.
         /// </summary>
-        public const int Version = 2;
+        public const int Version = 3;
 
         public override uint GetVersion() => Version;
 
+        /// <summary>
+        /// Модели этого корня зависят от конфига всегда, даже если сейчас не в нём: иначе модель, импортированная, пока
+        /// конфиг не прочитан (порядок импорта при смене ветки), не перепроверяется, а новая цель не переимпортируется.
+        /// </summary>
+        public const string WatchedRoot = "Assets/Art/Lobby/";
+
         private void OnPreprocessModel()
         {
+            if (assetPath.StartsWith(WatchedRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                context.DependsOnSourceAsset(BoxUvTargets.FilePath);
+                return;
+            }
             foreach (BoxUvTargets.Target _ in BoxUvTargets.Load().ForModel(assetPath))
             {
                 context.DependsOnSourceAsset(BoxUvTargets.FilePath);

@@ -46,14 +46,21 @@
       "needs": []
     },
     {
-      "id": "input-blaze",
+      "id": "tails",
       "writes": [
         "tasks/bots-input/**",
-        "Assets/Scripts/Player/Input/**",
         "Assets/Scripts/Bots/**",
-        "Assets/Scripts/Debug/BotCombatStand/**",
-        "Assets/Editor/VR_Battlegrounds/Bots/**",
-        "Assets/Tests/EditMode/Bots/**"
+        "Assets/Tests/EditMode/Bots/**",
+        "Assets/Tests/EditMode/Weapons/InitializePreparedTests.cs",
+        "experts/bots/AGENT.md",
+        "experts/launch-infra/expert.json",
+        "experts/bots/journal/**",
+        "experts/avatar-ik/journal/**",
+        "experts/manipulation/journal/**",
+        "experts/weapon-system/journal/**",
+        "experts/launch-infra/journal/**",
+        "Docs/gameplay.md",
+        "Docs/troubleshooting.md"
       ],
       "after": [
         {

@@ -67,6 +67,7 @@ namespace VrBattlegrounds.Bots
         private BotGunner _gunner;
         private BotCombatDriver _combat;
         private int _tickFrame = -1;
+        private bool _hasRead;        // источник уже отдал кадр этому телу (позы устройства заданы)
         private int _seesPhase;
         private int _rightAtTarget, _leftAtTarget;
         private int _triggerFrames;   // > 0 — курок нажат ещё столько кадров
@@ -103,6 +104,7 @@ namespace VrBattlegrounds.Bots
             _body = avatar != null ? avatar.GetComponent<BotBody>() : null;
             _gunner = avatar != null ? avatar.GetComponent<BotGunner>() : null;
             _combat = avatar != null ? avatar.GetComponent<BotCombatDriver>() : null;
+            _hasRead = false;
             _rightAtTarget = _leftAtTarget = 0;
             _triggerFrames = 0;
             _releasedFrames = 0;
@@ -114,15 +116,39 @@ namespace VrBattlegrounds.Bots
         public bool TryRead(ref DeviceFrame frame)
         {
             if (_avatar == null) return false;
-            // Погибшее живое тело (с Blaze) не ведётся, как и в прежнем пути: оно ждёт смены на призрака или возрождения,
-            // устройство держит последнюю позу и отпущенные кнопки. Призрак (без Blaze) ведётся — идёт к своей зоне.
-            if (_player != null && !_player.IsAlive && _combat != null) return false;
+            // Погибшее живое тело (с Blaze) не ведётся, как и в прежнем пути: оно ждёт смены на призрака или возрождения.
+            // Призрак (без Blaze) ведётся — идёт к своей зоне.
+            if (_player != null && !_player.IsAlive && _combat != null) return _hasRead && HoldDead(ref frame);
             if (_tickFrame != Time.frameCount)
             {
                 _tickFrame = Time.frameCount;
                 Tick(Time.deltaTime);
             }
-            return _pilot.TryRead(ref frame);
+            bool read = _pilot.TryRead(ref frame);
+            _hasRead |= read;
+            return read;
+        }
+
+        /// <summary>
+        /// Кадр погибшего тела: прежние позы, рука по-прежнему сжата (Grip), остальное отпущено. Снаряжение при смерти
+        /// отпускает только <c>AvatarTeardown</c> (один путь сброса): смерть, пришедшая событием синхронизации SDK,
+        /// откладывает сброс до LateUpdate, и отпущенный здесь Grip уронил бы оружие раньше — вторым путём, через руку.
+        /// Курок отпущен — мёртвое тело не стреляет до сброса.
+        /// </summary>
+        private static bool HoldDead(ref DeviceFrame frame)
+        {
+            frame.Left = HoldGripOnly(frame.Left);
+            frame.Right = HoldGripOnly(frame.Right);
+            return true;
+        }
+
+        /// <summary>Рука погибшего тела: из органов управления остаётся только сжатый Grip.</summary>
+        public static DeviceHand HoldGripOnly(DeviceHand hand)
+        {
+            hand.Pressed &= UxrInputButtons.Grip;
+            hand.Trigger1D = -1f;
+            hand.Joystick = Vector2.zero;
+            return hand;
         }
 
         // ── Кадр ─────────────────────────────────────────────────────────────
@@ -432,6 +458,7 @@ namespace VrBattlegrounds.Bots
         private void Rest()
         {
             _aiming = false;
+            _hasRead = false;
             _rightAtTarget = _leftAtTarget = 0;
             _pilot.Rest(UxrHandSide.Right);
             _pilot.Rest(UxrHandSide.Left);

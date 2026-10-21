@@ -128,7 +128,42 @@ namespace VrBattlegrounds.Tests.Weapons
             Assert.That(_firearm.GetMagazineRounds(trigger), Is.Zero);
         }
 
+        [Test]
+        public void Action_не_в_покое_до_Start_оружия_не_досылает()
+        {
+            int trigger = _host.TriggerIndex;
+            SeatMagazine(rounds: null);
+            int rounds = _firearm.GetMagazineRounds(trigger);
+            Assert.That(rounds, Is.GreaterThan(0), "Контроль: магазин в гнезде не пуст.");
+
+            // OnEnable готовит риг (запоминает покой Action); затвор сдвигается до Start — HasReloaded больше не
+            // страхует, проверка покоя — единственная защита досылания при Initialize (патч 90).
+            Call(_host, "OnEnable");
+            _hostEnabled = true;
+            Assert.That(_host.IsActionAtRest, Is.True, "Контроль: после подготовки рига Action в покое.");
+            Transform action = FirstActionTarget();
+            action.localPosition += Vector3.forward * 0.02f;
+            Assert.That(_host.IsActionAtRest, Is.False, "Контроль харнесса: Action сдвинут из покоя.");
+
+            Call(_host, "Start");
+
+            UxrFirearmReadinessState state = _firearm.GetReadinessState(trigger);
+            Assert.That(state?.ChamberRound ?? false, Is.False, "Action вне покоя — Initialize не досылает патрон.");
+            Assert.That(_firearm.GetMagazineRounds(trigger), Is.EqualTo(rounds), "Патроны магазина не тронуты.");
+        }
+
         // ── Харнесс ─────────────────────────────────────────────────────────
+
+        /// <summary>Первая деталь Action рига (привязки подготовлены в OnEnable хоста).</summary>
+        private Transform FirstActionTarget()
+        {
+            FieldInfo field = typeof(WeaponMechanismRig).GetField("_bindings", Any);
+            Assert.That(field, Is.Not.Null, "WeaponMechanismRig изменился: нет _bindings — обновить харнесс.");
+            var bindings = (ChamberActionBinding[])field.GetValue(_host.Rig);
+            Assert.That(bindings, Is.Not.Empty, "Контроль: у Viper есть детали Action.");
+            Assert.That(bindings[0].Target, Is.Not.Null, "Контроль: у детали Action есть цель.");
+            return bindings[0].Target;
+        }
 
         private void SeatMagazine(int? rounds)
         {

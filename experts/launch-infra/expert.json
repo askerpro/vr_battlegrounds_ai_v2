@@ -35,7 +35,7 @@
     "Assets/Editor/VR_Battlegrounds/Debug/DebugBootstrapWindow.cs",
     "Assets/Editor/VR_Battlegrounds/Debug/DebugModeMenu.cs",
     "Assets/Editor/VR_Battlegrounds/Debug/AndroidCompileGate.cs",
-    "Assets/Editor/VR_Battlegrounds/Bots/BotCombatStandEditor.cs",
+    "Assets/Editor/VR_Battlegrounds/Bots/BotStandInputSmokeEditor.cs",
     "Assets/Scripts/Debug/DebugBootstrapGate.cs",
     "Assets/Scripts/Debug/Bootstrap/**",
     "Assets/Scripts/Debug/E2E/*.cs",

@@ -92,6 +92,7 @@ namespace VrBattlegrounds.Bots
         private PlayerController _cachedTarget;
         private readonly List<Collider> _targetColliders = new List<Collider>();
         private UxrShotDescriptor _boundShot;
+        private WeaponCategory? _category;
         private float _lastGateAimError = float.NaN;
         private Collider _lastBlocker;
         private UxrGrabbableObject _triggerGrip;
@@ -143,9 +144,15 @@ namespace VrBattlegrounds.Bots
         /// <summary>Оружие в руке бота; null — нет.</summary>
         public UxrFirearmWeapon Firearm => IsHolding ? _firearm : null;
 
-        public WeaponCategory? WeaponCategory => Firearm != null &&
-            Firearm.TryGetComponent(out WeaponComponent weapon) && weapon.WeaponData != null
-            ? weapon.WeaponData.Category : (WeaponCategory?)null;
+        /// <summary>
+        /// Категория оружия в руке; null — нет оружия или данных. Снимается один раз на выбранный ствол (источник ввода
+        /// читает её каждый кадр — без поиска компонента в кадре).
+        /// </summary>
+        public WeaponCategory? WeaponCategory => Firearm != null ? (_category ??= ResolveCategory()) : null;
+
+        private WeaponCategory? ResolveCategory() =>
+            _weapon != null && _weapon.TryGetComponent(out WeaponComponent weapon) && weapon.WeaponData != null
+                ? weapon.WeaponData.Category : (WeaponCategory?)null;
 
         /// <summary>Blaze выбирает момент атаки; настоящий выстрел исполняет только автор оружия.</summary>
         public void RequestShot()
@@ -166,8 +173,11 @@ namespace VrBattlegrounds.Bots
         /// <summary>Директор уже велел взять оружие этому телу.</summary>
         public bool ArmRequested => _armRequested;
 
-        /// <summary>Сколько выстрелов сделал бот — для проверок и лога.</summary>
-        public int ShotsFired { get; private set; }
+        /// <summary>
+        /// Сколько раз мозг решил нажать курок (<see cref="BotShotOutcome.Fired"/>) — для проверок и лога. Это решения,
+        /// а не выстрелы: выстрел делает штатный <c>UxrFirearmWeapon</c> по курку руки, и учёт может его отклонить.
+        /// </summary>
+        public int TriggerPressDecisions { get; private set; }
 
         /// <summary>
         /// Взять оружие: купленное (<paramref name="purchase"/>) или, если null, стартовый пистолет из кобуры.
@@ -375,6 +385,7 @@ namespace VrBattlegrounds.Bots
             _grabbable = weapon.GetComponent<UxrGrabbableObject>();
             _spawnedByBot = spawnedByBot;
             _boundShot = ShotOf(_firearm);
+            _category = null;
             _triggerGrip = _firearm != null && _firearm.TryGetTriggerGrip(0, out UxrGrabbableObject grip, out _) ? grip : null;
         }
 
@@ -385,6 +396,7 @@ namespace VrBattlegrounds.Bots
             _firearm = null;
             _grabbable = null;
             _boundShot = null;
+            _category = null;
             _triggerGrip = null;
         }
 
@@ -475,7 +487,7 @@ namespace VrBattlegrounds.Bots
             if (IsPathBlocked(muzzle.position, muzzle.forward, distance, out _lastBlocker)) return BotShotOutcome.Occluded;
 
             PickAimOffset();
-            ShotsFired++;
+            TriggerPressDecisions++;
             return BotShotOutcome.Fired;
         }
 

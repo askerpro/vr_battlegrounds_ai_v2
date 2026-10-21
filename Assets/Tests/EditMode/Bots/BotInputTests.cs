@@ -1,7 +1,9 @@
 using NUnit.Framework;
 using UltimateXR.Avatar;
+using UltimateXR.Devices;
 using UnityEngine;
 using VrBattlegrounds.Bots;
+using VrBattlegrounds.DevTools.E2E.Input;
 using VrBattlegrounds.Player.Input;
 
 namespace VrBattlegrounds.Tests.Bots
@@ -127,6 +129,30 @@ namespace VrBattlegrounds.Tests.Bots
             Assert.That(BlazeInputSource.GripWithRetry(false, ref pressed, ref released), Is.False);
             Assert.That(pressed, Is.Zero);
             Assert.That(released, Is.Zero);
+        }
+
+        [Test]
+        public void Погибшее_тело_держит_хват_и_отпускает_курок()
+        {
+            var hand = new DeviceHand
+            {
+                Position = new Vector3(0.2f, 1.1f, 0.3f), Rotation = Quaternion.Euler(10f, 20f, 0f),
+                Pressed = UxrInputButtons.Grip | UxrInputButtons.Trigger | UxrInputButtons.Button1,
+                Trigger1D = 1f, Grip1D = 1f, Joystick = Vector2.one
+            };
+
+            DeviceHand dead = BlazeInputSource.HoldGripOnly(hand);
+
+            Assert.That(dead.Pressed, Is.EqualTo(UxrInputButtons.Grip),
+                "Хват держится: снаряжение при смерти отпускает только AvatarTeardown, не рука.");
+            Assert.That(dead.Trigger1D, Is.LessThan(0f), "Ось курка — от отпущенной кнопки: мёртвое тело не стреляет.");
+            Assert.That(dead.Grip1D, Is.EqualTo(1f));
+            Assert.That(dead.Joystick, Is.EqualTo(Vector2.zero));
+            Assert.That(dead.Position, Is.EqualTo(hand.Position), "Поза руки прежняя.");
+            Assert.That(dead.Rotation, Is.EqualTo(hand.Rotation));
+
+            Assert.That(BlazeInputSource.HoldGripOnly(default).Pressed, Is.EqualTo(UxrInputButtons.None),
+                "Пустая рука не сжимается.");
         }
 
         [Test]

@@ -229,6 +229,13 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
                 EditorGUILayout.LabelField("Как исправить", EditorStyles.miniBoldLabel);
                 EditorGUILayout.LabelField(_selected.FixHint, EditorStyles.wordWrappedMiniLabel);
             }
+            AuditFixer fixer = AuditFixerCatalog.ForRule(rule.Id);
+            if (fixer != null)
+            {
+                int count = _report.Findings.Count(f => f.RuleId == rule.Id);
+                if (GUILayout.Button("Исправить: " + fixer.Title + " (находок правила: " + count + ")", GUILayout.Height(22)))
+                    RunFixer(fixer);
+            }
             EditorGUILayout.LabelField("Доказательство", EditorStyles.miniBoldLabel);
             EditorGUILayout.LabelField(rule.Evidence, EditorStyles.wordWrappedMiniLabel);
             if (_selected.Items.Count > 0)
@@ -241,6 +248,32 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
                 }
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        /// <summary>Dry-run по всем находкам правила в отчёте → подтверждение со списком → применение → повторный аудит.</summary>
+        private void RunFixer(AuditFixer fixer)
+        {
+            List<AuditFixAction> plan = fixer.Plan(_report.Findings.Where(f => f.RuleId == fixer.RuleId));
+            if (plan.Count == 0)
+            {
+                ShowNotification(new GUIContent("Нечего исправлять"));
+                return;
+            }
+            const int shown = 15;
+            string list = string.Join("\n", plan.Take(shown).Select(a => a.ToString()));
+            if (plan.Count > shown)
+                list += "\n… и ещё " + (plan.Count - shown);
+            if (!EditorUtility.DisplayDialog(fixer.Title, fixer.WhatChanges + "\n\nАссетов: " + plan.Count + "\n\n" + list, "Применить", "Отмена"))
+                return;
+            fixer.Apply(plan);
+            int failed = plan.Count(a => !a.Applied);
+            if (failed > 0)
+                EditorUtility.DisplayDialog(fixer.Title, "Не применено: " + failed + "\n" + string.Join("\n", plan.Where(a => !a.Applied).Take(shown).Select(a => a.ToString())), "OK");
+            AuditRequest again = _report.Request;
+            again.ShowProgress = true;
+            _report = AssetAuditRunner.Run(again);
+            _selected = null;
+            GUIUtility.ExitGUI();
         }
 
         private static void Ping(string pathOrObject)

@@ -50,6 +50,27 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
             AssetAuditWindow.ShowReport(AssetAuditRunner.Run(request));
         }
 
+        [MenuItem(Root + "Fix Android ASTC in Selected Folders", priority = 40)]
+        private static void FixAndroidAstc()
+        {
+            string[] folders = Selection.assetGUIDs.Select(g => AssetDatabase.GUIDToAssetPath(g)).Where(p => AssetDatabase.IsValidFolder(p)).ToArray();
+            if (folders.Length == 0)
+            {
+                GameLog.Perf.Warning("[AssetAudit] выделите в Project папки паков");
+                return;
+            }
+            const string ruleId = "texture.android-format";
+            AuditFixer fixer = AuditFixerCatalog.ForRule(ruleId);
+            List<AuditFixAction> plan = AuditFixerCatalog.PlanForFolders(ruleId, folders);
+            GameLog.Perf.Info("[AssetAudit] dry-run " + fixer.Title + ": " + plan.Count + "\n" + string.Join("\n", plan.Select(a => a.ToString())));
+            if (plan.Count == 0)
+                return;
+            string list = string.Join("\n", plan.Take(15).Select(a => a.ToString())) + (plan.Count > 15 ? "\n… и ещё " + (plan.Count - 15) : string.Empty);
+            if (!EditorUtility.DisplayDialog(fixer.Title, fixer.WhatChanges + "\n\nАссетов: " + plan.Count + "\n\n" + list, "Применить", "Отмена"))
+                return;
+            fixer.Apply(plan);
+        }
+
         /// <summary>Вход для <c>-executeMethod</c>; аргументы — см. описание класса.</summary>
         public static void RunFromCommandLine()
         {

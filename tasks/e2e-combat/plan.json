@@ -70,6 +70,24 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "close",
+      "writes": [
+        "tasks/e2e-combat/**",
+        "experts/launch-infra/journal/2026-10-21-e2e-combat.md",
+        "experts/gameplay/journal/2026-10-21-e2e-combat.md",
+        "experts/network/journal/2026-10-21-e2e-combat.md",
+        "experts/avatar-ik/journal/2026-10-21-e2e-combat.md"
+      ],
+      "after": [
+        {
+          "task": "e2e-combat",
+          "stage": "series",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

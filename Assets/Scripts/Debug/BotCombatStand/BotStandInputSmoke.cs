@@ -357,6 +357,18 @@ namespace VrBattlegrounds.DevTools.BotCombatStand
             return feet;
         }
 
+        /// <summary>Учёт готовности спуска 0 (только чтение): инициализирован, патрон в патроннике, магазин, строка машины.</summary>
+        private string Readiness()
+        {
+            if (_firearm == null) return "нет оружия";
+            UxrFirearmReadinessState state = _firearm.UsesReadinessLedger(0) ? _firearm.GetReadinessState(0) : null;
+            VrBattlegrounds.Weapons.WeaponSystem system = _firearm.GetComponent<VrBattlegrounds.Weapons.WeaponSystem>();
+            return $"ledger={_firearm.UsesReadinessLedger(0)}, init={state?.ReadinessInitialized}, chamber={state?.ChamberRound}, " +
+                   $"actionOpen={state?.ActionOpen}, ammo={_firearm.GetAmmoLeft(0)}, loaded={_firearm.IsLoaded(0)}, " +
+                   // MachineState — тип сборки Weapons.Core, на которую asmdef стенда не ссылается (CS0012): только строка машины.
+                   $"row={(system != null ? system.LastRowId : "-")}";
+        }
+
         // ── Наблюдение ───────────────────────────────────────────────────────
 
         private void OnShot(int trigger) => _shots++;

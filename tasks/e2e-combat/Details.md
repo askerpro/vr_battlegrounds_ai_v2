@@ -60,3 +60,20 @@
 других задач), 2 новых — `GameTagsTests.Prefabs_TagsMatchRules` (AK105/Mk14/MP5K Untagged) и
 `HandsPackWeaponTests(Scar)` — пришли с origin/dev вместе с пересборкой стволов (`200236fe7`, `331048228`); в ветке
 относительно origin/dev префабов нет. XML: `reports/editmode-full-2/`.
+
+## Итерация 3 (worker, S+2, TestMap2, `scripted-combat-next-round`)
+
+| Прогон | Тикет / отчёт | Итог |
+|---|---|---|
+| series-1 | 965 / heavy `20261021-011946-editor-suite-series` | МОЖНО ВЛИВАТЬ: 17/17 + 33/33 + 33/33, UxrComponentNotFound/NRE/Exception 0, Ready 77,9 с |
+
+Раунд 2: Equipment через 6,8 с после Resolution; оба живы в зонах, готовность сброшена, руки пусты; 4150→4150 и
+2500→2500; повторная покупка −200 у каждого (Viper, чек); Countdown раунда 2 по жетонам. Принято пользователем
+2026-10-21 по отчёту. Отчёт: `reports/series-1/`.
+
+HeavyEditor на кандидате `series` (набор всех scripted-*): прогон 970 — `scripted-combat-hit` красный: клиент пошёл к
+точке спавна сразу после `carry`, пока рука доводила пистолет из позы хвата (ровность −0,12; в `combat-round` паузу
+давал жетон) — `carry` теперь ждёт позу переноски (≥ 0,9, 3 кадра, ≤ 3 с); EditMode 2876 — 2 «новых» красных пришли с
+origin/dev (GameTags AK105/Mk14/MP5K, HandsPack Scar), владельцу Tools/e2e сообщено (11172). Прогон 976 — МОЖНО
+ВЛИВАТЬ: input-smoke 2/2+11/11, wall-purchase 6/6+16/16+16/16, combat-hit 9/9+21/21+20/20, combat-round
+13/13+21/21+21/21, combat-next-round 17/17+33/33+33/33, логи без ошибок. Отчёты: `reports/heavy-all-1/`, `reports/heavy-all-2/`.

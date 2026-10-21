@@ -46,6 +46,24 @@
       "needs": []
     },
     {
+      "id": "series",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "tasks/e2e-combat/**"
+      ],
+      "after": [
+        {
+          "task": "e2e-combat",
+          "stage": "round",
+          "state": "merged"
+        }
+      ],
+      "needs": []
+    },
+    {
       "id": "work",
       "writes": [
         "tasks/e2e-combat/**"

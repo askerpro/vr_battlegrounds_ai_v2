@@ -8,11 +8,13 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Editor.Performance.AssetAudit;
+using VrBattlegrounds.Editor.Performance.AssetAudit.Fixers;
 
 namespace VrBattlegrounds.Editor.Performance.BoxUv
 {
     /// <summary>
-    /// Находит сабмеши моделей, которые рисуются материалами с box-UV (<see cref="BakedLitMaterialConverter.Materials"/>),
+    /// Находит сабмеши моделей, которые рисуются материалами с box-UV (<see cref="Materials"/>),
     /// и пишет <see cref="BoxUvTargets"/>. Источники: префабы проекта и сцены из списка (по умолчанию Lobby).
     /// Сабмеш, который где-то рисуется другим материалом, не переразворачивается — иначе изменится чужая картинка.
     /// Сцены, ссылающиеся на ту же модель, но не просканированные, попадают в <c>unverifiedScenes</c>.
@@ -20,6 +22,18 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
     public static class BoxUvTargetScanner
     {
         public static readonly string[] DefaultScenes = { "Assets/Scenes/Lobby.unity" };
+
+        /// <summary>
+        /// Материалы Lobby на трипланарном S_VPWorldAligned, чьи сабмеши переразворачиваются box-UV (UV в метрах; аудит UV
+        /// 2026-10-20, reports/uv-audit-20261020). После переразвёртки их переводит на Baked Lit фиксер аудитора
+        /// (<see cref="BakedLitMaterialFixer.PlanWorldAligned"/>) — единственный писатель материалов (QPM-SHADER-007).
+        /// WornGround (пол шатра) — материал проекта: его пишет LobbyDecorationAuthoring.ApplyGroundMaterials.
+        /// </summary>
+        public static readonly string[] Materials =
+        {
+            "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Concrete_01.mat",
+            "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Materials/M_Tiles_ObjectSpace.mat",
+        };
 
         [MenuItem("Tools/VR Battlegrounds/Performance/Box UV/Scan (Dry Run)")]
         private static void DryRunMenu() => GameLog.Perf.Info("[BoxUv] " + JsonConvert.SerializeObject(Summary(Scan(DefaultScenes))));
@@ -34,11 +48,29 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
             config.Save();
             AssetDatabase.ImportAsset(BoxUvTargets.FilePath, ImportAssetOptions.ForceUpdate);
             List<string> reimported = BoxUvModelPostprocessor.ReimportTargets();
-            Dictionary<string, object> materials = BakedLitMaterialConverter.Convert();
+            Dictionary<string, object> materials = ConvertMaterials();
             Dictionary<string, object> report = Summary(config);
             report["reimportedModels"] = reimported.Count;
             report["materials"] = materials;
             return report;
+        }
+
+        /// <summary>
+        /// S_VPWorldAligned → Baked Lit через фиксер аудитора: UV box-UV в метрах, поэтому метры на единицу UV = 1,
+        /// тайлинг = 1 / _MainTile. Уже переведённые материалы попадают в skipped.
+        /// </summary>
+        public static Dictionary<string, object> ConvertMaterials()
+        {
+            var fixer = new BakedLitMaterialFixer();
+            List<AuditFixAction> plan = fixer.PlanWorldAligned(Materials.Select(p => new KeyValuePair<string, float>(p, 1f)));
+            fixer.Apply(plan);
+            return new Dictionary<string, object>
+            {
+                ["converted"] = plan.Where(a => a.Applied).Select(a => a.ToString()).ToList(),
+                ["failures"] = plan.Where(a => !a.Applied).Select(a => a.ToString()).ToList(),
+                ["skipped"] = fixer.LastSkipped.ToList(),
+                ["passed"] = plan.All(a => a.Applied),
+            };
         }
 
         public static Dictionary<string, object> Summary(BoxUvTargets config) => new Dictionary<string, object>
@@ -53,13 +85,12 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         {
             var targetMaterials = new HashSet<Material>();
             var config = new BoxUvTargets();
-            foreach (BakedLitMaterialConverter.Entry entry in BakedLitMaterialConverter.Materials)
+            foreach (string path in Materials)
             {
-                if (!entry.BoxUv) continue;
-                var material = AssetDatabase.LoadAssetAtPath<Material>(entry.MaterialPath);
-                if (material == null) throw new InvalidOperationException("Нет материала " + entry.MaterialPath);
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null) throw new InvalidOperationException("Нет материала " + path);
                 targetMaterials.Add(material);
-                config.Materials.Add(entry.MaterialPath);
+                config.Materials.Add(path);
             }
             config.Scenes.AddRange(scenes);
 

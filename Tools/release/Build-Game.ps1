@@ -302,7 +302,11 @@ function Read-ValidatedBuildProfile([string] $ManifestPath, [string] $ArtifactRo
 
 # $Generated: checkout -> @{ путь -> sha256 } generated-файлов, классифицированных BuildCheckoutGenerated.ps1 после
 # сборки. Запись dirty builder manifest с тем же путём и sha256 помечается generated и не делает пару dirty.
+# gpuSceneIdentity (provenance флага -GpuSceneIdentity) пишется в pair и в каждую запись профиля; builder build.json
+# его не содержит. При повторной агрегации значение берётся из исходного pair (поля нет — false), не из CLI.
 function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPassed, $Recovery = $null, $Generated = @{}) {
+    $gpuSceneIdentityValue = [bool] $GpuSceneIdentity
+    if ($null -ne $Recovery) { $gpuSceneIdentityValue = [bool] $Recovery.GpuSceneIdentity }
     $profiles = New-Object System.Collections.Generic.List[object]
     $origins = New-Object System.Collections.Generic.List[object]
     $dirtyEntries = New-Object System.Collections.Generic.List[object]
@@ -328,6 +332,8 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
                     $manifest = $validated.Manifest
                     $record = $validated.Record
                     if ($null -ne $Recovery) { $record.outputRoot = $artifactRoot }
+                    if ($record -is [Collections.IDictionary]) { $record['gpuSceneIdentity'] = $gpuSceneIdentityValue }
+                    else { $record | Add-Member -NotePropertyName gpuSceneIdentity -NotePropertyValue $gpuSceneIdentityValue -Force }
                     $origins.Add([ordered]@{ path = $manifestPath; sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant() })
                     $generatedHashes = $Generated[$run.ProjectPath]
                     $entries = @($manifest.dirty.entries)
@@ -356,7 +362,7 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
                 }
                 $unknownActual.unavailableReasons = $unknownReasons
                 $record = [ordered]@{
-                    profile = $profile; outputRoot = $artifactRoot; files = @(); success = $false
+                    profile = $profile; outputRoot = $artifactRoot; files = @(); success = $false; gpuSceneIdentity = $gpuSceneIdentityValue
                     actual = $unknownActual
                     terminal = @{ startedUtc = $(if ($terminal) { (ConvertTo-BuildTimestamp $terminal.startedUtc).ToString('o') } else { $null }); endedUtc = $(if ($terminal) { $terminal.endedUtc } else { $null }); result = $null; reason = $reason }
                 }
@@ -373,6 +379,7 @@ function Write-BuildPairManifest($Runs, $Heads, $TerminalRuns, [bool] $BuildPass
             value = $dirty; entries = $dirtyEntries.ToArray(); reason = $(if (-not $dirtyKnown) { 'Часть builder manifests не предоставила dirty evidence' } else { $null })
             generatedRule = 'generated=true: известный generated-файл сборочного checkout (Tools/release/BuildCheckoutGenerated.ps1) с тем же sha256 после сборки; value его не учитывает'
         }
+        gpuSceneIdentity = $gpuSceneIdentityValue
         profiles = $profiles.ToArray(); sourceManifests = $origins.ToArray(); success = $passed
         generatedUtc = [DateTimeOffset]::UtcNow.ToString('o')
     }
@@ -402,6 +409,9 @@ function Invoke-BuildReaggregation([string] $InputPath, [string] $OutputDirector
         Assert-FileHash $spec.console.path $spec.console.sha256
         $original = Get-Content -LiteralPath $spec.originalPair.path -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($original.schemaVersion -ne 1 -or $original.sourceSha -cne $spec.sourceSha -or $original.success -isnot [bool] -or $original.success) { throw 'Ожидался исходный failed pair той же ревизии' }
+        # Pair до появления provenance флага не содержит gpuSceneIdentity: отсутствие поля = false.
+        if ($null -ne $original.gpuSceneIdentity -and $original.gpuSceneIdentity -isnot [bool]) { throw 'Некорректный gpuSceneIdentity исходного pair' }
+        $originalGpuSceneIdentity = $original.gpuSceneIdentity -eq $true
 
         # Единственный поддержанный legacy control flow: проверен при диагностике этого helper.
         # Другой helper требует отдельного доказательства; raw success не заменяет process outcome.
@@ -492,7 +502,7 @@ function Invoke-BuildReaggregation([string] $InputPath, [string] $OutputDirector
             attempts = $attempts.ToArray(); uxrHash = $uxr[0]
         }
         $script:Config = $spec.configuration
-        $result = Write-BuildPairManifest $runs.ToArray() $heads $terminals $true @{ Roots = $roots; OutcomeConfirmed = $true; Evidence = $evidence; OutputDirectory = $output }
+        $result = Write-BuildPairManifest $runs.ToArray() $heads $terminals $true @{ Roots = $roots; OutcomeConfirmed = $true; Evidence = $evidence; OutputDirectory = $output; GpuSceneIdentity = $originalGpuSceneIdentity }
         Write-Host ('Reaggregated build manifest: ' + $result.Path)
         return $result
     } catch {

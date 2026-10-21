@@ -71,6 +71,72 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
             fixer.Apply(plan);
         }
 
+        [MenuItem(Root + "Fix Mobile Shaders in Active Scene", priority = 41)]
+        private static void FixMobileShaders()
+        {
+            string scenePath = EditorSceneManager.GetActiveScene().path;
+            if (string.IsNullOrEmpty(scenePath))
+            {
+                GameLog.Perf.Warning("[AssetAudit] активная сцена не сохранена — нечего проверять");
+                return;
+            }
+            var fixer = (Fixers.BakedLitMaterialFixer)AuditFixerCatalog.ForRule("shader.non-mobile");
+            List<AuditFixAction> plan = PlanForScene(fixer, scenePath);
+            string report = WriteFixPlan(scenePath, plan, fixer.LastSkipped);
+            GameLog.Perf.Info("[AssetAudit] dry-run " + fixer.Title + ": к переводу " + plan.Count + ", пропусков " + fixer.LastSkipped.Count +
+                              "; полный план — " + report);
+            if (plan.Count == 0)
+                return;
+            string list = string.Join("\n", plan.Take(15).Select(a => a.ToString())) + (plan.Count > 15 ? "\n… и ещё " + (plan.Count - 15) : string.Empty);
+            if (!EditorUtility.DisplayDialog(fixer.Title, fixer.WhatChanges + "\n\nМатериалов: " + plan.Count + "\n\n" + list, "Применить", "Отмена"))
+                return;
+            fixer.Apply(plan);
+        }
+
+        [MenuItem(Root + "Revert Mobile Shader Fix in Selected Folders", priority = 42)]
+        private static void RevertMobileShaders()
+        {
+            string[] folders = Selection.assetGUIDs.Select(g => AssetDatabase.GUIDToAssetPath(g)).Where(p => AssetDatabase.IsValidFolder(p)).ToArray();
+            if (folders.Length == 0)
+            {
+                GameLog.Perf.Warning("[AssetAudit] выделите в Project папки с переведёнными материалами");
+                return;
+            }
+            if (EditorUtility.DisplayDialog("Откат перевода шейдеров", "Вернуть исходные шейдеры материалам с данными отката в:\n" +
+                                                                       string.Join("\n", folders), "Вернуть", "Отмена"))
+                Fixers.BakedLitMaterialFixer.Revert(folders);
+        }
+
+        /// <summary>Dry-run фиксера по аудиту сцены только его правилом (JSON не пишется).</summary>
+        internal static List<AuditFixAction> PlanForScene(AuditFixer fixer, string scenePath)
+        {
+            AuditRequest request = AuditRequest.Scene(scenePath);
+            request.OutputPath = string.Empty;
+            foreach (AuditRule rule in AuditRuleCatalog.CreateRules(null, new List<string>()))
+            {
+                if (rule.Id != fixer.RuleId)
+                    request.DisabledRules.Add(rule.Id);
+            }
+            AuditReport report = AssetAuditRunner.Run(request);
+            return fixer.Plan(report.Findings.Where(f => f.RuleId == fixer.RuleId));
+        }
+
+        private static string WriteFixPlan(string scope, IReadOnlyList<AuditFixAction> plan, IReadOnlyList<string> skipped)
+        {
+            string folder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Logs", "AssetAudit");
+            System.IO.Directory.CreateDirectory(folder);
+            string path = System.IO.Path.Combine(folder, "fix-mobile-shaders-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt");
+            var text = new System.Text.StringBuilder();
+            text.Append("# Fix Mobile Shaders — ").Append(scope).Append('\n');
+            foreach (AuditFixAction action in plan)
+                text.Append("WOULD ").Append(action).Append('\n');
+            foreach (string skip in skipped)
+                text.Append("SKIP  ").Append(skip).Append('\n');
+            text.Append("eligible=").Append(plan.Count).Append(" skipped=").Append(skipped.Count).Append('\n');
+            System.IO.File.WriteAllText(path, text.ToString(), new System.Text.UTF8Encoding(false));
+            return path;
+        }
+
         /// <summary>Вход для <c>-executeMethod</c>; аргументы — см. описание класса.</summary>
         public static void RunFromCommandLine()
         {

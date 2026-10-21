@@ -20,6 +20,10 @@
   - правило здесь с ценой и доказательством;
   - правило аудитора ассетов с тем же смыслом;
   - тест аудитора, который ловит исходный случай. Тест добавляется после приёмки пользователем.
+- **Порядок исправления находки** (решение пользователя 2026-10-22): гипотеза или кандидат → проверка (замер или прямая
+  проверка сохранённого ассета) → результат → правило аудитора с тем же смыслом → прогон аудитора подтверждает, что правило
+  ловит исходный случай (и не ловит правильные) → только потом исправление по находкам аудитора, фиксером правила, если он
+  есть. Исправлять «руками» без правила нельзя. Тест правила и фиксера — после пользовательской проверки.
 - **Цена** — только из normal A/B на шлеме (см. [метод](#метод-замера)). Доля такта в replay, доля в детальной (instrumented) трассе и время на Windows ценой не являются: это ориентир, что проверять.
 - **Порог без замера не выдумывается.** Пишем «ориентир» или «не измерено».
 - **Владелец документа** — зона performance (`experts/performance/AGENT.md`). Правила про содержимое сцен проходят ревью level-design.
@@ -32,7 +36,7 @@
 | Инструмент | Что делает | Где сейчас |
 |---|---|---|
 | Аудитор ассетов: `Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/`, меню `Tools/VR Battlegrounds/Performance/Asset Audit/` (Audit Selection, Audit Active Scene, окно) | Механическая проверка правил с id из колонки «Аудитор» | влит в `origin/dev` (задача asset-audit, 2026-10-20) |
-| Box-UV при импорте: `Assets/Editor/VR_Battlegrounds/Performance/BoxUv/` | Переразвёртка UV вместо трипланарного шейдера + конвертер в Baked Lit | влит с задачей scene-detail (2026-10-20) |
+| Box-UV при импорте: `Assets/Editor/VR_Battlegrounds/Performance/BoxUv/` | Переразвёртка UV вместо трипланарного шейдера; материалы переводит фиксер аудитора `BakedLitMaterialFixer` | влит с задачей scene-detail (2026-10-20); фиксер — scene-detail-followups |
 | Свой меш с UV2 для пола шатра: `LobbyTentFloorLightmap` | Пол в лайтмапе без правки общего FBX | влит (scene-detail) |
 | Диагностические подмены `render_diag` (`PerfRenderDiagnosticControl`) | Рантайм-подмена шейдера/неба для A/B без правки ассетов | влит (scene-detail) |
 | Per-draw на шлеме: `Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py`, `Run-QuestE2E.ps1 -MetaRenderDocCmd` | Такты и столлы каждого draw через Meta RenderDoc | влит (scene-detail) |
@@ -72,7 +76,7 @@ Lobby после правок scene-detail, тур по 8 видам 2026-10-22 
 | QPM-SHADER-003 | Не больше 1–2 текстур на пиксель на больших площадях. Детали запекать в одну текстуру или в vertex colour. | Столлы выборки на Adreno. | не измерено (ориентир: S_BasicTextured/S_Foliage — ~49% тактов replay кадра Lobby) | `material.texture-count`, `shadergraph.heavy-sampling` |
 | QPM-SHADER-004 | Пакетные материалы с HDRP-наследием (`_DISABLE_SSR_TRANSPARENT`, `RayTracingPrepass` в disabledShaderPasses) — признак ПК-пака. Перевести на мобильный шейдер до попадания в карту. | Пак рассчитан на десктоп. | — | `material.hdrp-legacy` |
 | QPM-SHADER-005 | Simple Lit без бликов: `_SpecularHighlights = 1` (это `SpecularSource.NoSpecular`; 0 — блики **включены**). | Обратная семантика легко включает лишние блики. | не измерено | — |
-| QPM-SHADER-006 | Свечение плафонов — Unlit (цвет) или Simple Lit с `_EMISSION` и GI-флагом `RealtimeEmissive` (realtime GI выключен — в свет не идёт). URP при импорте и валидации включает `_EMISSION` только при `AnyEmissive`: с `None` или `EmissiveIsBlack` эмиссия **молча выключается**; `BakedEmissive` даёт вклад в лайтмапы. | Скрытая ошибка, не цена: проверять сохранённый ассет, а не материал в памяти. | — | — |
+| QPM-SHADER-006 | Свечение плафонов — Unlit (цвет) или Simple Lit с `_EMISSION` и GI-флагом `RealtimeEmissive` (realtime GI выключен — в свет не идёт). URP при импорте и валидации включает `_EMISSION` только при `AnyEmissive`: с `None` или `EmissiveIsBlack` эмиссия **молча выключается**; `BakedEmissive` даёт вклад в лайтмапы. | Скрытая ошибка, не цена: проверять сохранённый ассет, а не материал в памяти. Следом инструменты, судящие по `_EMISSION`, считают материал неэмиссивным (дверная лампа Lobby ушла в Baked Lit, 2026-10-22). | — | `material.emission-off` |
 | QPM-SHADER-007 | У материала один писатель. Если инструмент оптимизации меняет материал, авторинг-инструмент сцены обязан ставить то же целевое состояние или исключить материал. | Повторный запуск авторинга молча возвращает дорогой шейдер. | — | — |
 
 ### Небо и фон (SKY)
@@ -167,10 +171,11 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 | Правило аудитора | id манифеста |
 |---|---|
-| `shader.non-mobile` | QPM-SHADER-001 |
+| `shader.non-mobile` (фиксер `BakedLitMaterialFixer`) | QPM-SHADER-001 |
 | `shadergraph.heavy-sampling` | QPM-SHADER-002, QPM-SHADER-003 |
 | `material.texture-count` | QPM-SHADER-003 |
 | `material.hdrp-legacy` | QPM-SHADER-004 |
+| `material.emission-off` | QPM-SHADER-006 |
 | `scene.procedural-skybox` | QPM-SKY-001 |
 | `texture.no-mipmaps` / `texture.android-format` / `texture.size` | QPM-TEX-001 / 002 / 003 |
 | `lighting.large-without-lightmap` | QPM-LIGHT-002 |
@@ -180,7 +185,6 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 Ещё не автоматизированы — кандидаты в правила аудитора:
 - QPM-SHADER-005 — Simple Lit с бликами;
-- QPM-SHADER-006 — эмиссия (`_EmissionColor` не чёрный) без флага `AnyEmissive`;
 - QPM-SHADER-007 — несколько писателей одного материала;
 - QPM-LIGHT-001 — realtime-свет в статичной сцене, ContributeGI у подвижных;
 - QPM-LIGHT-004 — светильник без источника; range ламп меньше расстояния до центра помещения;
@@ -192,5 +196,6 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 | Дата | id | Изменение | Доказательство |
 |---|---|---|---|
+| 2026-10-22 | QPM-SHADER-006, QPM-SHADER-007, «Как читать и поддерживать» | Правило аудитора `material.emission-off` и фиксер `EmissionOffFixer`; один фиксер `BakedLitMaterialFixer` вместо двух конвертеров Baked Lit; порядок «правило до исправления» | задача scene-detail-followups: `tasks/scene-detail-followups/Readme.md` |
 | 2026-10-20 | QPM-SHADER-001, статус инструментов | Итоговый A/B Lobby 10,81 → 4,26 мс; инструменты scene-detail влиты | `tasks/scene-detail/changelog/2026-10-20-render-diag-ab.md` «Итоговый normal A/B» |
 | 2026-10-20 | все | Первая версия по замерам Lobby | задача scene-detail: `tasks/scene-detail/changelog/2026-10-20-render-diag-ab.md`; документ пользователя в Claude Docs «Lobby на Quest 3: замеры GPU и план оптимизаций»; аудитор — задача asset-audit |

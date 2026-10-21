@@ -1,7 +1,8 @@
 // Диагностический пол для E2E normal A/B (PerfRenderDiagnosticControl): одна выборка текстуры с проекцией
 // сверху по мировым X/Z (uv = positionWS.xz / _MainTile — как SubG_WorldAlignedTexture пака, но без
 // тройной проекции и смешивания слоёв). _PLANAR_LIT: + запечённый свет (лайтмапа или SH), без PBR и нормалей.
-// Не используется материалами сцены; лежит в Resources, чтобы попасть в сборку. Не путь к релизу.
+// Не используется материалами сцены; в Development-сборку его добавляет PerfDiagnosticShaderBuildProcessor,
+// в Prod не попадает. Не путь к релизу.
 Shader "VR Battlegrounds/Diagnostics/PerfPlanarFloor"
 {
     Properties

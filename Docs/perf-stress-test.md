@@ -213,6 +213,14 @@ Fixed Foveated Rendering, как его видит `XRDisplaySubsystem.foveatedR
 `com.unity.xr.oculus`, ссылка на сборку `Unity.XR.Oculus`). Пропущенных кадров компоновщика
 в API пакета 4.5 нет (`Stats.AppMetrics` отсутствует) — их заменяет доля кадров вне бюджета.
 
+`mem_mb` диагностического прогона несопоставим с обычным. В E2E-прогоне с диагностическим каналом
+(`context.Diagnostics != null`, `PerfStressScenario.RunClient`) `PerfStressDiagnosticAdapter` до старта создаёт
+`PerfDiagnosticRecorder` (`Assets/Scripts/Debug/StressTest/PerfDiagnosticRecorder.cs`), а тот сразу выделяет
+массивы на `frameCapacity = 65536` кадров и `phaseCapacity = 512` фаз. Запись кадра — `PerfRawFrame` плюс
+поколение и флаг, около 112 байт по раскладке полей, итого около 7 МиБ управляемой памяти на весь прогон
+(оценка по коду, не замер). Буфер живёт весь прогон, поэтому разности фаз одного прогона он не искажает,
+а сравнение `mem_mb`/`gc_mb` с обычным прогоном стресс-теста или legacy E2E — искажает.
+
 ## Классы
 
 | Класс | Роль |

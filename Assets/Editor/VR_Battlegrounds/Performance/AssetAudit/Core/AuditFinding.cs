@@ -53,6 +53,12 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
 
         public List<AuditMetric> Metrics { get; } = new List<AuditMetric>();
 
+        /// <summary>
+        /// Ассеты, которые исправляет фиксер правила: все экземпляры группы, без ограничения <see cref="MaxItems"/>
+        /// (в отчёт не пишутся — там <see cref="Items"/>). Пусто — фиксер берёт <see cref="Asset"/>.
+        /// </summary>
+        public List<string> FixTargets { get; } = new List<string>();
+
         /// <summary>Объект или связанный ассет этого экземпляра (материал шейдера, путь в сцене).</summary>
         public AuditFinding WithItem(string item)
         {
@@ -65,6 +71,14 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
         public AuditFinding WithGroup(string groupKey)
         {
             GroupKey = groupKey;
+            return this;
+        }
+
+        /// <summary>Ассет для фиксера правила (см. <see cref="FixTargets"/>).</summary>
+        public AuditFinding WithFixTarget(string assetPath)
+        {
+            if (!string.IsNullOrEmpty(assetPath) && !FixTargets.Contains(assetPath))
+                FixTargets.Add(assetPath);
             return this;
         }
 
@@ -98,6 +112,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit
                 Severity = other.Severity;
             foreach (string item in other.Items)
                 WithItem(item);
+            foreach (string target in other.FixTargets)
+                WithFixTarget(target);
         }
     }
 }

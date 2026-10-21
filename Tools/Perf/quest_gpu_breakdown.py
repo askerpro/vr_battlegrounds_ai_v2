@@ -20,6 +20,8 @@ def main(argv=None):
     parser.add_argument("--adb", default=ADB_DEFAULT)
     parser.add_argument("--package", default=PACKAGE)
     parser.add_argument("--metrics", help="точные runtime имена через запятую; неизвестное имя — отказ")
+    # draw этого collector не реализован; per-draw на шлеме — адаптер Meta RenderDoc,
+    # см. Tools/Perf/README.md, раздел «Per-draw захват Meta RenderDoc на Quest».
     parser.add_argument("--capture-kind", choices=("stage", "draw"), default="stage",
                         help="один detailed capture; draw требует проверенного adapter (пока отсутствует)")
     parser.add_argument("--enable-detailed", action="store_true",

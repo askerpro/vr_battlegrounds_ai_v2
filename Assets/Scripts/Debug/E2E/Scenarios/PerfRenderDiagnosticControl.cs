@@ -19,7 +19,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         internal const string FloorShaderName = "Shader Graphs/S_VPWorldAligned";
         internal const string CheapShaderName = "Shader Graphs/S_BasicTextured";
         internal const string FreeShaderName = "Universal Render Pipeline/Unlit";
-        internal const string PlanarShaderResource = "PerfDiagnostics/PerfPlanarFloor";
+        // В Development-сборку шейдер кладёт PerfDiagnosticShaderBuildProcessor (Editor); в Prod его нет.
+        internal const string PlanarShaderName = "VR Battlegrounds/Diagnostics/PerfPlanarFloor";
         // floor-basic — S_BasicTextured; floor-unlit — URP Unlit по UV меша (нижняя граница, визуально непригоден:
         // UV пола рассчитана на мировую проекцию); floor-planar-unlit/-lit — одна выборка с проекцией сверху по миру
         // (PerfPlanarFloor), без света / с запечённым светом.
@@ -73,7 +74,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         // Пол: каждый материал на S_VPWorldAligned → копия на дешёвом шейдере с основным слоем исходного.
         // Basic: S_BasicTextured (MainBC/MainNormal, проекция по миру), без вершинного смешивания слоёв и шума краёв.
         // UvUnlit: URP Unlit с MainBC по UV меша. Basic/UvUnlit берут шейдер у загруженного материала сцены.
-        // PlanarUnlit/PlanarLit: PerfPlanarFloor из Resources — одна выборка MainBC по миру, без света / с лайтмапой.
+        // PlanarUnlit/PlanarLit: PerfPlanarFloor (Shader.Find, только Development-сборки) — одна выборка MainBC по миру, без света / с лайтмапой.
         private int ReplaceFloor(FloorMode mode)
         {
             bool planar = mode == FloorMode.PlanarUnlit || mode == FloorMode.PlanarLit;
@@ -81,9 +82,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             Shader cheap;
             if (planar)
             {
-                cheap = Resources.Load<Shader>(PlanarShaderResource);
+                cheap = Shader.Find(PlanarShaderName);
                 if (cheap == null || !cheap.isSupported)
-                    throw new InvalidOperationException("render_diag: шейдер " + PlanarShaderResource + " недоступен");
+                    throw new InvalidOperationException("render_diag: шейдер " + PlanarShaderName + " недоступен (в сборке только Development)");
                 _cheapShader = cheap.name + "#" + cheap.GetInstanceID();
             }
             else

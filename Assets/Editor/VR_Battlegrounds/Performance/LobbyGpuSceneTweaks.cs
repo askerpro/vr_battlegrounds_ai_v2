@@ -17,7 +17,7 @@ namespace VrBattlegrounds.Editor.Performance
     public static class LobbyGpuSceneTweaks
     {
         const string LobbyScenePath = "Assets/Scenes/Lobby.unity";
-        const string MenuRoot = "VR Battlegrounds/Performance/Lobby GPU/";
+        const string MenuRoot = "Tools/VR Battlegrounds/Performance/Lobby GPU/";
 
         // Зеркало: прежние значения сцены (переопределения префаба MirrorDisplayClean) — 768 и 16 м.
         public const int MirrorTextureSize = 512;

@@ -10,7 +10,7 @@
 # Дирижёр — единственный, кто работает с устройством через adb (выбор устройства, установка APK,
 # пробуждение и датчик приближения, am start, ожидание, force-stop, logcat, pull). Настройки шлема
 # меняются только на время прогона: KEYCODE_WAKEUP и prox_close перед стартом, automation_disable
-# и KEYCODE_SLEEP (шлем обратно в сон, чтобы не разряжался) в finally. Сам скрипт ничего не меняет в брандмауэре Windows: при отсутствии правила он отказывает
+# в finally, KEYCODE_SLEEP (шлем обратно в сон, чтобы не разряжался) — в конце finally, после logcat и pull. Сам скрипт ничего не меняет в брандмауэре Windows: при отсутствии правила он отказывает
 # и печатает команду, которую выполняет человек с правами администратора.
 #
 # Гасит дирижёр только то, что запустил сам: свой серверный PID и его потомков (как Run-E2E.ps1),
@@ -1290,15 +1290,11 @@ $runDir = Join-Path $RepoRoot ('Tools\e2e\results\' + $runId)
 if ($null -ne $diagnosticInput) { $runDir = Join-Path $RepoRoot ('Tools/e2e/results/' + $runId + '-' + [guid]::NewGuid().ToString('N')) }
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 
-# Unity возвращает канонический external files path; /sdcard является Android symlink.
-# Проверка persistentDataPath в Player остаётся строгой, alias разрешает отправитель.
-$storageProbe = Invoke-AdbShell @('readlink', '-f', '/sdcard') 15
-$deviceStorage = $storageProbe.Out.Trim().TrimEnd('/')
-if ($storageProbe.ExitCode -ne 0 -or $storageProbe.TimedOut -or $deviceStorage -cnotin @('/storage/emulated/0', '/storage/self/primary')) {
-    Stop-Refused ('Не подтверждён канонический external storage: ' + $storageProbe.Out + ' ' + $storageProbe.Err)
-}
-$deviceFilesDir = $deviceStorage + '/Android/data/' + $Package + '/files'
-$deviceResult = $deviceFilesDir + '/e2e/' + $runId + '/client-1.json'
+# Пути шлема зависят от пробы external storage (readlink /sdcard); проба идёт первой внутри try,
+# чтобы её отказ проходил через finally (run.json, уборка) — до пробы пути шлема не определены.
+$deviceStorage = $null
+$deviceFilesDir = $null
+$deviceResult = $null
 $serverResult = Join-Path $runDir 'server.json'
 $serverLog = Join-Path $runDir 'server.log'
 $clientResult = Join-Path $runDir 'client-1.json'
@@ -1313,7 +1309,6 @@ if ($null -ne $diagnosticInput) {
         $launcherToken = [guid]::NewGuid().ToString('N')
         $diagnosticStages.server = New-E2EDiagnosticStage $diagnosticInput $ServerDataPath 'server' $launcherToken
         $diagnosticStages.client = New-E2EDiagnosticStage $diagnosticInput (Join-Path $runDir 'device-input') 'client-1' $launcherToken
-        $diagnosticDeviceRoot = $deviceFilesDir + '/' + $diagnosticStages.client.relative
     }
     catch {
         $stageError = $_.Exception.Message
@@ -1334,42 +1329,24 @@ $serverArgs = @(
     '-e2eDiscoveryPort', "$DiscoveryPort",
     '-logFile', $serverLog
 )
-$clientTokens = @(
-    '-e2eScenario', $Scenario,
-    '-e2eRole', 'client-1',
-    '-e2eResult', $deviceResult,
-    '-e2eMap', $Map,
-    '-e2eTimeout', "$scenarioTimeout",
-    '-e2eQuitOnFinish',
-    '-e2eNetworkPort', "$NetworkPort",
-    '-e2eDiscoveryPort', "$DiscoveryPort",
-    '-e2eServerAddress', $ServerAddress,
-    '-e2eDeviceToken', $deviceToken
-)
-foreach ($pair in $scenarioArgs) { $serverArgs += @('-e2eArg', $pair); $clientTokens += @('-e2eArg', $pair) }
-# Поза головы — только шлему: серверу (headless) симулировать нечего.
-if ($headPoseInfo.mode -ne 'off') { $clientTokens += @('-e2eHeadPose', $headPoseInfo.clientArg) }
+foreach ($pair in $scenarioArgs) { $serverArgs += @('-e2eArg', $pair) }
 
 # Точки обзора: один относительный путь от persistentDataPath для обеих сторон; файл кладётся в оба места до запуска.
 $viewsArgPath = $null
 if ($null -ne $viewsInfo) {
     $viewsArgPath = 'e2e/' + $runId + '/views.json'
     $serverArgs += @('-e2eArg', ('views=' + $viewsArgPath))
-    $clientTokens += @('-e2eArg', ('views=' + $viewsArgPath))
 }
 if ($null -ne $diagnosticInput) {
     # У каждой роли собственный путь, хотя Windows процессы могут делить persistentDataPath.
     $serverArgs += @('-e2eRunSpec', $diagnosticStages.server.path, '-e2eRunSpecSha256', $diagnosticInput.sha256)
-    $clientTokens += @('-e2eRunSpec', ($diagnosticDeviceRoot + '/run-spec.json'), '-e2eRunSpecSha256', $diagnosticInput.sha256)
     if ($null -ne $viewsInfo) {
         $serverArgs = @($serverArgs | ForEach-Object { if ($_ -ceq ('views=' + $viewsArgPath)) { 'views=' + $diagnosticStages.server.viewsRelative } else { $_ } })
-        $clientTokens = @($clientTokens | ForEach-Object { if ($_ -ceq ('views=' + $viewsArgPath)) { 'views=' + $diagnosticStages.client.viewsRelative } else { $_ } })
     }
 }
-foreach ($token in $clientTokens) {
-    if ($token -notmatch $SafeToken) { Stop-Refused ('аргумент шлема с недопустимыми символами: "' + $token + '"') }
-}
-$unityArgs = $clientTokens -join ' '
+# Аргументы шлема содержат пути external storage: собираются в try сразу после пробы.
+$clientTokens = $null
+$unityArgs = $null
 $component = $Package + '/' + $Activity
 
 $manifest = [ordered]@{
@@ -1397,7 +1374,8 @@ $manifest = [ordered]@{
     pc = [ordered]@{ cpu = $null; computerName = $env:COMPUTERNAME; firewall = $firewall.Detail }
     network = [ordered]@{ serverAddress = $ServerAddress; networkPort = $NetworkPort; discoveryPort = $DiscoveryPort; autoPorts = $autoPorts }
     launch = [ordered]@{
-        device = [ordered]@{ command = ('am start -S -W -n ' + $component + " -e unity '" + $unityArgs + "'"); unityArgs = $unityArgs; amStartOutput = $null; pid = $null }
+        # command и unityArgs заполняются в try после пробы external storage.
+        device = [ordered]@{ command = $null; unityArgs = $null; amStartOutput = $null; pid = $null }
         server = [ordered]@{ player = $ServerPlayer; args = $serverArgs; pid = $null }
     }
     build = $null
@@ -1429,14 +1407,13 @@ if ($null -ne $viewsInfo) {
         names = $viewsInfo.names
         arg = $viewsArgPath
         local = 'views.json'
-        device = ($deviceFilesDir + '/' + $viewsArgPath)
+        device = $null  # путь на шлеме — в try после пробы external storage
         server = (Join-Path $ServerDataPath ($viewsArgPath -replace '/', '\'))
         pushed = $false
         serverCopied = $false
     }
     if ($null -ne $diagnosticInput) {
         $manifest.views.server = Join-Path $ServerDataPath $diagnosticStages.server.viewsRelative
-        $manifest.views.device = $diagnosticDeviceRoot + '/' + $diagnosticInput.spec.views.path
         $manifest.views.arg = $null
         $manifest.views.roleArgs = [ordered]@{ server = $diagnosticStages.server.viewsRelative; client = $diagnosticStages.client.viewsRelative }
         $manifest.views.local = 'source/views.json'
@@ -1472,6 +1449,51 @@ $exitCode = 2
 $pairRevision = $null
 
 try {
+    # ── external storage шлема и аргументы приложения ──
+    # Unity возвращает канонический external files path; /sdcard является Android symlink.
+    # Проверка persistentDataPath в Player остаётся строгой, alias разрешает отправитель.
+    $storageProbe = Invoke-AdbShell @('readlink', '-f', '/sdcard') 15
+    $deviceStorage = $storageProbe.Out.Trim().TrimEnd('/')
+    if ($storageProbe.ExitCode -ne 0 -or $storageProbe.TimedOut -or $deviceStorage -cnotin @('/storage/emulated/0', '/storage/self/primary')) {
+        throw ('Не подтверждён канонический external storage: ' + $storageProbe.Out + ' ' + $storageProbe.Err)
+    }
+    $deviceFilesDir = $deviceStorage + '/Android/data/' + $Package + '/files'
+    $deviceResult = $deviceFilesDir + '/e2e/' + $runId + '/client-1.json'
+    if ($null -ne $diagnosticInput) { $diagnosticDeviceRoot = $deviceFilesDir + '/' + $diagnosticStages.client.relative }
+
+    $clientTokens = @(
+        '-e2eScenario', $Scenario,
+        '-e2eRole', 'client-1',
+        '-e2eResult', $deviceResult,
+        '-e2eMap', $Map,
+        '-e2eTimeout', "$scenarioTimeout",
+        '-e2eQuitOnFinish',
+        '-e2eNetworkPort', "$NetworkPort",
+        '-e2eDiscoveryPort', "$DiscoveryPort",
+        '-e2eServerAddress', $ServerAddress,
+        '-e2eDeviceToken', $deviceToken
+    )
+    foreach ($pair in $scenarioArgs) { $clientTokens += @('-e2eArg', $pair) }
+    # Поза головы — только шлему: серверу (headless) симулировать нечего.
+    if ($headPoseInfo.mode -ne 'off') { $clientTokens += @('-e2eHeadPose', $headPoseInfo.clientArg) }
+    if ($null -ne $viewsInfo) { $clientTokens += @('-e2eArg', ('views=' + $viewsArgPath)) }
+    if ($null -ne $diagnosticInput) {
+        $clientTokens += @('-e2eRunSpec', ($diagnosticDeviceRoot + '/run-spec.json'), '-e2eRunSpecSha256', $diagnosticInput.sha256)
+        if ($null -ne $viewsInfo) {
+            $clientTokens = @($clientTokens | ForEach-Object { if ($_ -ceq ('views=' + $viewsArgPath)) { 'views=' + $diagnosticStages.client.viewsRelative } else { $_ } })
+        }
+    }
+    foreach ($token in $clientTokens) {
+        if ($token -notmatch $SafeToken) { throw ('аргумент шлема с недопустимыми символами: "' + $token + '"') }
+    }
+    $unityArgs = $clientTokens -join ' '
+    $manifest.launch.device.command = 'am start -S -W -n ' + $component + " -e unity '" + $unityArgs + "'"
+    $manifest.launch.device.unityArgs = $unityArgs
+    if ($null -ne $manifest.views) {
+        if ($null -ne $diagnosticInput) { $manifest.views.device = $diagnosticDeviceRoot + '/' + $diagnosticInput.spec.views.path }
+        else { $manifest.views.device = $deviceFilesDir + '/' + $viewsArgPath }
+    }
+
     # ── сборка пары (-Build) ──
     if ($Build) {
         Write-Section 'Собираю пару: e2e-плеер сервера и APK Quest/Test одной ревизии (batch Unity)'
@@ -1864,13 +1886,6 @@ finally {
         }
     }
 
-    # Решение пользователя 2026-10-20: разбуженный для прогона шлем после теста возвращается в сон,
-    # чтобы не разряжался зря. adb (logcat, pull ниже) во сне продолжает работать.
-    if ($deviceWoken -and $KeepAwake) { Write-Host '  шлем оставлен бодрствующим (-KeepAwake: сон — после серии)' }
-    elseif ($deviceWoken) {
-        try { [void](Invoke-AdbShell @('input', 'keyevent', 'KEYCODE_SLEEP') 20); Write-Host '  шлем переведён в сон' } catch {}
-    }
-
     # Link закрыт нами по -StopLink. Автоматический возврат не делаем (решение пользователя 2026-10-12: перезапуск
     # Link-клиента со шлема не восстанавливает связь с ПК надёжно) — отмечаем в run.json и подсказываем человеку.
     if ($linkStopped) {
@@ -1915,6 +1930,8 @@ finally {
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
         $deviceReceipt = [ordered]@{ source = $diagnosticDeviceRoot; local = $dest; ok = $false; detail = $null; files = @() }
         try {
+            # Без подтверждённого external storage stage шлема не создавался: pull без корня недопустим.
+            if ($null -eq $diagnosticDeviceRoot) { throw 'external storage шлема не подтверждён, stage на шлем не доставлялся' }
             # Копируем содержимое stage без лишней GUID-папки: Windows adb ограничен MAX_PATH.
             $pull = Invoke-Adb @('pull', ($diagnosticDeviceRoot + '/.'), $dest) 600
             if ($pull.ExitCode -ne 0) { throw (($pull.Out + $pull.Err).Trim()) }
@@ -2121,6 +2138,14 @@ finally {
         $summary.exitCode = 2; $summary.verdict = $verdict; $summary.failure = $manifest.failure
         try { Write-TextFile (Join-Path $runDir 'run.json') ($manifest | ConvertTo-Json -Depth 16); Write-TextFile (Join-Path $runDir 'summary.json') ($summary | ConvertTo-Json -Depth 8) } catch {}
         Write-Host ('Raw harvest не записан: ' + $harvestError) -ForegroundColor Red
+    }
+
+    # Решение пользователя 2026-10-20: разбуженный для прогона шлем после теста возвращается в сон,
+    # чтобы не разряжался зря. Сон — последним действием с шлемом: после logcat, pull результата,
+    # diagnostic stage и артефактов (до 600 с на pull), т.к. adb по Wi-Fi во сне надёжен лишь несколько минут.
+    if ($deviceWoken -and $KeepAwake) { Write-Host '  шлем оставлен бодрствующим (-KeepAwake: сон — после серии)' }
+    elseif ($deviceWoken) {
+        try { [void](Invoke-AdbShell @('input', 'keyevent', 'KEYCODE_SLEEP') 20); Write-Host '  шлем переведён в сон' } catch {}
     }
 
     $verdictColour = 'Yellow'

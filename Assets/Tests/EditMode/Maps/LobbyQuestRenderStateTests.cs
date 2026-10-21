@@ -169,17 +169,21 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [Test]
-        public void LampMaterialsGlowWithoutGiAndHighlights()
+        // Дверная лампа: приёмка пользователем 2026-10-22 (scene-detail-followups) — после EmissionOffFixer светится.
+        [TestCase("Assets/Materials/Lobby/Night/LobbyNightLampLong.mat")]
+        [TestCase("Assets/Materials/Lobby/Night/LobbyNightDoorLamp.mat")]
+        public void LampMaterialsGlowWithoutGiAndHighlights(string path)
         {
-            var lamp = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Lobby/Night/LobbyNightLampLong.mat");
+            var lamp = AssetDatabase.LoadAssetAtPath<Material>(path);
             Assert.IsNotNull(lamp);
             // Состояние с диска: URP при импорте пересчитывает _EMISSION по GI-флагам, поэтому проверяется сохранённый файл.
             string text = System.IO.File.ReadAllText(AssetDatabase.GetAssetPath(lamp));
             Assert.That(text, Does.Contain("- _EMISSION"), "QPM-SHADER-006: _EMISSION сохранён в ассете");
             Assert.AreEqual(MaterialGlobalIlluminationFlags.RealtimeEmissive, lamp.globalIlluminationFlags,
                 "None/EmissiveIsBlack выключают _EMISSION при импорте; BakedEmissive дал бы вклад в лайтмапы");
-            if (lamp.shader.name == "Universal Render Pipeline/Simple Lit")
-                Assert.AreEqual(1f, lamp.GetFloat("_SpecularHighlights"), "QPM-SHADER-005: 1 = NoSpecular");
+            Assert.AreEqual("Universal Render Pipeline/Simple Lit", lamp.shader.name, "Baked Lit эмиссии не имеет");
+            Assert.AreEqual(1f, lamp.GetFloat("_SpecularHighlights"), "QPM-SHADER-005: 1 = NoSpecular");
+            Assert.IsNotNull(lamp.GetTexture("_EmissionMap"), "светится рассеиватель по карте эмиссии, а не весь корпус");
         }
     }
 }

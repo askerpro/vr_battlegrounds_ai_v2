@@ -1,0 +1,53 @@
+{
+  "task_id": "scene-detail-followups",
+  "owner": "scene-detail-followups",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/scene-detail-followups",
+  "base_sha": "c7b8d6ab3dbbaeb3106036405727e3b1747082c0",
+  "doc_path": "tasks/scene-detail-followups/Readme.md",
+  "title": "Неблокирующие замечания ревью scene-detail",
+  "branch": "task/scene-detail-followups",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/scene-detail-followups/**",
+        "Tools/e2e/Run-QuestE2E.ps1",
+        "Tools/e2e/.gitattributes",
+        "Tools/release/Build-Game.ps1",
+        "Docs/testing.md",
+        "Tools/Perf/README.md",
+        "Tools/Perf/quest_gpu_breakdown.py",
+        "Docs/perf-stress-test.md",
+        "Assets/Scripts/Debug/E2E/Scenarios/Resources/**",
+        "Assets/Scripts/Debug/E2E/Scenarios/Resources.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/PerfDiagnostics/**",
+        "Assets/Scripts/Debug/E2E/Scenarios/PerfDiagnostics.meta",
+        "Assets/Scripts/Debug/E2E/Scenarios/PerfRenderDiagnosticControl.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/PerfStressScenario.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/PerfDiagnosticShaderBuildProcessor.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/PerfDiagnosticShaderBuildProcessor.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Performance/LobbyGpuMaterialTier.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/LobbyGpuMaterialTier.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Performance/LobbyGpuSceneTweaks.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/BoxUv/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyNightLighting.cs",
+        "Assets/Materials/Lobby/Night/LobbyNightDoorLamp.mat",
+        "Assets/Materials/Lobby/Night/LobbyNightDoorLamp.mat.meta",
+        "Docs/quest-performance-manifest.md",
+        "experts/launch-infra/journal/**",
+        "experts/performance/journal/**",
+        "experts/gameplay/journal/**",
+        "experts/level-design/journal/**",
+        "Assets/Tests/EditMode/AssetAudit/MaterialFixerTests.cs",
+        "Assets/Tests/EditMode/AssetAudit/MaterialFixerTests.cs.meta",
+        "Assets/Tests/EditMode/DevTools/PerfDiagnosticShaderTests.cs",
+        "Assets/Tests/EditMode/DevTools/PerfDiagnosticShaderTests.cs.meta",
+        "Assets/Tests/EditMode/Maps/LobbyQuestRenderStateTests.cs"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

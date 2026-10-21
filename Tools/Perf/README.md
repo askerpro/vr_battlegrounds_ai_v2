@@ -1,7 +1,11 @@
 # Tools/Perf — замеры и диагностика GPU (владелец performance)
 
-Python 3.10+, только stdlib. План/границы: `tasks/perf-stress-scenario/gpu-implementation-plan.md`.
-Точный формат: `tasks/perf-stress-scenario/contracts/gpu-package-v1.md`.
+Python 3.10+, только stdlib. План/границы: `tasks/scene-detail/gpu-diagnostics-completion-plan.md`
+(детальная диагностика) и `tasks/quest-perf-pipeline/gpu-launch-implementation-plan.md` (запуск на шлеме).
+Форматы: контракты `tasks/scene-detail/contracts/` (scene-index-v1, runtime-adapter-v1, renderdoc-bridge-v1,
+build-identity-v1, quality-discovery-v1) и `tasks/quest-perf-pipeline/contracts/gpu-launch-inputs.md`.
+Отдельный документ формата пакета gpu-package-v1 в dev не влит: точная схема пакета — проверки
+`gpu_diagnostics/model.py` и `gpu_diagnostics/import_runtime.py`.
 
 ## Offline импорт, проверка и отчёт
 
@@ -47,6 +51,8 @@ GPU source intervals неизвестны. Принятые локальные r
 Сравнение таких распределений — observationMetrics.deltaP50, status остаётся limited.
 Без закрытого локального ready window или при несопоставимых условиях дельта не выдаётся.
 Неполный/пустой источник, неизвестные условия и причины ready refusal не скрываются.
+Runtime recorder заранее резервирует буфер кадров, поэтому `mem_mb` диагностического прогона
+несопоставим с обычным стресс-тестом: `Docs/perf-stress-test.md`, раздел «Метрики».
 
 `compare-series` читает schemaVersion1, pairs/aa — массивы `{a,b,order}` (пути относительно
 плана, order AB/BA сверяется с actual startedUtc), allowedSettings — JSON pointers
@@ -170,6 +176,7 @@ python -B -X utf8 Tools/Perf/quest_gpu_breakdown.py --pass realtime --serial <se
 - Draw adapter пока **unsupported**: для runtime CLI известен синтаксис `-x=<IDs>`,
   однако реальный ограниченный capture и его схема ещё не проверены на устройстве.
   Каталог/документация не заменяют эту проверку. Clocks не переводятся в ms без частоты.
+  Per-draw на шлеме снимает отдельный адаптер — см. [Per-draw захват Meta RenderDoc на Quest](#per-draw-захват-meta-renderdoc-на-quest).
 
 Logcat читается независимо от capture. Смена фазы/итог/EOF во время settle/capture, пустой ответ,
 ошибка counter или timeout дают partial, а не успешный замер. Общий `--max-wait` действует также
@@ -177,6 +184,65 @@ Logcat читается независимо от capture. Смена фазы/�
 границы host receive time и причины. Собственные subprocess завершаются; старый output не затирается.
 Legacy logcat по-прежнему **не доказывает** runtime workload.ready, точный native clock или
 стабильность вида всю фазу; receipt имеет эту границу достоверности и не является normal run package.
+
+## Per-draw захват Meta RenderDoc на Quest
+
+`gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py` снимает такты и столлы каждого draw одного
+кадра на шлеме через Meta RenderDoc Fork (`renderdoccmd`, проверен 68.18). Режим **opt-in**: включается
+только явными флагами `Tools/e2e/Run-QuestE2E.ps1`, без них приложение запускается обычным `am start`.
+
+```powershell
+Tools/e2e/Run-QuestE2E.ps1 ... -MetaRenderDocCmd <renderdoccmd.exe> -MetaRenderDocOut <новая-пустая-папка> -MetaCapturePhase "база: center-north"
+```
+
+`-MetaRenderDocCmd` и `-MetaRenderDocOut` задаются вместе; нужен python3 в PATH и adb из `<sdk>/platform-tools`
+(тот же, что у runner: renderdoccmd ищет adb через SDK root). Адаптер меняет состояние шлема, поэтому
+**каждый такой прогон требует разрешения пользователя на изменения шлема**. Перф-метрики прогона с
+инъекцией недействительны.
+
+Что меняется на шлеме на время прогона:
+- settings global `enable_gpu_debug_layers`, `gpu_debug_app`, `gpu_debug_layer_app`, `gpu_debug_layers`,
+  `gpu_debug_layers_gles` — слой захвата RenderDoc для пакета приложения;
+- свойства `debug.vulkan.layers`, `debug.rdoc.*`, `security.perf_harden`, `debug.oculus.guardian_pause`,
+  `debug.vr.profiler`, `debug.oculus.usepackagedvvl.com.oculus.renderdoccmd.*`;
+- установленные серверы `com.oculus.renderdoccmd.arm64/arm32`, `adb forward tcp:N → localabstract:renderdoc_N`,
+  режим detailed `ovrgpuprofiler`;
+- переходные эффекты: пробуждение шлема, `prox_close`, пропуск рендера компоновщика.
+- `persist.debug.dalvik.vm.jdwp.enabled` не меняется никогда (ветка root+reboot запрещена); частоты kgsl
+  только записываются в журнал (их меняет и троттлинг).
+
+Порядок (фазы адаптера вызывает Run-QuestE2E):
+1. `launch` — снимок: полный `getprop` и `settings list global` плюс отслеживаемые ключи, атомарно в
+   `<out>/journal.json` **до любых изменений**. Предусловия чистого шлема: gpu_debug_* пусты, серверы не
+   установлены, приложение не запущено, detailed выключен, adb forward нет, JDWP выключен. Нарушение —
+   отказ без изменений. Затем `renderdoccmd adb-launch` с теми же Unity-аргументами (`--intent-args`).
+2. `capture` (в фоне) — ждёт в logcat начало фазы `-MetaCapturePhase`, settle, `adb-capture` одного кадра в
+   новую `<out>/captures/`; ровно один `.rdc`, его размер и SHA256 в журнале.
+3. `finish` — из `finally` Run-QuestE2E, в том числе при Ctrl+C/исключении: force-stop приложения,
+   `adb-session --drawcall-profiling` (`info`, `fetch_drawcall_states`, `draws`, `passes`; ответы —
+   `<out>/tool-logs/*adb-session.replies.jsonl`), затем откат.
+4. Откат — остановить процессы прогона, отменить переходные эффекты, удалить установленные серверы,
+   выключить detailed, удалить появившиеся gpu_debug_*, вернуть свойства с известными вендорскими значениями,
+   снять forward `renderdoc_*`. Чужие изменения (ключ уже был задан, неизвестное значение) не трогаются и
+   попадают в `restore.foreign`. Затем снимок снимается повторно и сравнивается с исходным:
+   `restore.verified=true` только без расхождений (`remainingDiffs`), ошибок и foreign. После отката шлем усыпляется.
+
+`finish` возвращает 0 только при draws > 0 и verified. Коды фаз — в manifest прогона `launch.device.metaRenderDoc`
+(`launchExit`, `captureExit`, `finishExit`, `restoreOnlyExit`).
+
+Сбой отката: Run-QuestE2E сам повторяет идемпотентный `restore-only` по снимку из журнала. Если и он не verified
+(код 3), runner печатает готовую команду `python ... meta_renderdoc_quest.py restore-only ...` — выполнить её,
+разобрать `restore.remainingDiffs/foreign/errors` в `journal.json`, до подтверждённого отката не использовать шлем
+для замеров и сообщить пользователю. Повреждённый журнал делает автоматический откат невозможным: `finish`
+(код 3) печатает список ключей для ручной проверки. Известный остаток: ранее отсутствовавшее `debug.*` свойство
+после `setprop key ''` остаётся пустым до перезагрузки (getprop их не различает); `prox_close` и
+`oom_score_adj` процессов renderdoc истекают сами.
+
+Чтение: `Clocks` и столлы — replay захваченного кадра на шлеме (instrumented). Они показывают **пропорции**
+между draw — где искать, но не цену. Бюджет и эффект правки — только realtime-тайминги normal прогона
+(`ovr_gpu`/AppGPUTime, A/B): например, Procedural-скайбокс с 8 % тактов replay дал −0,05 мс в A/B
+(`experts/performance/journal/2026-10-20-scene-detail-quest-gpu-lobby.md`). Рейтинг draw по ответам сессии —
+`tasks/scene-detail/tools/rank_quest_drawcalls.py`.
 
 ## Граница готовности
 

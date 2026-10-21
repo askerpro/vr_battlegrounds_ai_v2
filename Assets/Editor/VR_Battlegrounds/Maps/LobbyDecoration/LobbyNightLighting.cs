@@ -206,15 +206,17 @@ namespace VrBattlegrounds.EditorTools
             material = new Material(source) { name = name };
             material.EnableKeyword("_EMISSION");
             material.SetColor("_EmissionColor", WarmLamp);
-            // Свет ламп запекают настоящие источники; эмиссия только видна, второй раз в GI не идёт.
-            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            // RealtimeEmissive, а не EmissiveIsBlack: с ним URP выключает _EMISSION (QPM-SHADER-006, правило аудитора
+            // material.emission-off). Realtime GI выключен — эмиссия видна, но второй раз в свет не идёт (свет ламп запекают
+            // настоящие источники). Дальше материал ведут фиксеры аудитора (shader.non-mobile → Simple Lit с эмиссией).
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             AssetDatabase.CreateAsset(material, path);
             log.AppendLine("Создан материал " + path + " из " + sourcePath);
             return material;
         }
 
-        // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому ярус материалов
-        // (LobbyGpuMaterialTier) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
+        // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому фиксер шейдеров аудитора
+        // (BakedLitMaterialFixer) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
         // освещён, светится только рассеиватель), стекло SM_TopLight/SM_LampPost/SM_Lamp_02 — непрозрачный Unlit.
         // GI-флаг RealtimeEmissive: URP (BaseShaderGUI.SetMaterialKeywords) включает _EMISSION только при AnyEmissive,
         // а с None или EmissiveIsBlack при импорте/валидации выключает его — плафон гас. Realtime GI в Lobby выключен,

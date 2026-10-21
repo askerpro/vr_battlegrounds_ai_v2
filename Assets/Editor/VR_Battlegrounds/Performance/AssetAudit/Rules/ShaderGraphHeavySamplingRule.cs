@@ -33,7 +33,7 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
 
         public override string FixHint =>
             "Большие поверхности — URP Baked Lit с одной текстурой (детали запечь в текстуру/vertex color) и box-UV вместо world-aligned " +
-            "(фиксеры scene-detail: BoxUvModelPostprocessor, BakedLitMaterialConverter). В графе: Branch по свойству → Keyword, " +
+            "(фиксеры scene-detail: BoxUvModelPostprocessor, BakedLitMaterialFixer). В графе: Branch по свойству → Keyword, " +
             "убрать неиспользуемые слои, нормали вдали.";
 
         public void CheckShader(Shader shader, string assetPath, AuditContext context)

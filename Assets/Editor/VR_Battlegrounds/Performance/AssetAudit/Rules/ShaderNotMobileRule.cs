@@ -40,7 +40,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
 
         public override string FixHint =>
             "Статичный декор и большие поверхности — URP Baked Lit + лайтмапа (1–2 выборки); освещаемое динамикой — Simple Lit; " +
-            "далёкое/эмиссивное — Unlit. Сначала «замена прежде оптимизации»: дешёвый шейдер вместо настройки дорогого.";
+            "далёкое/эмиссивное — Unlit. Сначала «замена прежде оптимизации»: дешёвый шейдер вместо настройки дорогого. " +
+            "Фиксер правила — BakedLitMaterialFixer (S_BasicTextured, S_Foliage, URP Lit → Baked Lit / Simple Lit).";
 
         public void CheckMaterial(Material material, string assetPath, AuditContext context)
         {
@@ -63,6 +64,7 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
                     critical ? AuditSeverity.Critical : DefaultSeverity)
                 .WithGroup("shader:" + shader.name)
                 .WithItem(label)
+                .WithFixTarget(assetPath)
                 .WithMetric("shader", shader.name)
                 .WithMetric("passes", shader.passCount);
         }

@@ -740,7 +740,15 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 if (!SceneManager.GetSceneByPath(context.DiagnosticInput.RequestedSceneId).isLoaded && MapLoader.Instance != null &&
                     !MapLoader.Instance.IsLoading)
-                    MapLoader.Instance.LoadMap(Path.GetFileNameWithoutExtension(context.DiagnosticInput.RequestedSceneId));
+                {
+                    // Отказ MapLoader — сразу в вердикт: иначе причина теряется до таймаута ожидания MapRun.
+                    string sceneName = Path.GetFileNameWithoutExtension(context.DiagnosticInput.RequestedSceneId);
+                    if (!MapLoader.Instance.CanAcceptLoad(sceneName, out string refusal) || !MapLoader.Instance.LoadMap(sceneName))
+                    {
+                        result.Summary = $"MapLoader отказал в загрузке '{sceneName}': {refusal ?? "LoadMap вернул false"}";
+                        yield break;
+                    }
+                }
                 var mapReady = new E2EWaitOutcome();
                 yield return E2EWait.Until(mapReady, "сервер загрузил canonical MapRun", Remaining(startDeadline),
                     () => PerfStressDiagnosticAdapter.MapReady(context, out _, out _), DescribeServer);

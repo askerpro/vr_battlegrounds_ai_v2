@@ -1,0 +1,23 @@
+{
+  "summary": "r3: дельта к gpu-launch-inputs r2 — quality.discoveryOnly и not-applicable ffr/cpuLevel/gpuLevel для rendered Windows клиента без XR",
+  "motivation": "Follow-up P2 ревью launch-infra задачи scene-detail (раунды 1-3): E2EDiagnosticSession.cs:477-493,788,810,936-946 расширяет r2 сверх dto-v2:144-155; контракт фиксирует существующее поведение, код не меняется",
+  "transition_cost": "Нет кода: поведение уже в origin/dev c7b8d6ab3. Владелец quest-perf-pipeline переносит r3 в свою папку contracts штатной ревизией; до этого нормативны r2 + этот файл",
+  "aspects": ["run-spec", "runtime-events", "windows-rendered"],
+  "compatibility": "additive",
+  "structural": false,
+  "providing_stage": "gpu-launch-inputs",
+  "document": "tasks/scene-detail-followups/contracts/gpu-launch-inputs-rev3.md",
+  "document_sha256": "a1810570dbea9540c478920374e999a662e77fb0549cf6d4deafdf4ddafb1086",
+  "dto_document": "tasks/quest-perf-pipeline/contracts/gpu-launch-dto-v2.md",
+  "dto_document_sha256": "a64c9625ee3cf5416f765c493b736334ff9a133f2393fe8872b695f28d490e64",
+  "consumers": ["perf-stress-scenario"],
+  "invariants": [
+    "Базой остаются gpu-launch-inputs r2 (c41b67d6...) и dto-v2 (a64c9625...); DTO, конструкторы, коды отказов и envelope не меняются",
+    "discoveryOnly — необязательный bool; отсутствие = false и прежняя валидация r2; true требует requestedFingerprint=null, mode=live, capture.kind=none",
+    "discoveryOnly=true запрещает workload.ready (missing-evidence) и, значит, capture.ready; discovery не GPU/A/B замер",
+    "not-applicable только для ffr/cpuLevel/gpuLevel при политике vrb-gpu-platform-v1, точной Reason и проверке session по фактическому runtime (WindowsPlayer, не batchmode, XR off, client-*, graphics backend не Null)",
+    "Для Quest, сервера и rendered клиента с XR исключения нет: null required key даёт unknown-conditions при ready",
+    "Правило dto-v2 «неполные условия не разрешают ready» сохраняется; qualityFingerprintMethod входит в required conditions ready",
+    "Совместимо с quality-discovery-v1 (81fb20cf...) и runtime-adapter-v1 (2bc22de2...) задачи scene-detail"
+  ]
+}

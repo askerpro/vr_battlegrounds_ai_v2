@@ -545,11 +545,15 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-QuestE2E.ps1 -HeadPose of
 сервера (или есть блокирующее), дирижёр отказывает и печатает готовые `New-NetFirewallRule`/`netsh` — их выполняет
 человек с правами администратора; сам скрипт брандмауэр не меняет.
 
-Порядок: сервер → заглушка `server.json` → `KEYCODE_WAKEUP`, `prox_close`, `logcat -c` → `am start -S -W -n
-<pkg>/<activity> -e unity "<аргументы>"` с `-e2eQuitOnFinish` и результатом в `/sdcard/Android/data/<pkg>/files/e2e/
-<прогон>/client-1.json` → опрос обоих вердиктов до статуса ≠ `started` или таймаута. В `finally` всегда: `am
-force-stop`, гашение своего серверного PID и потомков, `automation_disable`, `KEYCODE_SLEEP`, logcat, сбор,
-`run.json`.
+Порядок: проба `readlink -f /sdcard` (канонический external storage: `/storage/emulated/0` или
+`/storage/self/primary`, иначе код 2 через `finally`) → сервер → заглушка `server.json` → `KEYCODE_WAKEUP`,
+`prox_close`, `logcat -c` → `am start -S -W -n <pkg>/<activity> -e unity "<аргументы>"` с `-e2eQuitOnFinish` и
+результатом в `<storage>/Android/data/<pkg>/files/e2e/<прогон>/client-1.json` (обычно `/storage/emulated/0/...`) →
+опрос обоих вердиктов до статуса ≠ `started` или таймаута. Путь канонический, а не `/sdcard/...`: Unity отдаёт
+`persistentDataPath` в каноническом виде, и Player строго проверяет, что RunSpec и артефакты лежат внутри него;
+`/sdcard` — Android symlink, и его alias разрешает дирижёр, а не Player. В `finally` всегда: `am force-stop`, гашение
+своего серверного PID и потомков, `automation_disable`, logcat, pull результата, diagnostic stage и артефактов,
+`run.json`, и последним — `KEYCODE_SLEEP` (adb по Wi-Fi во сне надёжен лишь несколько минут, а pull длится до 600 с).
 
 **После теста шлем — обратно в сон** (решение пользователя 2026-10-20): любой инструмент, который будил шлем
 (`KEYCODE_WAKEUP`/`prox_close`), в конце работы при любом исходе отправляет `input keyevent KEYCODE_SLEEP`, иначе
@@ -613,7 +617,8 @@ logcat за прогон потоком — кольцевой буфер шле
 
 Дирижёр копирует файл в папку прогона (`views.json`), в persistentDataPath сервера
 (`%USERPROFILE%\AppData\LocalLow\<companyName>\<productName>\e2e\<прогон>\views.json`, имена из ProjectSettings этого
-checkout) и на шлем (`mkdir -p`, `adb push` в `/sdcard/Android/data/<pkg>/files/e2e/<прогон>/views.json`) и передаёт обеим
+checkout) и на шлем (`mkdir -p`, `adb push` в `<storage>/Android/data/<pkg>/files/e2e/<прогон>/views.json`, `<storage>` — из
+пробы `readlink -f /sdcard`) и передаёт обеим
 сторонам `-e2eArg views=e2e/<прогон>/views.json` — путь от persistentDataPath. В `run.json` — блок `views` (`source`,
 `sha256`, `count`, `names`, `arg`, пути копий, `pushed`, `serverCopied`).
 

@@ -36,3 +36,18 @@
 - Риск, найденный чтением (дефект gameplay): повтор NextMap/Stop во время перехода — `IsAvailable` не учитывает
   `MapLoader.IsLoading`, а `Series` меняет индекс/команды до того, как загрузчик принял запрос (пропуск карты,
   игроки без команд на карте 2). NextMap посреди матча запрещён правилом (продуктовое решение).
+
+## Итерация 1 — клиент-админ (2026-10-22)
+
+- Операции скрипта: `admin-rights` (`DebugMode.Set(true)` → ждёт реплицированный `IsAdmin`), `admin-command`
+  (ждёт `AdminMapCommands.IsAvailable`, шлёт `CmdAdminMapCommand`, ждёт `MapState`), `admin-command-denied`
+  (не-админ шлёт ту же команду, состояние карты не меняется `seconds`). Список команд `InputScript.AdminCommands`
+  совпадает с `MapCommand` (тест).
+- Оракул `scripted-admin-pause` (только чтение): права ровно у одного клиента; Live без серверного вызова GoLive;
+  отказ не-админу (лог `Pause отклонена: <имя> не админ`, карта Live, режим тот же); пауза — `WarmupMode`
+  с `MapState=Paused`, все живы, руки пусты, `MatchEconomy.Current == null`; продолжение — новый режим (другой
+  netId), раунд тот же, деньги = снимок начала раунда, готовность сброшена. Лог исполнения `<имя>: <cmd>.`
+  (Info канала Match) — только диагностика.
+- Прогон: worker ticket 997, run `ae5e9b0d69014d8195765cf4ff664502` — сервер и оба клиента зелёные, логи
+  без ошибок (кроме шума Package Manager у клонов). Сбой стенда до этого (`LaunchNotReady`, MPPM Idle,
+  ticket 991) — infra_issue 11375/11439.

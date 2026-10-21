@@ -19,7 +19,8 @@ namespace VrBattlegrounds.Tests.DevTools
     /// </summary>
     public class ScriptedInputTests
     {
-        private static readonly string[] BuiltInScripts = { "input-smoke", "wall-purchase", "combat-hit", "combat-round" };
+        private static readonly string[] BuiltInScripts =
+            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -161,6 +162,38 @@ namespace VrBattlegrounds.Tests.DevTools
         }
 
         [Test]
+        public void CombatNextRound_GhostsGoHomeThenBuyAndGetReadyAgain()
+        {
+            InputScript script = InputScript.Load("combat-next-round", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int verified = Index(script, s => s.op == "wait-server" && s.name == "round-verified");
+            int home = Index(script, s => s.op == "walk" && s.target == "own-spawn-point", verified);
+            int equipment = Index(script, s => s.op == "wait-server" && s.name == "equipment-2", verified);
+            int rebuy = Index(script, s => s.op == "grab-wall-item", equipment);
+            int bought = Index(script, s => s.op == "step" && s.name == "grabbed-2", equipment);
+            int tag = Index(script, s => s.op == "grab-dog-tag", bought);
+            int zone = Index(script, s => s.op == "walk" && s.target == "own-spawn-point", tag);
+
+            Assert.That(verified, Is.GreaterThan(0), "раунд 2 начинается после Resolution раунда 1");
+            Assert.That(home, Is.GreaterThan(verified).And.LessThan(equipment),
+                "призраки идут домой до Equipment: Setup ждёт всех в своих зонах, возрождение — входом в зону");
+            Assert.That(script.steps[home].client, Is.Zero, "домой идут оба — стрелок выбыл молча в Resolution");
+            Assert.That(rebuy, Is.GreaterThan(equipment), "снаряжение снято в Resolution — покупка заново");
+            Assert.That(script.steps[rebuy].item, Is.EqualTo("pistol"));
+            Assert.That(bought, Is.GreaterThan(rebuy), "grabbed-2 несёт netId покупки раунда 2 для кассы сервера");
+            Assert.That(tag, Is.GreaterThan(bought), "готовность раунда 2 — снова жетоном");
+            Assert.That(zone, Is.GreaterThan(tag), "Countdown держится, пока живой игрок вне своей зоны");
+        }
+
+        private static int Index(InputScript script, System.Func<InputStep, bool> match, int after = -1)
+        {
+            for (int i = after + 1; i < script.steps.Length; i++)
+                if (match(script.steps[i])) return i;
+            return -1;
+        }
+
+        [Test]
         public void ShootingSummary_FitsBarrierStepData()
         {
             var outcome = new ScriptedGunner.Outcome
@@ -226,6 +259,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(E2ERunner.IsRegistered("scripted-wall-purchase"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-hit"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-round"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-combat-next-round"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

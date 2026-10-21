@@ -38,7 +38,9 @@
         "Assets/Scripts/Weapons/WeaponSystem/**",
         "Assets/Scripts/Weapons/Core/**",
         "Assets/ThirdParty/UltimateXR/Runtime/Scripts/Mechanics/Weapons/UxrFirearmWeapon.Readiness.cs",
-        "Assets/Tests/EditMode/Weapons/**"
+        "Assets/Tests/EditMode/Weapons/**",
+        "Assets/Scripts/Player/Input.meta",
+        "Assets/Tests/EditMode/Bots/**"
       ],
       "after": [],
       "needs": []

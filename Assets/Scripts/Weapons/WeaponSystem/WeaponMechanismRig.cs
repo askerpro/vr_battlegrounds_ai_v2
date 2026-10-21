@@ -236,7 +236,6 @@ namespace VrBattlegrounds.Weapons
             return true;
         }
 
-        /// <summary>Action физически в покое: ручка и каждая деталь в своей локальной позе покоя.</summary>
         /// <summary>
         /// Только диагностика (лог Initialize): какая привязка Action вне покоя и на сколько; «в покое» — все в покое.
         /// </summary>
@@ -258,6 +257,7 @@ namespace VrBattlegrounds.Weapons
             return "в покое";
         }
 
+        /// <summary>Action физически в покое: ручка и каждая деталь в своей локальной позе покоя.</summary>
         public bool IsAtRest()
         {
             if (!_prepared) return false;

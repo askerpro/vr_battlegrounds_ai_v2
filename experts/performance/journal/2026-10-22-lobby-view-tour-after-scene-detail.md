@@ -10,7 +10,7 @@ map-only без кукол, `scene_detail=lod-a`, те же 8 видов `tasks/
 - База (ovr_gpu = AppGPUTime p50, медиана 3 прогонов): west-station 5,45, center-east 4,95, center-south 4,54,
   south-edge 4,31, center-north 4,29, north-edge 3,65, east-edge-ne 3,32, east-edge-se 2,82. Все 8 видов ≤ 7 мс;
   максимум одного прогона 5,96 (west-station). 2026-10-14: 10,83 … 4,59, выше 7 — 6 из 8.
-- Кадр 72 Гц держит: dt p50 13,9, p95 ≤ 15,9; GPU util p50 28–46 % (было 40–85 %).
+- Кадр 72 Гц держит: dt p50 13,9, p95 ≤ 16,0; GPU util p50 28–46 % (было 40–85 %).
 - Ориентиры не достигнуты: setpass 37–89 (center-north 89), tris до 243k (west-station). Бюджета на них нет
   (backlog `budget-baseline`).
 - Куклы не перемерялись: прежний вывод (CPU-bound до 18,4 мс с куклами в кадре) остаётся открытым.

@@ -1,0 +1,49 @@
+{
+  "task_id": "astc-fixer",
+  "owner": "astc-fixer",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/astc-fixer",
+  "base_sha": "9d44e8f9147da4acad972075a8e67810278a9129",
+  "doc_path": "tasks/astc-fixer/Readme.md",
+  "title": "Фиксер ASTC для несжатых текстур паков",
+  "branch": "task/astc-fixer",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/astc-fixer/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Tests/EditMode/AssetAudit/**",
+        "experts/performance/journal/2026-10-21-astc-fixer.md",
+        "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Textures/T_ElectricPole_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Textures/T_LampPost_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Textures/T_Lamp_02_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Textures/T_Lamp_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_AlarmLight_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_ArmyCot_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Brick_02_ORMH.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_BunkBed_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_CardboardTarget_mechanism_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_CardboardTargets_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Cliff_02_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Door_lamp_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Generator_01_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Generator_02_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_GroundIntense_ORMH.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Ground_ORMH.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Lamp_long_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_MicroDetails_Mask.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_MilitaryRadio_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Rock_01_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Rock_02_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Rock_03_ORM.png.meta",
+        "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Tent_a_ORM.png.meta",
+        "Assets/Art/Lobby/Interior/Imported/ConvertedMaps/M_Chair_02_MetallicSmoothness.png.meta",
+        "Assets/Art/Lobby/Interior/Imported/ConvertedMaps/M_Chair_02_Occlusion.png.meta",
+        "Assets/Art/Lobby/Interior/Imported/RuralTown/URP/Art/Textures/T_Chair_02_ORM.png.meta"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

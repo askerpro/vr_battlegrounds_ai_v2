@@ -440,6 +440,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ScriptedClientScenario(ScriptedClientScenario.PurchaseName, "wall-purchase");
             yield return new ScriptedClientScenario(ScriptedClientScenario.CombatHitName, "combat-hit");
             yield return new ScriptedClientScenario(ScriptedClientScenario.CombatRoundName, "combat-round");
+            yield return new ScriptedClientScenario(ScriptedClientScenario.CombatSeriesName, "combat-next-round");
         }
 
         /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>

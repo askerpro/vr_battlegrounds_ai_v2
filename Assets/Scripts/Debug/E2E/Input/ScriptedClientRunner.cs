@@ -38,6 +38,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         private const float CarryDown = 0.5f;
         private const float CarryForward = 0.3f;
         private const float CarryPitch = 45f;
+        private const float CarrySettleSeconds = 3f;
 
         /// <summary>Наименьшая ровность оружия (крен вокруг ствола до ≈ 25°) при переноске и выстреле.</summary>
         private const float UprightMin = 0.9f;
@@ -104,7 +105,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 case "choose-team": return ChooseTeam(step, label);
                 case "grab-wall-item": return GrabWallItem(step, label);
                 case "grab-dog-tag": return GrabDogTag(step, label);
-                case "carry": return Instant(() => Carry(step, label));
+                case "carry": return Carry(step, label);
                 case "shoot-enemy": return ShootEnemy(step, label);
                 case "expect-eliminated": return ExpectEliminated(step, label);
                 case "release": return Release(step, label);
@@ -365,15 +366,32 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             if (!grabbed.Succeeded) Fail(label, grabbed.Diagnosis);
         }
 
-        private void Carry(InputStep step, string label)
+        /// <summary>
+        /// Опустить предмет в позу переноски и дождаться, пока рука до неё дойдёт: человек сначала опускает
+        /// оружие, потом идёт, — шаги ходьбы проверяют, что оружие несут ровно.
+        /// </summary>
+        private IEnumerator Carry(InputStep step, string label)
         {
             UxrHandSide side = Side(step);
             UxrAvatar avatar = E2EScriptedInput.Avatar;
             UxrGrabber grabber = avatar != null ? avatar.GetGrabber(side) : null;
             if (grabber == null || grabber.GrabbedObject == null) Fail(label, $"в руке {side} нечего нести");
 
+            UxrGrabbableObject held = grabber.GrabbedObject;
             CarryHeld(side);
-            Pass(label, $"{grabber.GrabbedObject.name} в руке {side}: ствол вперёд-вниз, верх вверх; Grip держится");
+            Transform frame = ScriptedGunner.AimFrame(held);
+            float deadline = Now + CarrySettleSeconds;
+            int stable = 0;
+            float level = ScriptedGunner.Level(frame);
+            while (stable < 3)
+            {
+                level = ScriptedGunner.Level(frame);
+                stable = level >= UprightMin ? stable + 1 : 0;
+                if (Now > deadline) Fail(label, $"{held.name} не дошёл до позы переноски за {CarrySettleSeconds:0.#} с: ровность {F(level)}");
+                yield return null;
+            }
+
+            Pass(label, $"{held.name} в руке {side}: ствол вперёд-вниз, верх вверх (ровность {F(level)}); Grip держится");
         }
 
         /// <summary>
@@ -544,7 +562,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
 
         private void ReachStep(InputStep step, string label)
         {
-            string data = step.name == "grabbed" ? "netId=" + GrabbedNetId.ToString(CultureInfo.InvariantCulture)
+            // grabbed, grabbed-2, … — покупка раунда: netId взятого предмета для кассы сервера.
+            string data = step.name.StartsWith("grabbed", System.StringComparison.Ordinal)
+                        ? "netId=" + GrabbedNetId.ToString(CultureInfo.InvariantCulture)
                         : step.name == "shot" ? (LastShooting != null ? LastShooting.StepData() : "role=target")
                         : null;
             if (!_context.Step(step.name, data)) Fail(label, "шаг не принят барьером (лимиты имени/данных)");

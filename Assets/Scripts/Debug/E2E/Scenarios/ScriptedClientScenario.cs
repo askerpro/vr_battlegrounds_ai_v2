@@ -47,6 +47,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         public const string PurchaseName = "scripted-wall-purchase";
         public const string CombatHitName = "scripted-combat-hit";
         public const string CombatRoundName = "scripted-combat-round";
+        public const string CombatSeriesName = "scripted-combat-next-round";
 
         private const string CheckClients = "сервер: клиенты подключены обычными соединениями, ботов нет";
         private const string CheckWalked = "сервер: голова каждого клиента ушла от корня (поза реплицирована)";
@@ -62,6 +63,10 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         private const string CheckKill = "сервер: жертва убита стрелком — PlayerKilled, выбыла, тело заменено";
         private const string CheckKillReward = "сервер: касса начислила стрелку награду за убийство оружием из покупки";
         private const string CheckRound = "сервер: Resolution — раунд и счёт за командой стрелка, деньги за раунд";
+        private const string CheckNextRound = "сервер: раунд 2 — Equipment, готовность сброшена, оба живы в своих зонах, руки пусты";
+        private const string CheckCarryOver = "сервер: деньги раунда 1 перенесены в раунд 2 без сброса";
+        private const string CheckRebuy = "сервер: касса провела покупку каждого клиента в раунде 2";
+        private const string CheckReadyAgain = "сервер: готовность раунда 2 — снова жетонами, бой не по пределу ожидания";
 
         private const string ShooterRole = "client-1";
         private const string TargetRole = "client-2";
@@ -163,11 +168,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private IEnumerator RunPurchaseServer(E2EContext context, E2EResult result)
         {
-            bool round = _name == CombatRoundName;
+            bool series = _name == CombatSeriesName;
+            bool round = series || _name == CombatRoundName;
             bool combat = round || _name == CombatHitName;
             result.Declare(CheckClients, CheckTeams, CheckLive, CheckEquipment, CheckWalls, CheckPurchase);
             if (combat) result.Declare(CheckCombat, CheckShotReplayed, CheckDamage);
             if (round) result.Declare(CheckReadiness, CheckKill, CheckKillReward, CheckRound);
+            if (series) result.Declare(CheckNextRound, CheckCarryOver, CheckRebuy, CheckReadyAgain);
             DebugBootstrapGate.Suppress("E2E: дирижёр прогона — сценарий");
 
             yield return E2EBarrier.WaitClients(context, "input-active", 90f);
@@ -225,6 +232,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
                 context.ServerStep("oracle-done");
                 if (combat) yield return RunCombatHit(context, result, mode, round);
+                if (series) yield return RunNextRound(context, result, mode);
                 yield return E2EBarrier.WaitClients(context, "done", 90f);
             }
             finally
@@ -233,6 +241,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             result.Summary = !result.AllChecksGreen ? "см. проверки"
+                : series ? "два раунда вводом: убийство и Resolution, затем раунд 2 — возрождение, перенос денег, покупка, жетоны"
                 : round ? "раунд сыгран вводом: жетоны, убийство курком, Resolution — счёт и деньги за командой стрелка"
                 : combat ? "скриптовый клиент выстрелил курком в противника, сервер увидел урон от его актора"
                 : "скриптовые клиенты купили оружие со своих стен вводом, касса провела покупки";
@@ -355,6 +364,99 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
         }
 
+        // ══════════════════════════════════════════════════════════════════
+        //  Сервер: следующий раунд
+        // ══════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// После Resolution раунда 1: призраки вернулись в зоны и возродились, раунд 2 в Equipment с чистой
+        /// готовностью и пустыми руками, деньги перенесены; клиенты покупают снова и снимают жетоны — бой раунда 2
+        /// начинается по готовности, а не по пределу ожидания.
+        /// </summary>
+        private IEnumerator RunNextRound(E2EContext context, E2EResult result, EliminationMode mode)
+        {
+            var sessions = new List<PlayerSession>(HumanSessions());
+            var afterRound = new Dictionary<PlayerSession, int>();
+            foreach (PlayerSession session in sessions) afterRound[session] = Money(session);
+            int firstRound = mode.CurrentRoundNumber;
+            int transactionsBefore = _transactions.Count;
+
+            E2EWaitOutcome next = new E2EWaitOutcome();
+            yield return E2EWait.Until(next, $"раунд {firstRound + 1}: фаза Equipment", 120f,
+                () => mode.CurrentRoundNumber == firstRound + 1 && mode.CurrentRoundPhase == RoundPhase.Equipment,
+                () => $"раунд {mode.CurrentRoundNumber}, фаза {mode.CurrentRoundPhase}; {DescribeZones()}");
+
+            bool ok = next.Succeeded;
+            var report = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                bool alive = session.ActiveAvatar != null && session.ActiveAvatar.IsAlive && !session.IsEliminated;
+                bool reset = !session.ReadyState && !session.HasGrabbedDogTag;
+                bool empty = HandsEmpty(session);
+                ok &= alive && session.IsInSpawnZone && reset && empty;
+                report.Add($"{session.PlayerName}: жив={alive}, в зоне={session.IsInSpawnZone}, готовность сброшена={reset}, " +
+                           $"руки пусты={empty}");
+            }
+
+            result.Set(CheckNextRound, ok, $"{next.Diagnosis}; " + string.Join("; ", report));
+            if (!next.Succeeded) Abort(result, "раунд 2 не начался");
+
+            bool carried = true;
+            var money = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                int now = Money(session);
+                carried &= now == afterRound[session];
+                money.Add($"{session.PlayerName}: {afterRound[session]}→{now}");
+            }
+
+            var reasons = new List<string>();
+            for (int i = transactionsBefore; i < _transactions.Count; i++)
+                reasons.Add($"{_transactions[i].Reason} {_transactions[i].Delta:+0;-0}");
+            result.Set(CheckCarryOver, carried,
+                string.Join("; ", money) + $"; транзакции между раундами: {(reasons.Count > 0 ? string.Join(", ", reasons) : "нет")}");
+
+            var before = new Dictionary<PlayerSession, int>();
+            foreach (PlayerSession session in sessions) before[session] = Money(session);
+            context.ServerStep("equipment-2");
+
+            Dictionary<string, string> grabbed = null;
+            yield return E2EBarrier.WaitClients(context, "grabbed-2", 120f, onReached: d => grabbed = new Dictionary<string, string>(d));
+            yield return E2EWait.Hold(1.5f);
+            CheckPurchases(result, grabbed, before, CheckRebuy);
+            context.ServerStep("rebuy-verified");
+
+            yield return E2EBarrier.WaitClients(context, "in-zone-2", 60f);
+            E2EWaitOutcome fight = new E2EWaitOutcome();
+            yield return E2EWait.Until(fight, $"раунд {firstRound + 1}: Countdown или Combat", 60f,
+                () => mode.CurrentRoundNumber == firstRound + 1 &&
+                      (mode.CurrentRoundPhase == RoundPhase.Countdown || mode.CurrentRoundPhase == RoundPhase.Combat),
+                () => $"раунд {mode.CurrentRoundNumber}, фаза {mode.CurrentRoundPhase}; {DescribeZones()}");
+            bool limit = mode.RoundPhases.Readiness.LimitExpired;
+            bool tags = true;
+            var ready = new List<string>();
+            foreach (PlayerSession session in sessions)
+            {
+                tags &= session.HasGrabbedDogTag;
+                ready.Add($"{session.PlayerName}: жетон={session.HasGrabbedDogTag}");
+            }
+
+            result.Set(CheckReadyAgain, fight.Succeeded && !limit && tags,
+                $"{fight.Diagnosis}; предел ожидания истёк={limit}; " + string.Join(", ", ready));
+            context.ServerStep("series-verified");
+        }
+
+        private static int Money(PlayerSession session) =>
+            MatchEconomy.Current != null && session != null ? MatchEconomy.Current.GetMoney(session) : -1;
+
+        private static bool HandsEmpty(PlayerSession session)
+        {
+            UxrAvatar avatar = AvatarOf(session);
+            if (avatar == null) return false;
+            return !UxrGrabManager.Instance.GetObjectBeingGrabbed(avatar, UltimateXR.Core.UxrHandSide.Left, out _) &&
+                   !UxrGrabManager.Instance.GetObjectBeingGrabbed(avatar, UltimateXR.Core.UxrHandSide.Right, out _);
+        }
+
         /// <summary>Сервер объявил смерть жертвы от стрелка; жертва выбыла, тело сменилось (призрак).</summary>
         private void VerifyKill(E2EResult result, PlayerSession shooter, PlayerSession target, PlayerController targetBody)
         {
@@ -452,7 +554,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             return controller != null ? controller.GetComponent<UxrActor>() : null;
         }
 
-        private void CheckPurchases(E2EResult result, Dictionary<string, string> grabbed, Dictionary<PlayerSession, int> before)
+        private void CheckPurchases(E2EResult result, Dictionary<string, string> grabbed, Dictionary<PlayerSession, int> before,
+                                    string check = CheckPurchase)
         {
             var report = new List<string>();
             bool ok = grabbed != null;
@@ -497,7 +600,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             }
 
             ok &= byNetId.Count >= 2;
-            result.Set(CheckPurchase, ok, string.Join("; ", report));
+            result.Set(check, ok, string.Join("; ", report));
         }
 
         private void OnTransaction(EconomyTransaction transaction) => _transactions.Add(transaction);

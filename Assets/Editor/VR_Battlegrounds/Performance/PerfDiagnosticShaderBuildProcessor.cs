@@ -10,8 +10,9 @@ namespace VrBattlegrounds.Editor.Performance
     /// <summary>
     /// Кладёт диагностический шейдер E2E (PerfPlanarFloor, render_diag) только в Development-сборки (конфигурация Test).
     /// Шейдер лежит вне Resources, поэтому в Prod не попадает: e2e-харнесс там вырезан (VRBG_NO_E2E).
-    /// В копию первой сцены сборки добавляется скрытый объект с выключенным MeshRenderer и материалом на этом шейдере —
-    /// ссылка из сцены включает шейдер в сборку, и рантайм находит его через Shader.Find. Исходная сцена не сохраняется.
+    /// В копию каждой сцены сборки добавляется скрытый объект с выключенным MeshRenderer и материалом на этом шейдере:
+    /// ссылка из сцены включает шейдер в сборку, а загруженная сцена (Lobby, карта) держит его загруженным, чтобы рантайм
+    /// нашёл его через Shader.Find после выгрузки Offline. Исходные сцены не сохраняются.
     /// </summary>
     public sealed class PerfDiagnosticShaderBuildProcessor : IProcessSceneWithReport
     {
@@ -23,8 +24,7 @@ namespace VrBattlegrounds.Editor.Performance
 
         public void OnProcessScene(Scene scene, BuildReport report)
         {
-            if (!BuildPipeline.isBuildingPlayer || report == null || (report.summary.options & BuildOptions.Development) == 0 ||
-                scene.buildIndex != 0) return;
+            if (!BuildPipeline.isBuildingPlayer || report == null || (report.summary.options & BuildOptions.Development) == 0) return;
 
             var shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPath);
             if (shader == null)

@@ -378,8 +378,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                 m.SetTexture("_EmissionMap", emissionMap);
                 m.SetColor("_EmissionColor", emissionColor);
                 m.EnableKeyword("_EMISSION");
-                // AnyEmissive обязателен: с None/EmissiveIsBlack URP выключит _EMISSION при импорте (QPM-SHADER-006).
-                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+                // AnyEmissive обязателен: с None/EmissiveIsBlack URP выключит _EMISSION при импорте. RealtimeEmissive, а не
+                // BakedEmissive: свет запекают настоящие источники, эмиссия не должна второй раз идти в лайтмапы (QPM-SHADER-006).
+                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
 
             EditorUtility.SetDirty(m);

@@ -208,7 +208,8 @@ namespace VrBattlegrounds.EditorTools
             material.SetColor("_EmissionColor", WarmLamp);
             // RealtimeEmissive, а не EmissiveIsBlack: с ним URP выключает _EMISSION (QPM-SHADER-006, правило аудитора
             // material.emission-off). Realtime GI выключен — эмиссия видна, но второй раз в свет не идёт (свет ламп запекают
-            // настоящие источники). Дальше материал ведут фиксеры аудитора (shader.non-mobile → Simple Lit с эмиссией).
+            // настоящие источники). Пресет создаёт материал один раз; потерянное свечение возвращает фиксер аудитора
+            // EmissionOffFixer (правило material.emission-off).
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             AssetDatabase.CreateAsset(material, path);
             log.AppendLine("Создан материал " + path + " из " + sourcePath);

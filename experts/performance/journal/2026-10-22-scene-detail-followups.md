@@ -13,7 +13,8 @@ _EMISSION → ярус принял за неэмиссивную → Baked Lit)
 
 Хвосты ревью: PerfPlanarFloor вне Resources (в Development-сборку — `PerfDiagnosticShaderBuildProcessor`, в Prod нет;
 сборкой не проверено), Tools/Perf/README (ссылки, раздел Meta RenderDoc), заметка о буфере PerfDiagnosticRecorder
-(~7 МиБ по коду, не замер), меню Lobby GPU под Tools.
+(~7 МиБ по коду, не замер), меню Lobby GPU под Tools. Держатель шейдера — в каждой сцене Development-сборки (Shader.Find
+после выгрузки Offline); эмиссия после фиксеров — RealtimeEmissive (BakedEmissive дал бы вклад в лайтмапы).
 
 Попутно: `material.emission-off` ловит ещё M_Glass_Inst (Lobby), OwnerIndicator, DustPuffParticle_NoSoft и сэмплы UXR;
 в Lobby 3 розовых материала (MI_Emissive, MI_TopLight, «No Name»).

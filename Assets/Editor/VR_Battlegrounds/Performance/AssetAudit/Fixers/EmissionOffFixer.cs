@@ -99,6 +99,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
             Vector2 offset = m.HasProperty("_BaseMap") ? m.GetTextureOffset("_BaseMap") : Vector2.zero;
             Color color = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white;
             color.a = 1f;
+            // Alpha clip сохраняется: без него у cutout-материала пропало бы отсечение.
+            bool cutout = m.IsKeywordEnabled("_ALPHATEST_ON");
+            float cutoff = m.HasProperty("_Cutoff") ? m.GetFloat("_Cutoff") : 0.5f;
             m.shader = simpleLit;
             m.shaderKeywords = Array.Empty<string>();
             m.SetTexture("_BaseMap", baseMap);
@@ -106,9 +109,19 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
             m.SetTextureOffset("_BaseMap", offset);
             m.SetColor("_BaseColor", color);
             m.SetFloat("_Surface", 0f);
-            m.SetFloat("_AlphaClip", 0f);
-            m.SetOverrideTag("RenderType", "Opaque");
-            m.renderQueue = (int)RenderQueue.Geometry;
+            m.SetFloat("_AlphaClip", cutout ? 1f : 0f);
+            m.SetFloat("_Cutoff", cutoff);
+            if (cutout)
+            {
+                m.EnableKeyword("_ALPHATEST_ON");
+                m.SetOverrideTag("RenderType", "TransparentCutout");
+                m.renderQueue = (int)RenderQueue.AlphaTest;
+            }
+            else
+            {
+                m.SetOverrideTag("RenderType", "Opaque");
+                m.renderQueue = (int)RenderQueue.Geometry;
+            }
             m.SetFloat("_ReceiveShadows", 0f);
             m.EnableKeyword("_RECEIVE_SHADOWS_OFF");
             m.SetTexture("_BumpMap", null);

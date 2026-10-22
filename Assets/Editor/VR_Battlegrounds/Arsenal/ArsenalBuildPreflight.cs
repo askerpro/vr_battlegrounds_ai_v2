@@ -201,9 +201,12 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (new SerializedObject(firearm).FindProperty("_triggers").arraySize == 0 ||
                 new SerializedObject(projectile).FindProperty("_shotTypes").arraySize < (r.PreserveDonorGameplay && (r.Pellets || r.Action == HandsPackWeaponRecipe.ActionKind.Pump) ? 2 : 1))
                 throw new InvalidOperationException("Донор не содержит спуска/типов выстрела: " + r.FirearmDonor);
-            var magazine = Required<GameObject>(r.MagazineBase);
+            // Шаблон магазина — текущий магазин ствола или, у первой сборки, готовый магазин паков; у патрона ручного
+            // заряжания счётчика UxrFirearmMag нет (его снимает ConfigureCartridge).
+            var magazine = Required<GameObject>(HandsPackWeaponBuilder.MagazineTemplate(r));
             Component<Mirror.NetworkIdentity>(magazine); Component<Rigidbody>(magazine);
-            Component<UxrGrabbableObject>(magazine); Component<UxrFirearmMag>(magazine);
+            Component<UxrGrabbableObject>(magazine);
+            if (!r.ManualLoading) Component<UxrFirearmMag>(magazine);
             if (!r.PreserveDonorGameplay) foreach (var effect in Effects) Required<GameObject>("Assets/Prefabs/Weapons/Effects/" + effect + ".prefab");
             Required<Material>(WeaponGrabHighlight.MaterialPath);
         }

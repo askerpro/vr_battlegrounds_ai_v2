@@ -1,0 +1,89 @@
+{
+    "pack": "HandsPack",
+    "item": "Uzi",
+    "weapon": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab",
+    "magazineNote": "выбран Reloading, деталь Magazine_Mesh, кадры 24–26 (0,800–0,867 с), середина 0,833 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "HandsPack_Uzi_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_Uzi_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aiming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_Uzi_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_Uzi_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "HandsPack_Uzi_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_Uzi_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Uzi/Uzi_mag.prefab",
+            "body": "Mesh",
+            "clip": "Reloading",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 0.8330000042915344,
+            "frame": 25.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_Uzi_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "Reloading",
+            "weaponClip": "",
+            "part": "Magazine_Mesh",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 3,
+            "startFrame": 24,
+            "endFrame": 26,
+            "startTime": 0.800000011920929,
+            "endTime": 0.8669999837875366,
+            "midTime": 0.8330000042915344,
+            "rigidMm": 2.5940001010894777,
+            "rigidDeg": 4.820000171661377,
+            "palmMm": 36.45600128173828,
+            "seatMm": 624.9879760742188,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "Reloading",
+            "weaponClip": "",
+            "part": "Magazine_Mesh",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 638.3770141601563,
+            "minPalmMm": 30.874000549316408
+        }
+    ]
+}

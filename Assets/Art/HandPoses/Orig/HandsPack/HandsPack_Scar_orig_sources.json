@@ -1,0 +1,110 @@
+{
+    "pack": "HandsPack",
+    "item": "Scar",
+    "weapon": "Assets/Prefabs/Weapons/Scar/Scar.prefab",
+    "magazineNote": "выбран Recharge, деталь Scar_Magazine_mesh, кадры 23–36 (0,767–1,200 с), середина 0,967 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "HandsPack_Scar_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_Scar_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Scar/Scar.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aiming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_Scar_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_Scar_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "HandsPack_Scar_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_Scar_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Scar/Scar.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aiming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_Scar_Support_orig/Left",
+                "Orig/HandsPack_Scar_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "HandsPack_Scar_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_Scar_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Scar/Scar_mag.prefab",
+            "body": "Mesh",
+            "clip": "Recharge",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 0.9670000076293945,
+            "frame": 29.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_Scar_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "Recharge",
+            "weaponClip": "",
+            "part": "Scar_Magazine_mesh",
+            "side": "Left",
+            "result": "окно",
+            "distance": "начало детали",
+            "frames": 14,
+            "startFrame": 23,
+            "endFrame": 36,
+            "startTime": 0.7670000195503235,
+            "endTime": 1.2000000476837159,
+            "midTime": 0.9670000076293945,
+            "rigidMm": 0.11599999666213989,
+            "rigidDeg": 0.0,
+            "palmMm": 66.73799896240235,
+            "seatMm": 212.64999389648438,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "Recharge",
+            "weaponClip": "",
+            "part": "Scar_Magazine_mesh",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 388.6499938964844,
+            "minPalmMm": 181.76800537109376
+        }
+    ]
+}

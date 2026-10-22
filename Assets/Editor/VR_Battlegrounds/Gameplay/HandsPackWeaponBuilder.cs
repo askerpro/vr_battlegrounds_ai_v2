@@ -51,7 +51,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public bool Pellets;           // дробь без помпы (полуавтоматический дробовик); у помпового — всегда
 
         public string UxrTag;          // тег хвата корня: по нему карманы и слоты принимают оружие
-        public string MagazineBase;    // префаб магазина, от которого делается вариант (сеть, физика, звук)
+        public string MagazineBase;    // шаблон магазина первой сборки (сеть, физика, звук); дальше шаблон — текущий магазин ствола
         public string MagazineName;    // прежнее имя ассета магазина; null — Name + "_mag"
         public string InteractionFolder; // ассеты областей подсветки; null — Art/Weapons/Interaction/<имя>
         public string MagazineGripDonor; // прежняя калибровка хвата MEF магазина; сборка его не читает (хваты аватаров не пишет)
@@ -127,7 +127,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Action            = HandsPackWeaponRecipe.ActionKind.Pump,
             LoadingPart       = "Shogun_Staple_mesh",
             UxrTag            = "Shotgun",
-            MagazineBase      = "Assets/Prefabs/Weapons/Shotgun/MagShotgun.prefab",
+            MagazineBase      = MagShotgunBase,
             MagazinePart      = "Shogun_Patron_mesh",
             MagazineTag       = "MagShotgun",
             MagazineCapacity  = 8,
@@ -159,8 +159,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         private const string M16 = "Assets/Prefabs/Weapons/AR15/AR15.prefab";
         private const string GunReal = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab";
-        private const string MagRifleBase = "Assets/Prefabs/Weapons/Machinegun/MagMachinegun.prefab";
-        private const string MagPistolBase = "Assets/Prefabs/Weapons/Gun/MagGun.prefab";
+        // Шаблон магазина первой сборки нового ствола — готовый магазин паков того же типа (базы SDK удалены 2026-10-22).
+        private const string MagRifleBase = "Assets/Prefabs/Weapons/Scar/Scar_mag.prefab";
+        private const string MagPistolBase = "Assets/Prefabs/Weapons/PPK/PPK_mag.prefab";
+        internal const string MagShotgunBase = "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab";
 
         internal static HandsPackWeaponRecipe RifleDonor(HandsPackWeaponRecipe r)
         {
@@ -312,16 +314,19 @@ namespace VrBattlegrounds.Editor.Gameplay
             WeaponGripCarryOver.RequireBuilderMode(poses, "HandsPackWeaponBuilder");
             string path = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
             string magazine = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
-            // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
-            WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
-            Build(r);
-            WeaponGripCarryOver.Restore(grips, poses);
-            // Подсветка выдаваемого отдельно магазина. Области хвата оружия сборка уже испекла по центрам ладоней
-            // пака — перенесённые хваты аватаров их не меняют.
-            WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
-            WeaponRebuildFinish.Complete(path, magazine, "HandsPackWeaponBuilder");
-            // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
-            PackOrigPoses.ExportForWeapon(path);
+            // Области: Interaction/<имя> (у стволов KINEMATION — папка ствола KINEMATION).
+            var outputs = new List<string> { "Assets/Art/Weapons/Interaction/" + r.Name, KinemationFixReview.InteractionFolder(r.Name) };
+            // Всё или ничего: отказ любого шага, включая прицел и _orig, возвращает файлы ствола к состоянию до сборки.
+            WeaponRebuildFinish.Run("HandsPackWeaponBuilder", path, magazine, outputs, () =>
+            {
+                // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
+                WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
+                Build(r);
+                WeaponGripCarryOver.Restore(grips, poses, MagazineBaseGeometry(r), SdkSampleAvatars);
+                // Подсветка выдаваемого отдельно магазина. Области хвата оружия сборка уже испекла по центрам ладоней
+                // пака — перенесённые хваты аватаров их не меняют.
+                WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
+            });
         }
 
         /// <summary>
@@ -372,7 +377,13 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// (<see cref="KinemationWeaponBuilder" />). <see cref="HandsPackWeaponRecipe.TargetLength" /> 0 — модель уже
         /// в реальном масштабе (KINEMATION), корень ×1.
         /// </summary>
-        public static GameObject Build(HandsPackWeaponRecipe r, IWeaponModel pack)
+        /// <param name="configureHost">
+        /// false — хост WeaponSystem (и трубка ручного заряжания) не настраивается: клипы затвора ставит следующий шаг
+        /// (KINEMATION — <see cref="KinemationFixReview" />, набор Hands — <c>HandsPackLegacyRebuild.InstallMotion</c>),
+        /// и вызывающий настраивает хост после них (<see cref="ConfigureHost(string, HandsPackWeaponRecipe)" />). Без клипов
+        /// профиль HoldOpen не настраивается (отказ «затвор без клипов»).
+        /// </param>
+        public static GameObject Build(HandsPackWeaponRecipe r, IWeaponModel pack, bool configureHost = true)
         {
             if (r.ManualLoading && AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile) == null)
                 throw new System.InvalidOperationException("Не задан явный профиль tube reload: " + r.ManualLoadingProfile);
@@ -394,7 +405,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Matrix4x4 bodyLocal = BodyPlacement(r, pack);
 
                 GameObject mag = BuildMagazine(r, pack, bodyLocal, scale, folder, scene);
-                GameObject weapon = BuildWeapon(r, pack, bodyLocal, scale, scene, mag);
+                GameObject weapon = BuildWeapon(r, pack, bodyLocal, scale, scene, mag, configureHost);
 
                 ImpactSoundInstaller.Apply(weapon, false);
                 // Override применяется последним: geometry/grab/ray child frames сохраняют authored local TRS.
@@ -488,7 +499,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static int MovingAxes(Vector3 value) => (Mathf.Abs(value.x) >= 1e-5f ? 1 : 0) +
             (Mathf.Abs(value.y) >= 1e-5f ? 1 : 0) + (Mathf.Abs(value.z) >= 1e-5f ? 1 : 0);
 
-        private static GameObject BuildWeapon(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, float scale, Scene scene, GameObject magPrefab)
+        private static GameObject BuildWeapon(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, float scale, Scene scene, GameObject magPrefab,
+                                              bool configureHost)
         {
             var root = new GameObject(r.Name);
             SceneManager.MoveGameObjectToScene(root, scene);
@@ -721,6 +733,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             WeaponInteractionRecipe interaction = WeaponInteractionRecipes.For(root, r, palms);
             if (r.InteractionFolder != null) interaction.AssetFolder = r.InteractionFolder;
             WeaponInteractionInstaller.Apply(root, interaction);
+            if (configureHost) ConfigureHost(root, r);
+
+            return root;
+        }
+
+        /// <summary>
+        /// Хост WeaponSystem по профилю рецепта (у ручного заряжания — вместе с трубкой и приёмником патрона): единственный
+        /// writer хоста при сборке. Вызывается, когда механика ствола (клипы затвора) уже стоит.
+        /// </summary>
+        private static void ConfigureHost(GameObject root, HandsPackWeaponRecipe r)
+        {
             if (r.ManualLoading)
                 ManualLoadingAuthoring.ConfigureWeapon(root, r.Name, r.MagazineCapacity,
                     AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(r.ManualLoadingProfile),
@@ -733,8 +756,20 @@ namespace VrBattlegrounds.Editor.Gameplay
                     WeaponSystemAuthoring.Configure(root, AssetDatabase.LoadAssetAtPath<WeaponReadinessProfile>(readiness) ??
                         throw new System.InvalidOperationException("Нет профиля готовности " + readiness));
             }
+        }
 
-            return root;
+        /// <summary>Отложенный хост (<c>Build(..., configureHost: false)</c>) на сохранённом префабе после установки клипов затвора.</summary>
+        public static void ConfigureHost(string path, HandsPackWeaponRecipe r)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                ConfigureHost(root, r);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+            // SaveAsPrefabAsset пишет _assetId = 0 — вернуть канон.
+            VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { path }, false);
         }
 
         /// <summary>Помпа или затвор: ход из клипа либо сохранённая ручная механика immutable донора.</summary>
@@ -776,6 +811,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                 pump.FindProperty("_localPumpDirection").vector3Value = travel.normalized;
                 pump.FindProperty("_localPumpOffset").vector3Value = travel;
                 pump.ApplyModifiedPropertiesWithoutUndo();
+                // С этапа drive помпой управляет хост WeaponSystem: компонент — только источник хода, порога и звуков
+                // для WeaponSystemAuthoring.Configure, который его затем снимает. Включённый он считается legacy-помпой.
+                ((UxrShotgunPump)pump.targetObject).enabled = false;
 
                 // Помпа идёт за смещением руки с момента хвата, иначе запаздывает на промах хвата.
                 var follow = new SerializedObject(root.AddComponent<PumpGrabFollow>());
@@ -831,21 +869,24 @@ namespace VrBattlegrounds.Editor.Gameplay
         // ── Магазин ─────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Вариант <see cref="HandsPackWeaponRecipe.MagazineBase" />: сеть, физика, звуки и хват
-        /// сэмпловых аватаров от базы, геометрия — меш пака. Масштаб — как у оружия: вложенный
-        /// магазин живёт под корнем оружия с ×1, выдаваемый должен быть того же размера.
+        /// Самостоятельный префаб магазина (не вариант): шаблон — текущий магазин ствола, а у первой сборки —
+        /// <see cref="HandsPackWeaponRecipe.MagazineBase" /> (готовый магазин паков того же типа). Сеть, физика и звуки — от
+        /// шаблона, геометрия — меш пака. Масштаб — как у оружия: вложенный магазин живёт под корнем оружия с ×1,
+        /// выдаваемый должен быть того же размера. Корень сохраняет GUID и localFileID (внешние WeaponInfo/spawn-ссылки).
         /// </summary>
         private static GameObject BuildMagazine(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, float scale, string folder, Scene scene)
         {
-            var basePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(r.MagazineBase);
+            string path = $"{folder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
+            string template = MagazineTemplate(r);
+            var basePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(template) ??
+                throw new System.InvalidOperationException($"{r.Name}: нет шаблона магазина {template}");
+            long rootId = AssetDatabase.LoadAssetAtPath<GameObject>(path) is GameObject current &&
+                          AssetDatabase.TryGetGUIDAndLocalFileIdentifier(current, out string _, out long id) ? id : 0;
             var mag = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab, scene);
-            if (r.PreserveDonorGameplay)
-            {
-                // Смена базы Variant меняет inherited root fileID даже при прежнем GUID.
-                // Отделённая копия immutable шаблона позволяет SaveAsPrefabAsset сопоставить
-                // прежний корень по имени и сохранить внешние WeaponInfo/spawn-ссылки.
-                PrefabUtility.UnpackPrefabInstance(mag, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            }
+            // Отделённая копия: магазин — не вариант базы SDK (базы удалены, решение пользователя 2026-10-22).
+            // SaveAsPrefabAsset сопоставляет прежний корень по имени и сохраняет внешние WeaponInfo/spawn-ссылки.
+            PrefabUtility.UnpackPrefabInstance(mag, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            if (template != path && !r.PreserveDonorGameplay) ClearTemplateGrips(mag);
             mag.name = r.MagazineName ?? r.Name + "_mag";
             mag.transform.localScale = Vector3.one * scale;
             if (r.PreserveDonorGameplay)
@@ -861,21 +902,14 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Геометрия базы уходит целиком, вместе с индикатором патронов, который на неё ссылается.
             foreach (var indicator in mag.GetComponents<MonoBehaviour>().Where(c => c != null && c.GetType().Name == "MagAmmoIndicator").ToList())
                 Object.DestroyImmediate(indicator);
-            // Точки хвата сэмпловых аватаров живут внутри объекта геометрии (у MagShotgun — в
-            // MagShotGunGeo), а Cyborg из реестра хватает по ним. Такой объект остаётся без меша.
+            // Объект геометрии базы (MagMachinegunGeo, MagGunGeo, MagShotGunGeo) уходит целиком, вместе с точками хвата
+            // сэмпловых аватаров SDK внутри него (решение пользователя 2026-10-22). Поза руки магазина — snap-точка _orig
+            // (PackOrigPoses); регистрация поз аватаров — отдельная команда, перенос хватов эти узлы не воссоздаёт.
+            foreach (Transform geometry in BaseGeometry(mag.transform).ToList())
+                Object.DestroyImmediate(geometry.gameObject);
             foreach (MeshFilter filter in mag.GetComponentsInChildren<MeshFilter>(true).ToList())
-            {
-                if (filter == null) continue;
-                GameObject geo = filter.gameObject;
-                if (geo.GetComponentInChildren<UxrGrabbableObjectSnapTransform>(true) == null)
-                {
-                    Object.DestroyImmediate(geo);
-                    continue;
-                }
-
-                foreach (Component c in geo.GetComponents<Component>().Where(c => c is Renderer || c is Collider || c is MeshFilter || c is MonoBehaviour).Reverse().ToList())
-                    Object.DestroyImmediate(c);
-            }
+                if (filter != null) Object.DestroyImmediate(filter.gameObject);
+            RemoveOrphanGripEntries(mag.GetComponent<UxrGrabbableObject>());
 
             // Меш пака: ориентирован как в оружии, центр — в начале координат магазина. Детали,
             // которые вынимаются вместе с ним (патроны, гильзы в каморах барабана), — на своих
@@ -899,7 +933,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             col.center = mesh.bounds.center;
             col.size = mesh.bounds.size;
 
-            var so = new SerializedObject(mag.GetComponent<UxrFirearmMag>());
+            // У патрона ручного заряжания счётчик снимает ConfigureCartridge — в шаблоне-патроне его нет.
+            var counter = mag.GetComponent<UxrFirearmMag>();
+            if (counter == null) counter = mag.AddComponent<UxrFirearmMag>();
+            var so = new SerializedObject(counter);
             so.FindProperty("_capacity").intValue = r.MagazineCapacity;
             so.FindProperty("_rounds").intValue = r.MagazineCapacity;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -915,9 +952,101 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (mag.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>() == null)
                 mag.AddComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>();
             if (r.FinalRootScale > 0f) mag.transform.localScale = Vector3.one * r.FinalRootScale;
-            string path = $"{folder}/{mag.name}.prefab";
             if (r.ManualLoading) ManualLoadingAuthoring.ConfigureCartridge(mag, r.Name, r.MagazineCapacity);
-            return PrefabUtility.SaveAsPrefabAsset(mag, path);
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(mag, path);
+            if (rootId != 0 && (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(saved, out string _, out long after) || after != rootId))
+                throw new System.InvalidOperationException($"{path}: изменился localFileID корня магазина — внешние ссылки WeaponInfo/spawn разорвались бы");
+            return saved;
+        }
+
+        /// <summary>Шаблон магазина: текущий префаб магазина ствола, у первой сборки — <see cref="HandsPackWeaponRecipe.MagazineBase" />.</summary>
+        internal static string MagazineTemplate(HandsPackWeaponRecipe r)
+        {
+            if (r.PreserveDonorGameplay) return r.MagazineBase;
+            string own = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
+            return AssetDatabase.LoadAssetAtPath<GameObject>(own) != null ? own : r.MagazineBase;
+        }
+
+        /// <summary>Шаблон — магазин другого ствола: его записи хвата аватаров и snap-точки _orig не переносятся.</summary>
+        private static void ClearTemplateGrips(GameObject mag)
+        {
+            var grabbable = mag.GetComponent<UxrGrabbableObject>();
+            if (grabbable != null)
+            {
+                var so = new SerializedObject(grabbable);
+                so.FindProperty("_grabPoint._avatarGripPoseEntries").arraySize = 0;
+                SerializedProperty additional = so.FindProperty("_additionalGrabPoints");
+                for (int i = 0; i < additional.arraySize; i++)
+                    additional.GetArrayElementAtIndex(i).FindPropertyRelative("_avatarGripPoseEntries").arraySize = 0;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Transform grabs = mag.transform.Find("Grabs");
+            if (grabs != null)
+                foreach (Transform child in grabs.Cast<Transform>().ToList())
+                    Object.DestroyImmediate(child.gameObject);
+        }
+
+        /// <summary>
+        /// Имена объектов геометрии базы магазина (<see cref="HandsPackWeaponRecipe.MagazineBase" />), которые
+        /// <see cref="BuildMagazine" /> удаляет. Перенос хватов отбрасывает записи с трансформами внутри них.
+        /// </summary>
+        public static string[] MagazineBaseGeometry(HandsPackWeaponRecipe r)
+        {
+            string template = MagazineTemplate(r);
+            var basePrefab = string.IsNullOrEmpty(template) ? null : AssetDatabase.LoadAssetAtPath<GameObject>(template);
+            if (basePrefab == null) return System.Array.Empty<string>();
+            // Узлы, которые сборка создаёт заново (меш пака и детали магазина), — не удалённая геометрия базы.
+            var rebuilt = new HashSet<string> { "Mesh" };
+            rebuilt.UnionWith((r.MagazineExtraParts ?? new string[0]).Select(Clean));
+            return BaseGeometry(basePrefab.transform).Select(t => t.name)
+                .Concat(basePrefab.GetComponentsInChildren<MeshFilter>(true).Select(f => f.gameObject.name))
+                .Where(n => !rebuilt.Contains(n)).Distinct().ToArray();
+        }
+
+        /// <summary>
+        /// Геометрия базы магазина — прямые дети корня, кроме собственного <c>Grabs</c>, с мешем, рендерером, коллайдером
+        /// или точками хвата внутри: <c>MagMachinegunGeo</c>/<c>MagGunGeo</c>/<c>MagShotGunGeo</c> SDK и их уже обрезанные
+        /// копии у неизменяемых доноров набора Hands (<c>Geo</c> с коллайдером, пустой <c>MagShotGunGeo</c> с точками хвата).
+        /// </summary>
+        private static IEnumerable<Transform> BaseGeometry(Transform magazine) =>
+            magazine.Cast<Transform>().Where(child => child.name != "Grabs" &&
+                (child.GetComponentInChildren<Renderer>(true) != null || child.GetComponentInChildren<MeshFilter>(true) != null ||
+                 child.GetComponentInChildren<Collider>(true) != null || child.GetComponentInChildren<UxrGrabbableObjectSnapTransform>(true) != null));
+
+        /// <summary>Сэмпловые аватары UltimateXR (CyborgAvatar, BigHandsAvatar, SmallHandsAvatar): их записей хвата у магазинов паков нет.</summary>
+        public static readonly string[] SdkSampleAvatars =
+        {
+            "e7468ec6b7af89c4d94d451ec3c1807b", "dc011efb41f2d4a419389aefb4b4270d", "7195d091dac462e4db9ba0793d9a6727"
+        };
+
+        /// <summary>
+        /// Записи хвата сэмпловых аватаров SDK (у доноров набора Hands их точки лежат в собственном <c>Grabs</c>) и записи,
+        /// у которых обе трансформы выравнивания удалены вместе с геометрией базы; ставшие ненужными точки — тоже.
+        /// </summary>
+        private static void RemoveOrphanGripEntries(UxrGrabbableObject grabbable)
+        {
+            if (grabbable == null) return;
+            var orphans = new List<Transform>();
+            var so = new SerializedObject(grabbable);
+            var lists = new List<SerializedProperty> { so.FindProperty("_grabPoint._avatarGripPoseEntries") };
+            SerializedProperty additional = so.FindProperty("_additionalGrabPoints");
+            for (int i = 0; i < additional.arraySize; i++)
+                lists.Add(additional.GetArrayElementAtIndex(i).FindPropertyRelative("_avatarGripPoseEntries"));
+            foreach (SerializedProperty entries in lists)
+                for (int i = entries.arraySize - 1; i >= 0; i--)
+                {
+                    SerializedProperty entry = entries.GetArrayElementAtIndex(i);
+                    var left = entry.FindPropertyRelative("_gripAlignTransformHandLeft").objectReferenceValue as Transform;
+                    var right = entry.FindPropertyRelative("_gripAlignTransformHandRight").objectReferenceValue as Transform;
+                    bool sample = SdkSampleAvatars.Contains(entry.FindPropertyRelative("_avatarPrefabGuid").stringValue);
+                    if (!sample && (left != null || right != null)) continue;
+                    orphans.Add(left);
+                    orphans.Add(right);
+                    entries.DeleteArrayElementAtIndex(i);
+                }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            foreach (Transform orphan in orphans.Where(t => t != null).Distinct().ToList())
+                if (orphan != null) HandsPackPoseImporter.RemoveUnused(grabbable.gameObject, orphan, null);
         }
 
         // ── Вспомогательное ─────────────────────────────────────────────────────

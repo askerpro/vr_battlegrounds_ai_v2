@@ -145,7 +145,7 @@ namespace VrBattlegrounds.Editor.HandPoseReview.Tests
         }
 
         const string Cyborg = "Assets/ThirdParty/UltimateXR/Samples/FullScene/Prefabs/Avatars/CyborgAvatarExample.prefab";
-        // Сэмплы SDK (Gun, Machinegun, Shotgun) убраны из арсенала 2026-10-20 (Assets/Unused/Weapons) — правила хвата
+        // Сэмплы SDK (Gun, Machinegun, Shotgun) убраны из арсенала 2026-10-20 и удалены 2026-10-22 — правила хвата
         // проверяются на стволах игрового набора с теми же ролями точек.
         const string Gun = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab";
         // Превью правки позы — на исходном сэмпле SDK (ThirdParty): у него явная запись хвата CyborgAvatarExample.

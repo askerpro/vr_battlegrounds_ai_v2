@@ -1521,7 +1521,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                     AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
                 return new Dictionary<string, object> { ["passed"] = false, ["failures"] = new List<string> { exception.Message }, ["rows"] = rows };
             }
-            if (!IsMagazineOnlyScope(entries)) AssetDatabase.SaveAssets();
+            // Только своё: данные WeaponSystem, вылет, префабы волны (общий SaveAssets записал бы чужие изменения).
+            if (!IsMagazineOnlyScope(entries))
+                OwnAssetSave.Save(entries.Select(e => e.Prefab).Concat(created).Append(DataFolder).Append(EjectionFolder));
             return new Dictionary<string, object> { ["passed"] = true, ["failures"] = failures, ["warnings"] = warnings, ["rows"] = rows, ["created"] = created };
         }
 

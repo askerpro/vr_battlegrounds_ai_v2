@@ -1,0 +1,68 @@
+{
+    "pack": "HandsPack",
+    "item": "AR15",
+    "weapon": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+    "magazineNote": "выбран Reload, деталь Rifle_Magazine_Mesh, кадры 17–59 (0,567–1,967 с), середина 1,267 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "HandsPack_AR15_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_AR15_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab",
+            "body": "Mesh",
+            "clip": "Reload",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.2669999599456788,
+            "frame": 38.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_AR15_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "Reload",
+            "weaponClip": "",
+            "part": "Rifle_Magazine_Mesh",
+            "side": "Left",
+            "result": "окно",
+            "distance": "начало детали",
+            "frames": 43,
+            "startFrame": 17,
+            "endFrame": 59,
+            "startTime": 0.5669999718666077,
+            "endTime": 1.9670000076293946,
+            "midTime": 1.2669999599456788,
+            "rigidMm": 0.07500000298023224,
+            "rigidDeg": 0.0,
+            "palmMm": 81.21299743652344,
+            "seatMm": 565.2239990234375,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "Reload",
+            "weaponClip": "",
+            "part": "Rifle_Magazine_Mesh",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 567.8499755859375,
+            "minPalmMm": 207.78199768066407
+        }
+    ]
+}

@@ -29,8 +29,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
     /// прогон возвращает разделение к исходному мешу и делает его заново — результат тот же.
     /// </para>
     /// <para>
-    /// Сборка ствола: сборщик пака → <see cref="AfterBuild"/> (родной прицел разделяется всегда, сдвиг — из записи,
-    /// если отпечаток ShotSource совпал, иначе 0 и «пересвести на стенде»; комплект — из записи) → баланс.
+    /// Сборка ствола: сборщик пака → <see cref="AfterBuild"/> (родной прицел разделяется всегда, сдвиг — из записи;
+    /// запись не применилась — отказ, сборка откатывается; комплект — из записи) → баланс.
     /// Кнопка стенда «Применить к префабу» вызывает тот же код (<see cref="Apply"/>).
     /// </para>
     /// </summary>
@@ -61,8 +61,10 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         }
 
         /// <summary>
-        /// Шаги 2–3 сборки ствола (вызывают сборщики после сохранения префаба): родной прицел — разделение всегда
-        /// (сдвиг из записи или 0), комплект — из записи таблицы. null — у ствола нет ни родного прицела, ни записи.
+        /// Шаг прицела сборки ствола (<c>WeaponRebuildFinish</c> после сохранения префаба сборщиком): родной прицел —
+        /// разделение и сдвиг из записи, комплект — из записи. Запись не применяется (нет её, другая дистанция, отпечаток
+        /// ShotSource), спецификация разделения не совпала с мешем пака, второй прицел — исключение до записи прицела.
+        /// null — у ствола нет ни родного прицела, ни записи.
         /// </summary>
         public static string AfterBuild(string prefabPath)
         {
@@ -81,25 +83,12 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             return entry != null ? ApplyToPrefab(prefabPath, entry) : null;
         }
 
-        /// <summary>
-        /// <see cref="AfterBuild"/> для сборщика: ошибка не прерывает сборку, а пишется предупреждением с подсказкой
-        /// «пересвести на стенде». Возвращает отчёт или null.
-        /// </summary>
-        public static string AfterBuildLogged(string prefabPath, string builder)
+        /// <summary>Есть ли у префаба прицел: деталь <see cref="SightAdjustablePart"/> или сетка коллиматора.</summary>
+        public static bool HasSight(string prefabPath)
         {
-            try
-            {
-                string report = AfterBuild(prefabPath);
-                if (report != null) VrBattlegrounds.Core.GameLog.WeaponSystem.Info($"[{builder}] прицел: {report}");
-                return report;
-            }
-            catch (Exception e)
-            {
-                VrBattlegrounds.Core.GameLog.WeaponSystem.Warning($"[{builder}] {prefabPath}: прицел не подготовлен — {e.Message}. " +
-                    "Откройте вкладку «Калибровка прицела» окна «Настройка оружия», сведите и примените заново.",
-                    AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
-                return null;
-            }
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            return prefab != null && (prefab.GetComponentsInChildren<SightAdjustablePart>(true).Length > 0
+                                      || prefab.GetComponentsInChildren<WeaponOpticView>(true).Length > 0);
         }
 
         /// <summary>Спецификация родного прицела префаба; null — у ствола нет своего прицела в таблице разделения.</summary>
@@ -222,16 +211,15 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         }
 
         /// <summary>
-        /// Постоянное разделение родного прицела и сдвиг подвижной детали. <paramref name="entry"/> null или с чужим
-        /// отпечатком ShotSource / дистанцией — разделение со сдвигом 0 и пометкой «пересвести на стенде».
+        /// Постоянное разделение родного прицела и сдвиг подвижной детали из <paramref name="entry"/>. Записи нет, она на
+        /// другую дистанцию или с чужим отпечатком ShotSource — отказ до записи (сдвиг 0 молча потерял бы калибровку).
         /// </summary>
         public static string ApplyNative(string prefabPath, SightSplitSpec spec, WeaponSightTable.Entry entry)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Применение прицела — только в Edit Mode");
             var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
             if (settings == null) throw new InvalidOperationException("Нет настроек калибровки: " + SettingsPath);
-            string note;
-            float offset = 0f;
+            float offset;
             GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
             // Разделение — на второй временной копии; в основную копию переносятся только его результаты, существующие
             // узлы рамок и деталей обновляются на месте (их fileID в префабе не меняются — повторный прогон тот же).
@@ -243,10 +231,15 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     throw new InvalidOperationException($"{prefabPath}: у ствола свой прицел, а в префабе стоит комплект/коллиматор — снимите его");
                 Transform shotSource = FindShotSource(root);
                 ShotSourceFingerprint before = ShotSourceFingerprint.Capture(shotSource, root.transform);
-                if (entry == null) note = "записи в таблице нет — сдвиг 0, свести на стенде";
-                else if (entry.ZeroDistance != settings.DefaultZeroDistance) note = $"запись на {entry.ZeroDistance} м, пристрелка {settings.DefaultZeroDistance} м — сдвиг 0, пересвести на стенде";
-                else if (entry.ShotSource.IsEmpty || entry.ShotSource.Compare(before) != null) note = "отпечаток ShotSource не совпал — сдвиг 0, пересвести на стенде";
-                else { offset = entry.MovingOffset; note = null; }
+                if (entry == null)
+                    throw new InvalidOperationException($"{prefabPath}: родной прицел без записи в {WeaponSightTable.AssetPath} — свести на стенде и сохранить в таблицу");
+                if (entry.ZeroDistance != settings.DefaultZeroDistance)
+                    throw new InvalidOperationException($"{prefabPath}: запись сведена на {entry.ZeroDistance} м, текущая пристрелка {settings.DefaultZeroDistance} м — пересвести на стенде");
+                string drift = entry.ShotSource.IsEmpty ? "отпечаток в записи пуст" : entry.ShotSource.Compare(before);
+                if (drift != null)
+                    throw new InvalidOperationException($"{prefabPath}: запись таблицы не применяется — отпечаток ShotSource не совпал ({drift}); " +
+                                                        "сборка изменила точку выстрела — пересвести на стенде");
+                offset = entry.MovingOffset;
 
                 // TRS всех узлов вне прицела: рамки Sight*Frame пересоздаются, рамки Scar поднимаются (спецификация).
                 var raise = new HashSet<Transform>(spec.Raises.Select(r => root.transform.Find(r.NodePath)).Where(t => t != null));
@@ -283,7 +276,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 PrefabUtility.UnloadPrefabContents(root);
             }
             RestoreAssetId(prefabPath);
-            return ReadbackNative(prefabPath, spec, offset) + (note != null ? " — " + note : "");
+            return ReadbackNative(prefabPath, spec, offset);
         }
 
         /// <summary>

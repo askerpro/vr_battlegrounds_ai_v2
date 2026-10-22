@@ -1,0 +1,148 @@
+{
+    "pack": "Kinemation",
+    "item": "AK105",
+    "weapon": "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+    "magazineNote": "выбран A_FP_AK105_Reload_Tac + A_W_AK105_Reload_Tac, деталь Magazine, кадры 91–128 (1,517–2,133 с), середина 1,817 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "Kinemation_AK105_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_AK105_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_AK105_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_AK105_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_AK105_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_AK105_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_AK105_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AK105/AK105.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_AK105_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_AK105_Support_orig/Left",
+                "Orig/Kinemation_AK105_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "Kinemation_AK105_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_AK105_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AK105/AK105_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_AK105_Reload_Tac",
+            "weaponClip": "A_W_AK105_Reload_Tac",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.8170000314712525,
+            "frame": 109.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_AK105_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_AK105_Reload_Empty",
+            "weaponClip": "A_W_AK105_Reload_Empty",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 38,
+            "startFrame": 91,
+            "endFrame": 128,
+            "startTime": 1.5169999599456788,
+            "endTime": 2.132999897003174,
+            "midTime": 1.8170000314712525,
+            "rigidMm": 2.4579999446868898,
+            "rigidDeg": 0.0,
+            "palmMm": 31.799999237060548,
+            "seatMm": 58.025001525878909,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_AK105_Reload_Empty",
+            "weaponClip": "A_W_AK105_Reload_Empty",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 601.4849853515625,
+            "minPalmMm": 130.79400634765626
+        },
+        {
+            "clip": "A_FP_AK105_Reload_Tac",
+            "weaponClip": "A_W_AK105_Reload_Tac",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 38,
+            "startFrame": 91,
+            "endFrame": 128,
+            "startTime": 1.5169999599456788,
+            "endTime": 2.132999897003174,
+            "midTime": 1.8170000314712525,
+            "rigidMm": 2.4579999446868898,
+            "rigidDeg": 0.0,
+            "palmMm": 31.799999237060548,
+            "seatMm": 58.025001525878909,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_AK105_Reload_Tac",
+            "weaponClip": "A_W_AK105_Reload_Tac",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 601.4849853515625,
+            "minPalmMm": 130.79400634765626
+        }
+    ]
+}

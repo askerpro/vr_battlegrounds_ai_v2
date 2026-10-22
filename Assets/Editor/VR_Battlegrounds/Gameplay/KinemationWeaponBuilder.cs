@@ -203,7 +203,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     MagazineIsInternal = true, ManualLoading = true,
                     ManualLoadingProfile = "Assets/Data/Weapons/Profiles/ManualLoadHerringtonReadiness.asset"
                 });
-                r.MagazineBase = "Assets/Prefabs/Weapons/Shotgun/MagShotgun.prefab";
+                r.MagazineBase = HandsPackWeaponBuilder.MagShotgunBase;
                 r.Pellets = true;
                 return new KinemationWeaponRecipe
                 {
@@ -320,6 +320,29 @@ namespace VrBattlegrounds.Editor.Gameplay
         public static GameObject Build(KinemationWeaponRecipe k, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             WeaponGripCarryOver.RequireBuilderMode(poses, "KinemationWeaponBuilder");
+            string path = PrefabPath(k);
+            // Всё или ничего: отказ любого шага, включая прицел, возвращает файлы ствола к состоянию до сборки.
+            WeaponRebuildFinish.Run("KinemationWeaponBuilder", path, MagazinePath(k), RebuildOutputs(k), () => BuildSteps(k, poses));
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>Что пишет <see cref="Build" /> помимо текущих префабов ствола и их зависимостей — для отката.</summary>
+        public static IEnumerable<string> RebuildOutputs(KinemationWeaponRecipe k)
+        {
+            string name = k.Weapon.Name;
+            var paths = new List<string>
+            {
+                $"{KinemationWeapon.ArtRoot}/{name}", $"{KinemationWeapon.ArtRoot}/Materials", $"{KinemationAudio.Root}/{name}",
+                "Assets/Art/Weapons/Interaction/" + name
+            };
+            paths.AddRange(VrBattlegrounds.Editor.Arsenal.ArsenalEditorActions.SourceSettingsPaths(k));
+            paths.AddRange(VrBattlegrounds.Editor.Arsenal.ArsenalBuildPreflight.MaterialSettingsPaths(k));
+            if (name == "TR15") paths.AddRange(Tr15OpticBuilder.OutputPaths());
+            return paths;
+        }
+
+        private static void BuildSteps(KinemationWeaponRecipe k, WeaponGripPoseMode poses)
+        {
             HandsPackWeaponRecipe r = k.Weapon;
             string path = PrefabPath(k);
             // Хваты снимаются до сборки: сборщик перезаписывает оружие и магазин.
@@ -340,18 +363,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             r.StaticParts = model.Parts.Where(p => !used.Contains(p) && !excluded.Any(e => e.EndsWith("*") ? p.StartsWith(e.TrimEnd('*')) : p == e)).ToArray();
 
             // Точка отдачи и области хвата — по центрам ладоней рук пака (HandsPackWeaponBuilder.PalmPoints).
-            HandsPackWeaponBuilder.Build(r, model);
-            WeaponGripCarryOver.Restore(grips, poses);
+            // Хост WeaponSystem — после клипов затвора KinemationFixReview: профиль HoldOpen без них не настраивается.
+            HandsPackWeaponBuilder.Build(r, model, configureHost: false);
+            string[] droppedGeometry = HandsPackWeaponBuilder.MagazineBaseGeometry(r);
+            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.SdkSampleAvatars);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
+            HandsPackWeaponBuilder.ConfigureHost(path, r);
             // WeaponInteractionInstaller переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
-            WeaponGripCarryOver.Restore(grips, poses);
+            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.SdkSampleAvatars);
             if (r.Name == "TR15") Tr15OpticBuilder.Apply(); // ассеты окна XPS2 для SightKit_XPS2
-            WeaponRebuildFinish.Complete(path, MagazinePath(k), "KinemationWeaponBuilder");
-            // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
-            PackOrigPoses.ExportForWeapon(path);
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
-            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
         /// <summary>Звуки ствола: выстрел, затвор назад/вперёд, магазин снять/вставить — куски звуков пака.</summary>

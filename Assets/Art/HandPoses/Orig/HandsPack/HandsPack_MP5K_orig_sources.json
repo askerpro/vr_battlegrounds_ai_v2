@@ -1,0 +1,110 @@
+{
+    "pack": "HandsPack",
+    "item": "MP5K",
+    "weapon": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab",
+    "magazineNote": "выбран Reload, деталь Rifle04_Magazine_Mesh, кадры 31–63 (1,033–2,100 с), середина 1,567 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "HandsPack_MP5K_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_MP5K_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Idle_Aim",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_MP5K_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_MP5K_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "HandsPack_MP5K_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_MP5K_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Idle_Aim",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_MP5K_Support_orig/Left",
+                "Orig/HandsPack_MP5K_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "HandsPack_MP5K_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_MP5K_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MP5K/MP5K_mag.prefab",
+            "body": "Mesh",
+            "clip": "Reload",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.5670000314712525,
+            "frame": 47.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_MP5K_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "Reload",
+            "weaponClip": "",
+            "part": "Rifle04_Magazine_Mesh",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 33,
+            "startFrame": 31,
+            "endFrame": 63,
+            "startTime": 1.0329999923706055,
+            "endTime": 2.0999999046325685,
+            "midTime": 1.5670000314712525,
+            "rigidMm": 0.07599999755620957,
+            "rigidDeg": 0.0,
+            "palmMm": 33.55699920654297,
+            "seatMm": 505.57598876953127,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "Reload",
+            "weaponClip": "",
+            "part": "Rifle04_Magazine_Mesh",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 506.6260070800781,
+            "minPalmMm": 159.29299926757813
+        }
+    ]
+}

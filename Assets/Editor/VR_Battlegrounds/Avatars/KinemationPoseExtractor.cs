@@ -43,7 +43,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <param name="weaponMotion">
         /// Клип оружия, синхронный клипу рук (<c>A_W_*_Reload_*</c> к <c>A_FP_*_Reload_*</c>), в том же <paramref name="time" />
         /// поверх покоя; <c>null</c> — оружие в покое. Им снимается кадр с деталью в руке (магазин при перезарядке,
-        /// <see cref="PackOrigPoses" />): <paramref name="bodyBone" /> тогда — кость детали.
+        /// <see cref="VrBattlegrounds.Editor.Gameplay.PackOrigPoses" />): <paramref name="bodyBone" /> тогда — кость детали.
         /// </param>
         public static HandsPackPoseExtractor.Sample Extract(AnimationClip clip, float time, UxrHandSide side, GameObject weaponPrefab, string bodyBone,
                                                            AnimationClip weaponRest = null,

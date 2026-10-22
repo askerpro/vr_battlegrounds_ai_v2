@@ -1,0 +1,27 @@
+{
+  "task_id": "weapon-rebuild-sight-guarantee",
+  "owner": "weapon-rebuild-sight-guarantee",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/weapon-rebuild-sight-guarantee",
+  "base_sha": "30b90e08e4bbfa5febb93baf5ca388a7fc7bc3b0",
+  "doc_path": "tasks/weapon-rebuild-sight-guarantee/Readme.md",
+  "title": "Пересборка оружия не затирает калибровку и разрезанные меши прицелов",
+  "branch": "task/weapon-rebuild-sight-guarantee",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/weapon-rebuild-sight-guarantee/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponRebuildFinish.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponRebuildTransaction.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponRebuildTransaction.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationWeaponBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackWeaponBuilder.cs",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackLegacyRebuild.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/WeaponSightAuthoring.cs"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

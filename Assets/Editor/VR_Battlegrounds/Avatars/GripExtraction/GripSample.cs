@@ -91,7 +91,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// универсальные оси кисти источника; сдвиг в единицах префаба (<paramref name="k" /> — масштаб корпуса префаба /
         /// <see cref="BodyScale" />). Та же величина, что <c>palmInBody</c> в <see cref="GripPlacement.Evaluate" />:
         /// мир = корпус.position + корпус.rotation · <paramref name="position" />, поворот = корпус.rotation · <paramref name="rotation" />.
-        /// Не зависит от граббера цели — snap-точки <c>_orig</c> (<see cref="PackOrigPoses" />).
+        /// Не зависит от граббера цели — snap-точки <c>_orig</c> (<see cref="VrBattlegrounds.Editor.Gameplay.PackOrigPoses" />).
         /// </summary>
         public void PalmInBody(UxrHandSide side, float k, out Vector3 position, out Quaternion rotation)
         {

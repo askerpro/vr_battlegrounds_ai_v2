@@ -1,0 +1,148 @@
+{
+    "pack": "Kinemation",
+    "item": "SRM12",
+    "weapon": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+    "magazineNote": "выбран A_FP_SRM-12_Reload_Empty + A_W_SRM-12_Reload_Empty, деталь SRS_Magazine, кадры 120–188 (2,000–3,133 с), середина 2,567 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "Kinemation_SRM12_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_SRM12_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_SRM-12_Idle_Pose",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_SRM12_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_SRM12_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_SRM12_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_SRM12_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_SRM-12_Idle_Pose",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_SRM12_Support_orig/Left",
+                "Orig/Kinemation_SRM12_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "Kinemation_SRM12_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_SRM12_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SRM12/SRM12_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_SRM-12_Reload_Empty",
+            "weaponClip": "A_W_SRM-12_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 2.566999912261963,
+            "frame": 154.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_SRM12_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_SRM-12_Reload_Empty",
+            "weaponClip": "A_W_SRM-12_Reload_Empty",
+            "part": "SRS_Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 69,
+            "startFrame": 120,
+            "endFrame": 188,
+            "startTime": 2.0,
+            "endTime": 3.132999897003174,
+            "midTime": 2.566999912261963,
+            "rigidMm": 0.024000000208616258,
+            "rigidDeg": 0.0,
+            "palmMm": 34.76300048828125,
+            "seatMm": 493.8089904785156,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_SRM-12_Reload_Empty",
+            "weaponClip": "A_W_SRM-12_Reload_Empty",
+            "part": "SRS_Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 604.8099975585938,
+            "minPalmMm": 79.7770004272461
+        },
+        {
+            "clip": "A_FP_SRM-12_Reload_Tactical",
+            "weaponClip": "A_W_SRM-12_Reload_Tac",
+            "part": "SRS_Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 67,
+            "startFrame": 60,
+            "endFrame": 126,
+            "startTime": 1.0,
+            "endTime": 2.0999999046325685,
+            "midTime": 1.5499999523162842,
+            "rigidMm": 0.023000000044703485,
+            "rigidDeg": 0.0,
+            "palmMm": 34.76499938964844,
+            "seatMm": 473.11199951171877,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_SRM-12_Reload_Tactical",
+            "weaponClip": "A_W_SRM-12_Reload_Tac",
+            "part": "SRS_Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 606.1240234375,
+            "minPalmMm": 76.68499755859375
+        }
+    ]
+}

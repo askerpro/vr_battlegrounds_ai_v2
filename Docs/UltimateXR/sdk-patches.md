@@ -2112,8 +2112,8 @@ CyborgHandsBase (`71b74b0d08444f49bbb7aa2828d0890a`); потомки (PlayerCont
 шесть записей стояли под Controllers, а `_selectedAvatarForGrips` указывал на Controllers — кнопка
 регистрации аватара в инспекторе добавляла бы новые записи потомку.
 
-Удалять эти записи нельзя: варианты проекта (`Assets/Prefabs/Weapons/Grenade/Grenade.prefab`,
-`Assets/Unused/Weapons/{Machinegun/Machinegun,SDKGun/Gun,Shotgun/Shotgun}.prefab`) переопределяют у
+Удалять эти записи нельзя: вариант проекта `Assets/Prefabs/Weapons/Grenade/Grenade.prefab` (прежние варианты
+`Assets/Unused/Weapons/{Machinegun/Machinegun,SDKGun/Gun,Shotgun/Shotgun}.prefab` удалены 2026-10-22) переопределяет у
 того же элемента `data[3]` GUID на базу и точки выравнивания на свои узлы «(MEF_cyborg_hands)», а
 `_handPose`/`_poseBlendValue` наследуют из сэмпла (их override `data[4].*` лежат за `Array.size = 4`
 и не действуют). Узлы выравнивания записей общие с записью `CyborgAvatarExample`/`CyborgAvatar_URP`

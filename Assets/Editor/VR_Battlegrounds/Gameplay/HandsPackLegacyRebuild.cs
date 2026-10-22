@@ -39,7 +39,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             var ids = Targets.ToDictionary(p => p, ReadAssetId);
             CaptureDonors();
             string report = Preflight(Recipes(ids));
-            AssetDatabase.SaveAssets();
+            OwnAssetSave.Save(new[] { MotionRoot }); // доноры и движение — только свои ассеты
             return report;
         }
 
@@ -65,30 +65,50 @@ namespace VrBattlegrounds.Editor.Gameplay
             CaptureDonors();
             HandsPackWeaponRecipe[] recipes = Recipes(ids);
 
-            // Ошибка структуры источника должна обнаружиться до перезаписи первого игрового префаба.
-            GameLog.WeaponSystem.Info(Preflight(recipes));
-
-            foreach (var recipe in recipes)
+            // Preflight пишет движение всех стволов набора до их пересборки: при отказе движение ещё не пересобранных
+            // стволов возвращается (иначе остались бы файлы с новыми rid managed reference).
+            var motions = recipes.Select(r => WeaponRebuildTransaction.Begin(Array.Empty<string>(), new[] { $"{MotionRoot}/{r.Name}" })).ToArray();
+            int next = 0;
+            try
             {
-                using var source = new HandsPackWeapon(recipe.Folder, recipe.BodyPart);
-                string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
-                string magPath = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName}.prefab";
+                // Ошибка структуры источника должна обнаружиться до перезаписи первого игрового префаба.
+                GameLog.WeaponSystem.Info(Preflight(recipes));
+                // Движение, записанное preflight, — до копий пересборки: иначе область ствола начнётся несохранённой.
+                OwnAssetSave.Save(new[] { MotionRoot });
+                for (; next < recipes.Length; next++) Rebuild(recipes[next], guids, ids, rootIds, poses);
+            }
+            catch
+            {
+                string rollback = string.Join("\n", motions.Skip(next).Select(m => m.Rollback()));
+                GameLog.WeaponSystem.Error($"[HandsPackLegacyRebuild] движение не пересобранных стволов набора возвращено:\n{rollback}");
+                throw;
+            }
+        }
+
+        private static void Rebuild(HandsPackWeaponRecipe recipe, Dictionary<string, string> guids, Dictionary<string, uint> ids,
+            Dictionary<string, long> rootIds, WeaponGripPoseMode poses)
+        {
+            using var source = new HandsPackWeapon(recipe.Folder, recipe.BodyPart);
+            string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
+            string magPath = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName}.prefab";
+            var outputs = new List<string> { $"{MotionRoot}/{recipe.Name}", "Assets/Art/Weapons/Interaction/" + recipe.Name };
+            // Каждый ствол — всё или ничего: отказ возвращает его файлы, уже пересобранные стволы набора остаются.
+            WeaponRebuildFinish.Run("HandsPackLegacyRebuild", path, magPath, outputs, () =>
+            {
                 // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
                 WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magPath);
-                HandsPackWeaponBuilder.Build(recipe, source);
+                // Хост WeaponSystem — после клипов затвора InstallMotion: профиль HoldOpen без них не настраивается.
+                HandsPackWeaponBuilder.Build(recipe, source, configureHost: false);
                 ApplyMagazine(magPath);
                 InstallMotion(path, recipe, source);
+                HandsPackWeaponBuilder.ConfigureHost(path, recipe);
                 foreach (string saved in new[] { path, magPath })
                     if (AssetDatabase.AssetPathToGUID(saved) != guids[saved] || ReadAssetId(saved) != ids[saved] || ReadRootLocalId(saved) != rootIds[saved])
                         throw new InvalidOperationException($"Изменён GUID/root localFileID/NetworkIdentity assetId: {saved}");
                 ValidateReferences(path, magPath);
-                WeaponGripCarryOver.Restore(grips, poses);
-                WeaponRebuildFinish.Complete(path, magPath, "HandsPackLegacyRebuild");
-                // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
-                PackOrigPoses.ExportForWeapon(path);
-                GameLog.WeaponSystem.Info($"[HandsPackLegacyRebuild] {recipe.Name}: FBX, baseline config и generic motion сохранены");
-            }
-            AssetDatabase.SaveAssets();
+                WeaponGripCarryOver.Restore(grips, poses, HandsPackWeaponBuilder.MagazineBaseGeometry(recipe), HandsPackWeaponBuilder.SdkSampleAvatars);
+            });
+            GameLog.WeaponSystem.Info($"[HandsPackLegacyRebuild] {recipe.Name}: FBX, baseline config и generic motion сохранены");
         }
 
         private static string Preflight(HandsPackWeaponRecipe[] recipes)
@@ -183,7 +203,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
                 finally { PrefabUtility.UnloadPrefabContents(root); }
             }
-            AssetDatabase.SaveAssets();
+            OwnAssetSave.Save(new[] { Donors });
         }
 
         private static HandsPackWeaponRecipe[] Recipes(Dictionary<string, uint> ids)
@@ -213,7 +233,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             rifle.ActionPart = action.GetComponentsInChildren<MeshFilter>(true)
                 .First(f => f.sharedMesh != null && AssetDatabase.GetAssetPath(f.sharedMesh).EndsWith("Hands_Automatic_Rifle03.FBX", StringComparison.OrdinalIgnoreCase)).sharedMesh.name;
             var pump = HandsPackWeaponBuilder.ShotgunReal;
-            pump.ShotAudio = null; pump.LoadAudio = null; // исходная игровая конфигурация звука из immutable baseline
+            pump.ShotAudio = null; // выстрел — исходная игровая конфигурация звука из immutable baseline
+            // LoadAudio рецепта (Reload_1) остаётся: ручное заряжание ставит его окну приёма патрона, без него окно немое.
             // Второй патрон — prop FPS-руки в Recharge, а не часть корпуса и не второй gameplay magazine.
             // Live probe: в bind/Shot он выше корпуса; Recharge переносит его из руки к окну заряжания.
             pump.ExcludedSourceParts = new[] { "Shogun_Patron_mesh001" };

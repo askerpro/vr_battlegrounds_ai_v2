@@ -104,7 +104,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
-            AssetDatabase.SaveAssets();
+            // Только своё: движение и области ствола, материал приёмной области, оружие и магазин.
+            OwnAssetSave.Save(new[] { $"{KinemationWeapon.ArtRoot}/{name}", "Assets/Art/Weapons/Interaction", path, KinemationWeaponBuilder.MagazinePath(recipe) });
         }
 
         private static void ApplyMagazine(KinemationWeaponRecipe recipe)

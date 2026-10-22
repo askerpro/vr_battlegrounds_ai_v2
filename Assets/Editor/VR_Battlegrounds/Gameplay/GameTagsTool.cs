@@ -104,29 +104,37 @@ namespace VrBattlegrounds.Editor
                 .ThenBy(path => path);
 
             foreach (string path in paths)
+                ApplyToPrefab(path, result);
+        }
+
+        /// <summary>
+        /// Разметить один префаб на диске и сохранить его, если теги изменились. Возвращает число изменённых объектов
+        /// (0 — префаб не записан). Пересборка ствола зовёт это для оружия и магазина (сборщик пишет корень без тега).
+        /// </summary>
+        public static int ApplyToPrefab(string path, Result result)
+        {
+            GameObject contents = PrefabUtility.LoadPrefabContents(path);
+            try
             {
-                GameObject contents = PrefabUtility.LoadPrefabContents(path);
-                try
-                {
-                    int changed = ApplyToHierarchy(contents, path, result);
-                    if (changed == 0) continue;
+                int changed = ApplyToHierarchy(contents, path, result);
+                if (changed == 0) return 0;
 
-                    // Префаб с Missing Script Unity сохранить откажется — это не правка, а отказ.
-                    PrefabUtility.SaveAsPrefabAsset(contents, path, out bool saved);
-                    if (!saved)
-                    {
-                        result.Conflicts.Add($"{path}: не сохранён (Missing Script?) — {changed} тегов не записано");
-                        continue;
-                    }
-
-                    result.ChangedObjects += changed;
-                    result.SavedPrefabs.Add(path);
-                    result.ChangedAssets.Add($"{path} ({changed})");
-                }
-                finally
+                // Префаб с Missing Script Unity сохранить откажется — это не правка, а отказ.
+                PrefabUtility.SaveAsPrefabAsset(contents, path, out bool saved);
+                if (!saved)
                 {
-                    PrefabUtility.UnloadPrefabContents(contents);
+                    result.Conflicts.Add($"{path}: не сохранён (Missing Script?) — {changed} тегов не записано");
+                    return 0;
                 }
+
+                result.ChangedObjects += changed;
+                result.SavedPrefabs.Add(path);
+                result.ChangedAssets.Add($"{path} ({changed})");
+                return changed;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
             }
         }
 

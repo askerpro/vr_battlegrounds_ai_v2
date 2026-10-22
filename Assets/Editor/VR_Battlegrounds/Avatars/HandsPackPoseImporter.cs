@@ -146,7 +146,9 @@ namespace VrBattlegrounds.Editor.Avatars
                 imported.Add((recipe, sample, CreatePoseAsset(recipe, sample.Hand)));
             }
 
-            AssetDatabase.SaveAssets();
+            // Только своё: позы, база поз, оружие и аватары хвата (общий SaveAssets записал бы чужие изменения).
+            string[] poses = imported.Select(i => AssetDatabase.GetAssetPath(i.Pose)).ToArray();
+            VrBattlegrounds.Editor.Gameplay.OwnAssetSave.Save(poses);
 
             RegisterOnPoseBase(imported.Select(i => i.Pose));
             foreach (var (recipe, sample, pose) in imported)
@@ -154,7 +156,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 AssignToGrabPoint(recipe, sample, pose, gripAvatars);
             }
 
-            AssetDatabase.SaveAssets();
+            VrBattlegrounds.Editor.Gameplay.OwnAssetSave.Save(poses.Append(PoseBase).Concat(gripAvatars).Concat(imported.Select(i => i.Recipe.Weapon)));
             GameLog.Debug.Info($"[HandsPackPoseImporter] Поз: {imported.Count} → {string.Join(", ", imported.Select(i => i.Recipe.PoseFolder ?? PoseFolder).Distinct())}");
         }
 

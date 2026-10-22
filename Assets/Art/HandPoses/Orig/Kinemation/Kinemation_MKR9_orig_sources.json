@@ -1,0 +1,148 @@
+{
+    "pack": "Kinemation",
+    "item": "MKR9",
+    "weapon": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab",
+    "magazineNote": "выбран A_FP_MKR9_Reload_Empty + A_W_MKR9_Reload_Empty, деталь Mag, кадры 60–112 (1,000–1,867 с), середина 1,433 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "Kinemation_MKR9_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_MKR9_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_MKR9_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_MKR9_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_MKR9_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_MKR9_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_MKR9_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_MKR9_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_MKR9_Support_orig/Left",
+                "Orig/Kinemation_MKR9_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "Kinemation_MKR9_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_MKR9_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/MKR9/MKR9_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_MKR9_Reload_Empty",
+            "weaponClip": "A_W_MKR9_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.4329999685287476,
+            "frame": 86.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_MKR9_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_MKR9_Reload_Empty",
+            "weaponClip": "A_W_MKR9_Reload_Empty",
+            "part": "Mag",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 53,
+            "startFrame": 60,
+            "endFrame": 112,
+            "startTime": 1.0,
+            "endTime": 1.8669999837875367,
+            "midTime": 1.4329999685287476,
+            "rigidMm": 1.4429999589920045,
+            "rigidDeg": 2.046999931335449,
+            "palmMm": 22.17099952697754,
+            "seatMm": 75.36399841308594,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_MKR9_Reload_Empty",
+            "weaponClip": "A_W_MKR9_Reload_Empty",
+            "part": "Mag",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 557.427978515625,
+            "minPalmMm": 101.427001953125
+        },
+        {
+            "clip": "A_FP_MKR9_Reload_Tac",
+            "weaponClip": "A_W_MKR9_Reload_Tac",
+            "part": "Mag",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 48,
+            "startFrame": 54,
+            "endFrame": 101,
+            "startTime": 0.8999999761581421,
+            "endTime": 1.6829999685287476,
+            "midTime": 1.2829999923706055,
+            "rigidMm": 2.7639999389648439,
+            "rigidDeg": 1.5889999866485596,
+            "palmMm": 21.636999130249025,
+            "seatMm": 150.64100646972657,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_MKR9_Reload_Tac",
+            "weaponClip": "A_W_MKR9_Reload_Tac",
+            "part": "Mag",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 461.2309875488281,
+            "minPalmMm": 99.97000122070313
+        }
+    ]
+}

@@ -1,0 +1,148 @@
+{
+    "pack": "Kinemation",
+    "item": "Mk14",
+    "weapon": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
+    "magazineNote": "выбран A_FP_Mk14EBR_Reload_Empty + A_W_Mk14EBR_Reload_Empty, деталь Mk14_Magazine, кадры 16–71 (0,533–2,367 с), середина 1,433 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "Kinemation_Mk14_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Mk14_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_Mk14EBR_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Mk14_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_Mk14_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_Mk14_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Mk14_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_Mk14EBR_Idle",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Mk14_Support_orig/Left",
+                "Orig/Kinemation_Mk14_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "Kinemation_Mk14_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Mk14_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Mk14/Mk14_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_Mk14EBR_Reload_Empty",
+            "weaponClip": "A_W_Mk14EBR_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.4329999685287476,
+            "frame": 43.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Mk14_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_Mk14EBR_Reload_Empty",
+            "weaponClip": "A_W_Mk14EBR_Reload_Empty",
+            "part": "Mk14_Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 56,
+            "startFrame": 16,
+            "endFrame": 71,
+            "startTime": 0.5329999923706055,
+            "endTime": 2.367000102996826,
+            "midTime": 1.4329999685287476,
+            "rigidMm": 1.25600004196167,
+            "rigidDeg": 0.0,
+            "palmMm": 29.402999877929689,
+            "seatMm": 491.59600830078127,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_Mk14EBR_Reload_Empty",
+            "weaponClip": "A_W_Mk14EBR_Reload_Empty",
+            "part": "Mk14_Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 493.22100830078127,
+            "minPalmMm": 165.86399841308595
+        },
+        {
+            "clip": "A_FP_Mk14EBR_Reload_Tactical",
+            "weaponClip": "A_W_Mk14EBR_Reload_Tactical",
+            "part": "Mk14_Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "меш",
+            "frames": 56,
+            "startFrame": 16,
+            "endFrame": 71,
+            "startTime": 0.5329999923706055,
+            "endTime": 2.367000102996826,
+            "midTime": 1.4329999685287476,
+            "rigidMm": 1.3200000524520875,
+            "rigidDeg": 0.0,
+            "palmMm": 29.441999435424806,
+            "seatMm": 491.59600830078127,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_Mk14EBR_Reload_Tactical",
+            "weaponClip": "A_W_Mk14EBR_Reload_Tactical",
+            "part": "Mk14_Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "меш",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 493.22100830078127,
+            "minPalmMm": 165.86500549316407
+        }
+    ]
+}

@@ -270,7 +270,7 @@ pivot на точке прицеливания (F — вершина мушки,
 | MKR9 | `SightKit_MX68` в пазу | +0,08 мм; канал MX68 уже планки — принято; бюджет треугольников 32 000 |
 | TR15 | `SightKit_XPS2` в пазу | сетка на 15 м |
 | ShotgunReal (FABARM) | не калибруется | — |
-| SDKGun, SDK ShotGun, Machinegun | убраны из арсенала | ассеты в `Assets/Unused/Weapons/` (README) |
+| SDKGun, SDK ShotGun, Machinegun | убраны из арсенала | ассеты удалены 2026-10-22 (были в `Assets/Unused/Weapons/`) |
 
 **Ловушки:** `SaveAsPrefabAsset` обнуляет `_assetId` (писатель восстанавливает, `NetworkAssetIdOnDiskTests`);
 `EditorUtility.CopySerialized` терял вершины у многопоточных мешей пака Hands — копировать через Mesh API;

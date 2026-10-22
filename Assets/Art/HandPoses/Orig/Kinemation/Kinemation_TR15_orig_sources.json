@@ -1,0 +1,128 @@
+{
+    "pack": "Kinemation",
+    "item": "TR15",
+    "weapon": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+    "magazineNote": "ни в одном клипе перезарядки рука не держит деталь жёстко (см. magazineScan)",
+    "points": [
+        {
+            "name": "Kinemation_TR15_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_TR15_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_TR15_Idle_Pose_Non_Grip",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_TR15_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_TR15_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_TR15_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_TR15_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_TR15_Idle_Pose_Non_Grip",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_TR15_Support_orig/Left",
+                "Orig/Kinemation_TR15_Support_orig/Right (зеркало)"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_TR15_Reload_Empty",
+            "weaponClip": "A_W_TR15_Reload_Empty",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 1167.873046875,
+            "minPalmMm": 120.76499938964844
+        },
+        {
+            "clip": "A_FP_TR15_Reload_Empty",
+            "weaponClip": "A_W_TR15_Reload_Empty",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 1167.873046875,
+            "minPalmMm": 125.0770034790039
+        },
+        {
+            "clip": "A_FP_TR15_Reload_Tactical",
+            "weaponClip": "A_W_TR15_Reload_Tac",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 672.3140258789063,
+            "minPalmMm": 108.90299987792969
+        },
+        {
+            "clip": "A_FP_TR15_Reload_Tactical",
+            "weaponClip": "A_W_TR15_Reload_Tac",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 672.3140258789063,
+            "minPalmMm": 127.57499694824219
+        }
+    ]
+}

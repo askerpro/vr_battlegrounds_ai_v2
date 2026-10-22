@@ -81,7 +81,7 @@ namespace VrBattlegrounds.Editor.Avatars
 
         /// <summary>
         /// Сборщик оружия из паков не добавляет и не регистрирует позы и хваты аватаров (решение пользователя 2026-10-22):
-        /// записи хвата переносятся как есть, сборка готовит только исходные позы <c>_orig</c> (<see cref="PackOrigPoses" />).
+        /// записи хвата переносятся как есть, сборка готовит только исходные позы <c>_orig</c> (<see cref="VrBattlegrounds.Editor.Gameplay.PackOrigPoses" />).
         /// Перезапись поз MEF из пака — явная команда (<see cref="HandsPackPoseImporter" />, Grip Extraction).
         /// </summary>
         public static void RequireBuilderMode(WeaponGripPoseMode mode, string builder)
@@ -136,14 +136,23 @@ namespace VrBattlegrounds.Editor.Avatars
         /// всех аватаров. <see cref="WeaponGripPoseMode.ReimportFromPack" /> переносит все, кроме аватаров импортёра поз:
         /// их записи остаются от сборки и импорта.
         /// </summary>
-        public static void Restore(Snapshot snapshot, WeaponGripPoseMode mode)
+        /// <param name="droppedNodes">
+        /// Имена объектов, которые сборка удалила намеренно (геометрия базы магазина SDK). Записи, чьи трансформы
+        /// выравнивания лежали внутри них, не переносятся, и сами узлы не воссоздаются (решение пользователя 2026-10-22:
+        /// хват магазина Cyborg не переносится, поза магазина — snap-точка <c>_orig</c>).
+        /// </param>
+        /// <param name="droppedAvatars">GUID аватаров, чьи записи сборка убрала намеренно (сэмплы SDK у магазинов паков) — не переносятся.</param>
+        public static void Restore(Snapshot snapshot, WeaponGripPoseMode mode, IEnumerable<string> droppedNodes = null,
+            IEnumerable<string> droppedAvatars = null)
         {
+            var dropped = new HashSet<string>(droppedNodes ?? Enumerable.Empty<string>());
+            var droppedGuids = new HashSet<string>(droppedAvatars ?? Enumerable.Empty<string>());
             HashSet<string> rewritten = mode == WeaponGripPoseMode.ReimportFromPack ? HandsPackPoseImporter.GripAvatarGuidSet() : new HashSet<string>();
             foreach (PrefabGrips prefab in snapshot.Prefabs)
             {
                 GameObject root = PrefabUtility.LoadPrefabContents(prefab.Path);
                 var replaced = new List<Transform>();
-                int carried = 0;
+                int carried = 0, skipped = 0;
                 try
                 {
                     foreach (GrabbableGrips grips in prefab.Grabbables)
@@ -166,6 +175,12 @@ namespace VrBattlegrounds.Editor.Avatars
                             var result = new List<Entry>();
                             foreach (Entry old in grips.Points[i])
                             {
+                                if (droppedGuids.Contains(old.AvatarGuid) || Under(dropped, old.LeftPath) || Under(dropped, old.RightPath))
+                                {
+                                    skipped++;
+                                    continue;
+                                }
+
                                 Entry fresh = current.FirstOrDefault(e => e.AvatarGuid == old.AvatarGuid);
                                 if (rewritten.Contains(old.AvatarGuid) && fresh != null)
                                 {
@@ -207,9 +222,18 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 // SaveAsPrefabAsset пишет _assetId = 0 — вернуть канон (NetworkAssetIdOnDiskTests).
                 VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { prefab.Path }, false);
-                GameLog.Debug.Info($"[WeaponGripCarryOver] {prefab.Path}: перенесено записей хвата {carried} ({mode})");
+                GameLog.Debug.Info($"[WeaponGripCarryOver] {prefab.Path}: перенесено записей хвата {carried} ({mode})" +
+                                     (skipped > 0 ? $", не перенесено {skipped}: трансформы в удалённой геометрии базы или сэмплы SDK" : ""));
             }
         }
+
+        /// <summary>Путь записи проходит через удалённый сборкой объект.</summary>
+        private static bool Under(HashSet<string> dropped, string path) =>
+            path != null && dropped.Count > 0 && path.Split('/').Any(segment =>
+            {
+                int cut = segment.LastIndexOf(Separator);
+                return dropped.Contains(cut >= 0 ? segment.Substring(0, cut) : segment);
+            });
 
         /// <summary>Захватываемые самого префаба: магазин в гнезде — вложенный префаб со своим снимком.</summary>
         private static IEnumerable<UxrGrabbableObject> OwnGrabbables(GameObject root) =>

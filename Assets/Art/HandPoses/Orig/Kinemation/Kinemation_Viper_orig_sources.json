@@ -1,0 +1,148 @@
+{
+    "pack": "Kinemation",
+    "item": "Viper",
+    "weapon": "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+    "magazineNote": "выбран A_FP_WK-11_Viper_Reload_Empty + A_W_WK-11_Viper_Reload_Empty, деталь Magazine, кадры 54–111 (0,900–1,850 с), середина 1,367 с; держит: Left. Эксперимент — проверить глазами.",
+    "points": [
+        {
+            "name": "Kinemation_Viper_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Viper_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_WK-11_Viper_Idle_Pose",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Viper_Grip_orig/Left (зеркало)",
+                "Orig/Kinemation_Viper_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "Kinemation_Viper_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Viper_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Viper/Viper.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "A_FP_WK-11_Viper_Idle_Pose",
+            "weaponClip": "",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Viper_Support_orig/Left",
+                "Orig/Kinemation_Viper_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
+            "name": "Kinemation_Viper_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Viper_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Viper/Viper_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_WK-11_Viper_Reload_Empty",
+            "weaponClip": "A_W_WK-11_Viper_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.3669999837875367,
+            "frame": 82.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_Viper_Magazine_orig/Left"
+            ]
+        }
+    ],
+    "magazineScan": [
+        {
+            "clip": "A_FP_WK-11_Viper_Reload_Empty",
+            "weaponClip": "A_W_WK-11_Viper_Reload_Empty",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "начало детали",
+            "frames": 58,
+            "startFrame": 54,
+            "endFrame": 111,
+            "startTime": 0.8999999761581421,
+            "endTime": 1.850000023841858,
+            "midTime": 1.3669999837875367,
+            "rigidMm": 4.736000061035156,
+            "rigidDeg": 1.690999984741211,
+            "palmMm": 48.65800094604492,
+            "seatMm": 443.87799072265627,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_WK-11_Viper_Reload_Empty",
+            "weaponClip": "A_W_WK-11_Viper_Reload_Empty",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 995.718017578125,
+            "minPalmMm": 62.41899871826172
+        },
+        {
+            "clip": "A_FP_WK-11_Viper_Reload_Tactical",
+            "weaponClip": "A_W_WK-11_Viper_Reload_Tac",
+            "part": "Magazine",
+            "side": "Left",
+            "result": "окно",
+            "distance": "начало детали",
+            "frames": 55,
+            "startFrame": 68,
+            "endFrame": 122,
+            "startTime": 1.1330000162124634,
+            "endTime": 2.0329999923706056,
+            "midTime": 1.5829999446868897,
+            "rigidMm": 2.1530001163482668,
+            "rigidDeg": 3.1470000743865969,
+            "palmMm": 48.67300033569336,
+            "seatMm": 317.24200439453127,
+            "minPalmMm": 0.0
+        },
+        {
+            "clip": "A_FP_WK-11_Viper_Reload_Tactical",
+            "weaponClip": "A_W_WK-11_Viper_Reload_Tac",
+            "part": "Magazine",
+            "side": "Right",
+            "result": "нет окна",
+            "distance": "начало детали",
+            "frames": 0,
+            "startFrame": 0,
+            "endFrame": 0,
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "midTime": 0.0,
+            "rigidMm": 0.0,
+            "rigidDeg": 0.0,
+            "palmMm": 0.0,
+            "seatMm": 702.3289794921875,
+            "minPalmMm": 67.15899658203125
+        }
+    ]
+}

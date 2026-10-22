@@ -39,9 +39,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// <item><c>scripted-combat-round</c> (S + 2): то же, но готовность — жетоны, снятые рукой, клиент 1 стреляет до
     ///       смерти клиента 2; сервер проверяет готовность не по пределу ожидания, PlayerKilled и смену тела жертвы,
     ///       награду за убийство, Resolution со счётом 1:0 и деньгами за раунд.</item>
+    /// <item><c>scripted-admin-pause</c> (S + 2): матч начинает клиент-админ командой планшета, не-админу отказ,
+    ///       пауза и продолжение админом.</item>
+    /// <item><c>scripted-series-next-map</c> (S + 2): серия из двух карт клиентом-админом, «Следующая карта»
+    ///       (<c>ScriptedClientScenario.Series.cs</c>).</item>
     /// </list>
     /// </summary>
-    public sealed class ScriptedClientScenario : IE2EScenario
+    public sealed partial class ScriptedClientScenario : IE2EScenario
     {
         public const string SmokeName = "scripted-input-smoke";
         public const string PurchaseName = "scripted-wall-purchase";
@@ -105,7 +109,9 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         public IEnumerator Run(E2EContext context, E2EResult result)
         {
             if (context.IsServerSide)
-                return _name == SmokeName ? RunSmokeServer(context, result) : RunPurchaseServer(context, result);
+                return _name == SmokeName ? RunSmokeServer(context, result)
+                    : _name == SeriesNextMapName ? RunSeriesServer(context, result)
+                    : RunPurchaseServer(context, result);
 
             return RunClient(context, result);
         }

@@ -442,6 +442,7 @@ namespace VrBattlegrounds.DevTools.E2E
             yield return new ScriptedClientScenario(ScriptedClientScenario.CombatRoundName, "combat-round");
             yield return new ScriptedClientScenario(ScriptedClientScenario.CombatSeriesName, "combat-next-round");
             yield return new ScriptedClientScenario(ScriptedClientScenario.AdminPauseName, "admin-pause");
+            yield return new ScriptedClientScenario(ScriptedClientScenario.SeriesNextMapName, "series-next-map");
         }
 
         /// <summary>Сценарий с таким именем зарегистрирован (регистр не важен).</summary>

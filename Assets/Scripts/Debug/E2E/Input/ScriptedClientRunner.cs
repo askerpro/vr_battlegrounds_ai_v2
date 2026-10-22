@@ -52,6 +52,9 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         private readonly InputScript _script;
         private readonly ScriptedPilot _pilot = new ScriptedPilot();
 
+        /// <summary>Оркестратор карты, на которой клиент был при последней проверке карты (<c>activate</c>, <c>expect-map</c>).</summary>
+        private MapReferee _knownMap;
+
         /// <summary>netId предмета, взятого последним шагом <c>grab-wall-item</c>; 0 — ничего не взято.</summary>
         public uint GrabbedNetId { get; private set; }
 
@@ -112,6 +115,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 case "admin-rights": return AdminRights(step, label);
                 case "admin-command": return AdminCommand(step, label);
                 case "admin-command-denied": return AdminCommandDenied(step, label);
+                case "admin-start-series": return AdminStartSeries(step, label);
+                case "expect-map": return ExpectMap(step, label);
                 case "release": return Release(step, label);
                 case "hold": return Hold(step, label);
                 case "expect-held": return Instant(() => ExpectHeld(step, label));
@@ -135,6 +140,7 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 () => $"аватар={(E2EScriptedInput.Avatar != null ? E2EScriptedInput.Avatar.name : "нет")}, " +
                       $"кадров={E2EScriptedInput.AppliedFrames}, отказ={E2EScriptedInput.Refusal ?? "нет"}",
                 () => E2EScriptedInput.Refusal);
+            _knownMap = MapReferee.Instance;
             Require(label, bound, $"аватар {Name(E2EScriptedInput.Avatar)}, рост глаз {F(_pilot.EyeHeight)} м");
         }
 
@@ -599,11 +605,13 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             if (!available.Succeeded) Fail(label, available.Diagnosis);
 
             MapState before = MapReferee.Instance != null ? MapReferee.Instance.CurrentState : MapState.Warmup;
-            session.CmdAdminMapCommand(command);
+            int times = Mathf.Max(1, step.repeat);
+            for (int i = 0; i < times; i++) session.CmdAdminMapCommand(command);
+            string sent = times > 1 ? $"{command} ×{times} одним кадром" : command.ToString();
 
             if (!TryExpected(command, out MapState expected))
             {
-                Pass(label, $"{command} отправлена из состояния {before}");
+                Pass(label, $"{sent} отправлена из состояния {before}");
                 yield break;
             }
 
@@ -612,6 +620,67 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                 () => MapReferee.Instance != null && MapReferee.Instance.CurrentState == expected,
                 () => $"состояние карты {Describe()}");
             Require(label, applied, $"{command}: {before} → {expected}");
+        }
+
+        /// <summary>
+        /// «Новая серия» планшета (<c>MenuSessionSetup</c>): тот же Command <c>CmdAdminStartSeries</c>; шаг ждёт
+        /// реплицированную серию с этими картами. Загрузку первой карты проверяет следующий шаг <c>expect-map</c>.
+        /// </summary>
+        private IEnumerator AdminStartSeries(InputStep step, string label)
+        {
+            PlayerSession session = PlayerSession.LocalSession;
+            if (session == null || !session.IsAdmin) Fail(label, "у клиента нет прав админа");
+
+            session.CmdAdminStartSeries(step.target, step.maps);
+            string maps = string.Join(" → ", step.maps);
+            E2EWaitOutcome started = new E2EWaitOutcome();
+            yield return E2EWait.Until(started, $"серия {maps} идёт", step.timeoutS,
+                () => SeriesIs(step.maps, 0),
+                () => $"серия {DescribeSeries()}");
+            Require(label, started, $"режим {step.target}, карты {maps}");
+        }
+
+        /// <summary>
+        /// Карта <c>target</c> загружена заново: новый оркестратор карты (та же сцена тоже считается — серия грузит её
+        /// снова), разминка, ввод подан аватару. Оркестратор запоминается для следующей проверки карты.
+        /// </summary>
+        private IEnumerator ExpectMap(InputStep step, string label)
+        {
+            MapReferee previous = _knownMap;
+            UxrAvatar avatarBefore = E2EScriptedInput.Avatar;
+            E2EWaitOutcome loaded = new E2EWaitOutcome();
+            yield return E2EWait.Until(loaded, $"карта {step.target} загружена, разминка, ввод на аватаре", step.timeoutS,
+                () => MapReferee.Instance != null && MapReferee.Instance != previous &&
+                      MapReferee.Instance.SceneName == step.target && MapReferee.Instance.CurrentState == MapState.Warmup &&
+                      E2EScriptedInput.Avatar != null && E2EScriptedInput.AppliedFrames > 10,
+                () => $"карта {(MapReferee.Instance != null ? MapReferee.Instance.SceneName : "нет")} " +
+                      $"({(MapReferee.Instance != null && MapReferee.Instance == previous ? "прежняя" : "новая")}), " +
+                      $"аватар {Name(E2EScriptedInput.Avatar)}, кадров {E2EScriptedInput.AppliedFrames}; {Describe()}");
+            if (loaded.Succeeded) _knownMap = MapReferee.Instance;
+
+            PlayerSession session = PlayerSession.LocalSession;
+            bool rebound = E2EScriptedInput.Avatar != null && E2EScriptedInput.Avatar != avatarBefore;
+            Require(label, loaded, $"{step.target}: {Describe()}, серия {DescribeSeries()}; аватар " +
+                                   $"{(rebound ? "новый" : "прежний")} {Name(E2EScriptedInput.Avatar)}, команда " +
+                                   $"{(session != null ? session.TeamIndex : -1)}, админ {(session != null && session.IsAdmin)}");
+        }
+
+        private static bool SeriesIs(string[] maps, int index)
+        {
+            Series series = Series.Instance;
+            if (series == null || !series.IsRunning || series.CurrentIndex != index || series.Maps.Count != maps.Length)
+                return false;
+            for (int i = 0; i < maps.Length; i++)
+                if (series.Maps[i] != maps[i]) return false;
+            return true;
+        }
+
+        private static string DescribeSeries()
+        {
+            Series series = Series.Instance;
+            if (series == null) return "нет";
+            var maps = new List<string>(series.Maps);
+            return $"{(series.IsRunning ? "идёт" : "не идёт")}, карта {series.CurrentIndex + 1}/{maps.Count} [{string.Join(", ", maps)}]";
         }
 
         /// <summary>Не-админ жмёт ту же кнопку: сервер отказывает, состояние карты не меняется.</summary>

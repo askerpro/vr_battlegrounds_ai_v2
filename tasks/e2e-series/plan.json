@@ -21,6 +21,23 @@
       "needs": []
     },
     {
+      "id": "series",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.Series.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.Series.cs.meta",
+        "Assets/Scripts/Managers/Series.cs",
+        "Assets/Scripts/Managers/AdminMapCommands.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "Assets/Tests/EditMode/GameModes/SeriesSmokeTests.cs",
+        "tasks/e2e-series/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "work",
       "writes": [
         "tasks/e2e-series/**"

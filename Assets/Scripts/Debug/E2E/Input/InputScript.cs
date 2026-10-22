@@ -31,7 +31,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
     /// <item><c>admin-rights</c> — права админа этому клиенту (режим отладки, права выдаёт сервер);</item>
     /// <item><c>admin-command</c> — команда админа <c>target</c> (<c>GoLive</c>, <c>Pause</c>, <c>Resume</c>, <c>Stop</c>,
     ///       <c>NextMap</c>) тем же Command, что кнопка планшета; <c>admin-command-denied</c> — то же от не-админа:
-    ///       сервер отказывает, состояние карты не меняется (<c>seconds</c> ожидания);</item>
+    ///       сервер отказывает, состояние карты не меняется (<c>seconds</c> ожидания); <c>repeat</c> — сколько раз
+    ///       отправить команду подряд в одном кадре (повтор кнопки во время перехода карты);</item>
+    /// <item><c>admin-start-series</c> — «Новая серия» планшета: режим <c>target</c>, карты <c>maps</c> по порядку;
+    ///       шаг ждёт реплицированную серию;</item>
+    /// <item><c>expect-map</c> — карта <c>target</c> загружена заново (новый оркестратор карты), разминка, ввод подан
+    ///       аватару на ней;</item>
     /// <item><c>expect-held</c>, <c>expect-peers-holding</c> — проверки реплицированного состояния;</item>
     /// <item><c>release</c>, <c>hold</c> (<c>seconds</c>);</item>
     /// <item><c>step</c> / <c>wait-server</c> — барьер шагов e2e (<c>name</c>, <c>timeoutS</c>).</item>
@@ -53,7 +58,8 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         {
             "activate", "measure-start", "measure-check", "walk", "turn", "choose-team", "grab-wall-item",
             "grab-dog-tag", "carry", "shoot-enemy", "expect-eliminated", "release", "hold", "expect-held",
-            "expect-peers-holding", "admin-rights", "admin-command", "admin-command-denied", "step", "wait-server"
+            "expect-peers-holding", "admin-rights", "admin-command", "admin-command-denied", "admin-start-series",
+            "expect-map", "step", "wait-server"
         };
 
         /// <summary>Команды админа (<c>MapCommand</c>) для <c>admin-command</c> и <c>admin-command-denied</c>.</summary>
@@ -123,6 +129,26 @@ namespace VrBattlegrounds.DevTools.E2E.Input
                         return null;
                     }
 
+                    if (script.steps[i].op == "admin-start-series" &&
+                        (string.IsNullOrEmpty(script.steps[i].target) || script.steps[i].maps == null ||
+                         script.steps[i].maps.Length == 0))
+                    {
+                        error = $"шаг {i + 1} сценария {file}: admin-start-series без режима (target) или карт (maps)";
+                        return null;
+                    }
+
+                    if (script.steps[i].op == "expect-map" && string.IsNullOrEmpty(script.steps[i].target))
+                    {
+                        error = $"шаг {i + 1} сценария {file}: expect-map без сцены (target)";
+                        return null;
+                    }
+
+                    if (script.steps[i].repeat < 1)
+                    {
+                        error = $"шаг {i + 1} сценария {file}: repeat {script.steps[i].repeat} < 1";
+                        return null;
+                    }
+
                     if (script.steps[i].client < 0)
                     {
                         error = $"шаг {i + 1} сценария {file}: client {script.steps[i].client} < 0";
@@ -156,6 +182,12 @@ namespace VrBattlegrounds.DevTools.E2E.Input
         public string item = "";
         public int shots = 3;
         public string until = "hit";
+
+        /// <summary>Сцены карт серии по порядку (<c>admin-start-series</c>).</summary>
+        public string[] maps;
+
+        /// <summary>Сколько раз подряд отправить команду (<c>admin-command</c>).</summary>
+        public int repeat = 1;
 
         /// <summary>Номер клиента, который исполняет шаг; 0 — все.</summary>
         public int client;

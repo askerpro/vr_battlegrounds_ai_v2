@@ -11,7 +11,14 @@
     {
       "id": "work",
       "writes": [
-        "tasks/lobby-material-fixes/**"
+        "tasks/lobby-material-fixes/**",
+        "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Meshes/Props/Materials/**",
+        "Assets/Art/Lobby/Imported/Catalog/PostApocalypticTown/URP/Art/Static_Mesh/Materials/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Tests/EditMode/AssetAudit/**",
+        "Docs/quest-performance-manifest.md",
+        "experts/performance/journal/**",
+        "experts/level-design/journal/**"
       ],
       "after": [],
       "needs": []

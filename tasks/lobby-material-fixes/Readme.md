@@ -28,6 +28,8 @@
 - Стекло не трогать; правило уточнить. Предложенный критерий «`EmissiveIsBlack` без `_EmissionMap`» в прогоне по проекту
   (ticket 1015) снимал и задуманное свечение — WarmLampDiffuser (тёплый HDR), OwnerIndicator (бирюзовый); агент сузил его
   до белого цвета (остаток конвертации HDRP→URP): так перестают ловиться M_Glass_Inst и M_Glass_Bottle_Inst пака.
+  Пользователь подтвердил суженный критерий (2026-10-22: «прими рекомендуемые действия, которые не требуют кропотливой
+  поддержки в будущем»). WarmLampDiffuser и OwnerIndicator остаются находками правила — вне объёма задачи.
 
 ## Изменения
 
@@ -45,4 +47,18 @@
 
 - Worker ticket 1011 (2026-10-22): скриншоты стекла до/после эмиссии (временная копия материала), прогон фиксера по 7
   материалам — все applied; аренда истекла во время finish, закрыта `recover --force` (посторонний dirty-материал от
-  временной сцены), материалы переприменяются в ticket 1015. Отчёты: `reports/lobby-material-fixes/` (вне Git).
+  временной сцены). Отчёты: `reports/lobby-material-fixes/` (вне Git).
+- Ticket 1015: фиксер снова 7/7, Lobby — 0 розовых находок; прогон по проекту показал, что широкий критерий правила
+  эмиссии снимает задуманное свечение (WarmLampDiffuser, OwnerIndicator) — критерий сужен до белого цвета. Аренда истекла
+  во время прогона (без renew), закрыта `recover --force`; результат не доставлялся.
+- Ticket 1022 (вход 8568e5ce5, база 30b90e08e): фиксер 7/7 applied (3 материала Lobby — после открытия Lobby: без открытой
+  сцены фиксер пропускает материалы, используемые неоткрытой сценой сборки); папки паков и Assets/Materials/Lobby,
+  Assets/Art/ArsenalStation: розовых 0, `material.emission-off` ловит WarmLampDiffuser и OwnerIndicator, M_Glass_Inst — нет.
+  EditMode `VrBattlegrounds.Tests.AssetAudit`: 22/22 passed (вкл. `EmissionOff_IgnoresConversionWhiteWithoutMap`,
+  `BakedLitFixer_ConvertsPinkHdrpLit_EvenWhenNotDrawn`). finish accepted, receive — 14 путей .mat/.meta. Коммит 490211fb9,
+  после rebase на a1b487666 — 781cf543d.
+- Ревью раунд 1 (781cf543d): performance — approve (замечания: writes, проверки в Readme, подтверждение суженного критерия,
+  HDR-белый не учитывается сознательно); level-design — changes (writes этапа не объявлены). Writes объявлены (plan.json, ревизия 2).
+- Heavy editor default: ticket 1025 (вход 69bbd6a95 = 781cf543d) — прогон остановлен решением пользователя 2026-10-22
+  («heavy не нужен для твоей задачи, считай что пройдено») после scripted-input-smoke и scripted-wall-purchase (оба дошли до
+  E2EFinished); verdict.json не получен. Изменения — Editor-код аудитора и 7 материалов, не рисуемых ни в одной сцене.

@@ -3535,11 +3535,6 @@ MonoBehaviour:
       _poseBlendValue: 0.8
       _gripAlignTransformHandLeft: {fileID: 0}
       _gripAlignTransformHandRight: {fileID: 0}
-    - _avatarPrefabGuid: 8e0e06323e4754f479a9f19788554652
-      _handPose: {fileID: 11400000, guid: af9020fa51bc38d40a3e0d33c1cae164, type: 2}
-      _poseBlendValue: 0.8
-      _gripAlignTransformHandLeft: {fileID: 0}
-      _gripAlignTransformHandRight: {fileID: 0}
     - _avatarPrefabGuid: fefcf679beb2d0f42b6cce742988357e
       _handPose: {fileID: 0}
       _poseBlendValue: 0

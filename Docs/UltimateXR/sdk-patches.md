@@ -2096,3 +2096,47 @@ resolved». Превью хвата в инспекторе `UxrGrabbableObject`
 `UltimateXR.Editor` и `Assembly-CSharp-Editor`; в Unity — правка унаследованной позы через MEF без
 изменений префаба потомка (`git status`), превью хвата при выбранной CyborgHandsBase.
 Проверено офлайн-компиляцией; в Unity не проверено.
+
+## Патч 92: записи хвата сэмплов оружия — под базой CyborgHandsBase, не под потомком (2026-10-22)
+
+Номер выбран так же, как у патча 91 (агент основного checkout `live/grip-analyzer`, вне хаба).
+Код SDK не меняется — только данные четырёх префабов сэмпла. Маркера в коде нет; признак патча —
+GUID `71b74b0d08444f49bbb7aa2828d0890a` в полях ниже.
+
+### Проблема
+
+Правило семейства кистей Cyborg: записи хвата (`_avatarGripPoseEntries`) — только под базой
+CyborgHandsBase (`71b74b0d08444f49bbb7aa2828d0890a`); потомки (PlayerControllersCyborgAvatar
+`8e0e06323e4754f479a9f19788554652`, MEF_cyborg_hands_Player, MEF_cyborg_hands_Player_Black) записи
+наследуют по цепочке `ParentAvatarPrefab`. В сэмплах `Samples/FullScene/Prefabs/ShootingRange/Weapons`
+шесть записей стояли под Controllers, а `_selectedAvatarForGrips` указывал на Controllers — кнопка
+регистрации аватара в инспекторе добавляла бы новые записи потомку.
+
+Удалять эти записи нельзя: варианты проекта (`Assets/Prefabs/Weapons/Grenade/Grenade.prefab`,
+`Assets/Unused/Weapons/{Machinegun/Machinegun,SDKGun/Gun,Shotgun/Shotgun}.prefab`) переопределяют у
+того же элемента `data[3]` GUID на базу и точки выравнивания на свои узлы «(MEF_cyborg_hands)», а
+`_handPose`/`_poseBlendValue` наследуют из сэмпла (их override `data[4].*` лежат за `Array.size = 4`
+и не действуют). Узлы выравнивания записей общие с записью `CyborgAvatarExample`/`CyborgAvatar_URP`
+того же префаба (`Unused/Shotgun` ещё и двигает узлы помпы), поэтому они тоже не удаляются.
+
+### Применённое изменение
+
+Точечная замена строк YAML, документы и узлы не перестраивались:
+- `- _avatarPrefabGuid: 8e0e06323e4754f479a9f19788554652` → `71b74b0d08444f49bbb7aa2828d0890a`
+  (Grenade — точка 0; Gun — точка 0; Machinegun — «Trigger Grab» и «Front Grab»; Shotgun — корпус
+  и помпа); поза, Blend и выравнивание записи прежние, все позы зарегистрированы у базы;
+- `_selectedAvatarForGrips` → корневой GameObject базы
+  `{fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}` (5 компонентов).
+
+Для вариантов проекта действующие значения не меняются. Экземпляры сэмплов в сценах Build Settings
+(комната ShootingRange в Lobby, TestMap1, BotCombatStand) лежат под выключенным `Scene` и в игре не
+участвуют. Страж правила — `Assets/Tests/EditMode/Prefabs/CyborgGripEntriesOwnershipTests.cs`,
+исключений нет. Вне SDK тем же изменением по решению пользователя удалена запись Controllers на «Recoil»
+донора `Assets/Art/Weapons/HandsPack/LegacyBuildDonors/M16_Rifle_prefab.prefab` (без выравнивания;
+сборщики записи хвата донора не читают).
+
+### Как повторить при обновлении SDK
+
+Если обновление вернёт сэмплы, заново заменить GUID в шести записях и пяти `_selectedAvatarForGrips`
+(поиск `8e0e06323e4754f479a9f19788554652` в `ShootingRange/Weapons/*.prefab`). Записи не удалять
+(см. выше). Проверка — EditMode `CyborgGripEntriesOwnershipTests`, `GrabPoseCoverageTests`.

@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: e60059ac-d1b8-4009-8f9e-18ea070a70cb
+  _uxrUniqueId: 665388a7-27f9-4331-91f8-0fc74fa8f8de
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &396559841866505894
@@ -341,7 +341,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 02ad2524-4e69-401b-a52b-3673a9c74d71
+  _uxrUniqueId: a1e360ed-83e1-42f6-ae18-9975612082af
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &862664035520924121
@@ -388,7 +388,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: a2dda78a-5515-4d28-a558-a1e0b2ffece6
+  _uxrUniqueId: b3ca6747-0b76-426b-a34c-8ba546941a61
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &877272014012506295
@@ -499,7 +499,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 7c45b396-0c7d-4e95-9ef1-4868d896b87d
+  _uxrUniqueId: adfe8056-1436-427e-bb65-f12db0e61fcc
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &1177589833868431995
@@ -546,7 +546,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 939aee00-b91f-4a87-86e8-a02a2917f6c1
+  _uxrUniqueId: bbdc548b-5c34-41fc-aac2-294f6ff6f7f5
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &1391973794748482864
@@ -593,7 +593,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 3739758e-9f8e-4ab7-9c5a-aed1203049f3
+  _uxrUniqueId: f366238d-915f-47bb-b172-b7a7b162b811
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &1479114039132704108
@@ -711,13 +711,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1569127784798131865}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.011106243, y: -0.12874487, z: 0.35740536, w: -0.92496645}
-  m_LocalPosition: {x: 0.0076991348, y: -0.022326266, z: 0.2906094}
+  m_LocalRotation: {x: 0.035983834, y: -0.40634498, z: -0.0017465213, w: -0.9130092}
+  m_LocalPosition: {x: 0.0076991348, y: -0.014, z: 0.2906094}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7087697616365207812}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -3.849, y: 48.034, z: -1.496}
 --- !u!114 &1651133726268125050
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -730,7 +730,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 548e1ea2-714c-498b-954b-7a6757a9af00
+  _uxrUniqueId: 6b17445e-28a6-47f8-842f-7ab2491793bb
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &1609441357592778849
@@ -784,7 +784,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: f577e825-9b91-4b6b-a91d-90abdc2a5834
+  _uxrUniqueId: fb0ee282-a882-4b56-b2cf-c248345b7f37
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _compatibleTags:
@@ -1213,8 +1213,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2169378433829197920}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.1295708, y: 0.012750308, z: -0.92915857, w: 0.34599593}
-  m_LocalPosition: {x: -0.007653389, y: -0.022259103, z: 0.29060352}
+  m_LocalRotation: {x: -0.406345, y: 0.035983842, z: 0.9130093, w: 0.001746523}
+  m_LocalPosition: {x: -0.0076991348, y: -0.014, z: 0.2906094}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1232,7 +1232,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: eb6294d3-8243-4845-a97d-f5a0307d41a9
+  _uxrUniqueId: d3ef69df-2fcb-4b7a-ad9a-3aa60d0a9f28
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &2231077669970878432
@@ -1527,7 +1527,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 2b53c87d-fdce-4c77-b0d3-a29cee661f4a
+  _uxrUniqueId: 29580c51-da5b-4799-96de-4e6908dc8149
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &2679028184710294286
@@ -1614,7 +1614,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: ae66a7bc-008e-4bde-95d6-693d5d4c1115
+  _uxrUniqueId: 12e389c1-54bf-4c9c-8a8d-daa52e3d0388
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &2925398187254642400
@@ -1777,7 +1777,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: de0c34cc-549f-4c34-ae4a-3bf75c17a544
+  _uxrUniqueId: 4b8d6f8f-14a3-4519-bda2-180539713670
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &2974222289480924436
@@ -1833,7 +1833,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 7f1679bd-f64c-443f-8009-dddc43959558
+  _uxrUniqueId: 12e9eaf4-deb9-4818-ac03-bc5049f8d8e7
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
@@ -1970,7 +1970,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d17182e9c78c594d96529eb7adbcbe0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3e25616e-9201-4e20-8308-d9005fcefede
+  _uxrUniqueId: be3e2ae4-9328-4011-9b3d-d7b9bc0fda0b
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _continuousManipulationHaptics: 0
@@ -2036,7 +2036,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de9b9b50632dc364ba61a4632566e267, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: a25274fd-babc-4198-a5b7-403b159b7d3c
+  _uxrUniqueId: 86329a8f-49de-4dbb-92a2-553c24e3759a
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _audioOnGrab:
@@ -2072,7 +2072,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 097a8eab230aadf40bdce734556f5482, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: e417d96d-36e6-4869-8a52-8ecd0376b1d3
+  _uxrUniqueId: 447b70e9-0a43-4b90-b22d-80858ad8e71f
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _rounds: 7
@@ -2157,13 +2157,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3251021129088674613}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.08159287, y: -0.044648755, z: 0.7142167, w: -0.69371724}
-  m_LocalPosition: {x: 0.0058120918, y: -0.03971314, z: -0.09384046}
+  m_LocalRotation: {x: -0.23573077, y: -0.02906465, z: 0.79371417, w: -0.5600036}
+  m_LocalPosition: {x: 0.004, y: -0.0269, z: -0.0977}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9116440160414657646}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 18.069, y: -21.062, z: -112.976}
 --- !u!114 &4324151864212109955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2176,7 +2176,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 27fd96e0-648b-4ed6-9971-024f890104f1
+  _uxrUniqueId: 366a7827-7db1-4511-aa7a-a41c240752ff
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &3254525521450602042
@@ -2421,7 +2421,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7b06a52e9ced0e46a369c9a6e98a92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectAnchor
-  _uxrUniqueId: 858a1a76-cf58-4055-a032-5c7d9cf7ba62
+  _uxrUniqueId: 9075037b-adfc-45a9-9dbe-da219f02300f
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _compatibleTags:
@@ -2595,7 +2595,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 5b42248b-340f-4455-b5e4-48ce88c1cce1
+  _uxrUniqueId: 1142a8b3-cf2e-4da7-b967-838b26619dcd
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &4115101229555224028
@@ -2765,7 +2765,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 683415c1-0006-4957-935c-bb1e2da128d7
+  _uxrUniqueId: 92845bcc-ed6d-44f2-9215-3960f6decad6
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &4381812591956212571
@@ -2812,7 +2812,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: b230f80e-be84-4a14-bb76-bb2a028616ec
+  _uxrUniqueId: 6c432b5e-5f20-454a-aabe-eb3b8a2cf930
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &4461941267906005228
@@ -2954,7 +2954,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 69bf70cf-4c1e-4333-8e7c-fffd05cea042
+  _uxrUniqueId: 0b11ec7a-cdaf-4b9f-a18b-e9f3f074ec52
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &5019441426623325385
@@ -3001,7 +3001,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4ecdf5f0-6108-4fb5-a6ca-b251ca95a23c
+  _uxrUniqueId: b784e619-3c49-41f8-b021-781a19451712
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &5558223486495012419
@@ -3080,7 +3080,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 7772a0e3-9fc7-4f6d-8be1-12aaa52acbfd
+  _uxrUniqueId: 4e511595-ba39-4ff2-a5fe-0d7f57fb5f3b
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &5745446352733702374
@@ -3204,7 +3204,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObject
-  _uxrUniqueId: ac41f897-7d3e-4005-8b64-1c104d473e31
+  _uxrUniqueId: fea61ec4-651c-439e-aa29-e5de5d7d856b
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
@@ -3232,7 +3232,7 @@ MonoBehaviour:
   _rigidBodyDynamicOnRelease: 1
   _verticalReleaseMultiplier: 1
   _horizontalReleaseMultiplier: 1
-  _previewGrabPosesMode: 3
+  _previewGrabPosesMode: 2
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
   _selectedAvatarForGrips: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
@@ -3337,7 +3337,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b09fc2a58519c04382be9afd085eb88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Mechanics.Weapons.UxrProjectileSource
-  _uxrUniqueId: 48dea03a-9b14-4405-96d2-086c14e9e2b2
+  _uxrUniqueId: 66d50deb-152f-410b-a402-607277e11306
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _weaponAnimator: {fileID: 0}
@@ -3406,7 +3406,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1d9becc057b5a042859f71c7df57fdf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Mechanics.Weapons.UxrFirearmWeapon
-  _uxrUniqueId: af593872-7338-4e65-9872-3a68cdf435ad
+  _uxrUniqueId: a3222a17-0c80-4d6d-b6e7-d85ae0cd9916
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _recoilAxes: {fileID: 7770348165787161522}
@@ -3986,7 +3986,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObject
-  _uxrUniqueId: bfa6428d-5f98-4def-beb7-a965d8fae8b1
+  _uxrUniqueId: 469890ce-0a0d-42f3-bac7-042ff74912d1
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
@@ -4334,7 +4334,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 3536fcfe-0afa-431e-9c7c-0c810ff797fe
+  _uxrUniqueId: 0465ab79-5d34-4417-9608-5096fbc998fe
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &7419660411038536193
@@ -4362,8 +4362,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7419660411038536193}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.043201555, y: 0.081262365, z: -0.70248246, w: 0.7057255}
-  m_LocalPosition: {x: -0.005830753, y: -0.039792154, z: -0.093829066}
+  m_LocalRotation: {x: 0.029064627, y: 0.23573075, z: -0.5600036, w: 0.7937142}
+  m_LocalPosition: {x: -0.004, y: -0.0269, z: -0.0977}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4381,7 +4381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 7fc6ca29-5b3e-42ae-8222-2a9bef2d82bd
+  _uxrUniqueId: 1fe43103-4be3-4d18-8f4c-28038d27f0b1
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &7426031189661129027
@@ -4705,7 +4705,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 7cdfdaf1-7bb2-4a19-b2ad-89b5373f2025
+  _uxrUniqueId: fcd5cf4a-8c98-425a-999b-16e5dcfb877d
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &8499166342473083600
@@ -4873,7 +4873,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: d7271f0d-904b-4193-a1c3-60cabc4443f6
+  _uxrUniqueId: 603b24a4-1636-4433-9a55-d6e92a689591
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &8827771913218939422
@@ -5061,7 +5061,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 1bff7aac-a10e-4e79-9de6-64bb3c2ca8e2
+  _uxrUniqueId: a06d4b1d-1333-4bfc-8cc6-0980bb8d6d65
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &8914229432145007664
@@ -5108,7 +5108,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 60b6fb1e-62e9-4fd2-b197-001757f9da79
+  _uxrUniqueId: aa336d5a-adf9-4145-96da-4a70862e5b8c
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &9143891271711816504
@@ -5155,7 +5155,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 8b6639fe-9ebb-44d7-86de-e69344705e6a
+  _uxrUniqueId: c5c80009-ca34-4664-a35e-406517117489
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1
 --- !u!1 &9172232436131963998
@@ -5202,6 +5202,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: b70c938a-0b23-4cc8-a878-a1191bcb3f20
+  _uxrUniqueId: c35ca7f6-7f16-4db7-bf44-94abc2ec546d
   __prefabGuid: 69f24b275bfb4e34a93e038d9cacf6a9
   __isInPrefab: 1

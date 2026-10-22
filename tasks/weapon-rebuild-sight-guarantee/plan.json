@@ -97,6 +97,11 @@
         "Docs/grip-extraction.md",
         "Docs/weapons/sight-calibration.md",
         "Tools/e2e/editmode-known-red.json",
+        "experts/avatar-grip/journal/2026-10-22-weapon-rebuild-sight-guarantee.md",
+        "experts/gameplay/journal/2026-10-22-weapon-rebuild-sight-guarantee.md",
+        "experts/launch-infra/journal/2026-10-22-weapon-rebuild-sight-guarantee.md",
+        "experts/manipulation/journal/2026-10-22-weapon-rebuild-sight-guarantee.md",
+        "experts/weapon-system/journal/2026-10-22-weapon-rebuild-sight-guarantee.md",
         "tasks/weapon-rebuild-sight-guarantee/**"
       ],
       "after": [],

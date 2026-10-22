@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.LevelDesign;
 
@@ -34,8 +35,17 @@ namespace VrBattlegrounds.EditorTools
         private const string ProbeGroupName = "NightLightProbes";
         private const string WindowGlowPrefix = "WindowGlow__";
 
-        // Сокет светильника шатра: группа светильника — его родитель с тем же именем.
-        private static readonly Regex TentFixtureSocket = new Regex("^LightingSocket__((?:BayLamp|Pendant)_[A-Za-z0-9]+)__CommonLightingOwner$", RegexOptions.CultureInvariant);
+        // Сокет светильника шатра: группа светильника — его родитель с тем же именем. BayLamp — LobbyCanopyBaysBuilder,
+        // TentFill/TentAccent — LobbyTentLightFixtures.
+        private static readonly Regex TentFixtureSocket = new Regex("^LightingSocket__((?:BayLamp|TentFill|TentAccent)_[A-Za-z0-9]+)__CommonLightingOwner$", RegexOptions.CultureInvariant);
+
+        // Свет шатра (lobby-reflections, решение пользователя 2026-10-22): база ~0,35 по SH на высоте рук — лампы CampLighting
+        // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
+        // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
+        private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
+        private const float TentLampIntensity = 3.75f, TentLampRange = 8f;
+        private const float TentFillIntensity = 5f, TentFillRange = 10f;
+        private const float TentAccentIntensity = 22f, TentAccentRange = 4.5f;
 
         // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
         private static readonly Color FogColor = new Color(.050f, .062f, .088f);
@@ -45,11 +55,9 @@ namespace VrBattlegrounds.EditorTools
         private static readonly Color MoonColor = new Color(.62f, .71f, .95f);
         private static readonly Color WarmLamp = new Color(1f, .74f, .46f);
         private static readonly Color FloodWhite = new Color(1f, .93f, .80f);
-        private static readonly Color BulbGlass = new Color(1f, .86f, .62f);
         // Эмиссия рассеивателя ярче оттенка лампы: без bloom насыщенный тёплый почти белый читается как свет.
         private const float LampGlowBoost = 1.6f;
         private const string LampLongEmissionMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Lamp_long_EM.png";
-        private const string BulbGlassPath = "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Materials/Instances/M_Emissive.mat";
 
         // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
         private static readonly Dictionary<string, float> ZoneLightmapScale = new Dictionary<string, float>(StringComparer.Ordinal)
@@ -218,7 +226,8 @@ namespace VrBattlegrounds.EditorTools
 
         // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому фиксер шейдеров аудитора
         // (BakedLitMaterialFixer) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
-        // освещён, светится только рассеиватель), стекло SM_TopLight/SM_LampPost/SM_Lamp_02 — непрозрачный Unlit.
+        // освещён, светится только рассеиватель). Гражданские плафоны (SM_TopLight и др., стекло M_Emissive) удалены из
+        // базы 2026-10-22; колбы ламп шатра — Unlit LobbyNightWindowGlow (LobbyTentLightFixtures).
         // GI-флаг RealtimeEmissive: URP (BaseShaderGUI.SetMaterialKeywords) включает _EMISSION только при AnyEmissive,
         // а с None или EmissiveIsBlack при импорте/валидации выключает его — плафон гас. Realtime GI в Lobby выключен,
         // поэтому эмиссия видна, но в свет не идёт (свет ламп запекают настоящие источники); BakedEmissive дал бы
@@ -244,18 +253,6 @@ namespace VrBattlegrounds.EditorTools
                 EditorUtility.SetDirty(lampLong);
                 log.AppendLine("Плафон: " + AssetDatabase.GetAssetPath(lampLong) + " — Simple Lit, эмиссия по карте " + (emissionMap != null ? emissionMap.name : "нет") + ".");
             }
-
-            var glass = AssetDatabase.LoadAssetAtPath<Material>(BulbGlassPath);
-            if (glass == null) { log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: нет " + BulbGlassPath + "; стекло плафонов не светится."); return; }
-            var unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new InvalidOperationException("Нет шейдера URP Unlit.");
-            glass.shader = unlit;
-            glass.shaderKeywords = Array.Empty<string>();
-            OpaqueSurface(glass);
-            glass.SetTexture("_BaseMap", null);
-            glass.SetColor("_BaseColor", BulbGlass);
-            glass.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-            EditorUtility.SetDirty(glass);
-            log.AppendLine("Стекло плафонов: " + BulbGlassPath + " — непрозрачный Unlit " + BulbGlass + ".");
         }
 
         private static void OpaqueSurface(Material m)
@@ -398,9 +395,11 @@ namespace VrBattlegrounds.EditorTools
                     light.transform.rotation = Quaternion.Euler(32f, 135f, 0f); // луна на северо-западе, над стрельбищем.
                     if (bake) baked++; else realtime++;
                 }
-                // Шатёр: дальность 10 м дотягивает четыре центральные лампы до середины пола (2026-10-20,
-                // «шатёр освещён одной свечкой»); в запечённой ночи runtime-стоимость та же — ноль.
-                else if (name == "InteriorWarmLight") { Warm(light, bake, 6f, 10f); if (bake) baked++; else realtime++; }
+                // Шатёр (lobby-reflections, 2026-10-22): лампы CampLighting/BayLamp и сетка TentFill дают ровную базу,
+                // TentAccent — яркое пятно над точкой акцента; в запечённой ночи runtime-стоимость любого числа ламп — ноль.
+                else if (name == TentLampLight) { Warm(light, bake, TentLampIntensity, TentLampRange); if (bake) baked++; else realtime++; }
+                else if (name == TentFillLight) { Warm(light, bake, TentFillIntensity, TentFillRange); if (bake) baked++; else realtime++; }
+                else if (name == TentAccentLight) { Warm(light, bake, TentAccentIntensity, TentAccentRange); if (bake) baked++; else realtime++; }
                 else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
                 {
                     if (SnapToFixture(light, environment, log)) snapped++;
@@ -440,9 +439,13 @@ namespace VrBattlegrounds.EditorTools
             return moon;
         }
 
-        // Светильники шатра от LobbyCanopyBaysBuilder (BayLamp_N, Pendant_XX) приходят без Light: источник ставит
-        // этот пресет к их сокету «LightingSocket__<светильник>__CommonLightingOwner». Имя — InteriorWarmLight,
-        // поэтому значения задаёт то же правило, что у ламп шатра (ApplyLights).
+        // Светильники шатра (BayLamp_N — LobbyCanopyBaysBuilder, TentFill_N/TentAccent_X — LobbyTentLightFixtures) приходят
+        // без Light: источник ставит этот пресет к их сокету «LightingSocket__<светильник>__CommonLightingOwner». Имя
+        // источника задаёт правило яркости в ApplyLights: BayLamp — как лампы шатра, TentFill — база, TentAccent — акцент.
+        private static string TentLightName(string fixture) =>
+            fixture.StartsWith("TentFill_", StringComparison.Ordinal) ? TentFillLight
+            : fixture.StartsWith("TentAccent_", StringComparison.Ordinal) ? TentAccentLight : TentLampLight;
+
         private static void EnsureTentFixtureLights(Transform environment, StringBuilder log)
         {
             int created = 0, present = 0;
@@ -453,7 +456,7 @@ namespace VrBattlegrounds.EditorTools
                 var fixture = socket.parent;
                 if (fixture == null || fixture.name != match.Groups[1].Value) continue;
                 if (fixture.GetComponentsInChildren<Light>(true).Length > 0) { present++; continue; }
-                var go = new GameObject("InteriorWarmLight");
+                var go = new GameObject(TentLightName(fixture.name));
                 Undo.RegisterCreatedObjectUndo(go, "Свет светильника шатра");
                 Undo.SetTransformParent(go.transform, fixture, "Свет светильника шатра");
                 go.transform.SetPositionAndRotation(socket.position + Vector3.down * .1f, Quaternion.identity);
@@ -630,9 +633,59 @@ namespace VrBattlegrounds.EditorTools
                 foreach (float h in new[] { .5f, 2.5f })
                     positions.Add(new Vector3(x, y0 + h, z));
             }
+            // Точки акцента (lobby-reflections, 2026-10-22): шаг 1 м на высотах рук, чтобы оружие и руки получали пятно
+            // акцентной лампы, а не среднее по сетке 2.5 м. Стена арсенала — по её поднятому корпусу, точки стрельбы —
+            // полосы у северного и южного торцов шатра.
+            int dense = 0;
+            foreach (var anchor in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalStationAnchor>(true)))
+            {
+                var wall = anchor.RaisedBoundsWorld;
+                float front = wall.center.x < 0 ? wall.max.x + .3f : wall.min.x - .3f, side = wall.center.x < 0 ? 1f : -1f;
+                for (float d = 0f; d <= 2.01f; d += 1f)
+                for (float z = wall.min.z; z <= wall.max.z + .01f; z += 1f)
+                    foreach (float h in new[] { .9f, 1.5f, 2.1f })
+                    { positions.Add(new Vector3(front + side * d, y0 + h, z)); dense++; }
+            }
+            var tent = LobbyMilitaryCampSources.TentBounds(floor);
+            foreach (float s in new[] { 1f, -1f })
+            for (float x = tent.min.x + .75f; x <= tent.max.x - .7f; x += 1.5f)
+            for (float d = -1f; d <= 1.01f; d += 1f)
+                foreach (float h in new[] { 1.2f, 1.8f })
+                { positions.Add(new Vector3(x, y0 + h, s * (tent.max.z - .6f + d))); dense++; }
             var local = probes.transform;
             probes.probePositions = positions.Select(p => local.InverseTransformPoint(p)).ToArray();
-            log.AppendLine("Light probes: " + positions.Count + " точек в " + ContainerName + "/" + ProbeGroupName + ".");
+            log.AppendLine("Light probes: " + positions.Count + " точек (из них у акцентов " + dense + ") в " + ContainerName + "/" + ProbeGroupName + ".");
+            ApplyTentReflectionProbe(container, tent, y0, log);
+        }
+
+        // Запечённая проба отражений шатра (QPM-LIGHT-008, правило аудитора lighting.dark-reflection-zone): без неё металл
+        // оружия отражает ночное небо и чернеет. Box Projection по объёму под кровлей; смешивание проб не нужно — проба одна.
+        private const string TentReflectionProbeName = "TentReflectionProbe";
+        private static void ApplyTentReflectionProbe(Transform container, Bounds tent, float floorY, StringBuilder log)
+        {
+            var go = container.Find(TentReflectionProbeName)?.gameObject;
+            if (go == null)
+            {
+                go = new GameObject(TentReflectionProbeName);
+                Undo.RegisterCreatedObjectUndo(go, "Проба отражений шатра");
+                Undo.SetTransformParent(go.transform, container, "Проба отражений шатра");
+            }
+            var probe = go.GetComponent<ReflectionProbe>();
+            if (probe == null) probe = Undo.AddComponent<ReflectionProbe>(go);
+            Undo.RecordObject(go.transform, "Проба отражений шатра");
+            Undo.RecordObject(probe, "Проба отражений шатра");
+            const float height = 4.6f;
+            go.transform.SetPositionAndRotation(new Vector3(tent.center.x, floorY + 1.6f, tent.center.z), Quaternion.identity);
+            probe.mode = ReflectionProbeMode.Baked;
+            probe.boxProjection = true;
+            probe.size = new Vector3(tent.size.x, height, tent.size.z);
+            probe.center = new Vector3(0f, height / 2 - 1.6f, 0f);
+            probe.resolution = 128;
+            probe.hdr = true;
+            probe.importance = 1;
+            probe.blendDistance = 0f;
+            probe.intensity = 1f;
+            log.AppendLine("Проба отражений шатра: " + probe.size + ", Box Projection, 128 px, запекается с Generate Lighting.");
         }
 
         private static string HierarchyPath(Transform t, Transform root)

@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
         public static readonly string[] OwnedElsewhere =
         {
             "WornGround", "OutsideGravel",
-            "LobbyNightLampLong", "LobbyNightDoorLamp", "M_Emissive",
+            "LobbyNightLampLong", "LobbyNightDoorLamp",
         };
 
         // Корни сцены с игровыми/интерактивными объектами — их материалы не трогаются.

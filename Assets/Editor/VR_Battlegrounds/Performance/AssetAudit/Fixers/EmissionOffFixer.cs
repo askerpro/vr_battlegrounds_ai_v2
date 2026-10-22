@@ -15,14 +15,14 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
     /// Шейдер без эмиссии (свечение потеряно при смене шейдера) — URP Simple Lit без бликов с сохранёнными картой и цветом
     /// эмиссии, основной текстурой и тайлингом. Меняются только материалы в корнях окружения
     /// (<see cref="BakedLitMaterialFixer.EnvironmentRoots"/>): общий игровой контент и сэмплы SDK — решение их владельцев. Плафоны, которые каждый раз пишет ночной пресет LobbyNightLighting
-    /// (LobbyNightLampLong, M_Emissive), не трогаются: у материала один писатель (QPM-SHADER-007).
+    /// (LobbyNightLampLong), не трогаются: у материала один писатель (QPM-SHADER-007).
     /// </summary>
     public sealed class EmissionOffFixer : AuditFixer
     {
         public const string SimpleLitName = "Universal Render Pipeline/Simple Lit";
 
         /// <summary>Материалы, которые переписывает другой инструмент при каждом запуске (по префиксу имени).</summary>
-        public static readonly string[] OwnedElsewhere = { "LobbyNightLampLong", "M_Emissive" };
+        public static readonly string[] OwnedElsewhere = { "LobbyNightLampLong" };
 
         public override string RuleId => "material.emission-off";
         public override string Title => "Включить эмиссию (RealtimeEmissive)";

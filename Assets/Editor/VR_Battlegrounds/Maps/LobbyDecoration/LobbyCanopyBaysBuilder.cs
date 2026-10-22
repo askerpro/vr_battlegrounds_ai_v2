@@ -41,9 +41,6 @@ namespace VrBattlegrounds.EditorTools
             "SM_PropaneTank_02", "SM_FuelCanister", "SM_SandBarrier_04", "SM_SandBarrier_06",
             "SM_Lamp_long", "SM_ToolRack"
         };
-        // Подвесной плафон на цепи (RuralTown, только чтение): верх y=0, низ −0.555 м, LOD0 4056 tris.
-        private const string PendantPath = "Assets/Art/Lobby/Imported/Catalog/RuralTown/URP/Art/Prefabs/SM_TopLight.prefab";
-        public static readonly string[] RequiredExternalSources = { PendantPath };
         public static readonly string[] RequiredMaterials = {
             "Assets/Materials/Lobby/CanvasOlive.mat",          // как WestCurtain
             "Assets/Materials/Lobby/FrameDark.mat",            // как «Внешняя стойка»
@@ -121,7 +118,6 @@ namespace VrBattlegrounds.EditorTools
         {
             public Transform East, West;
             public Dictionary<string, GameObject> Sources;
-            public GameObject Pendant;
             public Material Canvas, Frame, Rubber, Steel;
             public float FloorY, FloorEdgeX, BayLength;
             public Bounds Tent, Station;
@@ -248,7 +244,6 @@ namespace VrBattlegrounds.EditorTools
             ctx.PostZ = Enumerable.Range(0, BayCount + 1).Select(k => tentBounds.max.z - ctx.BayLength * k).ToArray();
             ctx.Sources = RequiredSources.ToDictionary(s => s, s => LobbyMilitaryCampSources.Prefab(s));
             if (ctx.Sources.Any(p => p.Value == null)) throw new InvalidOperationException("Не импортирован источник пролётов навеса.");
-            ctx.Pendant = AssetDatabase.LoadAssetAtPath<GameObject>(PendantPath) ?? throw new InvalidOperationException("Нет внешнего источника: " + PendantPath);
             ctx.Canvas = LoadMaterial(RequiredMaterials[0]); ctx.Frame = LoadMaterial(RequiredMaterials[1]);
             ctx.Rubber = LoadMaterial(RequiredMaterials[2]); ctx.Steel = LoadMaterial(RequiredMaterials[3]);
             ctx.Station = MeasureStation();
@@ -472,10 +467,8 @@ namespace VrBattlegrounds.EditorTools
             board.transform.position += new Vector3(-ctx.FloorEdgeX + .002f - bd.min.x, 1.55f - bd.center.y, -5.93f - bd.center.z);
             Record(ctx, board, services.name);
 
-            var pendants = Group(ctx.West, "Pendants");
-            Pendant(ctx, pendants, "Pendant_NW", -7.00f, 6.30f);
-            Pendant(ctx, pendants, "Pendant_SW", -7.05f, -5.95f);
-
+            // Подвесных плафонов здесь больше нет: SM_TopLight (RuralTown) не военный; светильники шатра ставит
+            // LobbyTentLightFixtures (lobby-reflections, 2026-10-22).
             LockerTop(ctx, Group(ctx.West, "LockerTop"), zone);
         }
 
@@ -491,24 +484,6 @@ namespace VrBattlegrounds.EditorTools
             Box(ctx, g, "Box__CampSteel", new Vector3(-ctx.FloorEdgeX + size.x / 2 + .002f, centerY, z), size, Quaternion.identity, ctx.Steel);
             float top = centerY + size.y / 2;
             Box(ctx, g, "Drop__DarkRubber", new Vector3(WallCableX, (top + WallCableY) / 2, z), new Vector3(WallCableD, WallCableY - top, WallCableD), Quaternion.identity, ctx.Rubber);
-        }
-
-        // SM_TopLight чашкой под кровлю; фидер от настенного кабеля по скату; сокет под плафоном.
-        private static void Pendant(Ctx ctx, Transform parent, string name, float x, float z)
-        {
-            var g = Group(parent, name);
-            var p = Spawn(ctx.Pendant, g, "Shade", 0);
-            var b = Measure(p.transform);
-            if (b.size.y > .6f || b.size.x > .3f) throw new InvalidOperationException("SM_TopLight неожиданного габарита: " + b.size);
-            p.transform.position += new Vector3(x - b.center.x, RoofY(x) - .005f - b.max.y, z - b.center.z);
-            b = Measure(p.transform);
-            Record(ctx, p, PendantPath, g.name);
-            // Фидер Г-образно: по стене на высоте настенного кабеля (ниже карнизной балки 4.05) и вверх к чашке.
-            // Наклонный отрезок дал бы AABB, задевающий балку при проверке пересечений.
-            float wallX = WallCableX + WallCableD / 2, riserX = b.min.x - .02f, top = b.max.y - .02f;
-            Box(ctx, g, "Feed__DarkRubber", new Vector3((wallX + riserX) / 2, WallCableY, z), new Vector3(riserX - wallX, .02f, .02f), Quaternion.identity, ctx.Rubber);
-            Box(ctx, g, "FeedRiser__DarkRubber", new Vector3(riserX, (WallCableY + top) / 2, z), new Vector3(.02f, top - WallCableY, .02f), Quaternion.identity, ctx.Rubber);
-            AddSocket(ctx, g, "LightingSocket__" + name + "__CommonLightingOwner", new Vector3(b.center.x, b.min.y - .05f, b.center.z));
         }
 
         // Ящик и патронные коробки на западном шкафу одежды (SidewallDecoration). Опора чужая — без неё элемент пропускается.

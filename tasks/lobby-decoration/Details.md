@@ -320,7 +320,6 @@ Unity-проект. Старые относительные пути сохра�
 | Контейнер | `Assets/env_packs/RPG_FPS_game_assets_industrial/Containers/Cargo_container_v1/Cargo_container_v1_LD1close.prefab` | Фон лагеря, не укрытие в игровом центре |
 | Бочка | `Assets/env_packs/RPG_FPS_game_assets_industrial/Barrels/Barrel_v3/Barrel_v3_single.prefab` | Редкий служебный декор |
 | Вышка | `Assets/env_packs/ModularWoodenBuildings/URP/Art/Prefabs/SM_LookoutTower_01.prefab` | Дальний фон; использовать LOD |
-| Свет | `Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_TopLight.prefab` | Практический свет с ограничением теней |
 | Фонарь | `Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Lantern.prefab` | Небольшой акцент |
 | Камень | `Assets/env_packs/RuralTown/URP/Art/Prefabs/SM_Rock_01.prefab` | Край площадки |
 | Хвойное дерево | `Assets/env_packs/RuralTown/URP/Art/Scanned_Foliage/Foliage/SilverFir/Meshes/SM_SilverFir_M_01.fbx` | Игровой вариант с существующими Bark/Atlas материалами; прямой FBX имел error shader |
@@ -332,6 +331,11 @@ Unity-проект. Старые относительные пути сохра�
 | Складские мешки 2 | `Assets/env_packs/RPG_FPS_game_assets_industrial/Other_props/Palets/Bags_on_pallet_v1/Bags_on_pallet_v1_2.prefab` | То же ограничение |
 | Хижина 3 | `Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_Tent3_Merged.prefab` | Профлист, не брезентовый шатёр; не выбирать для центра |
 | Хижина 9 | `Assets/env_packs/PostApocalypticTown/URP/Art/Prefabs/SM_Tent9_Merged.prefab` | То же ограничение |
+
+Исключено 2026-10-22 (решение пользователя, задача lobby-reflections): гражданские лампы не подходят военной базе —
+`SM_TopLight` убран из таблицы и вместе с RuralTown `SM_Lamp`/`SM_LampPost`/`SM_Lamp_02`, PostApocalypticTown
+`SM_Lamp`/`SM_Light1`/`SM_Light3`, AbandonedFactory `SM_Lamp_01a`/`SM_CoverLight_01` удалён из `Assets/Art/Lobby/Imported/Catalog`.
+Светильники шатра — военные (MilitaryCamp `SM_Lamp_long`) и круги фонового света `LobbyTentLightFixtures`.
 
 Игровые арсеналы и `Assets/Prefabs/Environment/Lobby/ShootingTarget.prefab`
 использовать существующие. Декоративные копии оружия и новые интерактивные мишени не нужны.

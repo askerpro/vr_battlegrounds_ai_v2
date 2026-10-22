@@ -204,6 +204,114 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 91: префаб, в _handPoses/default которого пишут создание/копирование/добавление поз и
+        ///     «Set Current Pose As Default». При галочке у потомка — база (prefab asset), иначе штатно префаб аватара.
+        /// </summary>
+        private UxrAvatar GetPoseRegistryAvatar(UxrAvatar avatar, out bool redirectedToBase)
+        {
+            redirectedToBase = avatar != null && avatar == _avatar && IsVariantPrefabWriteLocked();
+
+            if (!redirectedToBase)
+            {
+                return avatar != null ? avatar.GetAvatarPrefab() : null;
+            }
+
+            UxrAvatar poseBase = GetVariantPoseBase();
+            return poseBase != null && EditorUtility.IsPersistent(poseBase) ? poseBase : null;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: папка поз аватара — самая частая папка его собственных поз.
+        /// </summary>
+        private static string GetPoseFolder(UxrAvatar avatar)
+        {
+            if (avatar == null)
+            {
+                return null;
+            }
+
+            return avatar.GetHandPoses()
+                         .Select(p => Path.GetDirectoryName(AssetDatabase.GetAssetPath(p))?.Replace('\\', '/'))
+                         .Where(folder => !string.IsNullOrEmpty(folder))
+                         .GroupBy(folder => folder)
+                         .OrderByDescending(group => group.Count())
+                         .ThenBy(group => group.Key, StringComparer.Ordinal)
+                         .Select(group => group.Key)
+                         .OrderBy(folder => folder.StartsWith("Assets/ThirdParty/", StringComparison.OrdinalIgnoreCase)) // общие позы SDK — не папка проекта
+                         .FirstOrDefault();
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: запись в префаб базы допустима, только если это prefab asset без несохранённых
+        ///     изменений: иначе сохранение базы записало бы и чужие правки (например перевыпущенные id).
+        /// </summary>
+        private static bool CanWriteBasePrefab(UxrAvatar baseAvatar)
+        {
+            string path = baseAvatar != null ? AssetDatabase.GetAssetPath(baseAvatar) : null;
+
+            if (string.IsNullOrEmpty(path))
+            {
+                EditorUtility.DisplayDialog(UxrConstants.Editor.Error, "Не найден prefab asset базы, владеющей позами. Запись отменена.", UxrConstants.Editor.Ok);
+                return false;
+            }
+
+            List<string> dirty = AssetDatabase.LoadAllAssetsAtPath(path).Where(o => o != null && EditorUtility.IsDirty(o)).Select(o => o.name + " (" + o.GetType().Name + ")").ToList();
+
+            if (dirty.Count > 0)
+            {
+                EditorUtility.DisplayDialog(UxrConstants.Editor.Error,
+                                            $"В префабе базы {path} уже есть несохранённые изменения ({string.Join(", ", dirty.Take(5))}). " +
+                                            "Сохранение позы записало бы и их. Сохраните или откатите их и повторите.",
+                                            UxrConstants.Editor.Ok);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: добавляет позу в конец _handPoses компонента UxrAvatar prefab asset базы
+        ///     (SerializedObject + Undo, без LoadPrefabContents/SaveAsPrefabAsset и Apply override из экземпляра).
+        /// </summary>
+        private static void RegisterPoseInBasePrefab(UxrAvatar baseAvatar, UxrHandPoseAsset handPose)
+        {
+            SerializedObject baseObject = new SerializedObject(baseAvatar);
+            baseObject.Update();
+            SerializedProperty handPoses = baseObject.FindProperty(UxrAvatarEditor.PropertyHandPoses);
+            handPoses.arraySize++;
+            handPoses.GetArrayElementAtIndex(handPoses.arraySize - 1).objectReferenceValue = handPose;
+            baseObject.ApplyModifiedProperties();
+            SaveBasePrefabAsset(baseAvatar);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: сохраняет только файл префаба базы; чужие dirty-ассеты не записываются.
+        /// </summary>
+        private static void SaveBasePrefabAsset(UxrAvatar baseAvatar)
+        {
+            string path = AssetDatabase.GetAssetPath(baseAvatar);
+            List<string> otherDirty = AssetDatabase.LoadAllAssetsAtPath(path).Where(o => o != null && o != baseAvatar && EditorUtility.IsDirty(o)).Select(o => o.name + " (" + o.GetType().Name + ")").ToList();
+
+            if (otherDirty.Count > 0)
+            {
+                Debug.LogWarning($"[patch 91] Кроме UxrAvatar в {path} изменены: {string.Join(", ", otherDirty)}. Проверьте git diff базы.");
+            }
+
+            AssetDatabase.SaveAssetIfDirty(new GUID(AssetDatabase.AssetPathToGUID(path)));
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: новая поза, зарегистрированная в базе, сохраняется отдельно (без глобального SaveAssets).
+        /// </summary>
+        private void SaveBaseRegisteredPoseAsset(UxrHandPoseAsset handPose)
+        {
+            if (handPose != null && IsInheritedPoseEditableThroughVariant(handPose))
+            {
+                AssetDatabase.SaveAssetIfDirty(handPose);
+            }
+        }
+
+        /// <summary>
         ///     VR Battlegrounds patch 91: база, где следует создавать позы: владелец текущей унаследованной позы,
         ///     иначе первый предок с позами, иначе родительский префаб.
         /// </summary>
@@ -504,7 +612,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 // VR Battlegrounds patch 91: при галочке кнопки, пишущие в префаб потомка (_handPoses, default-позу, кости), заблокированы.
                 bool isVariantPrefabWriteLocked = IsVariantPrefabWriteLocked();
 
-                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked;
+                GUI.enabled = _avatar != null; // VR Battlegrounds patch 91: при галочке поза создаётся и регистрируется в базе
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Create New Pose...", "Creates a new pose for the currently selected avatar animator")))
                 {
@@ -529,12 +637,12 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                             SaveHandPose(_currentHandPose, SaveHandPoseFlags.HandDescriptors);
 
                             AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(newHandPoseAsset));
-                            AssetDatabase.SaveAssets();
+                            SavePoseAssetToDisk(newHandPoseAsset); // VR Battlegrounds patch 91
                         }
                     }
                 }
 
-                GUI.enabled = _currentHandPose != null && !isReadOnlyPose;
+                GUI.enabled = _currentHandPose != null && !isReadOnlyPose && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnDelete, lastY), new GUIContent("Delete Current Pose...", "Deletes the currently selected pose")))
                 {
@@ -552,7 +660,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     }
                 }
 
-                GUI.enabled = _currentHandPose != null && _avatar != null && _avatar.DefaultHandPose != _currentHandPose && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
+                GUI.enabled = _currentHandPose != null && _avatar != null && _avatar.DefaultHandPose != _currentHandPose; // VR Battlegrounds patch 91: при галочке default пишется в базу
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnMisc, lastY), new GUIContent("Set Current Pose As Default", "The default pose is the one that the avatar will have when it is in idle state")))
                 {
@@ -561,7 +669,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _poseIndex >= 0 && _poseIndex < _currentPoseNames.Count && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
+                GUI.enabled = _poseIndex >= 0 && _poseIndex < _currentPoseNames.Count; // VR Battlegrounds patch 91: при галочке копия регистрируется в базе
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Copy Current Pose To New...", "Copies the current pose to a new pose asset file")))
                 {
@@ -580,7 +688,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                             SaveHandPose(_currentHandPose, SaveHandPoseFlags.HandDescriptors);
 
                             AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(newHandPoseAsset));
-                            AssetDatabase.SaveAssets();
+                            SavePoseAssetToDisk(newHandPoseAsset); // VR Battlegrounds patch 91
                         }
                     }
                 }
@@ -611,7 +719,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
+                GUI.enabled = _avatar != null; // VR Battlegrounds patch 91: при галочке поза регистрируется в базе
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Add Pose From File...", "Creates a new pose using an external pose file")))
                 {
@@ -666,6 +774,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                                         SetPoseFromAsset(_avatar, srcHandPoseAsset, newHandPoseAsset);
                                         SaveHandPose(newHandPoseAsset, SaveHandPoseFlags.HandDescriptors);
                                         AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(newHandPoseAsset));
+                                        SaveBaseRegisteredPoseAsset(newHandPoseAsset); // VR Battlegrounds patch 91
                                         SwitchToPose(newHandPoseAsset);
                                     }
                                 }
@@ -683,7 +792,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91: и Add All Preset Poses ниже
+                GUI.enabled = _avatar != null; // VR Battlegrounds patch 91: и Add All Preset Poses ниже; при галочке — в базу
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Add All Poses From Folder...", "Adds all pose files from a folder to the current avatar")))
                 {
@@ -747,6 +856,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                                         SetPoseFromAsset(_avatar, srcHandPoseAsset, newHandPoseAsset);
                                         SaveHandPose(newHandPoseAsset, SaveHandPoseFlags.HandDescriptors);
                                         AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(newHandPoseAsset));
+                                        SaveBaseRegisteredPoseAsset(newHandPoseAsset); // VR Battlegrounds patch 91
                                     }
                                 }
 
@@ -770,13 +880,13 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     CreateAllHandPosePresets(_avatar);
                 }
 
-                // VR Battlegrounds patch 91: подсказка к заблокированным кнопкам создания/копирования/default/bake.
+                // VR Battlegrounds patch 91: подсказка о перенаправлении создания/default в базу и блокировке удаления/Bake.
                 if (isVariantPrefabWriteLocked)
                 {
                     GUI.enabled = true;
                     UxrAvatar poseBase = GetVariantPoseBase();
-                    EditorGUILayout.HelpBox($"Новые позы создавайте в базе {(poseBase != null ? poseBase.name : "родительского префаба")}. " +
-                                            "Пока включена галочка «Править позы базы через этот аватар», кнопки, пишущие в префаб потомка, заблокированы.",
+                    EditorGUILayout.HelpBox($"Новые позы и поза по умолчанию записываются в базу {(poseBase != null ? poseBase.name : "родительского префаба")}; " +
+                                            "удаление и Bake — только на базе.",
                                             MessageType.Info);
                 }
             }
@@ -1050,7 +1160,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     }
                 }
 
-                GUI.enabled = _currentHandPose != null && !isReadOnlyPose;
+                GUI.enabled = _currentHandPose != null && !isReadOnlyPose && !IsVariantPrefabWriteLocked(); // VR Battlegrounds patch 91
 
                 GUILayout.BeginHorizontal();
 
@@ -1845,6 +1955,23 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <param name="poseName">The pose name set to default</param>
         private void SetPoseAsDefault(UxrAvatar avatar, string poseName)
         {
+            // VR Battlegrounds patch 91: при галочке у потомка default-поза пишется в базу (потомки её наследуют).
+            UxrAvatar registryAvatar = GetPoseRegistryAvatar(avatar, out bool redirectedToBase);
+
+            if (redirectedToBase)
+            {
+                if (CanWriteBasePrefab(registryAvatar))
+                {
+                    SerializedObject baseObject = new SerializedObject(registryAvatar);
+                    baseObject.Update();
+                    baseObject.FindProperty(UxrAvatarEditor.PropertyDefaultHandPose).objectReferenceValue = avatar.GetHandPose(poseName);
+                    baseObject.ApplyModifiedProperties();
+                    SaveBasePrefabAsset(registryAvatar);
+                }
+
+                return;
+            }
+
             if (avatar != null)
             {
                 SerializedObject serializedObject = new SerializedObject(avatar.GetAvatarPrefab());
@@ -2169,6 +2296,14 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <returns>New UxrHandPoseAsset object</returns>
         private UxrHandPoseAsset CreatePose(UxrAvatar avatar, bool reset = true, string path = null)
         {
+            // VR Battlegrounds patch 91: при галочке у потомка поза регистрируется в _handPoses префаба базы.
+            UxrAvatar registryAvatar = GetPoseRegistryAvatar(avatar, out bool redirectedToBase);
+
+            if (redirectedToBase && !CanWriteBasePrefab(registryAvatar))
+            {
+                return null;
+            }
+
             if (string.IsNullOrEmpty(path))
             {
                 path = EditorUtility.SaveFilePanel("Create new pose", CurrentSaveFolder, GetUniquePoseName(avatar), "asset");
@@ -2184,7 +2319,11 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 string poseName = Path.GetFileNameWithoutExtension(path);
 
-                if (avatar.GetAvatarPrefab() && avatar.GetAvatarPrefab().GetHandPose(poseName, false) != null)
+                // VR Battlegrounds patch 91: при перенаправлении имя проверяется и в базе, и у потомка.
+                bool existsInPrefab = avatar.GetAvatarPrefab() && avatar.GetAvatarPrefab().GetHandPose(poseName, false) != null;
+                bool existsInBase   = redirectedToBase && registryAvatar.GetHandPose(poseName, false) != null;
+
+                if (existsInPrefab || existsInBase)
                 {
                     // Already exists in the parent prefab
 
@@ -2192,12 +2331,25 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     return null;
                 }
 
-                UxrAvatar parentPrefab = avatar.GetParentPrefab(poseName);
+                UxrAvatar parentPrefab = redirectedToBase ? registryAvatar.GetParentPrefab(poseName) : avatar.GetParentPrefab(poseName); // VR Battlegrounds patch 91
 
                 if (parentPrefab && !EditorUtility.DisplayDialog("Use new pose?",
-                                                                 $"A pose with the name {poseName} is already present in parent prefab {parentPrefab.name}. The new pose will not delete the old one, but will override it when using this avatar prefab ({avatar.GetAvatarPrefab().name}).",
+                                                                 $"A pose with the name {poseName} is already present in parent prefab {parentPrefab.name}. The new pose will not delete the old one, but will override it when using this avatar prefab ({(redirectedToBase ? registryAvatar.name : avatar.GetAvatarPrefab().name)}).",
                                                                  UxrConstants.Editor.Yes,
                                                                  UxrConstants.Editor.Cancel))
+                {
+                    return null;
+                }
+
+                // VR Battlegrounds patch 91: ассет позы базы ожидается в папке поз базы.
+                string baseFolder = redirectedToBase ? GetPoseFolder(registryAvatar) : null;
+
+                if (!string.IsNullOrEmpty(baseFolder) &&
+                    !string.Equals(Path.GetDirectoryName(UxrEditorUtils.GetProjectRelativePath(path))?.Replace('\\', '/'), baseFolder, StringComparison.OrdinalIgnoreCase) &&
+                    !EditorUtility.DisplayDialog("Папка поз базы",
+                                                 $"Позы базы {registryAvatar.name} лежат в {baseFolder}. Создать позу в другой папке?",
+                                                 UxrConstants.Editor.Yes,
+                                                 UxrConstants.Editor.Cancel))
                 {
                     return null;
                 }
@@ -2223,6 +2375,17 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 AssetDatabase.CreateAsset(handPose, file);
 
                 CurrentSaveFolder = Path.GetDirectoryName(file);
+
+                if (redirectedToBase)
+                {
+                    // VR Battlegrounds patch 91: регистрация в базе; потомок не меняется. Новая поза сразу записываема
+                    // (SetPoseFromAsset/SaveHandPose вызывающих кнопок) и видна в окне как унаследованная.
+                    RegisterPoseInBasePrefab(registryAvatar, handPose);
+                    _userEditedPose     = handPose;
+                    _showInheritedPoses = true;
+                    AssetDatabase.SaveAssetIfDirty(handPose);
+                    return handPose;
+                }
 
                 SerializedObject serializedObject = new SerializedObject(avatar.GetAvatarPrefab());
                 serializedObject.Update();
@@ -2421,9 +2584,16 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 return;
             }
 
+            List<UxrHandPoseAsset> createdPoses = new List<UxrHandPoseAsset>(); // VR Battlegrounds patch 91
+
             foreach (UxrHandPosePreset preset in _handPosePresets)
             {
                 UxrHandPoseAsset newHandPoseAsset = CreatePose(avatar, false, path + "/" + preset.Pose.name + ".asset");
+
+                if (newHandPoseAsset != null)
+                {
+                    createdPoses.Add(newHandPoseAsset);
+                }
 
                 if (newHandPoseAsset != null)
                 {
@@ -2441,7 +2611,15 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 }
             }
 
-            AssetDatabase.SaveAssets();
+            // VR Battlegrounds patch 91: позы, зарегистрированные в базе, сохраняются по одной; иначе штатный SaveAssets.
+            if (createdPoses.Count > 0 && createdPoses.All(IsInheritedPoseEditableThroughVariant))
+            {
+                createdPoses.ForEach(SaveBaseRegisteredPoseAsset);
+            }
+            else
+            {
+                AssetDatabase.SaveAssets();
+            }
         }
 
         // Hand descriptors
@@ -3042,6 +3220,17 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             {
                 string defaultPath = "Assets/";
                 
+                // VR Battlegrounds patch 91: при галочке у потомка диалоги создания открываются в папке поз базы.
+                if (IsVariantPrefabWriteLocked())
+                {
+                    string baseFolder = GetPoseFolder(GetVariantPoseBase());
+
+                    if (!string.IsNullOrEmpty(baseFolder))
+                    {
+                        return baseFolder + "/";
+                    }
+                }
+
                 if (string.IsNullOrEmpty(s_currentSaveFolder))
                 {
                     return defaultPath;

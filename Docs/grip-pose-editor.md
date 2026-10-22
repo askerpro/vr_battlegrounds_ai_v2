@@ -96,10 +96,13 @@ UltimateXR Hand Pose Editor. В окно встроена панель «Авт�
 >   позы — спиннеры, Pose Type/Blend, пресеты, «Обхватить»/IK — пишутся в существующий ассет позы базы
 >   (тот же файл и GUID); изменение получат все потомки. Префаб потомка и его `_handPoses` не меняются;
 >   удаление и переименование поз остаются заблокированными. Пока галочка включена, у потомка (вариант
->   префаба без своих поз или с унаследованной текущей позой) заблокированы и кнопки, пишущие в его префаб:
->   «Create New Pose», «Copy Current Pose To New», «Add Pose From File», «Add All Poses From Folder»,
->   «Add All Preset Poses», «Delete All Poses», «Set Current Pose As Default», «Bake Pose In Avatar»;
->   подсказка «Новые позы создавайте в базе <имя>». Без галочки кнопки работают как в SDK.
+>   префаба без своих поз или с унаследованной текущей позой) префаб потомка не меняется: «Create New
+>   Pose», «Copy Current Pose To New», «Add Pose From File», «Add All Poses From Folder», «Add All Preset
+>   Poses» создают ассет в папке поз базы (`Assets/Prefabs/Player/HandPoses/CyborgHands`) и регистрируют
+>   его в `_handPoses` CyborgHandsBase, «Set Current Pose As Default» пишет default базы (потомки его
+>   наследуют); окно сразу переключается на новую позу. «Bake Pose In Avatar», «Delete Current Pose»,
+>   «Delete All Poses» и переименование заблокированы — только на базе. Если в префабе базы есть
+>   несохранённые изменения, запись отказывается. Без галочки кнопки работают как в SDK.
 >   Унаследованная поза пишется только после явной правки её пользователем (спиннер, Pose Type, Copy/Reset/
 >   Load, пресет, «Обхватить»/IK); смена позы, автосинхронизация с Grabbable, Undo и закрытие окна её не
 >   сохраняют, а сохранение идёт только в её файл. Общие позы SDK (`Assets/ThirdParty/**`, например

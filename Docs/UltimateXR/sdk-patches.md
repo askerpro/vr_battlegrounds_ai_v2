@@ -1972,12 +1972,29 @@ resolved». Превью хвата в инспекторе `UxrGrabbableObject`
    Рядом — предупреждение «Правка пишется в позу базы <имя>; изменение получат все потомки».
    Смена Pose Type унаследованной позы при галочке записывается с `Undo.RecordObject` и `SetDirty`
    ассета базы (штатный SDK меняет `PoseType` без них; для собственных поз поведение прежнее).
-   Правило «потомки ничего не переопределяют»: при галочке `IsVariantPrefabWriteLocked()` (открыт
-   вариант префаба без своих поз или с унаследованной текущей позой) отключает кнопки, пишущие
-   в префаб потомка — `_handPoses`, default-позу или кости: Create New Pose, Copy Current Pose To New,
-   Add Pose From File, Add All Poses From Folder, Add All Preset Poses, Delete All Poses,
-   Set Current Pose As Default, Bake Pose In Avatar. Под меню — подсказка «Новые позы создавайте
-   в базе <имя>» (владелец текущей позы, иначе первый предок с позами). Без галочки кнопки прежние.
+   Правило «потомки ничего не переопределяют»: при галочке и `IsVariantPrefabWriteLocked()` (открыт
+   вариант префаба без своих поз или с унаследованной текущей позой) префаб потомка не пишется вовсе.
+   Create New Pose, Copy Current Pose To New, Add Pose From File, Add All Poses From Folder,
+   Add All Preset Poses и Set Current Pose As Default перенаправлены в базу (`GetPoseRegistryAvatar`:
+   владелец текущей позы, иначе первый предок с позами; только prefab asset). Bake Pose In Avatar,
+   Delete Current Pose, Delete All Poses и переименование при галочке заблокированы. Подсказка:
+   «Новые позы и поза по умолчанию записываются в базу <имя>; удаление и Bake — только на базе».
+   SDK создаёт позу в `CreatePose` (диалог пути → `CreateAsset` → вставка в `_handPoses`
+   `avatar.GetAvatarPrefab()` через `SerializedObject` на компоненте prefab asset → `SaveAssets`),
+   `CopyPoseAsNew`/Add From File/Folder/Presets — это `CreatePose` + `SetPoseFromAsset`, default —
+   `SetPoseAsDefault` (поле `_defaultHandPose` того же компонента). Ветка патча повторяет это для базы:
+   `SerializedObject` на `UxrAvatar` prefab asset базы (без `LoadPrefabContents`/`SaveAsPrefabAsset`
+   и Apply override из экземпляра), поза добавляется в конец `_handPoses` (в YAML базы меняются
+   только `_handPoses.Array.size` и новый `data[N]`), сохранение — `SaveAssetIfDirty` только файла
+   базы и ассета позы. Перед записью `CanWriteBasePrefab` отказывает, если в префабе базы уже есть
+   несохранённые изменения (иначе вместе с позой ушли бы чужие правки, например перевыпущенные id);
+   после записи лишние dirty-объекты базы выводятся предупреждением. Диалоги создания открываются
+   в папке поз базы (самая частая папка её поз, сейчас `Assets/Prefabs/Player/HandPoses/CyborgHands`),
+   другая папка — только после подтверждения. Новая поза сразу помечается правкой пользователя,
+   включается «Show inherited poses», окно переключается на неё (Create/Copy/Add From File). Default:
+   у MEF и Cyborg нет override `_defaultHandPose`, они наследуют значение базы (и `DefaultHandPose`
+   ищет его по цепочке). `OnValidate` компонента базы (`CreateRigInfo`) при `ApplyModifiedProperties`
+   вызывается так же, как в штатном SDK-пути `CreatePose`. Без галочки кнопки и `CreatePose` прежние.
 2. Путь сохранения: `SaveHandPose`, `AutoSave` (через `SaveHandPose`), `OnDisable`,
    `CheckWarnSaveHandPose` и SDK83-коммит используют общий `IsPoseDataReadOnly`; без галочки он
    совпадает с прежней проверкой `GetHandPose(name, false) != pose`. `SavePose` пишет только

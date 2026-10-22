@@ -241,8 +241,13 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
                     $"{loaded.Diagnosis}; {DescribeMap(lobby)}; серия {DescribeSeries()}; команды {string.Join(", ", teamsNow)}; " +
                     $"экономики нет={noEconomy}");
 
-                bool refused = HasAdminLog($"{MapCommand.Stop} отклонена: идёт смена карты");
-                result.Set(CheckStopRepeat, refused, $"повтор отклонён={refused}; {AdminLogTail()}");
+                // Первый «Стоп» сразу останавливает серию: повтор отсекает правило кнопки («не имеет смысла») или, если
+                // серия ещё шла, проверка смены карты. Важно, что серия остановлена ровно один раз.
+                bool refused = HasAdminLog($"{MapCommand.Stop} отклонена: идёт смена карты") ||
+                               HasAdminLog($"{MapCommand.Stop} сейчас не имеет смысла");
+                int stops = CountAdminLog("Серия остановлена администратором");
+                result.Set(CheckStopRepeat, refused && stops == 1,
+                    $"повтор отклонён={refused}, серия остановлена {stops} раз; {AdminLogTail()}");
 
                 bool kept = series != null && series.Maps.Count == maps.Count;
                 for (int i = 0; kept && i < maps.Count; i++) kept &= series.Maps[i] == maps[i];
@@ -274,6 +279,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             result.Summary = result.AllChecksGreen
                 ? "клиент-админ остановил серию посреди матча — лобби, команды распущены, повтор «Стоп» отклонён"
                 : "см. проверки";
+        }
+
+        private int CountAdminLog(string fragment)
+        {
+            int count = 0;
+            foreach (string line in _adminLog)
+                if (line.Contains(fragment)) count++;
+            return count;
         }
 
         private static string LobbyScene()

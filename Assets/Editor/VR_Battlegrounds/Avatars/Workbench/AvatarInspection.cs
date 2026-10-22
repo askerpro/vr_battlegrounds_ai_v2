@@ -50,6 +50,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             if (missing > 0) report.Findings.Add("Компоненты с потерянным script: " + missing);
             var rig = context.Avatar.AvatarRig;
             if (rig?.LeftArm?.Hand?.Wrist == null || rig?.RightArm?.Hand?.Wrist == null) report.Findings.Add("В UXR-риге отсутствует левая или правая кисть.");
+            AddCyborgHandsFindings(context, report);
             foreach (var path in context.PrefabChain.DefaultIfEmpty(context.AssetPath))
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -84,5 +85,24 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
         }
 
         public static bool Has(AvatarInspectionReport report, string type) => report.Components.Any(c => c.GetType().Name == type);
+
+        /// <summary>
+        /// Цепочка с общей базой поз Cyborg: база должна быть чистой (без рига и тела, прямой вариант PlayerBase),
+        /// а конечный аватар — иметь пястные пальцев 2–5 (позы базы закодированы на риге с пястными).
+        /// </summary>
+        static void AddCyborgHandsFindings(AvatarEditorContext context, AvatarInspectionReport report)
+        {
+            if (!context.PrefabChain.Contains(AvatarHandBases.SdkHands)) return;
+            if (!AvatarHandBases.IsCleanCyborgBase(out string reason)) report.Findings.Add("База CyborgHandsBase нарушает контракт: " + reason + ".");
+            if (context.AssetPath == AvatarHandBases.SdkHands) return;
+            foreach (var (label, hand) in new[] { ("левой", context.Avatar.LeftHand), ("правой", context.Avatar.RightHand) })
+            {
+                if (hand?.Wrist == null) continue;
+                var missing = new[] { ("указательный", hand.Index), ("средний", hand.Middle), ("безымянный", hand.Ring), ("мизинец", hand.Little) }
+                    .Where(f => f.Item2?.Metacarpal == null).Select(f => f.Item1).ToArray();
+                if (missing.Length > 0)
+                    report.Findings.Add("У " + label + " кисти нет пястных (" + string.Join(", ", missing) + "): позы CyborgHandsBase рассчитаны на риг с пястными.");
+            }
+        }
     }
 }

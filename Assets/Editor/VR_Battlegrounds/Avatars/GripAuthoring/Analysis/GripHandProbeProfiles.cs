@@ -533,8 +533,8 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
 
         /// <summary>
         /// Отражение рамки ладони на другую руку через анатомическую рамку запястья (HandUniversalLocalAxes):
-        /// компонента поперёк ладони (right) меняет знак, вдоль пальцев (forward) и по нормали ладони (up) сохраняется —
-        /// как в HandContactProbeCapture.Mirror для рамок фаланг. Отражаются нормаль и «вперёд»; рамка собирается заново.
+        /// компонента поперёк ладони (right) меняет знак, вдоль пальцев (forward) и по нормали ладони (up) сохраняется.
+        /// Отражаются нормаль и «вперёд»; рамка собирается заново.
         /// </summary>
         public static bool TryMirror(UxrAvatar avatar, UxrHandSide fromSide, Vector3 positionWrist, Quaternion rotationWrist,
             out Vector3 mirroredPosition, out Quaternion mirroredRotation, out string error)

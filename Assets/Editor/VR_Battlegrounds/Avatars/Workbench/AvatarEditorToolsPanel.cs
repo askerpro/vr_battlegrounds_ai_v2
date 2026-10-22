@@ -165,7 +165,7 @@ namespace VrBattlegrounds.Editor.Avatars.Workbench
             if (sharedTools)
             {
                 Func<string[]> handPaths = () => AvatarMaintenanceTools.Scope(AvatarHandBases.PlayerBase, AvatarHandBases.SdkHands, AvatarHandBases.NonSdkHands);
-                ActionButton("Проверить Cyborg / обновить Non-SDK базу", "Проверяет готовую CyborgHandsBase без рига и обновляет PlayerBase_NonSdkHands. Миграция Cyborg выполняется командой Rebuild CyborgHandsBase Prefab Tree.", handPaths,
+                ActionButton("Проверить Cyborg / обновить Non-SDK базу", "Проверяет готовую CyborgHandsBase без рига и обновляет PlayerBase_NonSdkHands. Нарушения базы видны в находках вкладки «Обзор».", handPaths,
                     () => AvatarMaintenanceTools.Checked(AvatarHandBases.CreateBases));
                 ActionButton("Очистить позы на PlayerBase", "Только PlayerBase. Сначала проверьте, что игровые варианты перенесены на базы кистей.", handPaths,
                     () => AvatarMaintenanceTools.Checked(AvatarHandBases.ClearPlayerBasePoses));

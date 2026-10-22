@@ -12,151 +12,12 @@ using UltimateXR.Manipulation.HandPoses;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
-using VrBattlegrounds.Editor.Avatars.ContactIk;
 using VrBattlegrounds.Editor.GripAuthoring.Analysis;
-using VrBattlegrounds.Editor.GripAuthoring.ContactPoints;
 using static VrBattlegrounds.Editor.GripAuthoring.Analysis.GripAuthoringGeometry;
 using Object = UnityEngine.Object;
 
 namespace VrBattlegrounds.Editor.HandPoseReview
 {
-    public enum HandPoseSdkWrapProfile { NoPenetration, MoreContacts }
-
-    /// <summary>Заимствованный контекст root: массивы view заморожены, snapshot/dispose остаются у общей сессии.</summary>
-    public sealed class HandPoseSdkContactContext
-    {
-        public UxrHandPoseEditorWindow Window { get; }
-        public UxrHandPoseContactEditContext SdkContext { get; }
-        public UxrHandSide Side { get; }
-        public GameObject ObjectRoot { get; }
-        public UxrGrabbableObject Grabbable { get; }
-        public int GrabPoint { get; }
-        public string InputKey { get; }
-        public HandContactIkPreviewView View { get; }
-        public Func<HandPoseSdkContactRequest, HandPoseSdkContactJob> BeginJob { get; }
-        public Func<bool> IsCurrent { get; }
-        public Action<Vector3> CommitPalmPlacement { get; }
-        public Matrix4x4 ObjectToWorld => Matrix4x4.TRS(ObjectRoot.transform.position, ObjectRoot.transform.rotation, Vector3.one);
-
-        public HandPoseSdkContactContext(UxrHandPoseEditorWindow window, UxrHandPoseContactEditContext sdkContext,
-            UxrHandSide side, GameObject objectRoot, UxrGrabbableObject grabbable, int grabPoint, string inputKey,
-            HandContactIkPreviewView view, Func<HandPoseSdkContactRequest, HandPoseSdkContactJob> beginJob,
-            Func<bool> isCurrent, Action<Vector3> commitPalmPlacement = null)
-        {
-            Window = window;
-            SdkContext = sdkContext;
-            Side = side;
-            ObjectRoot = objectRoot;
-            Grabbable = grabbable;
-            GrabPoint = grabPoint;
-            InputKey = inputKey;
-            View = view;
-            BeginJob = beginJob;
-            IsCurrent = isCurrent;
-            CommitPalmPlacement = commitPalmPlacement;
-        }
-    }
-
-    public sealed class HandPoseSdkContactRequest
-    {
-        readonly HandContactIkPreviewTarget[] _targets;
-        public long Generation { get; }
-        public UxrHandPoseContactEditContext SdkContext { get; }
-        public HandPoseSdkContactContext Context { get; }
-        public UxrHandPoseContactEditMode Mode { get; }
-        public float DistalPriority { get; }
-        public HandPoseSdkWrapProfile WrapProfile { get; }
-        public float MaximumPenetrationMm { get; }
-        public HandContactIkPreviewTarget[] Targets => _targets.Select(t => t.Copy()).ToArray();
-
-        public HandPoseSdkContactRequest(long generation, UxrHandPoseContactEditContext sdkContext,
-            HandPoseSdkContactContext context, UxrHandPoseContactEditMode mode, float distalPriority,
-            HandPoseSdkWrapProfile wrapProfile, float maximumPenetrationMm, HandContactIkPreviewTarget[] targets)
-        {
-            Generation = generation;
-            SdkContext = sdkContext;
-            Context = context;
-            Mode = mode;
-            DistalPriority = distalPriority;
-            WrapProfile = wrapProfile;
-            MaximumPenetrationMm = maximumPenetrationMm;
-            _targets = targets.Select(t => t.Copy()).ToArray();
-        }
-    }
-
-    public sealed class HandPoseSdkContactResult
-    {
-        readonly UxrHandDescriptor _descriptor;
-        public UxrHandDescriptor Descriptor
-        {
-            get
-            {
-                var copy = new UxrHandDescriptor();
-                copy.CopyFrom(_descriptor);
-                return copy;
-            }
-        }
-        public HandContactIkPreviewResult Preview { get; }
-
-        public HandPoseSdkContactResult(UxrHandDescriptor descriptor, HandContactIkPreviewResult preview)
-        {
-            _descriptor = new UxrHandDescriptor();
-            _descriptor.CopyFrom(descriptor);
-            Preview = preview;
-        }
-    }
-
-    /// <summary>Адаптер cooperative backend. Нативные ресурсы освобождаются после копирования завершённого результата.</summary>
-    public sealed class HandPoseSdkContactJob : IDisposable
-    {
-        readonly IContactIkCooperativeJob _job;
-        readonly Func<HandPoseSdkContactResult> _complete;
-        readonly Action _cleanup;
-        HandPoseSdkContactResult _result;
-        bool _disposed;
-
-        public long Generation => _job.Generation;
-        public bool IsCompleted => _job.IsCompleted;
-        public bool IsCancelled => _job.IsCancelled;
-        public int Evaluations => _job.Evaluations;
-        public string Progress => _job.Progress;
-        public HandPoseSdkContactResult Result => !_disposed && IsCompleted && !IsCancelled
-            ? _result ?? (_result = _complete())
-            : throw new InvalidOperationException("Результат job ещё не доступен.");
-
-        public HandPoseSdkContactJob(IContactIkCooperativeJob job, Func<HandPoseSdkContactResult> complete, Action cleanup)
-        {
-            _job = job ?? throw new ArgumentNullException(nameof(job));
-            _complete = complete ?? throw new ArgumentNullException(nameof(complete));
-            _cleanup = cleanup;
-        }
-
-        public bool Step(int maxEvaluations)
-        {
-            if (_disposed) throw new ObjectDisposedException(nameof(HandPoseSdkContactJob));
-            return _job.Step(maxEvaluations);
-        }
-
-        public void Cancel()
-        {
-            if (!_disposed) _job.Cancel();
-        }
-
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-            try
-            {
-                _job.Dispose();
-            }
-            finally
-            {
-                _cleanup?.Invoke();
-            }
-        }
-    }
-
     /// <summary>
     /// Встроенное в <see cref="UxrHandPoseEditorWindow"/> управление хватом от текущего <see cref="UxrGrabbableObject"/>:
     /// 1) Кнопка «Обхватить» — автоснап фаланг по текущему snapTransform с мгновенной фиксацией позы;
@@ -198,10 +59,6 @@ namespace VrBattlegrounds.Editor.HandPoseReview
         static int _lastSyncedPoseId;
         static bool _isSyncingWindow;
 
-        static HandPoseSdkContactContext _legacyContext;
-        public static HandPoseSdkContactContext CurrentContext => _legacyContext;
-        public static HandContactIkPreviewResult CurrentPreview => null;
-
         static HandPoseSdkContactEditing()
         {
             UxrHandPoseEditorWindow.DiagnosticsGUI += DrawGUI;
@@ -228,11 +85,6 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             return new GripAnalysisHost(_window, _avatar, _pose, _side, _grabbable, _grabPoint);
         }
 
-        public static void UpdateContext(HandPoseSdkContactContext context)
-        {
-            _legacyContext = context;
-        }
-
         public static void ClearContext(UxrHandPoseEditorWindow window = null)
         {
             if (window != null && _window != null && _window != window)
@@ -252,7 +104,6 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
 
-            _legacyContext = null;
             if (window != null)
             {
                 _ikModeRequested = false;

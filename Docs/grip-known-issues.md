@@ -248,7 +248,7 @@ R08, Herrington, Mk14, TR15 p0/p1. Числа статического Fit — �
 этих поз сохранены в ветке `archive/avatar-grip/r2-rejected-result-712-verified`.
 **Статус:** открыт. **Направление:** 4 (ручная доводка, [grip-pose-editor.md](grip-pose-editor.md): «Обхватить»
 и IK кончиков, проверка — метрика точки фаланги, N/15 фаланг в контакте; контактный IK по материальным
-опорным точкам — заменённая ветка, код в dev как запас).
+опорным точкам — заменённая ветка, код удалён из dev 2026-10-22).
 
 Ревью — локально, вне Git: `tasks/hand-rig-quality/reports/r2-human-review-715/Review.md`,
 `tasks/hand-rig-quality/reports/reference-grips-715/Review.md` (ориентиры пользователя) в основном checkout.

@@ -77,30 +77,6 @@ namespace VrBattlegrounds.Editor.Avatars
             return GripSample.FromPack(sample, point.SourceSide, point.SourceKind);
         }
 
-        /// <summary>Явно включает тяжёлый захват исходной геометрии до уничтожения временных клонов.</summary>
-        public GripSample Sample(GripSourcePoint point, bool captureSourceContact)
-        {
-            if (!captureSourceContact) return Sample(point);
-            GripSourceContactFrame frame = null;
-            Action<GripSourceCaptureContext> capture = context => frame = context.Capture();
-            HandsPackPoseExtractor.Sample sample;
-            if (point.KinemationRecipe != null)
-            {
-                KinemationWeapon model = KinemationModel(point.KinemationRecipe);
-                string restClip = point.KinemationRecipe.RestClip;
-                // Те же публичные входы, что GripSample, с callback только в явно выбранном режиме.
-                sample = KinemationPoseExtractor.Extract(model.PoseClip(), 0f, point.SourceSide, model.PackPrefab, model.Body,
-                    restClip != null ? model.Clip(restClip) : null, capture);
-            }
-            else
-            {
-                sample = HandsPackPoseImporter.ExtractSample(point.PackRecipe, capture);
-            }
-            GripSample result = GripSample.FromPack(sample, point.SourceSide, point.SourceKind);
-            result.SourceContactFrame = frame;
-            return result;
-        }
-
         public void Dispose() => ReleaseKinemationModel();
 
         private static bool Matches(GripSourcePoint point, string selector) =>

@@ -33,7 +33,7 @@ namespace VrBattlegrounds.Editor.Avatars
         public static void CreateBases()
         {
             GameObject playerBase = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase);
-            RequireCyborgBase(playerBase);
+            RequireCyborgBase();
 
             CreateVariant(NonSdkHands, playerBase);
 
@@ -44,22 +44,37 @@ namespace VrBattlegrounds.Editor.Avatars
             GameLog.Debug.Info("[AvatarHandBases] База Cyborg проверена, база Non-SDK обновлена.");
         }
 
-        private static void RequireCyborgBase(GameObject playerBase)
+        /// <summary>
+        /// Проверяет контракт общей базы Cyborg без исключений: GUID, прямой вариант <c>PlayerBase</c> (Unity и UXR),
+        /// нет рига и тела (<c>Cyborg</c>, <c>MEF_Rig</c>, <c>CyborgGeo</c>), есть собственные позы.
+        /// <paramref name="reason" /> — первое нарушение или null. Нужна находкам Редактора аватара и операциям с базами.
+        /// </summary>
+        public static bool IsCleanCyborgBase(out string reason)
         {
+            GameObject playerBase = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase);
             GameObject cyborgBase = AssetDatabase.LoadAssetAtPath<GameObject>(SdkHands);
             UxrAvatar avatar = cyborgBase != null ? cyborgBase.GetComponent<UxrAvatar>() : null;
-            if (playerBase == null || avatar == null ||
-                AssetDatabase.AssetPathToGUID(SdkHands) != GripTargetProfile.CyborgBaseGuid ||
-                PrefabUtility.GetCorrespondingObjectFromSource(cyborgBase) != playerBase ||
-                avatar.ParentPrefab != playerBase || avatar.AvatarRig.Transforms.Any() ||
-                cyborgBase.transform.Find("Cyborg") != null ||
-                cyborgBase.transform.Find("MEF_Rig") != null ||
-                cyborgBase.transform.Find("CyborgGeo") != null ||
-                !avatar.GetHandPoses().Any())
+            reason = playerBase == null ? "нет PlayerBase " + PlayerBase
+                : cyborgBase == null ? "нет CyborgHandsBase " + SdkHands
+                : avatar == null ? "у CyborgHandsBase нет корневого UxrAvatar"
+                : AssetDatabase.AssetPathToGUID(SdkHands) != GripTargetProfile.CyborgBaseGuid ? "GUID CyborgHandsBase не совпадает с " + GripTargetProfile.CyborgBaseGuid
+                : PrefabUtility.GetCorrespondingObjectFromSource(cyborgBase) != playerBase ? "Unity-родитель CyborgHandsBase — не PlayerBase"
+                : avatar.ParentPrefab != playerBase ? "UXR-родитель (_parentPrefab) CyborgHandsBase — не PlayerBase"
+                : avatar.AvatarRig.Transforms.Any() ? "у CyborgHandsBase заполнен риг аватара"
+                : cyborgBase.transform.Find("Cyborg") != null || cyborgBase.transform.Find("MEF_Rig") != null ||
+                  cyborgBase.transform.Find("CyborgGeo") != null ? "в CyborgHandsBase есть тело (Cyborg / MEF_Rig / CyborgGeo)"
+                : !avatar.GetHandPoses().Any() ? "у CyborgHandsBase нет собственных поз кисти"
+                : null;
+            return reason == null;
+        }
+
+        private static void RequireCyborgBase()
+        {
+            if (!IsCleanCyborgBase(out string reason))
             {
                 throw new System.InvalidOperationException(
                     "[AvatarHandBases] Нужна существующая CyborgHandsBase с сохранёнными позами, без рига и геометрии тела, " +
-                    "прямой вариант PlayerBase. Сначала выполните CyborgHandsPrefabTree.RebuildTree().");
+                    "прямой вариант PlayerBase: " + reason + ". Исправление — вручную или из истории Git (миграция 9c79ccb58).");
             }
         }
 
@@ -69,7 +84,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </summary>
         public static void ClearPlayerBasePoses()
         {
-            RequireCyborgBase(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerBase));
+            RequireCyborgBase();
             // Элемент списка варианта, равный элементу родителя, Unity не хранит как переопределение — он пропал бы
             // вместе с родительским. Поэтому списки баз снимаются до очистки и записываются заново после.
             var bases = new[] { SdkHands, NonSdkHands }.ToDictionary(p => p, p => OwnPoses(AssetDatabase.LoadAssetAtPath<GameObject>(p)));

@@ -1,6 +1,5 @@
 using UltimateXR.Editor.Manipulation.HandPoses;
 using UnityEditor;
-using VrBattlegrounds.Editor.GripAuthoring.ContactPoints;
 
 namespace VrBattlegrounds.Editor.HandPoseReview
 {

@@ -1,12 +1,7 @@
 using System;
 using System.IO;
-using System.Text;
-using UltimateXR.Avatar;
-using UltimateXR.Avatar.Rig;
-using UltimateXR.Manipulation;
 using UnityEditor;
 using UnityEngine;
-using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -203,115 +198,6 @@ namespace VrBattlegrounds.Editor.Avatars
             }
 
             return guid;
-        }
-    }
-
-    /// <summary>
-    /// Миграция и диагностика общей базы поз Cyborg без рига тела и её конечных аватаров.
-    /// </summary>
-    public static class CyborgHandsPrefabTree
-    {
-        [MenuItem("VR Battlegrounds/Avatars/Черновики/Cyborg Hands/Validate CyborgHandsBase Prefab Tree")]
-        public static void ValidateFromMenu()
-        {
-            string summary = ValidateTree();
-            GameLog.Player.Info(summary);
-        }
-
-        [MenuItem("VR Battlegrounds/Avatars/Черновики/Cyborg Hands/Rebuild CyborgHandsBase Prefab Tree")]
-        public static void RebuildFromMenu()
-        {
-            string summary = RebuildTree();
-            GameLog.Player.Info(summary);
-        }
-
-        /// <summary>
-        /// Создаёт цепочку PlayerBase → CyborgHandsBase без рига тела; геометрия и риг остаются
-        /// на конечных аватарах Cyborg и MEF. Сохраняет позы, GUID и принятые настройки аватаров.
-        /// </summary>
-        public static string RebuildTree()
-        {
-            // MEF body и graft уже авторены. Повторное добавление модели на базу уничтожает
-            // разделение общего каркаса и конечного аватара; сохраняем разрешённые snapshots.
-            return CyborgHandsPrefabMigration.Rebuild();
-        }
-
-        /// <summary>
-        /// Возвращает диагностику Unity/SDK-цепочек, рига тела и поз общей базы, а также ригов
-        /// и геометрии конечных аватаров. Общие device visuals допустимы в каркасе PlayerBase.
-        /// </summary>
-        public static string ValidateTree()
-        {
-            var sb = new StringBuilder(CyborgHandsPrefabMigration.Describe());
-            string basePath = GripTargetProfile.ResolveCyborgBasePath();
-            sb.AppendLine($"[CyborgHandsPrefabTree] Base path: {basePath} (GUID={AssetDatabase.AssetPathToGUID(basePath)})");
-
-            AppendAvatarLine(sb, "CyborgHandsBase", basePath);
-            AppendAvatarLine(sb, "PlayerControllersCyborgAvatar", GripTargetProfile.CyborgAvatarPath);
-            AppendAvatarLine(sb, "MEF_cyborg_hands_Player", GripTargetProfile.MefCyborgPlayerPath);
-            AppendAvatarLine(sb, "MEF_cyborg_hands_Player_Black", GripTargetProfile.MefCyborgPlayerBlackPath);
-            return sb.ToString();
-        }
-
-        private static void AppendAvatarLine(StringBuilder sb, string label, string path)
-        {
-            var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (go == null)
-            {
-                sb.AppendLine($"  - {label}: НЕ НАЙДЕН ({path})");
-                return;
-            }
-
-            var avatar = go.GetComponent<UxrAvatar>();
-            if (avatar == null)
-            {
-                sb.AppendLine($"  - {label}: нет UxrAvatar ({path})");
-                return;
-            }
-
-            string parentName = avatar.ParentAvatarPrefab != null ? avatar.ParentAvatarPrefab.name : "null";
-            string parentGuid = avatar.ParentAvatarPrefab != null
-                ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(avatar.ParentAvatarPrefab.gameObject))
-                : "null";
-            bool hasLeftMetacarpal = avatar.LeftHand != null && avatar.LeftHand.Index.Metacarpal != null;
-            bool hasRightMetacarpal = avatar.RightHand != null && avatar.RightHand.Index.Metacarpal != null;
-            bool hasNativeMefGloves = false;
-            int activeBodyRenderers = 0;
-            foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            {
-                if (smr == null || smr.sharedMesh == null) continue;
-                if (smr.sharedMesh.name.IndexOf("Hands_gloves", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    hasNativeMefGloves = true;
-                }
-
-                bool isHandRenderer =
-                    smr.name.IndexOf("Hand", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    smr.name.IndexOf("Glove", StringComparison.OrdinalIgnoreCase) >= 0;
-                if (!isHandRenderer && smr.enabled && IsActiveWithinPrefab(smr.transform, go.transform))
-                {
-                    activeBodyRenderers++;
-                }
-            }
-
-            int poseCount = 0;
-            foreach (var _ in avatar.GetAllHandPoses()) poseCount++;
-
-            sb.AppendLine(
-                $"  - {label}: GUID={avatar.PrefabGuid}, Parent={parentName} ({parentGuid}), " +
-                $"Metacarpals=L:{hasLeftMetacarpal}/R:{hasRightMetacarpal}, NativeMefGloves={hasNativeMefGloves}, ActiveBodyMeshes={activeBodyRenderers}, Poses={poseCount}");
-        }
-
-        private static bool IsActiveWithinPrefab(Transform current, Transform root)
-        {
-            while (current != null)
-            {
-                if (!current.gameObject.activeSelf) return false;
-                if (current == root) break;
-                current = current.parent;
-            }
-
-            return true;
         }
     }
 }

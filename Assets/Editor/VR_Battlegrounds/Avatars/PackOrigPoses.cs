@@ -695,7 +695,7 @@ namespace VrBattlegrounds.Editor.Avatars
             if (m.Kin != null)
             {
                 return KinemationPoseExtractor.Extract(w.Clip, w.MidTime, side, PackPrefab(m.Kin), w.Part,
-                                                       m.Kin.RestClip != null ? WeaponClip(m.Kin, m.Kin.RestClip) : null, null, w.WeaponClip);
+                                                       m.Kin.RestClip != null ? WeaponClip(m.Kin, m.Kin.RestClip) : null, w.WeaponClip);
             }
 
             GameObject model = HandsModel(m);

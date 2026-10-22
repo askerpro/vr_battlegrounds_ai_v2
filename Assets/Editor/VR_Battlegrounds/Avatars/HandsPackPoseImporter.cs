@@ -158,8 +158,7 @@ namespace VrBattlegrounds.Editor.Avatars
             GameLog.Debug.Info($"[HandsPackPoseImporter] Поз: {imported.Count} → {string.Join(", ", imported.Select(i => i.Recipe.PoseFolder ?? PoseFolder).Distinct())}");
         }
 
-        internal static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe,
-            System.Action<GripSourceCaptureContext> sourceContactCapture = null)
+        internal static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}{recipe.Folder}/Mesh/{recipe.Mesh}.FBX");
             AnimationClip clip = AssetDatabase.FindAssets("t:AnimationClip", new[] { $"{Pack}{recipe.Folder}/Animations" })
@@ -170,7 +169,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 throw new FileNotFoundException($"Пак: нет меша {recipe.Mesh} или клипа {recipe.Clip} в {recipe.Folder}");
             }
 
-            return HandsPackPoseExtractor.Extract(model, clip, recipe.Time, recipe.PackSide, recipe.BodyMesh, recipe.BodyBone, sourceContactCapture);
+            return HandsPackPoseExtractor.Extract(model, clip, recipe.Time, recipe.PackSide, recipe.BodyMesh, recipe.BodyBone);
         }
 
         private static UxrHandPoseAsset CreatePoseAsset(HandsPackPoseRecipe recipe, UxrHandDescriptor packHand)

@@ -47,7 +47,6 @@ namespace VrBattlegrounds.Editor.Avatars
         /// </param>
         public static HandsPackPoseExtractor.Sample Extract(AnimationClip clip, float time, UxrHandSide side, GameObject weaponPrefab, string bodyBone,
                                                            AnimationClip weaponRest = null,
-                                                           System.Action<GripSourceCaptureContext> sourceContactCapture = null,
                                                            AnimationClip weaponMotion = null)
         {
             var character = (GameObject)Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Character));
@@ -63,10 +62,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 // Оси — по позе модели до кадра клипа (так же SDK считает их у аватара).
                 HandsPackPoseExtractor.SolveAxes(arm.Hand, side, out UxrUniversalLocalAxes handAxes, out UxrUniversalLocalAxes fingerAxes);
-
-                string[] unavailableHands = null;
-                GripSourceLiveHand[] sourceHands = sourceContactCapture == null ? null :
-                    GripSourceContactCapture.PrepareHands(s => BuildArm(bones, s), out unavailableHands);
 
                 clip.SampleAnimation(character, time);
 
@@ -85,16 +80,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
                 Matrix4x4 hand     = Matrix4x4.TRS(arm.Hand.Wrist.position, handAxes.UniversalRotation, Vector3.one);
                 Matrix4x4 relative = hand.inverse * Matrix4x4.TRS(body.position, body.rotation, Vector3.one);
-
-                if (sourceContactCapture != null) GripSourceContactCapture.Deliver(sourceContactCapture, new GripSourceCaptureContext
-                {
-                    SourceKind = PackClipGripSource.Kinemation, CharacterRoot = character, ObjectRoot = weapon,
-                    ModelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(Character), WeaponAsset = weaponPrefab,
-                    Clip = clip, RestClip = weaponRest, Time = time, SourceSide = side,
-                    LiveHands = sourceHands, UnavailableHands = unavailableHands, BodyToWorld = body.localToWorldMatrix,
-                    ObjectRenderers = weapon.GetComponentsInChildren<Renderer>(true)
-                        .Where(GripSourceContactCapture.HasCaptureMesh).ToArray()
-                });
 
                 return new HandsPackPoseExtractor.Sample
                 {

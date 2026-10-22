@@ -19,9 +19,6 @@ namespace VrBattlegrounds.Editor.Arsenal
     internal static class ArsenalBuildPreflight
     {
         public const string InsertionMaterial = "Assets/Art/Weapons/Interaction/InsertionHighlight.mat";
-        // Аватар записей хвата поз паков — по GUID, как у импортёра поз (путь менялся переносом в Player/Unused).
-        private static string Mef => HandsPackPoseImporter.MefBaseAvatarPath;
-        private const string MagazineGrip = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab";
         private static readonly string[] Effects = { "Tracer_Default", "Impact_Concrete", "ImpactDecal_Concrete", "Muzzle_Default" };
 
         /// <summary>Convert ограничивает Android-импорт только исходных BC/Normal текстур выбранного оружия.</summary>
@@ -42,9 +39,9 @@ namespace VrBattlegrounds.Editor.Arsenal
             var kin = ArsenalEditorActions.Kinemation(weapon);
             var recipe = kin?.Weapon ?? ArsenalEditorActions.Hands(weapon);
             if (recipe == null) return Array.Empty<string>();
+            // Хват MEF доноров и пак донора сборка не читает: записей хвата аватаров она не пишет.
             var paths = new List<string> { AssetDatabase.GetAssetPath(weapon), recipe.GripDonor, recipe.FirearmDonor, recipe.MagazineBase,
-                recipe.MagazineGripDonor ?? MagazineGrip, HandsPackWeapon.PackModels + recipe.GripDonorFolder,
-                AvatarHandBases.NonSdkHands, Mef, WeaponGrabHighlight.MaterialPath, "Assets/Audio/SFX/Impacts" };
+                AvatarHandBases.NonSdkHands, WeaponGrabHighlight.MaterialPath, "Assets/Audio/SFX/Impacts" };
             paths.AddRange(Effects.Select(n => "Assets/Prefabs/Weapons/Effects/" + n + ".prefab"));
             if (kin != null)
             {
@@ -162,10 +159,12 @@ namespace VrBattlegrounds.Editor.Arsenal
             var body = HandsPackWeaponBuilder.BodyPlacement(recipe, source);
             if (recipe.Action != HandsPackWeaponRecipe.ActionKind.None) HandsPackWeaponBuilder.ResolveActionTravel(recipe, source, body, out _);
             HandsPackWeaponBuilder.ResolveTriggerRotation(recipe, source.Measure(recipe.TriggerPart, recipe.ActionClip, recipe.RestClip));
+            // Нейтральные точки хвата сборки — центры ладоней рук пака (HandsPackWeaponBuilder.PalmPoints).
+            source.PalmCenterInBody(true);
+            if (recipe.SupportGrip) source.PalmCenterInBody(false);
+            // Рецепты поз читает только экспорт _orig (PackOrigPoses): у нового оружия их может не быть.
             string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
-            var poses = HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path).ToArray();
-            if (poses.Length == 0) throw new InvalidOperationException("Нет рецептов поз полной сборки: " + recipe.Name);
-            foreach (var pose in poses) ValidatePose(pose);
+            foreach (var pose in HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path)) ValidatePose(pose);
         }
 
         public static void ValidatePose(HandsPackPoseRecipe pose)
@@ -181,27 +180,20 @@ namespace VrBattlegrounds.Editor.Arsenal
 
         private static void ValidateDonors(HandsPackWeaponRecipe r)
         {
-            var mef = Component<UxrAvatar>(Required<GameObject>(Mef));
             Component<UxrAvatar>(Required<GameObject>(AvatarHandBases.NonSdkHands));
             var grip = Required<GameObject>(r.GripDonor);
             Component<Rigidbody>(grip);
             var grab = Component<UxrGrabbableObject>(grip);
-            RequireGrip(grab, 0, mef); RequireGrip(grab, 1, mef);
             if (grip.transform.Find(r.GripDonorBodyPath)?.GetComponent<MeshFilter>()?.sharedMesh == null)
                 throw new InvalidOperationException("Нет корпуса донора хвата: " + r.GripDonor + "/" + r.GripDonorBodyPath);
             var anchor = grip.GetComponentInChildren<UxrGrabbableObjectAnchor>(true);
             if (anchor == null || anchor.GetComponent<AudioSource>() == null || grip.GetComponentInChildren<AnchorSound>(true) == null)
                 throw new InvalidOperationException("Нет якоря/звука донора: " + r.GripDonor);
-            using (var donor = new HandsPackWeapon(r.GripDonorFolder, r.GripDonorBody)) { donor.Clip(r.GripDonorPoseClip); donor.AimAxes(r.GripDonorPoseClip); }
             if (r.Action != HandsPackWeaponRecipe.ActionKind.None && r.Action != HandsPackWeaponRecipe.ActionKind.Pump)
             {
                 var action = grip.GetComponentsInChildren<UxrGrabbableObject>(true)
                     .FirstOrDefault(g => g != grab && g.GetComponentsInParent<UxrGrabbableObjectAnchor>(true).Length == 0);
                 if (action == null) throw new InvalidOperationException("Нет ручной детали донора: " + r.GripDonor);
-                // Сборщик переносит null HandPose донора затвора; ему нужны обе точки выравнивания.
-                RequireGrip(action, 0, mef, false);
-                if (!action.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null && f.name != "GrabHighlight"))
-                    throw new InvalidOperationException("Нет меша ручной детали донора: " + r.GripDonor);
             }
             var fire = Required<GameObject>(r.FirearmDonor);
             var firearm = Component<UxrFirearmWeapon>(fire);
@@ -212,20 +204,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             var magazine = Required<GameObject>(r.MagazineBase);
             Component<Mirror.NetworkIdentity>(magazine); Component<Rigidbody>(magazine);
             Component<UxrGrabbableObject>(magazine); Component<UxrFirearmMag>(magazine);
-            var magGrip = Required<GameObject>(r.MagazineGripDonor ?? MagazineGrip);
-            RequireGrip(Component<UxrGrabbableObject>(magGrip), 0, mef);
-            if (!magGrip.GetComponentsInChildren<MeshFilter>(true).Any(f => f.sharedMesh != null))
-                throw new InvalidOperationException("Нет меша донора хвата магазина: " + magGrip.name);
             if (!r.PreserveDonorGameplay) foreach (var effect in Effects) Required<GameObject>("Assets/Prefabs/Weapons/Effects/" + effect + ".prefab");
             Required<Material>(WeaponGrabHighlight.MaterialPath);
-        }
-
-        private static void RequireGrip(UxrGrabbableObject grab, int index, UxrAvatar avatar, bool requirePose = true)
-        {
-            if (grab.GrabPointCount <= index) throw new InvalidOperationException("Нет точки хвата " + index + " у " + grab.name);
-            var pose = grab.GetGrabPoint(index).GetGripPoseInfo(avatar);
-            if (pose == null || (requirePose && pose.HandPose == null) || pose.GripAlignTransformHandLeft == null || pose.GripAlignTransformHandRight == null)
-                throw new InvalidOperationException("Неполный хват MEF у " + grab.name + ", точка " + index);
         }
 
         private static void RequireMesh(Mesh mesh, string part)

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Mirror;
 using UltimateXR.Core;
@@ -55,7 +54,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string MagazineBase;    // префаб магазина, от которого делается вариант (сеть, физика, звук)
         public string MagazineName;    // прежнее имя ассета магазина; null — Name + "_mag"
         public string InteractionFolder; // ассеты областей подсветки; null — Art/Weapons/Interaction/<имя>
-        public string MagazineGripDonor; // immutable калибровка магазина; null — прежний Gun_real_mag
+        public string MagazineGripDonor; // прежняя калибровка хвата MEF магазина; сборка его не читает (хваты аватаров не пишет)
         public string MagazinePart;    // меш магазина из пака
         public string[] MagazineExtraParts; // вынимаются вместе с магазином: патроны, гильзы барабана
         public string MagazineTag;     // тег хвата магазина: его принимают якорь и карманы
@@ -66,10 +65,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         // Явный профиль готовности съёмного магазина (патронник, ручной цикл, Empty-поза); пусто — legacy без ledger.
         public string ReadinessProfile;
 
-        public string GripDonor;       // префаб с вручную настроенным хватом на том же паке
+        public string GripDonor;       // префаб, у которого берутся физика и поля хвата, якорь и затвор
+        public string GripDonorBodyPath; // путь его корпуса в префабе
+        // Папка, корпус и клип донора в паке — прежняя калибровка хвата MEF; сборка их не читает.
         public string GripDonorFolder; // его папка в паке
         public string GripDonorBody;   // рендерер его корпуса в паке
-        public string GripDonorBodyPath; // путь его корпуса в префабе
         public string GripDonorPoseClip;
         public string FirearmDonor;    // префаб, у которого берутся снаряд, звук выстрела, отдача
         public bool PreserveDonorGameplay; // пересборка существующего оружия: баланс и эффекты не заменяются defaults
@@ -87,10 +87,16 @@ namespace VrBattlegrounds.Editor.Gameplay
     ///
     /// <para>
     /// Геометрия и механика — из пака (<see cref="HandsPackWeapon" />): детали на точных местах,
-    /// ход помпы/затвора и угол спуска из клипа. Точки хвата — из ладоней FPS-рук пака через
-    /// калибровку по донору (<see cref="GripCalibration" />). Настройки, которые не выводятся
+    /// ход помпы/затвора и угол спуска из клипа. Настройки, которые не выводятся
     /// из пака (снаряд, звук, отдача, физика хвата), копируются у доноров по полям — без
     /// <c>_uxrUniqueId</c>, чтобы не делить id с донором.
+    /// </para>
+    ///
+    /// <para>
+    /// Записей хвата аватаров (<c>_avatarGripPoseEntries</c>) и их трансформов сборщик не пишет
+    /// (решение 2026-10-22): точка отдачи, <see cref="MainGripAimLock" /> и области подсветки — по
+    /// нейтральным точкам хвата, центрам ладоней рук пака (<see cref="PalmPoints" />). Хваты аватаров
+    /// переносит <see cref="WeaponGripCarryOver" />, регистрирует отдельная команда.
     /// </para>
     ///
     /// <para>
@@ -104,9 +110,6 @@ namespace VrBattlegrounds.Editor.Gameplay
         private const string ImpactEffect = "Assets/Prefabs/Weapons/Effects/Impact_Concrete.prefab";
         private const string ImpactDecal = "Assets/Prefabs/Weapons/Effects/ImpactDecal_Concrete.prefab";
         private const string MuzzleEffect = "Assets/Prefabs/Weapons/Effects/Muzzle_Default.prefab";
-
-        // Позы хвата настроены под MEF — как у M16 и Gun_real, с которых снята калибровка.
-        private static string MefAvatar => AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032");
 
         public static HandsPackWeaponRecipe ShotgunReal => new HandsPackWeaponRecipe
         {
@@ -296,46 +299,65 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static void BuildT38() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenBuildSet(T38.Select(r => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab"));
 
         /// <summary>
-        /// Полный маршрут одного T-38: сборка → позы (<paramref name="poses" />; по умолчанию хваты переносятся из
-        /// текущего префаба) → точка отдачи → прицел, хост WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />).
+        /// Полный маршрут одного T-38: сборка (точка отдачи и области хвата — по центрам ладоней пака,
+        /// <see cref="PalmPoints" />) → перенос хватов из текущего префаба → подсветка магазина → прицел, хост
+        /// WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />) → исходные позы пака и snap-точки <c>_orig</c>
+        /// (<see cref="PackOrigPoses" />). Позы и хваты аватаров не регистрируются — отдельная команда
+        /// (<see cref="HandsPackPoseImporter.ImportFor" />, Grip Extraction). <paramref name="poses" /> — только
+        /// <see cref="WeaponGripPoseMode.KeepCurrent" />.
         /// </summary>
         public static void BuildFull(HandsPackWeaponRecipe r, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Пересборка запрещена в Play Mode.");
+            WeaponGripCarryOver.RequireBuilderMode(poses, "HandsPackWeaponBuilder");
             string path = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
             string magazine = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
             // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
             WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
             Build(r);
-            if (poses == WeaponGripPoseMode.ReimportFromPack) VrBattlegrounds.Editor.Avatars.HandsPackPoseImporter.ImportFor(path);
             WeaponGripCarryOver.Restore(grips, poses);
-            AlignRecoilToMainGrip(path);
-            // Области и подсветка хвата — по итоговому хвату MEF (сборка пекла их по калибровочному), подсветка
-            // выдаваемого отдельно магазина. Писатель — узкое обновление взаимодействия.
-            WeaponInteractionReview.Apply(new[] { path }, new[] { magazine });
-            // Оно переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
-            WeaponGripCarryOver.Restore(grips, poses);
+            // Подсветка выдаваемого отдельно магазина. Области хвата оружия сборка уже испекла по центрам ладоней
+            // пака — перенесённые хваты аватаров их не меняют.
+            WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
             WeaponRebuildFinish.Complete(path, magazine, "HandsPackWeaponBuilder");
+            // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
+            PackOrigPoses.ExportForWeapon(path);
         }
 
         /// <summary>
-        /// Точка отдачи — у правой ладони на рукояти. После позы пака хват MEF стоит по кадру пака, а не по
-        /// калибровке сборщика (у револьвера — другой риг рук, калибровка с Gun_real ошибается на сантиметры).
+        /// Нейтральные точки хвата в осях корня <paramref name="root" />: центр ладони руки пака в кадре позы
+        /// (определение SDK <c>UxrAvatarHand.GetPalmCenter</c>). [0] — правая рука на рукояти (точка 0), [1] — левая,
+        /// вторая рука (точка 1). Та же величина, что начало snap-точек <c>Orig/&lt;поза&gt;_orig/Right|Left</c>
+        /// (<see cref="PackOrigPoses" />, <see cref="GripSample.PalmInBody" />). От аватаров не зависит: по ним сборка
+        /// ставит точку отдачи, решает о <see cref="MainGripAimLock" /> и печёт области подсветки
+        /// (<see cref="WeaponInteractionRecipes" />). <paramref name="body" /> — корпус в префабе, тот же меш, что в паке;
+        /// <paramref name="poseClip" /> — клип пака Hands (у KINEMATION клип позы задаёт модель).
         /// </summary>
-        public static void AlignRecoilToMainGrip(string path)
+        internal static Vector3[] PalmPoints(IWeaponModel pack, string poseClip, Transform root, Transform body)
         {
-            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            Vector3 Palm(UxrHandSide side)
+            {
+                if (pack is IHandGripSource frames)
+                {
+                    HandsPackPoseExtractor.Sample sample = frames.GripSample(side);
+                    GripSample.FromPack(sample, side, PackClipGripSource.Kinemation)
+                              .PalmInBody(side, body.lossyScale.x / sample.BodyScale, out Vector3 position, out _);
+                    return root.InverseTransformPoint(body.position + body.rotation * position);
+                }
+
+                return root.InverseTransformPoint(body.TransformPoint(((HandsPackWeapon)pack).PalmCenterInBody(side == UxrHandSide.Right)));
+            }
+
+            var hands = pack as HandsPackWeapon;
+            hands?.Sample(null);
+            hands?.Sample(poseClip);
             try
             {
-                Transform recoil = root.transform.Find("MeshContainer/RecoilSourceAxes");
-                Transform grip = root.GetComponent<UxrGrabbableObject>().GetGrabPoint(0).GetGripPoseInfo(MefAvatarComponent()).GripAlignTransformHandRight;
-                if (recoil == null || grip == null) return;
-                recoil.position = grip.position;
-                PrefabUtility.SaveAsPrefabAsset(root, path);
+                return new[] { Palm(UxrHandSide.Right), Palm(UxrHandSide.Left) };
             }
             finally
             {
-                PrefabUtility.UnloadPrefabContents(root);
+                hands?.Sample(null);
             }
         }
 
@@ -500,10 +522,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             // Помпа/затвор — отдельный граббабл у корня, как Recoil у M16. У револьвера его нет.
             PartMotion triggerMotion = pack.Measure(r.TriggerPart, r.ActionClip, r.RestClip);
-            UxrGrabbableObject actionGrab = null;
-            Transform actionPart = null;
             if (r.Action != HandsPackWeaponRecipe.ActionKind.None)
-                (actionGrab, actionPart) = BuildAction(r, pack, bodyLocal, root, gripDonor, fireDonor);
+                BuildAction(r, pack, bodyLocal, root, gripDonor, fireDonor);
 
             root.AddComponent<AnchoredItemCollisionIgnore>();
             root.AddComponent<OutOfWorldGuard>();
@@ -667,10 +687,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                 trig.FindPropertyRelative("_shotAudio._clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(r.ShotAudio);
             fw.ApplyModifiedPropertiesWithoutUndo();
 
-            // Точки хвата из ладоней пака: правая — рукоять, левая — помпа/цевьё/поддержка.
-            PlaceGrips(r, pack, root, parts[r.BodyPart], grabbable, actionGrab, actionPart, gripDonor);
-            UltimateXR.Avatar.UxrAvatar mef = MefAvatarComponent();
-            recoil.position = grabbable.GetGrabPoint(0).GetGripPoseInfo(mef).GripAlignTransformHandRight.position;
+            // Нейтральные точки хвата — центры ладоней пака: правая — рукоять, левая — цевьё/поддержка. Записей
+            // хвата аватаров сборка не пишет; точка отдачи — у правой ладони на рукояти.
+            Vector3[] palms = PalmPoints(pack, r.PoseClip, root.transform, parts[r.BodyPart]);
+            recoil.position = root.transform.TransformPoint(palms[0]);
             if (r.PreserveDonorGameplay)
             {
                 if (fireDonor.TryGetComponent(out RecoilAccumulator donorRecoil))
@@ -687,10 +707,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             // Вторая рука пистолета обнимает первую: она не должна поворачивать оружие и браться
             // одна (GunTwoHandAimTests, SupportGripTests; порог — TwoHandGrabCases.SupportGripMaxGap).
+            // Расстояние — между ладонями рук пака на рукояти и на второй точке.
             if (r.SupportGrip)
             {
-                float gap = Vector3.Distance(grabbable.GetGrabPoint(0).GetGripPoseInfo(mef).GripAlignTransformHandRight.position,
-                                             grabbable.GetGrabPoint(1).GetGripPoseInfo(mef).GripAlignTransformHandLeft.position);
+                float gap = Vector3.Distance(root.transform.TransformPoint(palms[0]), root.transform.TransformPoint(palms[1]));
                 if (gap < SupportGripMaxGap)
                 {
                     root.AddComponent<MainGripAimLock>();
@@ -698,7 +718,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
-            WeaponInteractionRecipe interaction = WeaponInteractionRecipes.For(root, r);
+            WeaponInteractionRecipe interaction = WeaponInteractionRecipes.For(root, r, palms);
             if (r.InteractionFolder != null) interaction.AssetFolder = r.InteractionFolder;
             WeaponInteractionInstaller.Apply(root, interaction);
             if (r.ManualLoading)
@@ -718,14 +738,14 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Помпа или затвор: ход из клипа либо сохранённая ручная механика immutable донора.</summary>
-        private static (UxrGrabbableObject, Transform) BuildAction(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal,
-                                                                  GameObject root, GameObject gripDonor, GameObject fireDonor)
+        private static void BuildAction(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal,
+                                        GameObject root, GameObject gripDonor, GameObject fireDonor)
         {
             var action = new GameObject(r.Action == HandsPackWeaponRecipe.ActionKind.Pump ? "Pump" : "Slide");
             action.transform.SetParent(root.transform, false);
             var actionNames = new Dictionary<string, string> { { r.ActionPart, Clean(r.ActionPart) } };
             foreach (string p in r.ActionExtraParts ?? new string[0]) actionNames[p] = Clean(p);
-            Transform actionPart = pack.BuildParts(action.transform, bodyLocal, actionNames)[r.ActionPart];
+            pack.BuildParts(action.transform, bodyLocal, actionNames);
 
             // Механика из клипа: полный ход — наибольшее смещение от покоя (у рычага взведения
             // MP5K путь не прямой, первое направление движения с ним не совпадает).
@@ -785,87 +805,6 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
                 slide.ApplyModifiedPropertiesWithoutUndo();
             }
-
-            return (actionGrab, actionPart);
-        }
-
-        private static void PlaceGrips(HandsPackWeaponRecipe r, IWeaponModel pack, GameObject root, Transform bodyMesh,
-                                       UxrGrabbableObject main, UxrGrabbableObject action, Transform actionPart, GameObject donor)
-        {
-            using var donorPack = new HandsPackWeapon(r.GripDonorFolder, r.GripDonorBody);
-            Transform donorBody = donor.transform.Find(r.GripDonorBodyPath);
-            var donorGrab = donor.GetComponent<UxrGrabbableObject>();
-            var mef = MefAvatarComponent();
-
-            UxrGripPoseInfo donorMain = donorGrab.GetGrabPoint(0).GetGripPoseInfo(mef);
-            UxrGripPoseInfo donorSupport = donorGrab.GetGrabPoint(1).GetGripPoseInfo(mef);
-
-            // Место хвата руки пака (правая — рукоять, левая — цевьё/помпа/поддержка) для руки аватара.
-            System.Func<bool, UxrHandSide, Matrix4x4> grip;
-            if (pack is IHandGripSource frames)
-            {
-                // Кадр рук в универсальных осях ладони (KINEMATION): хват сразу по нему, как делает позже
-                // HandsPackGripAligner для позы пака, — калибровка по донору того же пака не нужна.
-                var samples = new Dictionary<bool, VrBattlegrounds.Editor.Avatars.HandsPackPoseExtractor.Sample>
-                {
-                    { true, frames.GripSample(UxrHandSide.Right) },
-                    { false, frames.GripSample(UxrHandSide.Left) }
-                };
-                GameObject mefPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MefAvatar);
-                grip = (packRight, side) =>
-                {
-                    Transform t = Empty("AlignProbe", root.transform, Vector3.zero);
-                    VrBattlegrounds.Editor.Avatars.HandsPackGripAligner.Place(root.transform, bodyMesh, samples[packRight],
-                                                                              packRight ? UxrHandSide.Right : UxrHandSide.Left, mefPrefab, side, t);
-                    Matrix4x4 m = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
-                    Object.DestroyImmediate(t.gameObject);
-                    return m;
-                };
-            }
-            else
-            {
-                var hands = (HandsPackWeapon)pack;
-                var cal = new Dictionary<(bool, UxrHandSide), Matrix4x4>
-                {
-                    { (true, UxrHandSide.Right), GripCalibration.Measure(donorPack, r.GripDonorPoseClip, true, donorBody, donorMain.GripAlignTransformHandRight) },
-                    { (true, UxrHandSide.Left), GripCalibration.Measure(donorPack, r.GripDonorPoseClip, true, donorBody, donorMain.GripAlignTransformHandLeft) },
-                    { (false, UxrHandSide.Left), GripCalibration.Measure(donorPack, r.GripDonorPoseClip, false, donorBody, donorSupport.GripAlignTransformHandLeft) },
-                    { (false, UxrHandSide.Right), GripCalibration.Measure(donorPack, r.GripDonorPoseClip, false, donorBody, donorSupport.GripAlignTransformHandRight) }
-                };
-                grip = (packRight, side) => GripCalibration.Apply(hands, r.PoseClip, packRight, bodyMesh, cal[(packRight, side)]);
-            }
-
-            AddGrip(main, 0, root.transform, "Main Grab Point", grip(true, UxrHandSide.Left), grip(true, UxrHandSide.Right), donorMain);
-            if (r.SupportGrip)
-                AddGrip(main, 1, root.transform, "Additional Grab Point 0", grip(false, UxrHandSide.Left), grip(false, UxrHandSide.Right), donorSupport);
-
-            if (action == null) return;
-
-            if (r.Action == HandsPackWeaponRecipe.ActionKind.Pump)
-            {
-                // Помпу держит вторая рука — её место в паке и есть место хвата.
-                AddGrip(action, 0, action.transform, "Main Grab Point", grip(false, UxrHandSide.Left), grip(false, UxrHandSide.Right), donorSupport);
-                return;
-            }
-
-            // Затвор: в клипе прицеливания рука пака на нём не лежит — хват переносится с затвора
-            // донора как есть (в метрах, относительно центра детали, в осях прицеливания).
-            UxrGrabbableObject donorSlide = FindPart(donor);
-            Transform donorSlideMesh = donorSlide.GetComponentsInChildren<MeshFilter>(true).First(f => f.name != "GrabHighlight").transform;
-            UxrGripPoseInfo donorSlidePose = donorSlide.GetGrabPoint(0).GetGripPoseInfo(mef);
-            (Vector3 donorForward, Vector3 donorUp) = donorPack.AimAxes(r.GripDonorPoseClip);
-            (Vector3 forward, Vector3 up) = pack.AimAxes(r.PoseClip);
-            Matrix4x4 donorFrame = PartFrame(donorSlideMesh, donorBody, donorForward, donorUp);
-            Transform contactPart = r.ActionGripPart == null ? actionPart :
-                action.transform.GetComponentsInChildren<MeshFilter>(true).Single(f => f.name == Clean(r.ActionGripPart)).transform;
-            Matrix4x4 frame = PartFrame(contactPart, bodyMesh, forward, up);
-            if (r.ActionGripContact.HasValue) frame.SetColumn(3, new Vector4(
-                contactPart.TransformPoint(r.ActionGripContact.Value).x,
-                contactPart.TransformPoint(r.ActionGripContact.Value).y,
-                contactPart.TransformPoint(r.ActionGripContact.Value).z, 1f));
-            Matrix4x4 moveL = frame * donorFrame.inverse * GripCalibration.Rigid(donorSlidePose.GripAlignTransformHandLeft.localToWorldMatrix);
-            Matrix4x4 moveR = frame * donorFrame.inverse * GripCalibration.Rigid(donorSlidePose.GripAlignTransformHandRight.localToWorldMatrix);
-            AddGrip(action, 0, action.transform, "Main Grab Point", moveL, moveR, donorSlidePose);
         }
 
         /// <summary>
@@ -882,44 +821,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 additional.GetArrayElementAtIndex(i).FindPropertyRelative("_grabProximityTransformUseSelf").boolValue = true;
         }
 
-        /// <summary>Центр меша детали с осями прицеливания оружия (+Z — ствол, +Y — верх), без масштаба.</summary>
-        private static Matrix4x4 PartFrame(Transform part, Transform body, Vector3 bodyForward, Vector3 bodyUp)
-        {
-            Vector3 center = part.TransformPoint(part.GetComponent<MeshFilter>().sharedMesh.bounds.center);
-            return Matrix4x4.TRS(center, body.rotation * Quaternion.LookRotation(bodyForward, bodyUp), Vector3.one);
-        }
-
         /// <summary>Центр меша магазина пака в осях контейнера деталей — место якоря и начало координат магазина.</summary>
         private static Vector3 MagazineCenter(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal)
         {
             pack.Sample(null);
             return (bodyLocal * pack.PartInBody(r.MagazinePart)).MultiplyPoint3x4(pack.MeshOf(r.MagazinePart).bounds.center);
-        }
-
-        private static void AddGrip(UxrGrabbableObject grabbable, int point, Transform owner, string pointName,
-                                    Matrix4x4 left, Matrix4x4 right, UxrGripPoseInfo donorPose)
-        {
-            Transform grabs = owner.Find("Grabs") ?? Empty("Grabs", owner, Vector3.zero);
-            Transform avatar = Empty(Path.GetFileNameWithoutExtension(MefAvatar), grabs, Vector3.zero);
-            Transform pointT = Empty(pointName, avatar, Vector3.zero);
-            Transform l = Empty("Left Grab", pointT, Vector3.zero);
-            Transform rt = Empty("Right Grab", pointT, Vector3.zero);
-            l.SetPositionAndRotation(left.GetColumn(3), left.rotation);
-            rt.SetPositionAndRotation(right.GetColumn(3), right.rotation);
-            l.gameObject.AddComponent<UxrGrabbableObjectSnapTransform>();
-            rt.gameObject.AddComponent<UxrGrabbableObjectSnapTransform>();
-
-            var so = new SerializedObject(grabbable);
-            SerializedProperty entries = so.FindProperty(point == 0 ? "_grabPoint._avatarGripPoseEntries" : $"_additionalGrabPoints.Array.data[{point - 1}]._avatarGripPoseEntries");
-            entries.arraySize = 1;
-            SerializedProperty e = entries.GetArrayElementAtIndex(0);
-            e.FindPropertyRelative("_avatarPrefabGuid").stringValue = AssetDatabase.AssetPathToGUID(MefAvatar);
-            e.FindPropertyRelative("_handPose").objectReferenceValue = donorPose.HandPose;
-            e.FindPropertyRelative("_poseBlendValue").floatValue = donorPose.PoseBlendValue;
-            e.FindPropertyRelative("_gripAlignTransformHandLeft").objectReferenceValue = l;
-            e.FindPropertyRelative("_gripAlignTransformHandRight").objectReferenceValue = rt;
-            so.FindProperty("_selectedAvatarForGrips").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(MefAvatar);
-            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // ── Магазин ─────────────────────────────────────────────────────────────
@@ -1001,16 +907,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             var grab = new SerializedObject(mag.GetComponent<UxrGrabbableObject>());
             grab.FindProperty("_tag").stringValue = r.MagazineTag;
             grab.ApplyModifiedPropertiesWithoutUndo();
-
-            // Хват MEF — как у магазина Gun_real: ладонь сбоку, пальцы вокруг.
-            var donor = AssetDatabase.LoadAssetAtPath<GameObject>(r.MagazineGripDonor ?? "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab");
-            UxrGripPoseInfo donorPose = donor.GetComponent<UxrGrabbableObject>().GetGrabPoint(0).GetGripPoseInfo(MefAvatarComponent());
-            Transform donorMesh = donor.GetComponentInChildren<MeshFilter>(true).transform;
-            Matrix4x4 donorCenter = GripCalibration.Rigid(donorMesh.localToWorldMatrix * Matrix4x4.Translate(donorMesh.GetComponent<MeshFilter>().sharedMesh.bounds.center));
-            Matrix4x4 meshCenter = GripCalibration.Rigid(meshGo.transform.localToWorldMatrix * Matrix4x4.Translate(mesh.bounds.center));
-            Matrix4x4 left = meshCenter * (donorCenter.inverse * GripCalibration.Rigid(donorPose.GripAlignTransformHandLeft.localToWorldMatrix));
-            Matrix4x4 right = meshCenter * (donorCenter.inverse * GripCalibration.Rigid(donorPose.GripAlignTransformHandRight.localToWorldMatrix));
-            AddMagGrip(mag.GetComponent<UxrGrabbableObject>(), mag.transform, left, right, donorPose);
+            // Записи хвата аватаров магазина — только от базы; своих сборка не добавляет (перенос — WeaponGripCarryOver).
 
             ImpactSoundInstaller.Apply(mag, true);
             // Любая последующая сборка должна сохранять защиту магазина от поздней
@@ -1023,40 +920,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             return PrefabUtility.SaveAsPrefabAsset(mag, path);
         }
 
-        private static void AddMagGrip(UxrGrabbableObject grabbable, Transform owner, Matrix4x4 left, Matrix4x4 right, UxrGripPoseInfo donorPose)
-        {
-            Transform grabs = owner.Find("Grabs") ?? Empty("Grabs", owner, Vector3.zero);
-            Transform avatar = Empty(Path.GetFileNameWithoutExtension(MefAvatar), grabs, Vector3.zero);
-            Transform l = Empty("Left Grab", avatar, Vector3.zero);
-            Transform rt = Empty("Right Grab", avatar, Vector3.zero);
-            l.SetPositionAndRotation(left.GetColumn(3), left.rotation);
-            rt.SetPositionAndRotation(right.GetColumn(3), right.rotation);
-            l.gameObject.AddComponent<UxrGrabbableObjectSnapTransform>();
-            rt.gameObject.AddComponent<UxrGrabbableObjectSnapTransform>();
-
-            var so = new SerializedObject(grabbable);
-            SerializedProperty entries = so.FindProperty("_grabPoint._avatarGripPoseEntries");
-            string guid = AssetDatabase.AssetPathToGUID(MefAvatar);
-            int index = Enumerable.Range(0, entries.arraySize).FirstOrDefault(i => entries.GetArrayElementAtIndex(i).FindPropertyRelative("_avatarPrefabGuid").stringValue == guid);
-            if (entries.arraySize == 0 || entries.GetArrayElementAtIndex(index).FindPropertyRelative("_avatarPrefabGuid").stringValue != guid)
-            {
-                index = entries.arraySize;
-                entries.arraySize++;
-            }
-
-            SerializedProperty e = entries.GetArrayElementAtIndex(index);
-            e.FindPropertyRelative("_avatarPrefabGuid").stringValue = guid;
-            e.FindPropertyRelative("_handPose").objectReferenceValue = donorPose.HandPose;
-            e.FindPropertyRelative("_poseBlendValue").floatValue = donorPose.PoseBlendValue;
-            e.FindPropertyRelative("_gripAlignTransformHandLeft").objectReferenceValue = l;
-            e.FindPropertyRelative("_gripAlignTransformHandRight").objectReferenceValue = rt;
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         // ── Вспомогательное ─────────────────────────────────────────────────────
-
-        private static UltimateXR.Avatar.UxrAvatar MefAvatarComponent() =>
-            AssetDatabase.LoadAssetAtPath<GameObject>(MefAvatar).GetComponent<UltimateXR.Avatar.UxrAvatar>();
 
         private static UxrGrabbableObject FindPart(GameObject donor)
         {

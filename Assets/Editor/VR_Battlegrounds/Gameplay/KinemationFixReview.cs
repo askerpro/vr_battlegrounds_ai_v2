@@ -26,10 +26,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             try
             {
                 HandsPackWeaponBuilder.AlignMuzzle(root, recipe.Weapon);
-                var interaction = WeaponInteractionRecipes.For(root, recipe.Weapon);
+                var body = root.transform.Find("MeshContainer/Base");
+                // Области хвата — по центрам ладоней рук пака, как при сборке, а не по записям хвата аватаров.
+                var interaction = WeaponInteractionRecipes.For(root, recipe.Weapon,
+                    HandsPackWeaponBuilder.PalmPoints(source, recipe.Weapon.PoseClip, root.transform, body));
                 interaction.AssetFolder = InteractionFolder(name);
                 WeaponInteractionInstaller.Apply(root, interaction);
-                var body = root.transform.Find("MeshContainer/Base");
                 Transform slideTransform = root.transform.Find("Slide");
                 var slide = slideTransform != null ? slideTransform.GetComponent<UxrGrabbableObject>() : null;
                 var anchor = root.GetComponentInChildren<UxrGrabbableObjectAnchor>(true);

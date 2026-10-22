@@ -35,9 +35,6 @@ namespace VrBattlegrounds.Editor.Arsenal
         private Vector2 scroll;
         private bool maintenance;
         private bool buildSetExpanded;
-        // Хваты при пересборке: по умолчанию переносятся из текущего префаба (Cyborg доводится руками).
-        private WeaponGripPoseMode gripPoseMode = WeaponGripPoseMode.KeepCurrent;
-        private static readonly string[] GripPoseModeLabels = { "Оставить текущие позы", "Перезаписать позы из пака" };
         private readonly HashSet<WeaponInfo> buildSet = new HashSet<WeaponInfo>();
         private string result = "Выберите предмет или операцию. Чтение и выбор строк не сохраняют ассеты.";
         private string planTitle;
@@ -328,25 +325,21 @@ namespace VrBattlegrounds.Editor.Arsenal
         private void DrawBuild()
         {
             var kin = ArsenalEditorActions.Kinemation(weapon); var hands = ArsenalEditorActions.Hands(weapon);
-            gripPoseMode = (WeaponGripPoseMode)EditorGUILayout.Popup("Позы хвата", (int)gripPoseMode, GripPoseModeLabels);
-            if (gripPoseMode == WeaponGripPoseMode.ReimportFromPack)
-                EditorGUILayout.HelpBox("Позы MEF будут сняты с клипов пака заново; записи Cyborg переносятся из текущего префаба.", MessageType.Warning);
-            var poses = gripPoseMode;
-            EditorGUILayout.HelpBox("Пересборка из источника изменяет оружие, магазин, Art/motion/interaction, звуки и позы. Общая база поз влияет на наследующие аватары. После rebuild хваты переносятся (или перезаписываются по режиму), прицел, хост WeaponSystem и баланс ставятся сборкой; воспроизводимость новой readiness policy ведётся отдельным этапом. Этот маршрут не подтверждает игровую готовность.", MessageType.Warning);
+            EditorGUILayout.HelpBox("Пересборка из источника изменяет оружие, магазин, Art/motion/interaction и звуки. Позы и хваты аватаров сборка не регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — «Зарегистрировать хваты для аватара MEF» во вкладке «Взаимодействие» и Grip Extraction. Сборка экспортирует исходные позы пака _orig (" + PackOrigPoses.Root + ") и snap-точки Orig в префабы оружия и магазина. Прицел, хост WeaponSystem и баланс ставятся сборкой; воспроизводимость новой readiness policy ведётся отдельным этапом. Этот маршрут не подтверждает игровую готовность.", MessageType.Warning);
             if (kin != null)
             {
                 EditorGUILayout.LabelField("Рецепт: " + kin.Weapon.Name + " · исходник: " + kin.PackPrefab);
                 if (GUILayout.Button("Проверить источник KINEMATION")) Try(() => ArsenalEditorActions.Run("Проверка источника KINEMATION", Array.Empty<string>(), () => ArsenalEditorActions.ReportSource(kin), false));
                 Command("Подготовить Read/Write исходных моделей KINEMATION", ArsenalEditorActions.SourceSettingsPaths(kin), "Только ModelImporter .meta мешей выбранного исходного префаба и выбранных attachments; явный reimport исходников.", () => { KinemationWeapon.EnsureReadable(ArsenalEditorActions.SourcePrefab(kin), kin.Attachments); return "Read/Write исходных моделей подготовлен."; }, ArsenalBuildPreflight.Inputs(weapon), savesAllAssets: false);
                 var selected = weapon;
-                Command("Пересобрать выбранное оружие KINEMATION из источника", BuildPaths(selected), "Существующий source pipeline: sounds → geometry/magazine → poses/base → recoil → motion/regions; общие materials и insertion material входят в область. Дальше хваты (режим «Позы хвата»), прицел, хост WeaponSystem и баланс; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); KinemationWeaponBuilder.Build(kin, poses); return "Source rebuild " + kin.Weapon.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected));
+                Command("Пересобрать выбранное оружие KINEMATION из источника", BuildPaths(selected), "Существующий source pipeline: sounds → geometry/magazine/recoil → motion/regions по ладоням пака; общие materials и insertion material входят в область. Дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и экспорт _orig (позы + snap Orig); аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); KinemationWeaponBuilder.Build(kin); return "Source rebuild " + kin.Weapon.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected));
             }
             else if (hands != null)
             {
                 EditorGUILayout.LabelField("Рецепт: " + hands.Name + " · исходная папка: " + hands.Folder);
                 if (GUILayout.Button("Проверить источник Hands")) Try(() => ArsenalEditorActions.Run("Проверка источника Hands", Array.Empty<string>(), () => { using var source = new HandsPackWeapon(hands.Folder, hands.BodyPart); return source.Report(hands.RestClip); }, false));
                 var selected = weapon;
-                Command("Пересобрать выбранное оружие Hands T-38 из источника", BuildPaths(selected), "BuildFull: geometry/magazine → ImportFor (общая база поз) → recoil alignment. Дальше хваты (режим «Позы хвата»), прицел, хост WeaponSystem и баланс; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); HandsPackWeaponBuilder.BuildFull(hands, poses); return "Source rebuild " + hands.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected));
+                Command("Пересобрать выбранное оружие Hands T-38 из источника", BuildPaths(selected), "BuildFull: geometry/magazine, recoil и regions по ладоням пака → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс и экспорт _orig (позы + snap Orig); аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); HandsPackWeaponBuilder.BuildFull(hands); return "Source rebuild " + hands.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected));
             }
             else EditorGUILayout.HelpBox("Для этого предмета нет одиночного полного рецепта. SDK-варианты не пересобираются этим окном; три прежних Hands-импорта доступны отдельным набором ниже.", MessageType.Info);
             if (weapon != null && AssetDatabase.GetAssetPath(weapon.WeaponPrefab) == Ar15ScaleCalibration.WeaponPath)
@@ -368,33 +361,32 @@ namespace VrBattlegrounds.Editor.Arsenal
                 var unsupported = selectedSet.Where(w => ArsenalEditorActions.Kinemation(w) == null && ArsenalEditorActions.Hands(w) == null).ToArray();
                 if (unsupported.Length > 0) EditorGUILayout.HelpBox("Нет одиночного полного рецепта: " + string.Join(", ", unsupported.Select(w => w.DisplayName)), MessageType.Warning);
                 using (new EditorGUI.DisabledScope(selectedSet.Length == 0 || unsupported.Length > 0))
-                    Command("Пересобрать выбранный набор из источников (" + selectedSet.Length + ")", selectedSet.SelectMany(BuildPaths).Distinct().ToArray(), "Сначала preflight каждого источника, затем существующие source pipelines. Общие позы и source import dependencies входят в область; дальше хваты, прицел, хост WeaponSystem и баланс.", () =>
+                    Command("Пересобрать выбранный набор из источников (" + selectedSet.Length + ")", selectedSet.SelectMany(BuildPaths).Distinct().ToArray(), "Сначала preflight каждого источника, затем существующие source pipelines. Source import dependencies и позы _orig входят в область; дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и snap Orig; аватары не меняются.", () =>
                     {
                         ArsenalBuildPreflight.Validate(selectedSet);
                         foreach (var item in selectedSet)
                         {
                             var k = ArsenalEditorActions.Kinemation(item);
-                            if (k != null) KinemationWeaponBuilder.Build(k, poses); else HandsPackWeaponBuilder.BuildFull(ArsenalEditorActions.Hands(item), poses);
+                            if (k != null) KinemationWeaponBuilder.Build(k); else HandsPackWeaponBuilder.BuildFull(ArsenalEditorActions.Hands(item));
                         }
                         return "Пересобрано из источников оружий: " + selectedSet.Length + "; игровая проверка отдельно.";
                     }, selectedSet.SelectMany(ArsenalBuildPreflight.Inputs).Distinct().ToArray());
             }
             EditorGUILayout.LabelField("Поддержанный набор Hands: Browning Hi-Power · AR-15 · FABARM SDASS", EditorStyles.boldLabel);
-            Command("Пересобрать набор Hands: 3 оружия + 3 магазина", new[] { "Assets/Prefabs/Weapons/BrowningHiPower", "Assets/Prefabs/Weapons/AR15", "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Art/Weapons/HandsPack" }, "Фиксированный source bundle из immutable baseline: preflight, geometry/magazine, motion и проверка идентичности. Не одиночный рецепт; дальше хваты, прицел, хост WeaponSystem и баланс.", () => { HandsPackLegacyRebuild.RebuildAll(poses); return "Source набор 3+3 пересобран; игровая проверка отдельно."; });
+            Command("Пересобрать набор Hands: 3 оружия + 3 магазина", new[] { "Assets/Prefabs/Weapons/BrowningHiPower", "Assets/Prefabs/Weapons/AR15", "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Art/Weapons/HandsPack", PackOrigPoses.Root }, "Фиксированный source bundle из immutable baseline: preflight, geometry/magazine, motion и проверка идентичности. Не одиночный рецепт; дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и экспорт _orig; аватары не меняются.", () => { HandsPackLegacyRebuild.RebuildAll(); return "Source набор 3+3 пересобран; игровая проверка отдельно."; });
             maintenance = EditorGUILayout.Foldout(maintenance, "Обслуживание источников и восстановление", true);
             if (!maintenance) return;
             Command("Обновить звук револьвера из R08", new[] { "Assets/Prefabs/Weapons/Revolver/Revolver.prefab", KinemationWeaponBuilder.RevolverShotPath }, "Нарезка WAV выстрела из пакета KINEMATION и ссылка _shotAudio выбранного исторического Revolver. Не полная сборка.", () => { KinemationWeaponBuilder.MakeRevolverShot(); return "Звук револьвера обновлён."; }, new[] { KinemationWeaponBuilder.R08.ShotSound });
             Command("Подготовить шаблоны трёх Hands-импортов", new[] { "Assets/Art/Weapons/HandsPack" }, "Создаёт Art snapshots и motion assets; не является чистой проверкой.", HandsPackLegacyRebuild.PrepareBaseline);
+            Command("Экспортировать исходные позы паков (_orig)", PackOrigPoses.OutputPaths(), "Без пересборки оружия: позы _orig всех рецептов обоих паков в " + PackOrigPoses.Root + " и snap-точки Orig (пустые Transform) в префабы оружия и магазинов; магазин — эксперимент по клипам перезарядки. Неизменённый источник не перезаписывается. Позы и хваты аватаров не меняются.", PackOrigPoses.ExportAll, PackOrigPoses.InputPaths());
         }
         private static string[] BuildPaths(WeaponInfo selected)
         {
             var kin = ArsenalEditorActions.Kinemation(selected);
             string name = selected != null && selected.WeaponPrefab != null ? selected.WeaponPrefab.name : "";
             var recipe = kin?.Weapon ?? ArsenalEditorActions.Hands(selected);
-            var paths = ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons/Interaction/" + name, ArsenalBuildPreflight.InsertionMaterial, AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath });
+            var paths = ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons/Interaction/" + name, ArsenalBuildPreflight.InsertionMaterial, PackOrigPoses.Root });
             if (recipe != null) paths = paths.Concat(new[] { $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab", $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName ?? recipe.Name + "_mag"}.prefab" });
-            var poses = kin != null ? KinemationWeaponBuilder.PoseRecipes(kin) : HandsPackPoseImporter.Recipes.Where(r => selected != null && r.Weapon == AssetDatabase.GetAssetPath(selected.WeaponPrefab));
-            paths = paths.Concat(poses.Select(r => (r.PoseFolder ?? HandsPackPoseImporter.PoseFolder) + "/" + r.Pose + ".asset"));
             if (kin != null) paths = paths.Concat(new[] { KinemationWeapon.ArtRoot + "/" + name, KinemationWeapon.ArtRoot + "/Materials", KinemationAudio.Root + "/" + name }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).Concat(ArsenalBuildPreflight.MaterialSettingsPaths(kin));
             if (kin != null && kin.Weapon.Name == "TR15") paths = paths.Concat(Tr15OpticBuilder.OutputPaths());
             return paths.Distinct().ToArray();
@@ -404,14 +396,14 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (weapon == null || weapon.WeaponPrefab == null) return;
             var selected = weapon; string path = AssetDatabase.GetAssetPath(selected.WeaponPrefab);
             EditorGUILayout.HelpBox("Хват, ручной цикл и смещения редактируются в существующем Inspector префаба. Подгонка кисти по геометрии пока исследование; успешного отчёта о прилегании здесь нет.", MessageType.Info);
-            EditorGUILayout.HelpBox("Импорт оружейных поз изменяет grabs выбранного оружия, общую базу поз и MEF; наследующие аватары получают обновление. Это не локальная настройка одной станции.", MessageType.Info);
+            EditorGUILayout.HelpBox("Регистрация хватов MEF из поз пака — явная команда, сборка её не делает: изменяет grabs выбранного оружия, общую базу поз и MEF; наследующие аватары получают обновление. Это не локальная настройка одной станции.", MessageType.Info);
             if (GUILayout.Button("Проверить области хвата выбранного оружия")) Try(() => ArsenalEditorActions.Run("Проверка областей выбранного оружия", Array.Empty<string>(), () => WeaponInteractionReview.Preflight(new[] { path }), false));
             Command("Обновить подсветку и напоминание выбранного оружия", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons" }).ToArray(), "Выбранное оружие и его магазин; existing installer. Корпус, баланс и позы кистей не пересобираются.", () => WeaponInteractionReview.Apply(new[] { path }, selected.MagazinePrefab == null ? Array.Empty<string>() : new[] { AssetDatabase.GetAssetPath(selected.MagazinePrefab) }));
             var kin = ArsenalEditorActions.Kinemation(selected);
             if (kin != null) Command("Обновить механические анимации KINEMATION", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { KinemationWeapon.ArtRoot + "/" + kin.Weapon.Name, ArsenalBuildPreflight.InsertionMaterial }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).ToArray(), "Motion + bindings/контакты и Empty range; KinemationFixReview.Apply. Исходные ModelImporter могут получить Read/Write.", () => { KinemationFixReview.Apply(kin.Weapon.Name); return "Механика обновлена."; }, ArsenalBuildPreflight.Inputs(selected));
-            if (kin != null) Command("Импортировать позы кистей KINEMATION", BuildPaths(selected), "Только позы и grabs оружия, общий pose base и MEF. Source model import dependencies могут получить Read/Write.", () => { KinemationWeaponBuilder.ImportPoses(kin); return "Позы KINEMATION импортированы."; }, ArsenalBuildPreflight.Inputs(selected));
+            if (kin != null) Command("Зарегистрировать хваты для аватара MEF (позы KINEMATION)", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { KinemationWeaponBuilder.PoseFolder, AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath }).ToArray(), "Прежний импорт поз пака: позы Kinemation_*, grabs оружия, общий pose base и MEF. Source model import dependencies могут получить Read/Write.", () => { KinemationWeaponBuilder.ImportPoses(kin); return "Позы KINEMATION импортированы."; }, ArsenalBuildPreflight.Inputs(selected));
             if (HandsPackPoseImporter.Recipes.Any(r => r.Weapon == path))
-                Command("Импортировать позы кистей Hands", new[] { path, "Assets/Art/HandPoses", AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath }, "Поза оружия, MEF grip avatar и общий pose base; наследующие аватары получают обновление.", () => { HandsPackPoseImporter.ImportFor(path); return "Позы импортированы."; }, HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path).Select(p => HandsPackWeapon.PackModels + p.Folder).ToArray());
+                Command("Зарегистрировать хваты для аватара MEF (позы Hands)", new[] { path, "Assets/Art/HandPoses", AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath }, "Поза оружия, MEF grip avatar и общий pose base; наследующие аватары получают обновление.", () => { HandsPackPoseImporter.ImportFor(path); return "Позы импортированы."; }, HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path).Select(p => HandsPackWeapon.PackModels + p.Folder).ToArray());
             Command("Обновить внутренний патрон двух дробовиков", new[] { "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Prefabs/Weapons/Herrington" }, "Фиксированный набор двух дробовиков: ammo alignment/ejection, не баланс/ёмкость.", WeaponInternalAmmoAlignment.ApplyCurrentShotguns);
         }
         private void DrawChecks()

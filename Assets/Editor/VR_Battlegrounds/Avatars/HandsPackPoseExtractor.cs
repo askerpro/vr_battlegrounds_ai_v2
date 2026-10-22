@@ -107,7 +107,7 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
-        private static UxrAvatarArm BuildArm(Dictionary<string, Transform> bones, UxrHandSide side)
+        internal static UxrAvatarArm BuildArm(Dictionary<string, Transform> bones, UxrHandSide side)
         {
             string s   = side == UxrHandSide.Left ? "L" : "R";
             string rig = RigPrefix(bones, s);

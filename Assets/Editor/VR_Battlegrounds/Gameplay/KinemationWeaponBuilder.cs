@@ -37,9 +37,9 @@ namespace VrBattlegrounds.Editor.Gameplay
 
     /// <summary>
     /// Собирает стволы KINEMATION: геометрия и механика — <see cref="KinemationWeapon" />, звуки под Quest —
-    /// <see cref="KinemationAudio" />, позы рук MEF — <see cref="KinemationPoseExtractor" /> через
-    /// <see cref="HandsPackPoseImporter" />. Регистрация (WeaponInfo, реестр, сеть, стена, баланс, теги) — шаги
-    /// скилла <c>/add-weapon</c>, не сборщика.
+    /// <see cref="KinemationAudio" />, исходные позы рук пака <c>_orig</c> — <see cref="PackOrigPoses" />. Позы и хваты
+    /// аватаров (MEF через <see cref="HandsPackPoseImporter" />) — отдельная явная команда <see cref="ImportPoses(KinemationWeaponRecipe)" />.
+    /// Регистрация (WeaponInfo, реестр, сеть, стена, баланс, теги) — шаги скилла <c>/add-weapon</c>, не сборщика.
     /// </summary>
     public static class KinemationWeaponBuilder
     {
@@ -310,12 +310,16 @@ namespace VrBattlegrounds.Editor.Gameplay
             $"Assets/Prefabs/Weapons/{k.Weapon.PrefabFolder}/{k.Weapon.MagazineName ?? k.Weapon.Name + "_mag"}.prefab";
 
         /// <summary>
-        /// Полная пересборка из пака: звуки → геометрия и магазин → позы (<paramref name="poses" />) → отдача →
-        /// механика и подсветка (<see cref="KinemationFixReview" />) → прицел, хост WeaponSystem, баланс
-        /// (<see cref="WeaponRebuildFinish" />). Хваты по умолчанию переносятся из текущего префаба.
+        /// Полная пересборка из пака: звуки → геометрия, магазин и точка отдачи → механика и подсветка
+        /// (<see cref="KinemationFixReview" />) → прицел, хост WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />) →
+        /// исходные позы пака и snap-точки <c>_orig</c> (<see cref="PackOrigPoses" />). Позы и хваты аватаров сборка не
+        /// регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — отдельная команда
+        /// (<see cref="ImportPoses(KinemationWeaponRecipe)" />, Grip Extraction). <paramref name="poses" /> — только
+        /// <see cref="WeaponGripPoseMode.KeepCurrent" />.
         /// </summary>
         public static GameObject Build(KinemationWeaponRecipe k, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
+            WeaponGripCarryOver.RequireBuilderMode(poses, "KinemationWeaponBuilder");
             HandsPackWeaponRecipe r = k.Weapon;
             string path = PrefabPath(k);
             // Хваты снимаются до сборки: сборщик перезаписывает оружие и магазин.
@@ -335,17 +339,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             string[] excluded = k.Excluded ?? new string[0];
             r.StaticParts = model.Parts.Where(p => !used.Contains(p) && !excluded.Any(e => e.EndsWith("*") ? p.StartsWith(e.TrimEnd('*')) : p == e)).ToArray();
 
+            // Точка отдачи и области хвата — по центрам ладоней рук пака (HandsPackWeaponBuilder.PalmPoints).
             HandsPackWeaponBuilder.Build(r, model);
-            if (poses == WeaponGripPoseMode.ReimportFromPack) ImportPoses(k, model);
-            // До механики: области подсветки хвата строятся по хвату MEF (WeaponInteractionRecipes).
             WeaponGripCarryOver.Restore(grips, poses);
-            HandsPackWeaponBuilder.AlignRecoilToMainGrip(path);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
             // WeaponInteractionInstaller переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
             WeaponGripCarryOver.Restore(grips, poses);
             if (r.Name == "TR15") Tr15OpticBuilder.Apply(); // ассеты окна XPS2 для SightKit_XPS2
             WeaponRebuildFinish.Complete(path, MagazinePath(k), "KinemationWeaponBuilder");
+            // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
+            PackOrigPoses.ExportForWeapon(path);
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
             return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
@@ -406,7 +410,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             };
         }
 
-        /// <summary>Узкий импорт существующих поз: без пересборки геометрии, звуков и motion.</summary>
+        /// <summary>
+        /// Регистрация хватов MEF из поз пака (явная команда, не шаг сборки): позы <c>Kinemation_*</c>, база поз
+        /// <c>PlayerBase_NonSdkHands</c> и записи хвата MEF на оружии. Без пересборки геометрии, звуков и motion.
+        /// </summary>
         public static void ImportPoses(KinemationWeaponRecipe k)
         {
             using var model = Model(k);

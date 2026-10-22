@@ -178,6 +178,20 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>
+        /// Центр ладони FPS-руки в осях корпуса, единицы меша: определение SDK <c>UxrAvatarHand.GetPalmCenter</c>, как у
+        /// экстрактора поз (<c>HandsPackPoseExtractor.Sample.PalmCenter</c>) и snap-точек <c>_orig</c>.
+        /// </summary>
+        public Vector3 PalmCenterInBody(bool right)
+        {
+            Dictionary<string, Transform> bones = _instance.GetComponentsInChildren<Transform>(true)
+                                                           .GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
+            var arm = VrBattlegrounds.Editor.Avatars.HandsPackPoseExtractor.BuildArm(bones, right ? UltimateXR.Core.UxrHandSide.Right : UltimateXR.Core.UxrHandSide.Left);
+            Matrix4x4 body = Placement(_body);
+            Vector3 palm = Unscaled(body).inverse.MultiplyPoint3x4(VrBattlegrounds.Editor.Avatars.HandsPackPoseExtractor.PalmCenterWorld(arm.Hand));
+            return palm / body.lossyScale.x;
+        }
+
+        /// <summary>
         /// Ход и поворот детали относительно корпуса за клип, от кадра <paramref name="restClip" />.
         /// Ось хода — направление первого заметного смещения, в осях корпуса (единицы меша).
         /// </summary>

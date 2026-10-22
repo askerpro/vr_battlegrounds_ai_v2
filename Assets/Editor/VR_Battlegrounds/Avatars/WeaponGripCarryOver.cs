@@ -22,7 +22,8 @@ namespace VrBattlegrounds.Editor.Avatars
 
         /// <summary>
         /// Позы MEF заново снимаются с клипа пака (<see cref="HandsPackPoseImporter" />). Записи остальных аватаров
-        /// (Cyborg доводится руками) переносятся из текущего префаба.
+        /// (Cyborg доводится руками) переносятся из текущего префаба. Сборщики оружия этот режим больше не принимают
+        /// (<see cref="WeaponGripCarryOver.RequireBuilderMode" />): регистрация поз и хватов аватаров — отдельная команда.
         /// </summary>
         ReimportFromPack
     }
@@ -76,6 +77,18 @@ namespace VrBattlegrounds.Editor.Avatars
             public Quaternion Rotation;
             public int Sibling, Layer;
             public bool Active, Snap;
+        }
+
+        /// <summary>
+        /// Сборщик оружия из паков не добавляет и не регистрирует позы и хваты аватаров (решение пользователя 2026-10-22):
+        /// записи хвата переносятся как есть, сборка готовит только исходные позы <c>_orig</c> (<see cref="PackOrigPoses" />).
+        /// Перезапись поз MEF из пака — явная команда (<see cref="HandsPackPoseImporter" />, Grip Extraction).
+        /// </summary>
+        public static void RequireBuilderMode(WeaponGripPoseMode mode, string builder)
+        {
+            if (mode != WeaponGripPoseMode.KeepCurrent)
+                throw new InvalidOperationException($"{builder}: сборка не регистрирует позы аватаров (режим {mode}). " +
+                                                    "Хваты MEF из поз пака — отдельная команда «Зарегистрировать хваты для аватара MEF».");
         }
 
         /// <summary>

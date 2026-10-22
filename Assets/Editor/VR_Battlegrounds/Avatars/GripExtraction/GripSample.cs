@@ -89,6 +89,20 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
+        /// <summary>
+        /// Рамка ладони руки <paramref name="side" /> в осях корпуса предмета: начало — центр ладони источника, оси —
+        /// универсальные оси кисти источника; сдвиг в единицах префаба (<paramref name="k" /> — масштаб корпуса префаба /
+        /// <see cref="BodyScale" />). Та же величина, что <c>palmInBody</c> в <see cref="GripPlacement.Evaluate" />:
+        /// мир = корпус.position + корпус.rotation · <paramref name="position" />, поворот = корпус.rotation · <paramref name="rotation" />.
+        /// Не зависит от граббера цели — snap-точки <c>_orig</c> (<see cref="PackOrigPoses" />).
+        /// </summary>
+        public void PalmInBody(UxrHandSide side, float k, out Vector3 position, out Quaternion rotation)
+        {
+            ForSide(side, out Vector3 bodyPosition, out Quaternion bodyRotation, out Vector3 palmCenter);
+            rotation = Quaternion.Inverse(bodyRotation);
+            position = rotation * ((palmCenter - bodyPosition) * k);
+        }
+
         /// <summary>Поза пальцев руки <paramref name="side" />: как в <c>HandsPackPoseImporter.CreatePoseAsset</c>.</summary>
         public UxrHandDescriptor DescriptorFor(UxrHandSide side) => side == Side ? Hand : Hand.Mirrored();
     }

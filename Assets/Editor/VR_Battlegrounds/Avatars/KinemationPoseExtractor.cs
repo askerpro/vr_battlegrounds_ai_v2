@@ -40,9 +40,15 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <param name="weaponPrefab">Префаб оружия пака <c>Prefabs/Weapons/W_*.prefab</c></param>
         /// <param name="bodyBone">Кость корпуса в префабе оружия (<c>Body</c>)</param>
         /// <param name="weaponRest">Клип покоя оружия (<c>A_W_*_Idle</c>) или <c>null</c> — поза префаба</param>
+        /// <param name="weaponMotion">
+        /// Клип оружия, синхронный клипу рук (<c>A_W_*_Reload_*</c> к <c>A_FP_*_Reload_*</c>), в том же <paramref name="time" />
+        /// поверх покоя; <c>null</c> — оружие в покое. Им снимается кадр с деталью в руке (магазин при перезарядке,
+        /// <see cref="PackOrigPoses" />): <paramref name="bodyBone" /> тогда — кость детали.
+        /// </param>
         public static HandsPackPoseExtractor.Sample Extract(AnimationClip clip, float time, UxrHandSide side, GameObject weaponPrefab, string bodyBone,
                                                            AnimationClip weaponRest = null,
-                                                           System.Action<GripSourceCaptureContext> sourceContactCapture = null)
+                                                           System.Action<GripSourceCaptureContext> sourceContactCapture = null,
+                                                           AnimationClip weaponMotion = null)
         {
             var character = (GameObject)Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Character));
             character.hideFlags = HideFlags.HideAndDontSave;
@@ -72,6 +78,7 @@ namespace VrBattlegrounds.Editor.Avatars
                 Animator weaponAnimator = weapon.GetComponentInChildren<Animator>(true);
                 if (weaponRest != null && weaponAnimator != null) weaponRest.SampleAnimation(weaponAnimator.gameObject, 0f);
                 VrBattlegrounds.Editor.Gameplay.KinemationWeapon.SampleFullMagazines(weapon, weaponAnimator);
+                if (weaponMotion != null && weaponAnimator != null) weaponMotion.SampleAnimation(weaponAnimator.gameObject, Mathf.Min(time, weaponMotion.length));
 
                 Transform body = weapon.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == bodyBone)
                                  ?? throw new KeyNotFoundException($"{weaponPrefab.name}: нет кости корпуса {bodyBone}");
@@ -123,7 +130,7 @@ namespace VrBattlegrounds.Editor.Avatars
             throw new KeyNotFoundException($"{weaponPrefab.name}: нет настроек ствола с weaponRotationOffset");
         }
 
-        private static UxrAvatarArm BuildArm(Dictionary<string, Transform> bones, UxrHandSide side)
+        internal static UxrAvatarArm BuildArm(Dictionary<string, Transform> bones, UxrHandSide side)
         {
             string s   = side == UxrHandSide.Left ? "l" : "r";
             var    arm = new UxrAvatarArm();

@@ -47,13 +47,15 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static void OpenWorkbench() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenMaintenance(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build);
 
         /// <param name="poses">
-        /// Хваты: по умолчанию переносятся из текущих префабов; перезапись — позы пака <see cref="HandsPackPoseImporter" />
-        /// (рецепты есть у BrowningHiPower), записи остальных аватаров всё равно переносятся.
+        /// Хваты переносятся из текущих префабов — только <see cref="WeaponGripPoseMode.KeepCurrent" />. Позы и хваты
+        /// аватаров сборка не регистрирует (явная команда <see cref="HandsPackPoseImporter.ImportFor" />); она готовит
+        /// исходные позы пака и snap-точки <c>_orig</c> (<see cref="PackOrigPoses" />).
         /// </param>
         public static void RebuildAll(WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Пересборка Hands запрещена в Play Mode");
+            WeaponGripCarryOver.RequireBuilderMode(poses, "HandsPackLegacyRebuild");
             foreach (string path in Targets)
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
                     throw new InvalidOperationException($"Отсутствует baseline: {path}");
@@ -80,9 +82,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                     if (AssetDatabase.AssetPathToGUID(saved) != guids[saved] || ReadAssetId(saved) != ids[saved] || ReadRootLocalId(saved) != rootIds[saved])
                         throw new InvalidOperationException($"Изменён GUID/root localFileID/NetworkIdentity assetId: {saved}");
                 ValidateReferences(path, magPath);
-                if (poses == WeaponGripPoseMode.ReimportFromPack) HandsPackPoseImporter.ImportFor(path);
                 WeaponGripCarryOver.Restore(grips, poses);
                 WeaponRebuildFinish.Complete(path, magPath, "HandsPackLegacyRebuild");
+                // Последним: snap-точки Orig — добавленные объекты поверх готовых префабов, без регистрации у аватаров.
+                PackOrigPoses.ExportForWeapon(path);
                 GameLog.WeaponSystem.Info($"[HandsPackLegacyRebuild] {recipe.Name}: FBX, baseline config и generic motion сохранены");
             }
             AssetDatabase.SaveAssets();
@@ -327,9 +330,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                var interaction = WeaponInteractionRecipes.For(root, r);
-                WeaponInteractionInstaller.Apply(root, interaction);
                 Transform body = root.transform.Find("MeshContainer/" + r.BodyObjectName);
+                // Области хвата — по центрам ладоней рук пака, как в HandsPackWeaponBuilder.Build.
+                var interaction = WeaponInteractionRecipes.For(root, r, HandsPackWeaponBuilder.PalmPoints(source, r.PoseClip, root.transform, body));
+                WeaponInteractionInstaller.Apply(root, interaction);
                 var action = root.transform.Find(r.Action == HandsPackWeaponRecipe.ActionKind.Pump ? "Pump" : "Slide").GetComponent<UxrGrabbableObject>();
                 if (!AutomaticWeaponSlideFeedback.TryGetSlideTravel(action, out _, out float originalLength) ||
                     float.IsNaN(originalLength) || float.IsInfinity(originalLength))

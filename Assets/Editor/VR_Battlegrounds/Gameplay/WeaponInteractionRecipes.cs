@@ -1,19 +1,23 @@
 using System;
 using System.Linq;
-using UltimateXR.Avatar;
+using UltimateXR.Core;
 using UltimateXR.Manipulation;
-using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Editor.Avatars;
 
 namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>Явные семантические объёмы хвата; точки ладони служат предложением центра на корпусе.</summary>
     public static class WeaponInteractionRecipes
     {
-        public static WeaponInteractionRecipe For(GameObject root, HandsPackWeaponRecipe source = null)
+        /// <param name="palms">
+        /// Нейтральные точки хвата в осях корня по номеру точки — центры ладоней рук пака
+        /// (<see cref="HandsPackWeaponBuilder.PalmPoints" />). Без них — snap-точки <c>Orig</c> (<see cref="PackOrigPoses" />),
+        /// у оружия без них — первая запись хвата с трансформом выравнивания.
+        /// </param>
+        public static WeaponInteractionRecipe For(GameObject root, HandsPackWeaponRecipe source = null, Vector3[] palms = null)
         {
             var grab = root.GetComponent<UxrGrabbableObject>();
-            var avatar = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032")).GetComponent<UxrAvatar>();
             Transform body = root.GetComponentsInChildren<MeshFilter>(true)
                 .Where(f => f.sharedMesh != null && !f.name.StartsWith("GrabHighlight") &&
                             f.GetComponentInParent<UxrGrabbableObject>(true) == grab)
@@ -26,12 +30,15 @@ namespace VrBattlegrounds.Editor.Gameplay
             };
             Vector3 Grip(int index)
             {
+                // Нейтральные точки — раньше записей хвата: области не зависят от того, какие аватары зарегистрированы.
+                if (palms != null && index < palms.Length) return palms[index];
+                Transform orig = PackOrigPoses.FindSnap(root.transform, index == 0 ? "Grip" : "Support", index == 0 ? UxrHandSide.Right : UxrHandSide.Left);
+                if (orig != null) return root.transform.InverseTransformPoint(orig.position);
                 UxrGrabPointInfo point = grab.GetGrabPoint(index);
-                var info = point.GetGripPoseInfo(avatar);
-                Transform align = info?.GripAlignTransformHandRight ?? info?.GripAlignTransformHandLeft;
+                Transform align = null;
                 for (int i = 0; align == null; i++)
                 {
-                    info = point.GetGripPoseInfo(i);
+                    var info = point.GetGripPoseInfo(i);
                     if (info == null) break;
                     align = info.GripAlignTransformHandRight ?? info.GripAlignTransformHandLeft;
                 }

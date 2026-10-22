@@ -794,6 +794,10 @@ PrefabInstance:
       value: c1288aacdfca72346b6966bf7d6b906e
       objectReference: {fileID: 0}
     - target: {fileID: 1476713116175625359, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
+      propertyPath: _previewGrabPosesMode
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1476713116175625359, guid: ff6c66ad770fc1f42854b90cb14b7ad0, type: 3}
       propertyPath: _grabPoint._enableOnHandNear
       value: 
       objectReference: {fileID: 3564542525116609361}

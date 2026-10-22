@@ -40,6 +40,14 @@ namespace VrBattlegrounds.Managers
     /// (<see cref="SessionTeamAssigner.ClearBeforeSceneChange"/>), аватар — киборг,
     /// команду на следующую серию выбирают заново.
     /// </para>
+    ///
+    /// <para>
+    /// <b>Переход — одна транзакция с загрузкой.</b> Состояние серии (карты, индекс, «идёт», команды при конце
+    /// серии) меняется только под принятую загрузку — внутри <c>MapLoader.LoadMap(scene, onAccepted)</c>. Пока
+    /// загрузчик занят предыдущим переходом, повтор «Следующая карта»/«Стоп»/«Новая серия» отклоняется целиком:
+    /// серия не сдвигается и не останавливается, команды не снимаются (дефект найден e2e
+    /// <c>scripted-series-next-map</c>, 2026-10-22).
+    /// </para>
     /// </summary>
     [DefaultExecutionOrder(ManagerOrder.Series)]
     public class Series : NetworkBehaviour
@@ -172,13 +180,12 @@ namespace VrBattlegrounds.Managers
         /// Начинает серию: сбрасывает общий счёт, запоминает карты и грузит первую.
         /// </summary>
         /// <param name="modeId">Режим матча серии; пусто — каждая карта берёт свой первый совместимый.</param>
-        /// <returns>false — пустой список карт.</returns>
+        /// <returns>false — пустой список карт или загрузчик отклонил первую карту (серия не изменена).</returns>
         [Server]
         public bool ServerBegin(IReadOnlyList<string> maps, string modeId = null)
         {
-            if (!BeginCore(maps, modeId)) return false;
-            Load(_maps[0]);
-            return true;
+            List<string> scenes = Scenes(maps);
+            return scenes != null && Load(scenes[0], () => Begin(scenes, modeId));
         }
 
         /// <summary>
@@ -186,26 +193,36 @@ namespace VrBattlegrounds.Managers
         /// счёт и режим серии фиксируются, повторной загрузки нет. Захват режима — до Resolve запуска карты.
         /// </summary>
         [Server]
-        public bool ServerBeginStartup(string scene, string modeId) =>
-            BeginCore(new[] { scene }, modeId);
+        public bool ServerBeginStartup(string scene, string modeId)
+        {
+            List<string> scenes = Scenes(new[] { scene });
+            if (scenes == null) return false;
+            Begin(scenes, modeId);
+            return true;
+        }
 
-        private bool BeginCore(IReadOnlyList<string> maps, string modeId)
+        /// <summary>Сцены серии без пустых; null — сцен нет (серия не начинается).</summary>
+        private static List<string> Scenes(IReadOnlyList<string> maps)
         {
             if (maps == null || maps.Count == 0)
             {
                 GameLog.Match.Warning("[Series] ServerBegin: пустой список карт — серия не начата.");
-                return false;
+                return null;
             }
 
-            _maps.Clear();
+            var scenes = new List<string>();
             foreach (string map in maps)
-                if (!string.IsNullOrEmpty(map)) _maps.Add(map);
+                if (!string.IsNullOrEmpty(map)) scenes.Add(map);
 
-            if (_maps.Count == 0)
-            {
-                GameLog.Match.Warning("[Series] ServerBegin: в списке нет ни одной сцены.");
-                return false;
-            }
+            if (scenes.Count > 0) return scenes;
+            GameLog.Match.Warning("[Series] ServerBegin: в списке нет ни одной сцены.");
+            return null;
+        }
+
+        private void Begin(List<string> scenes, string modeId)
+        {
+            _maps.Clear();
+            foreach (string scene in scenes) _maps.Add(scene);
 
             _mapWins.Clear();
             _results.Clear();
@@ -218,7 +235,6 @@ namespace VrBattlegrounds.Managers
 
             GameLog.Match.Info($"[Series] Серия началась: {string.Join(" → ", ToArray(_maps))}" +
                 (CapturedModeId.Length > 0 ? $", режим '{CapturedModeId}'." : "."));
-            return true;
         }
 
         /// <summary>Записывает итог карты в общий счёт серии. Ничья (null) — только в результаты.</summary>
@@ -242,7 +258,7 @@ namespace VrBattlegrounds.Managers
         /// <summary>
         /// Переход к следующей карте серии; после последней — конец серии и лобби.
         /// </summary>
-        /// <returns>Сцена, которая грузится, или null — серия не идёт.</returns>
+        /// <returns>Сцена, которая грузится, или null — серия не идёт или загрузчик отклонил переход.</returns>
         [Server]
         public string ServerAdvance()
         {
@@ -255,40 +271,39 @@ namespace VrBattlegrounds.Managers
             int next = _currentIndex + 1;
             if (next < _maps.Count)
             {
-                _currentIndex = next;
-                GameLog.Match.Info($"[Series] Следующая карта {next + 1}/{_maps.Count}: {_maps[next]}.");
-                Load(_maps[next]);
-                return _maps[next];
+                string scene = _maps[next];
+                return Load(scene, () =>
+                {
+                    _currentIndex = next;
+                    GameLog.Match.Info($"[Series] Следующая карта {next + 1}/{_maps.Count}: {scene}.");
+                }) ? scene : null;
             }
 
-            GameLog.Match.Info("[Series] Серия сыграна — возврат в лобби.");
-            return FinishAndReturnToLobby();
+            return FinishAndReturnToLobby("Серия сыграна — возврат в лобби.");
         }
 
         /// <summary>
         /// Досрочный конец серии (админ: «Стоп / Лобби»). Общий счёт остаётся до начала
         /// следующей серии — его можно посмотреть в лобби.
         /// </summary>
-        /// <returns>Сцена лобби.</returns>
+        /// <returns>Сцена лобби или null — загрузчик отклонил переход (серия идёт дальше).</returns>
         [Server]
-        public string ServerEnd()
-        {
-            GameLog.Match.Info("[Series] Серия остановлена администратором — возврат в лобби.");
-            return FinishAndReturnToLobby();
-        }
+        public string ServerEnd() =>
+            FinishAndReturnToLobby("Серия остановлена администратором — возврат в лобби.");
 
         [Server]
-        private string FinishAndReturnToLobby()
+        private string FinishAndReturnToLobby(string reason)
         {
-            _running = false;
-            _currentIndex = -1;
-
             MapRegistry maps = SessionManager.Instance != null ? SessionManager.Instance.MapRegistry : null;
             string lobby = maps != null ? maps.LobbyScene : "Lobby";
 
-            ReleaseMatchTeams();
-            Load(lobby);
-            return lobby;
+            return Load(lobby, () =>
+            {
+                GameLog.Match.Info($"[Series] {reason}");
+                _running = false;
+                _currentIndex = -1;
+                ReleaseMatchTeams();
+            }) ? lobby : null;
         }
 
         /// <summary>
@@ -304,25 +319,38 @@ namespace VrBattlegrounds.Managers
             }
         }
 
-        private void Load(string scene)
+        /// <summary>
+        /// Переход серии на <paramref name="scene"/>: <paramref name="commit"/> (изменение состояния серии) и изъятие
+        /// снаряжения выполняются только под принятую загрузку, внутри её транзакции. Отклонённый запрос не меняет
+        /// ни серию, ни игроков живой карты.
+        /// </summary>
+        /// <returns>true — загрузка принята.</returns>
+        private bool Load(string scene, Action commit)
         {
             if (LoadMapOverride != null)
             {
+                commit();
                 EquipmentStrip.ServerStripAll($"переход на карту {scene}");
                 LoadMapOverride(scene);
-                return;
+                return true;
             }
 
             if (MapLoader.Instance == null)
             {
-                GameLog.Error($"[Series] Нет MapLoader — карта '{scene}' не загружена.");
-                return;
+                GameLog.Error($"[Series] Нет MapLoader — карта '{scene}' не загружена, серия не изменена.");
+                return false;
             }
 
-            // Снаряжение не переживает перехода на другую карту (и в лобби) — но снимается только
-            // под принятую загрузку, внутри её транзакции: отклонённый запрос не раздевает игроков живой карты.
-            if (!MapLoader.Instance.LoadMap(scene, () => EquipmentStrip.ServerStripAll($"переход на карту {scene}")))
-                GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: загрузчик отклонил запрос.");
+            // Снаряжение не переживает перехода на другую карту (и в лобби).
+            if (MapLoader.Instance.LoadMap(scene, () =>
+                {
+                    commit();
+                    EquipmentStrip.ServerStripAll($"переход на карту {scene}");
+                }))
+                return true;
+
+            GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: загрузчик отклонил запрос — серия не изменена.");
+            return false;
         }
 
         private static string[] ToArray(SyncList<string> list)

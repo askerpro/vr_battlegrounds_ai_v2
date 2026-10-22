@@ -586,7 +586,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
 
         private void OnLog(string condition, string stackTrace, LogType type)
         {
-            if (condition != null && condition.Contains("[AdminMapCommands]") && _adminLog.Count < 64) _adminLog.Add(condition);
+            if (condition != null && (condition.Contains("[AdminMapCommands]") || condition.Contains("[Series]")) && _adminLog.Count < 64) _adminLog.Add(condition);
         }
 
         private bool HasAdminLog(string fragment)

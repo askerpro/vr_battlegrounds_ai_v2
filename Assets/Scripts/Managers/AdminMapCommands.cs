@@ -130,8 +130,7 @@ namespace VrBattlegrounds.Managers
                 case MapCommand.Pause: return manager != null && manager.Pause();
                 case MapCommand.Resume: return manager != null && manager.Resume();
                 case MapCommand.Stop:
-                    Series.Instance.ServerEnd();
-                    return true;
+                    return Series.Instance.ServerEnd() != null;
                 case MapCommand.NextMap:
                     return Series.Instance.ServerAdvance() != null;
                 default: return false;

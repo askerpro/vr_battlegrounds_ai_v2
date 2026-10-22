@@ -429,6 +429,36 @@ namespace VrBattlegrounds.Tests.Modes
             CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, _loads);
         }
 
+        /// <summary>
+        /// Повтор «Следующая карта»/«Стоп»/«Новая серия», пока загрузчик занят переходом, отклоняется целиком: серия не
+        /// сдвигается и не останавливается, команды не снимаются (дефект найден e2e <c>scripted-series-next-map</c>).
+        /// </summary>
+        [Test]
+        public void Отклонённая_загрузка_не_меняет_серию_и_команды()
+        {
+            SilenceMirrorNoise();
+            CreateSession("elimination");
+            Series series = CreateSeries();
+            PlayerSession ct = Player("ct", _a.teamIndex);
+            Assert.IsTrue(series.ServerBegin(new[] { _mapA.sceneName, _mapB.sceneName }));
+            Assert.AreEqual("MapB", series.ServerAdvance());
+
+            series.LoadMapAcceptsOverride = _ => false;
+            Assert.IsNull(series.ServerAdvance(), "Переход в лобби при занятом загрузчике не отклонён.");
+            Assert.IsNull(series.ServerEnd(), "«Стоп» при занятом загрузчике не отклонён.");
+            Assert.IsFalse(series.ServerBegin(new[] { _mapA.sceneName }), "Новая серия при занятом загрузчике не отклонена.");
+
+            Assert.IsTrue(series.IsRunning, "Отклонённый переход остановил серию.");
+            Assert.AreEqual(1, series.CurrentIndex, "Отклонённый переход сдвинул серию.");
+            CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, series.Maps, "Отклонённая новая серия заменила карты.");
+            Assert.AreEqual(_a.teamIndex, ct.TeamIndex, "Отклонённый конец серии распустил команды.");
+            CollectionAssert.AreEqual(new[] { "MapA", "MapB" }, _loads);
+
+            series.LoadMapAcceptsOverride = null;
+            Assert.AreEqual("Lobby", series.ServerAdvance(), "После перехода загрузчик принимает запрос — серия идёт дальше.");
+            Assert.IsFalse(series.IsRunning);
+        }
+
         [Test]
         public void Остановка_серии_ведёт_в_лобби_и_счёт_виден_до_новой_серии()
         {

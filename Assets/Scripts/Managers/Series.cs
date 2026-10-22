@@ -122,6 +122,12 @@ namespace VrBattlegrounds.Managers
         /// <summary>Загрузчик карт. По умолчанию — <c>MapLoader.LoadMap</c>; подмена — тесты.</summary>
         public Action<string> LoadMapOverride { get; set; }
 
+        /// <summary>
+        /// Примет ли подменённый загрузчик (<see cref="LoadMapOverride"/>) запрос; null — принимает. Подмена — тесты
+        /// отказа (живой загрузчик отказывает, пока занят предыдущим переходом).
+        /// </summary>
+        public Func<string, bool> LoadMapAcceptsOverride { get; set; }
+
         // ── Жизненный цикл ───────────────────────────────────────────────────
 
         private void Awake()
@@ -329,6 +335,12 @@ namespace VrBattlegrounds.Managers
         {
             if (LoadMapOverride != null)
             {
+                if (LoadMapAcceptsOverride != null && !LoadMapAcceptsOverride(scene))
+                {
+                    GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: загрузчик отклонил запрос — серия не изменена.");
+                    return false;
+                }
+
                 commit();
                 EquipmentStrip.ServerStripAll($"переход на карту {scene}");
                 LoadMapOverride(scene);

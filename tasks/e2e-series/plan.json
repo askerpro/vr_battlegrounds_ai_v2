@@ -32,6 +32,7 @@
         "Assets/Scripts/Managers/AdminMapCommands.cs",
         "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
         "Assets/Tests/EditMode/GameModes/SeriesSmokeTests.cs",
+        "Assets/Tests/EditMode/GameModes/MatchFlowTests.cs",
         "tasks/e2e-series/**"
       ],
       "after": [],

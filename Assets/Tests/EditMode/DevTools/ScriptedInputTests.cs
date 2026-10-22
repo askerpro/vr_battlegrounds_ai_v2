@@ -22,7 +22,7 @@ namespace VrBattlegrounds.Tests.DevTools
     public class ScriptedInputTests
     {
         private static readonly string[] BuiltInScripts =
-            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round", "admin-pause" };
+            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round", "admin-pause", "series-next-map" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -75,6 +75,9 @@ namespace VrBattlegrounds.Tests.DevTools
         [TestCase("{\"op\":\"shoot-enemy\",\"until\":\"wound\"}", "wound")]
         [TestCase("{\"op\":\"admin-command\",\"target\":\"Kick\"}", "Kick")]
         [TestCase("{\"op\":\"admin-command-denied\"}", "команда админа")]
+        [TestCase("{\"op\":\"admin-start-series\",\"target\":\"elimination\"}", "maps")]
+        [TestCase("{\"op\":\"expect-map\"}", "expect-map")]
+        [TestCase("{\"op\":\"admin-command\",\"target\":\"NextMap\",\"repeat\":0}", "repeat")]
         public void Load_RejectsUnknownStepValuesAndNegativeClient(string step, string expected)
         {
             string file = Path.Combine(Path.GetTempPath(), "scripted-input-bad-step.json");
@@ -220,6 +223,39 @@ namespace VrBattlegrounds.Tests.DevTools
         }
 
         [Test]
+        public void SeriesNextMap_AdminStartsSeries_RepeatsNextMapDuringTransition_AllWaitForEachMap()
+        {
+            InputScript script = InputScript.Load("series-next-map", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int rights = Index(script, s => s.op == "admin-rights");
+            int teams = Index(script, s => s.op == "wait-server" && s.name == "teams-ok");
+            int start = Index(script, s => s.op == "admin-start-series");
+            int first = Index(script, s => s.op == "expect-map" && s.target == "TestMap2");
+            int verified = Index(script, s => s.op == "wait-server" && s.name == "series-verified");
+            int next = Index(script, s => s.op == "admin-command" && s.target == "NextMap");
+            int second = Index(script, s => s.op == "expect-map" && s.target == "TestMap1");
+            int mapVerified = Index(script, s => s.op == "wait-server" && s.name == "map-verified");
+            int goLive = Index(script, s => s.op == "admin-command" && s.target == "GoLive");
+            int zone = Index(script, s => s.op == "walk" && s.target == "own-spawn-zone", goLive);
+
+            Assert.That(rights, Is.GreaterThan(0).And.LessThan(teams));
+            Assert.That(start, Is.GreaterThan(teams), "серию начинают после выбора команд: команды переживают переход");
+            Assert.That(script.steps[start].client, Is.EqualTo(1), "серию начинает админ");
+            Assert.That(script.steps[start].target, Is.EqualTo("elimination"));
+            Assert.That(script.steps[start].maps, Is.EqualTo(new[] { "TestMap2", "TestMap1" }),
+                "карта стенда первой — серия грузит её заново, вторая — смена сцены");
+            Assert.That(first, Is.GreaterThan(start).And.LessThan(verified));
+            Assert.That(next, Is.GreaterThan(verified).And.LessThan(second), "«Следующая карта» — из разминки карты 1");
+            Assert.That(script.steps[next].repeat, Is.GreaterThanOrEqualTo(2),
+                "повтор кнопки одним кадром: второй приходит, пока загрузчик занят переходом");
+            Assert.That(mapVerified, Is.GreaterThan(second).And.LessThan(goLive));
+            Assert.That(zone, Is.GreaterThan(goLive), "ввод перенесён на аватар новой карты — клиенты идут в свои зоны");
+            Assert.That(script.steps[first].client, Is.Zero, "новую карту ждут оба клиента");
+            Assert.That(script.steps[second].client, Is.Zero, "новую карту ждут оба клиента");
+        }
+
+        [Test]
         public void AdminCommands_MatchMapCommand()
         {
             Assert.That(InputScript.AdminCommands, Is.EquivalentTo(System.Enum.GetNames(typeof(MapCommand))),
@@ -301,6 +337,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(E2ERunner.IsRegistered("scripted-combat-round"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-combat-next-round"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-admin-pause"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-series-next-map"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

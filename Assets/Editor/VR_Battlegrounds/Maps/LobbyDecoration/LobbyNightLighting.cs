@@ -560,21 +560,24 @@ namespace VrBattlegrounds.EditorTools
                     bool hasUv2 = mesh != null && mesh.HasVertexAttribute(VertexAttribute.TexCoord1);
                     Undo.RecordObject(go, "Ночной static GI");
                     Undo.RecordObject(renderer, "Ночной static GI");
+                    if (IsTentLightFixture(renderer.transform))
+                    {
+                        // Светильники шатра (LobbyTentLightFixtures) в GI не участвуют: их свет — у источника на сокете. Светлые
+                        // круги на Unlit давали в пробах «светлячков» до 4,3 при базе 0,3 (замер 2026-10-22); плафон акцента
+                        // иначе освещался своей яркой лампой в 5 см и «горел» неестественно. Вид задаёт эмиссия; тени нет.
+                        GameObjectUtility.SetStaticEditorFlags(go, (flags & ~StaticEditorFlags.ContributeGI) | StaticEditorFlags.ReflectionProbeStatic);
+                        renderer.shadowCastingMode = ShadowCastingMode.Off;
+                        renderer.receiveGI = ReceiveGI.LightProbes;
+                        renderer.lightProbeUsage = LightProbeUsage.Off;
+                        skipped++;
+                        continue;
+                    }
                     // ReflectionProbeStatic: запечённая проба отражений рисует только такие объекты — без бита проба шатра
                     // снимала одно ночное небо и металл оставался чёрным (lobby-reflections, 2026-10-22).
                     GameObjectUtility.SetStaticEditorFlags(go, flags | StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
                     // Только для запекания теней от baked-источников: realtime-теней в пресете нет, shadow pass не рисуется.
                     renderer.shadowCastingMode = ShadowCastingMode.On;
-                    if (IsAccentFixture(renderer.transform))
-                    {
-                        // Плафон акцента не освещается своей яркой лампой в 5 см под ним — иначе корпус «горит» неестественно
-                        // (пользователь 2026-10-22); его вид задаёт эмиссия, как у остальных плафонов. Тень на свою лампу не бросает.
-                        renderer.shadowCastingMode = ShadowCastingMode.Off;
-                        renderer.receiveGI = ReceiveGI.LightProbes;
-                        renderer.lightProbeUsage = LightProbeUsage.Off;
-                        probeLit++;
-                    }
-                    else if (small || !hasUv2)
+                    if (small || !hasUv2)
                     {
                         renderer.receiveGI = ReceiveGI.LightProbes;
                         // Пробы покрывают арену, стрельбища и базу внутри ограды; периметр — ambient.
@@ -592,10 +595,10 @@ namespace VrBattlegrounds.EditorTools
             log.AppendLine("Static GI: в лайтмапе " + lightmapped + ", ContributeGI через probes " + probeLit + ", пропущено (не static/динамика/cutout/текст) " + skipped + ".");
         }
 
-        private static bool IsAccentFixture(Transform t)
+        private static bool IsTentLightFixture(Transform t)
         {
             for (; t != null; t = t.parent)
-                if (t.name.StartsWith("TentAccent_", StringComparison.Ordinal)) return true;
+                if (t.name == LobbyTentLightFixtures.RootName) return true;
             return false;
         }
 

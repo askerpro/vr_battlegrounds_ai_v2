@@ -38,6 +38,9 @@ Quest e2e perf-stress Lobby с реальным трекингом (задача
       EditMode 2919 — красных 19, `ShootingRangePhotoCaptureTests` среди них нет. Код 1 не из-за правки:
       origin/dev ушла вперёд (12 игровых файлов E2E) — нужен rebase и повтор; 2 «новых красных»
       (`GameTagsTests.Prefabs_TagsMatchRules`, `HandsPackWeaponTests…(Scar)`) — из dev, те же в heavy bots-input и e2e-series.
-- [ ] Rebase на свежую origin/dev, повтор heavy, merge.
+- [x] Rebase на origin/dev 120779ff9; heavy editor, аренда 1020 (вход 9e7187a4): сценарии 3/3 passed (8/8 участников),
+      EditMode не прогонялся — пользователь решил остановить повтор после сценариев и вливать
+      по первому heavy (компиляция и тест OK): `reports/heavy-editor-2/`, verdict.json не записан.
+- [ ] Merge.
 
 Подробно: [changelog/2026-10-22-fix.md](changelog/2026-10-22-fix.md).

@@ -18,7 +18,7 @@ namespace VrBattlegrounds.EditorTools
     /// (OpenTent/WestWallDetail). Позы — в мировых метрах: ArmoryRangeZone совмещена с PhysicalArenaLayout в нуле,
     /// OpenTent без поворота и масштаба. Восток делится на 4 пролёта по tent.size.z/4 (север → юг): 1 и 4 закрыты
     /// статичным складом (ящики, шкафы, стол с мелким снаряжением; оружия нет), 2 и 3 открыты на базу; шторы подвязаны
-    /// к стойкам, у карниза свёрнутые валики; над закрытыми пролётами — плафоны и пустые сокеты света.
+    /// к стойкам, у карниза свёрнутые валики. Светильники шатра ставит LobbyTentLightFixtures.
     /// Запад: кабели и щитки по краям единственной станции арсенала, перфопанель, подвесные плафоны, ящик на шкафу;
     /// по периметру крыши — валики торцов и угловые висящие шторы (x&lt;0 — WestWallDetail, x&gt;0 — EastBays).
     /// Только MeshFilter/MeshRenderer/LODGroup; Light/Collider/скрипты источников удаляются. Освещение, пробы и GI
@@ -74,7 +74,6 @@ namespace VrBattlegrounds.EditorTools
         private const float CorridorBottom = .50f, CorridorTop = 3.80f;
         // Кровля TentRoof_LOD0: карниз y 4.19 при |x|=7.75, конёк y 5.59 при x=0 (измерено по вершинам).
         private const float RoofEaveY = 4.19f, RoofRidgeY = 5.59f, RoofHalfWidth = 7.75f;
-        private const float BayLampX = 7.30f, BayLampTopY = 3.55f;
         private const float WallCableX = -7.735f, WallCableY = 3.95f, WallCableD = .026f;
         private const float GableRollZ = 7.38f, GableRollD = .16f;
         private static readonly Bounds StationDefault = MinMax(new Vector3(-7.67f, -.1f, -4.13f), new Vector3(-6.09f, 4.05f, 3.55f));
@@ -292,7 +291,6 @@ namespace VrBattlegrounds.EditorTools
             GableRoll(ctx, rig, "GableRoll_NE", +1, +1); GableRoll(ctx, rig, "GableRoll_SE", +1, -1);
             CornerDrape(ctx, rig, "CornerDrape_NE", +1, +1); CornerDrape(ctx, rig, "CornerDrape_SE", +1, -1);
 
-            var lamps = Group(ctx.East, "Lamps");
             int closedIndex = 0, openIndex = 0;
             for (int k = 0; k < BayCount; k++)
             {
@@ -303,7 +301,6 @@ namespace VrBattlegrounds.EditorTools
                 if (closed)
                 {
                     if (closedIndex++ % 2 == 0) TableStores(ctx, g, north, south); else CabinetStores(ctx, g, north, south);
-                    BayLamp(ctx, lamps, "BayLamp_" + (k + 1), (ctx.PostZ[k] + ctx.PostZ[k + 1]) / 2);
                 }
                 else OutsideStores(ctx, g, north, south, openIndex++);
             }
@@ -398,21 +395,8 @@ namespace VrBattlegrounds.EditorTools
             Prop(ctx, g, "SM_AmmoCartridgeBoxes_03", "TableBoxesC", new Vector3(tb.center.x + .15f, tb.max.y, tb.center.z + .30f), 0, tb);
         }
 
-        // Плафон SM_Lamp_long вдоль пролёта у карниза, два подвеса до кровли, сокет под плафоном.
-        private static void BayLamp(Ctx ctx, Transform parent, string name, float zCenter)
-        {
-            var g = Group(parent, name);
-            var lamp = Spawn(ctx.Src("SM_Lamp_long"), g, "Fixture", 0);
-            var b = Measure(lamp.transform);
-            if (b.size.z < 2f || b.size.x > .4f || b.size.y > .35f) throw new InvalidOperationException("SM_Lamp_long неожиданного габарита: " + b.size);
-            lamp.transform.position += new Vector3(BayLampX - b.center.x, BayLampTopY - b.max.y, zCenter - b.center.z);
-            b = Measure(lamp.transform);
-            Record(ctx, lamp, g.name);
-            float roof = RoofY(BayLampX);
-            foreach (var dz in new[] { -.85f, .85f })
-                Box(ctx, g, "HangerRod", new Vector3(BayLampX, (b.max.y + roof) / 2, zCenter + dz), new Vector3(.012f, roof - b.max.y, .012f), Quaternion.identity, ctx.Steel);
-            AddSocket(ctx, g, "LightingSocket__" + name + "__CommonLightingOwner", new Vector3(b.center.x, b.min.y - .05f, b.center.z));
-        }
+        // Плафонов в закрытых пролётах больше нет (решение пользователя 2026-10-22): фон шатра — круги под кровлей,
+        // длинные плафоны — только над точками акцента (LobbyTentLightFixtures).
 
         private static void EaveRoll(Ctx ctx, Transform parent, string name, float zA, float zB)
         {

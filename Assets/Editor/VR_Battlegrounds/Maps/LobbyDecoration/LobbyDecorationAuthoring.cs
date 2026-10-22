@@ -505,15 +505,8 @@ namespace VrBattlegrounds.EditorTools
         private static void BuildLighting(Transform parent, Bounds floor, Material metal)
         {
             var group = New("CampLighting", parent);
-            foreach (float x in new[] { -5.8f, 5.8f })
-            foreach (float z in new[] { -4.8f, 4.8f })
-            {
-                var point = new Vector3(floor.center.x + x, floor.max.y + 3.25f, floor.center.z + z);
-                PlaceLightFixture(group.transform, "SM_Lamp_long", point + Vector3.up * .14f, 0);
-                var light = New("InteriorWarmLight", group.transform).AddComponent<Light>();
-                light.transform.position = point - Vector3.up * .20f;light.type = LightType.Point;light.intensity = 4.2f;light.range = 4.8f;
-                light.color = new Color(1,.79f,.51f);light.shadows = LightShadows.None;
-            }
+            // Плафонов шатра здесь больше нет (решение пользователя 2026-10-22): фон шатра — круги под кровлей, длинные
+            // плафоны — только над точками акцента; всё это ставит LobbyTentLightFixtures.
             foreach (var site in new[] { new Vector3(-17.75f,2.65f,-16), new Vector3(19.7f,2.65f,-21) })
             {
                 var light = New("ExteriorWarmLight", group.transform).AddComponent<Light>();

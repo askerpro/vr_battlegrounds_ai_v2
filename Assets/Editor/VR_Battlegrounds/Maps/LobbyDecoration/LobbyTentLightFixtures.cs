@@ -32,6 +32,7 @@ namespace VrBattlegrounds.EditorTools
         public const string FillPrefix = "TentFill_";
         public const string AccentPrefix = "TentAccent_";
         private const string LegacyPendantsPath = "OpenTent/WestWallDetail/Pendants";
+        private const string LegacyBayLampsPath = "EastBays/Lamps";
 
         private const string SteelPath = "Assets/Materials/Lobby/Exterior/CampSteel.mat";
         // Свой материал кругов: непрозрачное Unlit тёплого белого (LobbyNightWindowGlow и тусклый тёплый (.50, .35, .19) в шлеме
@@ -44,7 +45,7 @@ namespace VrBattlegrounds.EditorTools
         // Круг фонового света: плоский светящийся диск под кровлей (решение пользователя 2026-10-22).
         private const float DiscDiameter = .32f, DiscThickness = .012f, DiscBelowRoof = .06f;
 
-        // Сетка базового света: дополняет лампы CampLighting (±5.8; ±4.8) и BayLamp (7.3; ±3.0) до шага ~3.7 м.
+        // Сетка базового света с шагом ~3.7 м: весь фон шатра — круги; плафоны SM_Lamp_long — только над акцентами.
         // Модель освещённости — tasks/lobby-reflections/tools/tent_light_model.py.
         private static readonly Vector2[] FillPoints =
         {
@@ -53,6 +54,9 @@ namespace VrBattlegrounds.EditorTools
             new Vector2(-5.8f, -1.6f), new Vector2(-5.8f, 1.6f), new Vector2(5.8f, -1.6f), new Vector2(5.8f, 1.6f),
             // Бывшие подвесные плафоны у западной стены (Pendant_NW/SW).
             new Vector2(-7.0f, 6.3f), new Vector2(-7.05f, -5.95f),
+            // Бывшие плафоны CampLighting (±5.8; ±4.8) и BayLamp (7.3; ±3.0): плафоны — только над акцентами.
+            new Vector2(-5.8f, -4.8f), new Vector2(-5.8f, 4.8f), new Vector2(5.8f, -4.8f), new Vector2(5.8f, 4.8f),
+            new Vector2(7.3f, -3.0f), new Vector2(7.3f, 3.0f),
         };
 
         // Акценты — длинные плафоны SM_Lamp_long: над стеной арсенала CT вдоль стены перед её корпусом (корпус до X −6.09,
@@ -91,6 +95,16 @@ namespace VrBattlegrounds.EditorTools
                 {
                     log.AppendLine("Убраны плафоны SM_TopLight: " + string.Join(", ", legacy.Cast<Transform>().Select(t => t.name)));
                     Undo.DestroyObjectImmediate(legacy.gameObject);
+                }
+                // Миграция 2026-10-22: неакцентные плафоны шатра со своими лампами (CampLighting сборщика LobbyDecorationAuthoring,
+                // лежат прямо в ArmoryRangeZone; BayLamp сборщика LobbyCanopyBaysBuilder) — сборщики их больше не создают.
+                var legacyLamps = zone.Cast<Transform>().Where(t => t.name == "SM_Lamp_long" || t.name == "InteriorWarmLight").ToList();
+                var bayLamps = tent.Find(LegacyBayLampsPath);
+                if (bayLamps != null) legacyLamps.Add(bayLamps);
+                if (legacyLamps.Count > 0)
+                {
+                    log.AppendLine("Убраны неакцентные плафоны и их лампы: " + legacyLamps.Count + ".");
+                    foreach (Transform t in legacyLamps) Undo.DestroyObjectImmediate(t.gameObject);
                 }
                 var old = tent.Find(RootName);
                 if (old != null) Undo.DestroyObjectImmediate(old.gameObject);

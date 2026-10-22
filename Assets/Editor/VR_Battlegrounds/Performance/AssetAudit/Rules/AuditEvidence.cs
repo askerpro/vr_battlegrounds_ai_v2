@@ -17,6 +17,12 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
         public const string LobbyFloorBakedLitAB =
             "Normal A/B на Quest 3 (scene-detail, 2026-10-20): пол Lobby S_VPWorldAligned → URP Baked Lit даёт −1,87 мс кадра.";
 
+        /// <summary>Чёрный металл оружия в шатре Lobby: снимки в редакторе и пробы света.</summary>
+        public const string LobbyWeaponReflection =
+            "Lobby, шатёр, редактор, 2026-10-22 (задача lobby-reflections, замер — tasks/lobby-reflections/Readme.md): в сцене нет " +
+            "активной пробы отражений; белая металлическая сфера и металл револьвера чёрные, матовая сфера рядом освещена; " +
+            "временная запечённая проба шатра ×4 делает металл читаемым. Пользователь в шлеме: револьвер полностью чёрный.";
+
         /// <summary>Решение «замена прежде оптимизации» и стандартные приёмы Quest.</summary>
         public const string PerformanceExpertTricks =
             "Решение пользователя 2026-10-20: замена прежде оптимизации, стандартные приёмы Quest (большие площади — Baked Lit/Unlit " +

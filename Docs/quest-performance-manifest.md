@@ -104,6 +104,7 @@ Lobby после правок scene-detail, тур по 8 видам 2026-10-22 
 | QPM-LIGHT-005 | Если у сцены есть пресет света (Lobby: `LobbyNightLighting`), параметры света меняются только через него, а не ручной правкой сцены. | Правка в сцене откатится при следующем запуске пресета. | — | — |
 | QPM-LIGHT-006 | У каждого бита StaticEditorFlags один писатель; маску целиком не перезаписывать. Сборщик декора меняет только свои биты (так уже делает `OcclusionBakeTool` с битами окклюзии). | Перезапись маски (например, одним OccludeeStatic) сбрасывает ContributeGI — поверхность молча выпадает из лайтмапы. | — | — |
 | QPM-LIGHT-007 | Лайтмапы запекаются после явного подтверждения пользователем «карта готова» и после правок геометрии — в том же порядке, что окклюзия ([процесс карты](level-design/level-design-workflow.md), раздел 7). | Запекание до готовности устаревает после первой правки. | — | — |
+| QPM-LIGHT-008 | Зоны оружия (стена арсенала, место у неё, спавн) внутри запечённой Reflection Probe (Box Projection), если отражение окружения темнее рассеянного света в зоне (ночь, помещение). Смешивание проб не включать. | Цвет металла — почти целиком отражение: без пробы металл отражает ночное небо и становится чёрным рядом с освещёнными руками (Lobby, 2026-10-22: «револьвер полностью чёрный»). | ≈ 0: Lit и так читает кубмапу; память — одна кубмапа 128² | `lighting.dark-reflection-zone` |
 
 ### Геометрия и LOD (LOD)
 
@@ -179,6 +180,7 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 | `scene.procedural-skybox` | QPM-SKY-001 |
 | `texture.no-mipmaps` / `texture.android-format` / `texture.size` | QPM-TEX-001 / 002 / 003 |
 | `lighting.large-without-lightmap` | QPM-LIGHT-002 |
+| `lighting.dark-reflection-zone` | QPM-LIGHT-008 |
 | `lod.far-not-reduced` / `mesh.no-lod` | QPM-LOD-001 / 002 |
 | `foliage.alpha-test` | QPM-ALPHA-001 |
 | `reflection.planar` | QPM-REFL-001 |
@@ -196,6 +198,7 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 | Дата | id | Изменение | Доказательство |
 |---|---|---|---|
+| 2026-10-22 | QPM-LIGHT-008 | Зона оружия без пробы отражений при тёмном окружении; правило аудитора `lighting.dark-reflection-zone` | задача lobby-reflections: `tasks/lobby-reflections/Readme.md`, раздел «Замер» |
 | 2026-10-22 | QPM-SHADER-004, QPM-SHADER-006 | Розовые HDRP Lit → `BakedLitMaterialFixer`; `material.emission-off` не ловит белый остаток конвертации (`EmissiveIsBlack` без карты) | задача lobby-material-fixes: `tasks/lobby-material-fixes/Readme.md` |
 | 2026-10-22 | QPM-SHADER-006, QPM-SHADER-007, «Как читать и поддерживать» | Правило аудитора `material.emission-off` и фиксер `EmissionOffFixer`; один фиксер `BakedLitMaterialFixer` вместо двух конвертеров Baked Lit; порядок «правило до исправления» | задача scene-detail-followups: `tasks/scene-detail-followups/Readme.md` |
 | 2026-10-20 | QPM-SHADER-001, статус инструментов | Итоговый A/B Lobby 10,81 → 4,26 мс; инструменты scene-detail влиты | `tasks/scene-detail/changelog/2026-10-20-render-diag-ab.md` «Итоговый normal A/B» |

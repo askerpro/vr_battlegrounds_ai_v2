@@ -1,0 +1,20 @@
+{
+  "task_id": "lobby-reflections",
+  "owner": "lobby-reflections",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/lobby-reflections",
+  "base_sha": "120779ff9d815d7ce2db3519a33cbffd14ef158e",
+  "doc_path": "tasks/lobby-reflections/Readme.md",
+  "title": "Lobby: отражения металла и ровный свет шатра",
+  "branch": "task/lobby-reflections",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/lobby-reflections/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

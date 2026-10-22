@@ -43,9 +43,9 @@ namespace VrBattlegrounds.EditorTools
         // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
-        private const float TentLampIntensity = 3.75f, TentLampRange = 8f;
-        private const float TentFillIntensity = 5f, TentFillRange = 10f;
-        private const float TentAccentIntensity = 22f, TentAccentRange = 4.5f;
+        private const float TentLampIntensity = 1.5f, TentLampRange = 8f;
+        private const float TentFillIntensity = 2.75f, TentFillRange = 10f;
+        private const float TentAccentIntensity = 17f, TentAccentRange = 4.5f;
 
         // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
         private static readonly Color FogColor = new Color(.050f, .062f, .088f);
@@ -555,7 +555,9 @@ namespace VrBattlegrounds.EditorTools
                     bool hasUv2 = mesh != null && mesh.HasVertexAttribute(VertexAttribute.TexCoord1);
                     Undo.RecordObject(go, "Ночной static GI");
                     Undo.RecordObject(renderer, "Ночной static GI");
-                    GameObjectUtility.SetStaticEditorFlags(go, flags | StaticEditorFlags.ContributeGI);
+                    // ReflectionProbeStatic: запечённая проба отражений рисует только такие объекты — без бита проба шатра
+                    // снимала одно ночное небо и металл оставался чёрным (lobby-reflections, 2026-10-22).
+                    GameObjectUtility.SetStaticEditorFlags(go, flags | StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
                     // Только для запекания теней от baked-источников: realtime-теней в пресете нет, shadow pass не рисуется.
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                     if (small || !hasUv2)

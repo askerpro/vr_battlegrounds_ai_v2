@@ -3620,6 +3620,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5359259739919579920}
     m_Modifications:
+    - target: {fileID: 462880909935403036, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
+      propertyPath: __prefabGuid
+      value: 732e5b48d3557594583580ed383cc981
+      objectReference: {fileID: 0}
     - target: {fileID: 1610253549500277889, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
       propertyPath: __isInPrefab
       value: 1
@@ -3755,6 +3759,10 @@ PrefabInstance:
     - target: {fileID: 6535481629941946143, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
       propertyPath: _uxrUniqueId
       value: 9127b247-382d-4b90-98d7-c10319f35306
+      objectReference: {fileID: 0}
+    - target: {fileID: 7174085418304846215, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
+      propertyPath: __prefabGuid
+      value: 732e5b48d3557594583580ed383cc981
       objectReference: {fileID: 0}
     - target: {fileID: 7483316766852413768, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
       propertyPath: __isInPrefab

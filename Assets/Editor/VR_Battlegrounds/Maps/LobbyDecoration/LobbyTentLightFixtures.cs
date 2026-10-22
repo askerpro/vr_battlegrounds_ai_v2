@@ -220,7 +220,8 @@ namespace VrBattlegrounds.EditorTools
             material.SetColor("_BaseColor", DiscGlow);
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(material);
-            AssetDatabase.SaveAssets();
+            // Только свой материал: SaveAssets сохранил бы все «грязные» ассеты проекта (Unity пересериализует чужие при загрузке).
+            AssetDatabase.SaveAssetIfDirty(material);
             return material;
         }
 

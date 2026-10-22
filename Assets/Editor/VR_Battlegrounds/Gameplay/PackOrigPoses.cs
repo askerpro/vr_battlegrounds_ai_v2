@@ -639,7 +639,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (current.Lines.SequenceEqual(doc.Value.Lines)) continue;
                 if (free.Contains(doc.Key) && (current.Class == 1 || current.Class == 4)) continue;
                 if (additive.Contains(doc.Key) && IsSubsequence(doc.Value.Lines, current.Lines)) continue;
-                problems.Add($"изменён !u!{doc.Value.Class} &{doc.Key}");
+                problems.Add($"изменён !u!{doc.Value.Class} &{doc.Key} ({FirstDifference(doc.Value.Lines, current.Lines)})");
             }
 
             foreach (KeyValuePair<long, (int Class, string[] Lines)> doc in now)
@@ -673,8 +673,30 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             if (current != null) documents[id] = (type, current.ToArray());
+            // Хвостовая пустая строка — у последнего документа файла; новый объект Orig со случайным fileID может встать
+            // в конец, и без этого прежний последний документ выглядел бы изменённым.
+            foreach (long key in documents.Keys.ToList())
+            {
+                (int Class, string[] Lines) doc = documents[key];
+                int length = doc.Lines.Length;
+                while (length > 1 && doc.Lines[length - 1].Length == 0) length--;
+                if (length != doc.Lines.Length) documents[key] = (doc.Class, doc.Lines.Take(length).ToArray());
+            }
+
             header = string.Join("\n", preamble);
             return documents;
+        }
+
+        /// <summary>Первая различающаяся строка документа — для отчёта об отказе.</summary>
+        private static string FirstDifference(string[] was, string[] now)
+        {
+            for (int i = 0; i < Math.Max(was.Length, now.Length); i++)
+            {
+                string a = i < was.Length ? was[i].Trim() : "—", b = i < now.Length ? now[i].Trim() : "—";
+                if (a != b) return $"строка {i}: «{a}» → «{b}»";
+            }
+
+            return "без различий строк";
         }
 
         private static bool IsSubsequence(string[] part, string[] whole)

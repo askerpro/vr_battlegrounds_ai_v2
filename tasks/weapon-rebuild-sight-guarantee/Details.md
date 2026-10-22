@@ -11,11 +11,12 @@
   - [2](changelog/2026-10-22-arsenal-run2.md);
   - [3](changelog/2026-10-22-arsenal-run3.md);
   - [4–5](changelog/2026-10-22-arsenal-run4-5.md);
-  - [6–8 и удаление баз SDK](changelog/2026-10-22-sdk-bases-removal.md).
+  - [6–8 и удаление баз SDK](changelog/2026-10-22-sdk-bases-removal.md);
+  - [heavy 1, 10–12: подсветка магазина, MagPlace, snap-точки `_orig`](changelog/2026-10-22-arsenal-run9-12.md).
 - Все 17 стволов пересобираются транзакционно. Магазины — самостоятельные префабы без геометрии и сэмплов SDK.
   Базы MagGun/MagMachinegun/MagShotgun и `Assets/Unused` удалены. Шарнир отдачи в руках — запястье держащей руки.
 - Тесты добавлены после приёмки. Известные красные: покрытие хвата Cyborg у магазинов (регистрация поз отдельно).
-- Осталось: коммит, heavy, ревью зон (weapon-system, avatar-grip, gameplay, manipulation, launch-infra), merge.
+- Осталось: повторный heavy, ревью зон (weapon-system, avatar-grip, gameplay, manipulation, launch-infra), merge.
 - Временный зонд `WeaponRebuildProbe` в коммит не входит; копия — `reports/probe/`.
 
 Код этапов 1–2 и правки по прогонам описаны ниже и в changelog.

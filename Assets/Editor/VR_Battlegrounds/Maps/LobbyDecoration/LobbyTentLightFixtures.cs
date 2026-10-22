@@ -34,10 +34,10 @@ namespace VrBattlegrounds.EditorTools
         private const string LegacyPendantsPath = "OpenTent/WestWallDetail/Pendants";
 
         private const string SteelPath = "Assets/Materials/Lobby/Exterior/CampSteel.mat";
-        // Свой материал кругов: тёплое непрозрачное Unlit, тусклее окон (LobbyNightWindowGlow в шлеме выглядел неестественно
-        // ярким, пользователь 2026-10-22). Круг светится, в свет не идёт — свет у источника на сокете. Цвет — sRGB инспектора.
+        // Свой материал кругов: непрозрачное Unlit тёплого белого (LobbyNightWindowGlow и тусклый тёплый (.50, .35, .19) в шлеме
+        // читались коричневыми, пользователь 2026-10-22). Круг светится, в свет не идёт — свет у источника на сокете. Цвет — sRGB.
         private const string DiscGlowPath = "Assets/Materials/Lobby/Night/LobbyTentDiscGlow.mat";
-        private static readonly Color DiscGlow = new Color(.50f, .35f, .19f);
+        private static readonly Color DiscGlow = new Color(.95f, .86f, .70f);
 
         // Кровля TentRoof_LOD0 (как в LobbyCanopyBaysBuilder): карниз y 4.19 при |x| = 7.75, конёк y 5.59 при x = 0.
         private const float RoofEaveY = 4.19f, RoofRidgeY = 5.59f, RoofHalfWidth = 7.75f;

@@ -42,10 +42,15 @@ namespace VrBattlegrounds.EditorTools
         // Свет шатра (lobby-reflections, решение пользователя 2026-10-22): база ~0,35 по SH на высоте рук — лампы CampLighting
         // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
+        // Уровень света шатра регулируется одним множителем TentLightLevel (решение пользователя 2026-10-22); соотношение
+        // база/акцент задают интенсивности ниже. Вид плафонов от уровня не зависит — его задаёт эмиссия (LampGlowBoost).
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
+        private const float TentLightLevel = 1f;
         private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
         private const float TentFillIntensity = 1.9f, TentFillRange = 10f;
         private const float TentAccentIntensity = 9f, TentAccentRange = 4f;
+        // Круги фонового света: нейтральный тёплый белый — оттенок WarmLamp у них читался коричневым (пользователь 2026-10-22).
+        private static readonly Color TentFillColor = new Color(1f, .88f, .74f);
 
         // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
         private static readonly Color FogColor = new Color(.050f, .062f, .088f);
@@ -55,8 +60,8 @@ namespace VrBattlegrounds.EditorTools
         private static readonly Color MoonColor = new Color(.62f, .71f, .95f);
         private static readonly Color WarmLamp = new Color(1f, .74f, .46f);
         private static readonly Color FloodWhite = new Color(1f, .93f, .80f);
-        // Эмиссия рассеивателя = оттенок лампы: ×1.6 в шлеме выглядел неестественно ярким (пользователь, 2026-10-22).
-        private const float LampGlowBoost = 1.0f;
+        // Эмиссия рассеивателя: «нормальный вид плафона — прежний неакцентный минус 30 %» (пользователь 2026-10-22): 1.6 × 0.7.
+        private const float LampGlowBoost = 1.12f;
         private const string LampLongEmissionMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Lamp_long_EM.png";
 
         // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
@@ -397,9 +402,9 @@ namespace VrBattlegrounds.EditorTools
                 }
                 // Шатёр (lobby-reflections, 2026-10-22): лампы CampLighting/BayLamp и сетка TentFill дают ровную базу,
                 // TentAccent — яркое пятно над точкой акцента; в запечённой ночи runtime-стоимость любого числа ламп — ноль.
-                else if (name == TentLampLight) { Warm(light, bake, TentLampIntensity, TentLampRange); if (bake) baked++; else realtime++; }
-                else if (name == TentFillLight) { Warm(light, bake, TentFillIntensity, TentFillRange); if (bake) baked++; else realtime++; }
-                else if (name == TentAccentLight) { Warm(light, bake, TentAccentIntensity, TentAccentRange); if (bake) baked++; else realtime++; }
+                else if (name == TentLampLight) { Warm(light, bake, TentLampIntensity * TentLightLevel, TentLampRange); if (bake) baked++; else realtime++; }
+                else if (name == TentFillLight) { Warm(light, bake, TentFillIntensity * TentLightLevel, TentFillRange); light.color = TentFillColor; if (bake) baked++; else realtime++; }
+                else if (name == TentAccentLight) { Warm(light, bake, TentAccentIntensity * TentLightLevel, TentAccentRange); if (bake) baked++; else realtime++; }
                 else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
                 {
                     if (SnapToFixture(light, environment, log)) snapped++;
@@ -560,7 +565,16 @@ namespace VrBattlegrounds.EditorTools
                     GameObjectUtility.SetStaticEditorFlags(go, flags | StaticEditorFlags.ContributeGI | StaticEditorFlags.ReflectionProbeStatic);
                     // Только для запекания теней от baked-источников: realtime-теней в пресете нет, shadow pass не рисуется.
                     renderer.shadowCastingMode = ShadowCastingMode.On;
-                    if (small || !hasUv2)
+                    if (IsAccentFixture(renderer.transform))
+                    {
+                        // Плафон акцента не освещается своей яркой лампой в 5 см под ним — иначе корпус «горит» неестественно
+                        // (пользователь 2026-10-22); его вид задаёт эмиссия, как у остальных плафонов. Тень на свою лампу не бросает.
+                        renderer.shadowCastingMode = ShadowCastingMode.Off;
+                        renderer.receiveGI = ReceiveGI.LightProbes;
+                        renderer.lightProbeUsage = LightProbeUsage.Off;
+                        probeLit++;
+                    }
+                    else if (small || !hasUv2)
                     {
                         renderer.receiveGI = ReceiveGI.LightProbes;
                         // Пробы покрывают арену, стрельбища и базу внутри ограды; периметр — ambient.
@@ -576,6 +590,13 @@ namespace VrBattlegrounds.EditorTools
                 }
             }
             log.AppendLine("Static GI: в лайтмапе " + lightmapped + ", ContributeGI через probes " + probeLit + ", пропущено (не static/динамика/cutout/текст) " + skipped + ".");
+        }
+
+        private static bool IsAccentFixture(Transform t)
+        {
+            for (; t != null; t = t.parent)
+                if (t.name.StartsWith("TentAccent_", StringComparison.Ordinal)) return true;
+            return false;
         }
 
         private static bool IsDynamic(Renderer renderer) =>

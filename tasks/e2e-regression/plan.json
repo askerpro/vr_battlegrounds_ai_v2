@@ -89,6 +89,23 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "suite-2",
+      "writes": [
+        "tasks/e2e-regression/**",
+        "Tools/e2e/suites/default.json",
+        "Tools/e2e/known-noise.json",
+        "Tools/e2e/heavy/tests/test_windows.py"
+      ],
+      "after": [
+        {
+          "task": "e2e-regression",
+          "stage": "suite-1",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

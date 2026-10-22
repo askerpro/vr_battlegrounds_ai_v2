@@ -30,7 +30,8 @@ class SuiteWindowsTests(unittest.TestCase):
     def test_default_windows_scenarios(self):
         chosen = S.select(S.load("default"), "windows")
         self.assertEqual([(s.name, s.scene_name, s.clients, s.late_client_delay) for s in chosen],
-                         [("e2e-kit-selftest", "TestMap1", 2, 0), ("map-run-startup-route", "TestMap1", 2, 40)])
+                         [("e2e-kit-selftest", "TestMap1", 2, 0), ("dedicated-server-arsenal", "TestMap1", 2, 0),
+                          ("map-run-startup-route", "TestMap1", 2, 40)])
 
     def test_args_must_be_plain_tokens(self):
         data = {"version": 1, "defaults": {"map": "Assets/Scenes/Maps/TestMap1.unity", "mode": "elimination",

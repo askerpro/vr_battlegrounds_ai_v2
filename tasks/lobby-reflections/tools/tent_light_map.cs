@@ -9,7 +9,7 @@ System.Func<Transform, string> path = t => { string p = t.name; while (t.parent 
 
 // Аудитор: только новое правило.
 var report = VrBattlegrounds.Editor.Performance.AssetAudit.AssetAuditRunner.RunScene("Assets/Scenes/Lobby.unity");
-sb.AppendLine("AUDIT: " + report.Summary().Replace("\n", " | ").Substring(0, 0));
+sb.AppendLine("AUDIT findings total=" + report.Findings.Count);
 foreach (var f in report.Findings)
     if (f.RuleId == "lighting.dark-reflection-zone") sb.AppendLine("  " + f.Severity + " " + f.Message + " :: " + string.Join("; ", f.Items));
 scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Lobby.unity", UnityEditor.SceneManagement.OpenSceneMode.Single);

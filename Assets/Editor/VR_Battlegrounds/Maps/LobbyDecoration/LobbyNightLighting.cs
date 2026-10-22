@@ -636,7 +636,7 @@ namespace VrBattlegrounds.EditorTools
             // Точки акцента (lobby-reflections, 2026-10-22): шаг 1 м на высотах рук, чтобы оружие и руки получали пятно
             // акцентной лампы, а не среднее по сетке 2.5 м. Стена арсенала — по её поднятому корпусу, точки стрельбы —
             // полосы у северного и южного торцов шатра.
-            int dense = 0;
+            int accentProbes = 0;
             foreach (var anchor in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalStationAnchor>(true)))
             {
                 var wall = anchor.RaisedBoundsWorld;
@@ -644,17 +644,17 @@ namespace VrBattlegrounds.EditorTools
                 for (float d = 0f; d <= 2.01f; d += 1f)
                 for (float z = wall.min.z; z <= wall.max.z + .01f; z += 1f)
                     foreach (float h in new[] { .9f, 1.5f, 2.1f })
-                    { positions.Add(new Vector3(front + side * d, y0 + h, z)); dense++; }
+                    { positions.Add(new Vector3(front + side * d, y0 + h, z)); accentProbes++; }
             }
             var tent = LobbyMilitaryCampSources.TentBounds(floor);
             foreach (float s in new[] { 1f, -1f })
             for (float x = tent.min.x + .75f; x <= tent.max.x - .7f; x += 1.5f)
             for (float d = -1f; d <= 1.01f; d += 1f)
                 foreach (float h in new[] { 1.2f, 1.8f })
-                { positions.Add(new Vector3(x, y0 + h, s * (tent.max.z - .6f + d))); dense++; }
+                { positions.Add(new Vector3(x, y0 + h, s * (tent.max.z - .6f + d))); accentProbes++; }
             var local = probes.transform;
             probes.probePositions = positions.Select(p => local.InverseTransformPoint(p)).ToArray();
-            log.AppendLine("Light probes: " + positions.Count + " точек (из них у акцентов " + dense + ") в " + ContainerName + "/" + ProbeGroupName + ".");
+            log.AppendLine("Light probes: " + positions.Count + " точек (из них у акцентов " + accentProbes + ") в " + ContainerName + "/" + ProbeGroupName + ".");
             ApplyTentReflectionProbe(container, tent, y0, log);
         }
 

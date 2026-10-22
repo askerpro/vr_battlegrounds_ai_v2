@@ -38,6 +38,17 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "journal",
+      "writes": [
+        "tasks/dogtag-runtime-spawn/**",
+        "experts/gameplay/journal/2026-10-22-dogtag-runtime-spawn.md",
+        "experts/level-design/journal/2026-10-22-dogtag-runtime-spawn.md",
+        "experts/network/journal/2026-10-22-dogtag-runtime-spawn.md"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

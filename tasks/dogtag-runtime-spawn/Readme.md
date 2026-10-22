@@ -26,15 +26,17 @@
 
 ## Статус
 
-- [x] Код, Editor-миграция, правка сцен; независимое ревью субагентом, находки учтены.
-- [x] Миграция в worker (билет 1054, R 25511530), receive; EditMode-подмножество 282/296 (красные — известные и
-  устаревшие проверки жетона); host TestMap1/Elimination: 8 жетонов на крючках, id выровнены.
-- [x] Heavy editor/default на 231ebb3c (+ изменения, билет 1058): код 0, 8/8, UxrComponentNotFound/NRE/Exception 0;
-  жетон снимают удалённые клиенты (scripted-combat-round, -next-round). Отчёт — reports/heavy-editor-1/verdict.json.
-- [ ] Ручная проверка пользователем (Play/шлем), затем переписать устаревшие тесты
-  (`DogTagSetupTests`, `ArsenalVisibilityGeometryAudit`, `GameModeRulesTests` про жетон, `NetworkSpawnableRegistrationTests`).
-- [ ] Коммит, known-red (`DogTagPanel` → `DogTag` в GrabPose), heavy, ревью зон, вливание.
-  Одноразовая миграция `DogTagRuntimeSpawnMigration.cs` выполнена и удалена (в ветку не входит).
+- [x] Код, Editor-миграция в worker (билет 1054), правка станций и сцен; ревью субагентом, находки учтены.
+- [x] Приёмка пользователем по heavy (2026-10-22, без ручной проверки в шлеме).
+- [x] Тесты переписаны (`DogTagSetupTests`, `ArsenalVisibilityGeometryAudit`, `GameModeRulesTests`,
+  `NetworkSpawnableRegistrationTests`), known-red: GrabPose `DogTagPanel` → `DogTag`.
+- [x] Проверки на 1909c211: EditMode 2933 (19 известных красных, новых 0); heavy windows код 0;
+  heavy editor 8/8 на том же игровом коде. Ревью зон gameplay, level-design, network, launch-infra, bots — approve.
+- [x] Влито в origin/dev `1909c211` (этап work), публикация базы — билет 1066.
+- [x] Записи журналов зон gameplay, level-design, network (этап journal).
+
+Остаток вне задачи: хват жетона для кисти Cyborg — одним файлом `DogTag.prefab` (задача хватов);
+известный красный ArsenalMapGeometry TestMap1 — причина не уточнена (сообщение отказа не сохранено в отчёте).
 
 ## Этапы
 

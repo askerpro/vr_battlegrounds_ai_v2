@@ -35,12 +35,12 @@ namespace VrBattlegrounds.EditorTools
         private const string ProbeGroupName = "NightLightProbes";
         private const string WindowGlowPrefix = "WindowGlow__";
 
-        // Сокет светильника шатра: группа светильника — его родитель с тем же именем. BayLamp — LobbyCanopyBaysBuilder,
-        // TentFill/TentAccent — LobbyTentLightFixtures.
+        // Сокет светильника шатра: группа светильника — его родитель с тем же именем. TentFill/TentAccent —
+        // LobbyTentLightFixtures; BayLamp — только в сценах до lobby-reflections (сборщик их больше не создаёт).
         private static readonly Regex TentFixtureSocket = new Regex("^LightingSocket__((?:BayLamp|TentFill|TentAccent)_[A-Za-z0-9]+)__CommonLightingOwner$", RegexOptions.CultureInvariant);
 
-        // Свет шатра (lobby-reflections, решение пользователя 2026-10-22): база ~0,35 по SH на высоте рук — лампы CampLighting
-        // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
+        // Свет шатра (lobby-reflections, решение пользователя 2026-10-22): фон — сетка тусклых кругов TentFill под кровлей,
+        // над точками стрельбы — акцент TentAccent, прожектор вниз с короткой дальностью. Итог на 1,2 м: фон 0,16, акцент 0,44.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
         // Уровень света шатра регулируется одним множителем TentLightLevel (решение пользователя 2026-10-22; 1 → 0,65 по
         // отзыву из шлема «всё ещё слишком много света», затем −10 % по виду в редакторе); соотношение
@@ -236,7 +236,7 @@ namespace VrBattlegrounds.EditorTools
         // Плафоны ламп должны читаться источником света. Baked Lit эмиссии не имеет, поэтому фиксер шейдеров аудитора
         // (BakedLitMaterialFixer) их не трогает: длинная лампа — Simple Lit без бликов с картой эмиссии (корпус
         // освещён, светится только рассеиватель). Гражданские плафоны (SM_TopLight и др., стекло M_Emissive) удалены из
-        // базы 2026-10-22; колбы ламп шатра — Unlit LobbyNightWindowGlow (LobbyTentLightFixtures).
+        // базы 2026-10-22; круги шатра — Unlit LobbyTentDiscGlow (LobbyTentLightFixtures).
         // GI-флаг RealtimeEmissive: URP (BaseShaderGUI.SetMaterialKeywords) включает _EMISSION только при AnyEmissive,
         // а с None или EmissiveIsBlack при импорте/валидации выключает его — плафон гас. Realtime GI в Lobby выключен,
         // поэтому эмиссия видна, но в свет не идёт (свет ламп запекают настоящие источники); BakedEmissive дал бы
@@ -404,8 +404,8 @@ namespace VrBattlegrounds.EditorTools
                     light.transform.rotation = Quaternion.Euler(32f, 135f, 0f); // луна на северо-западе, над стрельбищем.
                     if (bake) baked++; else realtime++;
                 }
-                // Шатёр (lobby-reflections, 2026-10-22): лампы CampLighting/BayLamp и сетка TentFill дают ровную базу,
-                // TentAccent — яркое пятно над точкой акцента; в запечённой ночи runtime-стоимость любого числа ламп — ноль.
+                // Шатёр (lobby-reflections, 2026-10-22): сетка TentFill даёт ровную базу, TentAccent — яркое пятно на точке
+                // стрельбы; InteriorWarmLight — лампы старых сцен. В запечённой ночи runtime-стоимость любого числа ламп — ноль.
                 else if (name == TentLampLight) { Warm(light, bake, TentLampIntensity * TentLightLevel, TentLampRange); if (bake) baked++; else realtime++; }
                 else if (name == TentFillLight) { Warm(light, bake, TentFillIntensity * TentLightLevel, TentFillRange); light.color = TentFillColor; if (bake) baked++; else realtime++; }
                 else if (name == TentAccentLight)
@@ -456,9 +456,9 @@ namespace VrBattlegrounds.EditorTools
             return moon;
         }
 
-        // Светильники шатра (BayLamp_N — LobbyCanopyBaysBuilder, TentFill_N/TentAccent_X — LobbyTentLightFixtures) приходят
+        // Светильники шатра (TentFill_N/TentAccent_X — LobbyTentLightFixtures; BayLamp_N — старые сцены) приходят
         // без Light: источник ставит этот пресет к их сокету «LightingSocket__<светильник>__CommonLightingOwner». Имя
-        // источника задаёт правило яркости в ApplyLights: BayLamp — как лампы шатра, TentFill — база, TentAccent — акцент.
+        // источника задаёт правило яркости в ApplyLights: TentFill — база, TentAccent — акцент, BayLamp — как лампы шатра.
         private static string TentLightName(string fixture) =>
             fixture.StartsWith("TentFill_", StringComparison.Ordinal) ? TentFillLight
             : fixture.StartsWith("TentAccent_", StringComparison.Ordinal) ? TentAccentLight : TentLampLight;

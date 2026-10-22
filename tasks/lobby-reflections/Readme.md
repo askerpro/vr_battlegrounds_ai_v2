@@ -44,7 +44,8 @@
   большая яркая лампа. Акцент в этой задаче — стена арсенала CT.
 - Лампы `Shade__SM_TopLight` (Pendant_NW/SW, сборщик `LobbyCanopyBaysBuilder.Pendant`) не военные — убрать; убрать
   `SM_TopLight` и из подборки ассетов (`tasks/lobby-decoration/Details.md`, «Источники моделей») и из
-  `Assets/Art/Lobby/Imported/Catalog/RuralTown` (префаб, FBX, `M_TopLight.mat`; `M_Emissive` общий — оставить).
+  `Assets/Art/Lobby/Imported/Catalog/RuralTown` (префаб, FBX, `M_TopLight.mat`). `M_Emissive` после удаления всех
+  гражданских ламп остался без ссылок и удалён вместе с ними.
 - Остальные гражданские лампы импортированной базы (RuralTown SM_Lamp/SM_LampPost/SM_Lamp_02, PostApocalypticTown
   SM_Lamp/SM_Light1/SM_Light3, AbandonedFactory SM_Lamp_01a/SM_CoverLight_01) — сначала показать снимки, решает пользователь.
   `PortableWorkLamp` (SM_Light2) оставить.
@@ -95,6 +96,11 @@ Hands почти бинарные и импортированы как sRGB; а�
 - [x] Приёмка пользователем: редактор worker (1064) и шлем (пара 95f7c727, 2026-10-22)
 - [x] Тесты (worker 1070): LobbyQuestRenderStateTests + AssetAudit/фиксеры — 34/34; тесты карт 271/275, 4 красных —
       известные красные dev (`editmode-known-red.json`: эмбиент BotCombatStand, сетка LD-блоков, LD20, LD23)
-- [ ] Ревью зон performance и level-design, вливание (heavy не нужен — визуальная правка, событие 11705)
+- [x] Ревью зон performance и level-design, раунд 1 — approve (запросы 1109e70445854565, 0cab7d60e37c4653);
+      замечания поправлены: комментарии `LobbyNightLighting`, описание теста, QPM-LIGHT-008 (смешивание проб), writes этапа
+- [ ] Ревью раунд 2, вливание (heavy не нужен — визуальная правка, событие 11705)
+
+Тесты 34/34 прогнаны на 36cd4cd4b (worker 1070). Остаток (не исправлено): `SM_Light2.fbx.meta` (PortableWorkLamp)
+в externalObjects ссылается на удалённый `M_Light_Inst` — префаб `SM_Light2` задаёт материалы явно, вид не меняется.
 
 Следующие задачи: `arsenal-slot-lighting` (подсветка слотов), чистка арены (забор/мешки, надписи, цифры) — после вливания.

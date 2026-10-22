@@ -11,7 +11,19 @@
     {
       "id": "work",
       "writes": [
-        "tasks/lobby-reflections/**"
+        "tasks/lobby-reflections/**",
+        "tasks/lobby-decoration/Details.md",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Materials/Lobby/Night/**",
+        "Assets/Tests/EditMode/Maps/LobbyQuestRenderStateTests.cs",
+        "Assets/Art/Lobby/Imported/Catalog/**",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "Docs/quest-performance-manifest.md",
+        "experts/performance/journal/**",
+        "experts/level-design/journal/**"
       ],
       "after": [],
       "needs": []

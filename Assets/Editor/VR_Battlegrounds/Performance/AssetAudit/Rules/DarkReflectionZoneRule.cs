@@ -85,10 +85,12 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
                     float ratio = diffuse / Mathf.Max(reflection, 1e-4f);
                     if (ratio < MinDiffuseToReflectionRatio)
                         continue;
+                    // Одна находка на сцену: зоны — в списке, у каждой своё отношение.
                     context.Report(this, scenePath,
-                            "металл в зоне отражает окружение в " + ratio.ToString("0.#") + " раза темнее рассеянного света; пробы отражений нет")
+                            "зоны оружия без пробы отражений: отражение окружения в " + MinDiffuseToReflectionRatio.ToString("0.#") +
+                            "+ раза темнее рассеянного света — металл выглядит чёрным")
                         .WithGroup("refl:" + scenePath)
-                        .WithItem(zone.Key)
+                        .WithItem(zone.Key + " — в " + ratio.ToString("0.#") + " раза")
                         .WithMetric("ratio", ratio)
                         .WithMetric("diffuse", diffuse)
                         .WithMetric("environmentReflection", reflection)

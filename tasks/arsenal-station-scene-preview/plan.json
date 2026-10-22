@@ -1,0 +1,26 @@
+{
+  "task_id": "arsenal-station-scene-preview",
+  "owner": "arsenal-station-scene-preview",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/arsenal-station-scene-preview",
+  "base_sha": "30b90e08e4bbfa5febb93baf5ca388a7fc7bc3b0",
+  "doc_path": "tasks/arsenal-station-scene-preview/Readme.md",
+  "title": "Превью содержимого станций арсенала в Edit Mode",
+  "branch": "task/arsenal-station-scene-preview",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/arsenal-station-scene-preview/**",
+        "Assets/Scripts/Arsenal/**",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/**",
+        "Docs/Arsenal/**",
+        "experts/gameplay/journal/**",
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Assets/Scripts/Maps/Runtime/MapArsenalCompositionAdapter.cs"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

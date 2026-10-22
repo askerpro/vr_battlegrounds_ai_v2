@@ -204,9 +204,11 @@ Read/Write включается только явным импортным write
 
 **Сборка станции** — `ArsenalStationComposer` (вызывает только MapBootstrap через адаптер, на сервере и каждом
 клиенте с одним ключом запуска):
-1. `PrepareComposition(description, scope, binding)`: для каждой записи — ряд корпуса по ключу
-   (`ArsenalComposer.MissingRow`), представление (`ArsenalComposer.Presentation`), сборщик слота под выключенным
-   контейнером, затем ряд `Arrange` вешает слоты; ID ролей — `NetworkUxrIdentity.PrepareGeneratedIdentities`;
+1. `PrepareComposition(description, scope, binding)`: сначала план `PlanComposition(description, station)` — чистый
+   расчёт без объектов: для каждой записи ряд корпуса по ключу (`ArsenalComposer.MissingRow`), раскладка
+   (`ArsenalComposer.Presentation`) и поза слота в ряду (`ArsenalSlotRow.SlotLocalPoses` по ширинам префаба слота
+   ряда). Затем сборщик слота под выключенным контейнером, ряд `Mount` вешает каждый слот в позу плана
+   (`Arrange` — тот же расчёт); ID ролей — `NetworkUxrIdentity.PrepareGeneratedIdentities`;
    `ArsenalStationPresetBinding.Prepare` (контекст представления, затем оружие), `InstallSlots`. Сбой до
    необратимых шагов уничтожает собранные слоты. Повтор с тем же описанием и запуском — тот же handle.
 2. `Activate` включает слоты — компоненты регистрируются под ID манифеста; роль на выключенном объекте
@@ -218,6 +220,21 @@ Read/Write включается только явным импортным write
 Описание станции (`ArsenalStationResolver`) — порядок, ряд и место в ряду, без геометрии; его отпечаток
 хешируется по входам (порядок, ряды, свои раскладки оружия, стиль) и сверяется клиентом с config сервера.
 `MapRoot` отвергает станцию без рядов (`Station.Rows.Missing`) и с оставшимися слотами (`Station.AuthoredSlots`).
+
+**Превью станций в Edit Mode** (`Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalStationScenePreview.cs`, 2026-10-22).
+В Scene View открытой сцены карты (Lobby и др.) видно то же содержимое станций, что в Play: слоты, оружие, магазины,
+карточки и опоры. Превью всегда включено в интерактивном редакторе, в batch-режиме не строится. Состав и позы
+считает код игры: описание — `MapArsenalStationDescriber.Describe` (те же входы, что у адаптера запуска), размещение —
+`PlanComposition`, позы предметов — `ArsenalPresentationApplicator.ItemWorldPose`, карточка — `ApplyCard(Transform…)`
+и `ArsenalPriceTag.ApplyFrame/Text/TextColor`, опоры — `ArsenalSupportProjection.MaterializeSupportRole`. Своё у превью
+только отрисовка: копии мешей, материалов и текста, без сети, SDK, физики, света и игровых скриптов. Копии —
+`DontSaveInEditor|DontSaveInBuild|NotEditable`, корни «[Превью арсенала] <StationKey>» в корне сцены (не в префабе
+станции), дети скрыты в Hierarchy и не выбираются. Удаляются при входе в Play, закрытии сцены, перезагрузке
+скриптов; пересобираются при смене набора загруженных сцен, выходе из Play и через 0,5 с после правки входа
+(пресет, раскладка, `WeaponInfo`, стиль, `MapData`, каталоги, импорт `.asset`/`.prefab`). Отложенная пересборка идёт
+через `EditorApplication.update`, не `delayCall`: у редактора без фокуса (worker) очередь `delayCall` стоит. Итог и
+кнопка «Обновить» — окно «Арсенал» → «Станции», меню `Tools/VR Battlegrounds/Arsenal/Обновить превью станций`.
+Отличие от Play: подсветки слотов нет. Проверка — `ArsenalStationScenePreviewTests`.
 
 ---
 

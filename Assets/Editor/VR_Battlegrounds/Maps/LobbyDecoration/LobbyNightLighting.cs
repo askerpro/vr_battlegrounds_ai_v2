@@ -43,10 +43,10 @@ namespace VrBattlegrounds.EditorTools
         // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
         // Уровень света шатра регулируется одним множителем TentLightLevel (решение пользователя 2026-10-22; 1 → 0,65 по
-        // отзыву из шлема «всё ещё слишком много света»); соотношение
+        // отзыву из шлема «всё ещё слишком много света», затем −10 % по виду в редакторе); соотношение
         // база/акцент задают интенсивности ниже. Вид плафонов от уровня не зависит — его задаёт эмиссия (LampGlowBoost).
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
-        private const float TentLightLevel = .65f;
+        private const float TentLightLevel = .585f;
         private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
         private const float TentFillIntensity = 1.9f, TentFillRange = 10f;
         private const float TentAccentIntensity = 9f, TentAccentRange = 4f;
@@ -535,6 +535,9 @@ namespace VrBattlegrounds.EditorTools
 
         private static void ApplyStaticGi(Transform environment, StringBuilder log)
         {
+            // Плафон SM_Lamp_long освещался своей лампой в 20 см под ним и выглядел пересвеченным (пользователь 2026-10-22):
+            // его вид задаёт только эмиссия материала, как у акцентных плафонов.
+            var lampGlow = AssetDatabase.LoadAssetAtPath<Material>(NightFolder + "/LobbyNightLampLong.mat");
             int lightmapped = 0, probeLit = 0, skipped = 0;
             foreach (Transform zone in environment)
             {
@@ -561,9 +564,9 @@ namespace VrBattlegrounds.EditorTools
                     bool hasUv2 = mesh != null && mesh.HasVertexAttribute(VertexAttribute.TexCoord1);
                     Undo.RecordObject(go, "Ночной static GI");
                     Undo.RecordObject(renderer, "Ночной static GI");
-                    if (IsTentLightFixture(renderer.transform))
+                    if (IsTentLightFixture(renderer.transform) || UsesLampGlow(renderer, lampGlow))
                     {
-                        // Светильники шатра (LobbyTentLightFixtures) в GI не участвуют: их свет — у источника на сокете. Светлые
+                        // Светильники шатра (LobbyTentLightFixtures) и плафоны SM_Lamp_long в GI не участвуют: их свет — у источника на сокете. Светлые
                         // круги на Unlit давали в пробах «светлячков» до 4,3 при базе 0,3 (замер 2026-10-22); плафон акцента
                         // иначе освещался своей яркой лампой в 5 см и «горел» неестественно. Вид задаёт эмиссия; тени нет.
                         GameObjectUtility.SetStaticEditorFlags(go, (flags & ~StaticEditorFlags.ContributeGI) | StaticEditorFlags.ReflectionProbeStatic);
@@ -595,6 +598,9 @@ namespace VrBattlegrounds.EditorTools
             }
             log.AppendLine("Static GI: в лайтмапе " + lightmapped + ", ContributeGI через probes " + probeLit + ", пропущено (не static/динамика/cutout/текст) " + skipped + ".");
         }
+
+        private static bool UsesLampGlow(Renderer renderer, Material lampGlow) =>
+            lampGlow != null && renderer.sharedMaterials.Contains(lampGlow);
 
         private static bool IsTentLightFixture(Transform t)
         {

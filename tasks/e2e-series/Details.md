@@ -89,3 +89,7 @@
   Оракул `scripted-series-next-map` требует лог отказа повтора, проверяет сессии после каждой карты.
 - Сценарии для `Tools/e2e/suites/default.json` (владелец e2e-heavy-windows): `scripted-admin-pause`,
   `scripted-series-next-map` (timeout 420), `scripted-series-stop`.
+- Ревью итерации 3 (2026-10-22): launch-infra (11742) и gameplay (11739) — approve на `bdde40edb`; по замечанию
+  gameplay перенесён doc-комментарий теста в `MatchFlowTests.cs` (код тестов не менялся), повторное ревью.
+  Heavy 1033 (`20261022-070345-editor-suite-series3`): 8 скриптовых сценариев зелёные; код 1 — только два
+  EditMode-красных origin/dev (GameTags, Scar), устаревший `editmode-known-red.json` передан владельцу (11524).

@@ -50,10 +50,19 @@ namespace VrBattlegrounds.Maps
         /// <summary>Последнее попадание в мишень; false, если в неё ещё не попадали.</summary>
         public bool TryGetShot(ShootingTarget target, out Shot shot) => _shots.TryGetValue(target, out shot);
 
+        /// <summary>
+        /// Снимок нужен только экрану, который кто-то видит. Снаряд симулирует каждая машина
+        /// (см. <see cref="ShootingTarget"/>), поэтому контакт приходит и на выделенном сервере;
+        /// без графического устройства (-nographics) URP не создаёт RenderTexture — захват там выключен.
+        /// </summary>
+        public static bool CanRender => SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+
         private void OnEnable()
         {
             if (Active != null && Active != this) { enabled=false; GameLog.WeaponSystem.Error("[RangePhoto] Второй capture в загруженной сцене.",this);return; }
-            Active=this; ShootingTarget.ProjectileContact += HandleContact;
+            Active=this;
+            if(!CanRender){GameLog.WeaponSystem.Info("[RangePhoto] Нет графического устройства — фото попаданий не снимаются.",this);return;}
+            ShootingTarget.ProjectileContact += HandleContact;
         }
 
         private void OnDisable()
@@ -85,7 +94,7 @@ namespace VrBattlegrounds.Maps
         /// <summary>Замораживает реальную геометрию и точку контакта. Сам метод не вызывает игровые/сетевые действия.</summary>
         public bool QueuePhoto(ShootingTarget target,Vector3 point,string weapon,float distance)
         {
-            if(target==null||target.Pivot==null||!Finite(point.x)||!Finite(point.y)||!Finite(point.z))return false;
+            if(!CanRender||target==null||target.Pivot==null||!Finite(point.x)||!Finite(point.y)||!Finite(point.z))return false;
             try
             {
                 EnsureStudio();

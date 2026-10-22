@@ -12,7 +12,6 @@
       "id": "work",
       "writes": [
         "tasks/lobby-reflections/**",
-        "tasks/lobby-decoration/Details.md",
         "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/**",
         "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
         "Assets/Materials/Lobby/Night/**",

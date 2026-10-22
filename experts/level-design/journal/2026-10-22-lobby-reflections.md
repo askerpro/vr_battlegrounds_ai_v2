@@ -12,8 +12,9 @@ SM_TopLight (Pendant_NW/SW); сборщики их больше не созда�
 
 Гражданские лампы удалены из базы ассетов (решение пользователя): RuralTown SM_TopLight/SM_Lamp/SM_LampPost/SM_Lamp_02,
 PostApocalypticTown SM_Lamp/SM_Light1/SM_Light3, AbandonedFactory SM_Lamp_01a/SM_CoverLight_01 с 39 зависимостями, на
-которые больше никто не ссылался (`tasks/lobby-reflections/tools/orphan_set.py`); таблица «Источники моделей»
-`tasks/lobby-decoration/Details.md` обновлена. PortableWorkLamp (SM_Light2) оставлен.
+которые больше никто не ссылался (`tasks/lobby-reflections/tools/orphan_set.py`). Строка «Свет — `SM_TopLight`»
+в таблице «Источники моделей» `tasks/lobby-decoration/Details.md` устарела (папка другой задачи, не правилась).
+PortableWorkLamp (SM_Light2) оставлен.
 
 Пробы света: у стены арсенала и полос точек стрельбы — шаг 1 м на высотах рук; проба отражений шатра на весь пол арены.
 После правок геометрии (задача чистки арены) свет перезапекать через «Ночь: подготовить запекание» + Generate Lighting.

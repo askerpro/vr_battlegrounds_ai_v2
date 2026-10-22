@@ -45,7 +45,9 @@
 - Лампы `Shade__SM_TopLight` (Pendant_NW/SW, сборщик `LobbyCanopyBaysBuilder.Pendant`) не военные — убрать; убрать
   `SM_TopLight` и из подборки ассетов (`tasks/lobby-decoration/Details.md`, «Источники моделей») и из
   `Assets/Art/Lobby/Imported/Catalog/RuralTown` (префаб, FBX, `M_TopLight.mat`). `M_Emissive` после удаления всех
-  гражданских ламп остался без ссылок и удалён вместе с ними.
+  гражданских ламп остался без ссылок и удалён вместе с ними. Таблица «Источники моделей» в
+  `tasks/lobby-decoration/Details.md` — папка другой задачи, хаб запрещает её править (TASK_LAYOUT): строка «Свет —
+  `SM_TopLight`» там устарела, префаб удалён; светильники шатра — MilitaryCamp `SM_Lamp_long` и круги `LobbyTentLightFixtures`.
 - Остальные гражданские лампы импортированной базы (RuralTown SM_Lamp/SM_LampPost/SM_Lamp_02, PostApocalypticTown
   SM_Lamp/SM_Light1/SM_Light3, AbandonedFactory SM_Lamp_01a/SM_CoverLight_01) — сначала показать снимки, решает пользователь.
   `PortableWorkLamp` (SM_Light2) оставить.

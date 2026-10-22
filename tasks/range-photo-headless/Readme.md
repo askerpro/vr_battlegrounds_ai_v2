@@ -33,6 +33,11 @@ Quest e2e perf-stress Lobby с реальным трекингом (задача
 - [x] Quest e2e Lobby `-HeadPose off` с выстрелами в мишень: в логе сервера ошибки нет, вердикт по логам GREEN
       (итог INCONCLUSIVE — шлем снят за 1 с до конца фазы). Пользователь принял 2026-10-22: фото в шлеме есть.
 - [x] Тест `ShootingRangePhotoCaptureTests` на критерий `CanRenderOn`; журнал level-design.
-- [ ] Компиляция/тест в Unity, ревью зоны (level-design), heavy, merge.
+- [x] Ревью level-design: approve, zone ACK записан (заявка b151f47e750541cc, кандидат 984b9696e).
+- [x] Heavy editor + EditMode, аренда 1014 (вход be0b0bff, база 30b90e08e): компиляция OK, сценарии 3/3 OK,
+      EditMode 2919 — красных 19, `ShootingRangePhotoCaptureTests` среди них нет. Код 1 не из-за правки:
+      origin/dev ушла вперёд (12 игровых файлов E2E) — нужен rebase и повтор; 2 «новых красных»
+      (`GameTagsTests.Prefabs_TagsMatchRules`, `HandsPackWeaponTests…(Scar)`) — из dev, те же в heavy bots-input и e2e-series.
+- [ ] Rebase на свежую origin/dev, повтор heavy, merge.
 
 Подробно: [changelog/2026-10-22-fix.md](changelog/2026-10-22-fix.md).

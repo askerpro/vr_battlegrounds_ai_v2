@@ -43,9 +43,9 @@ namespace VrBattlegrounds.EditorTools
         // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
-        private const float TentLampIntensity = 1.5f, TentLampRange = 8f;
-        private const float TentFillIntensity = 2.75f, TentFillRange = 10f;
-        private const float TentAccentIntensity = 17f, TentAccentRange = 4.5f;
+        private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
+        private const float TentFillIntensity = 1.9f, TentFillRange = 10f;
+        private const float TentAccentIntensity = 9f, TentAccentRange = 4f;
 
         // Значения цветов — как в инспекторе (sRGB); проект в Linear, Unity переводит сам.
         private static readonly Color FogColor = new Color(.050f, .062f, .088f);
@@ -55,8 +55,8 @@ namespace VrBattlegrounds.EditorTools
         private static readonly Color MoonColor = new Color(.62f, .71f, .95f);
         private static readonly Color WarmLamp = new Color(1f, .74f, .46f);
         private static readonly Color FloodWhite = new Color(1f, .93f, .80f);
-        // Эмиссия рассеивателя ярче оттенка лампы: без bloom насыщенный тёплый почти белый читается как свет.
-        private const float LampGlowBoost = 1.6f;
+        // Эмиссия рассеивателя = оттенок лампы: ×1.6 в шлеме выглядел неестественно ярким (пользователь, 2026-10-22).
+        private const float LampGlowBoost = 1.0f;
         private const string LampLongEmissionMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Lamp_long_EM.png";
 
         // Масштаб в лайтмапе относительно базовых 10 texel/м. Зона вне таблицы не получает GI (отчёт предупреждает).
@@ -666,8 +666,8 @@ namespace VrBattlegrounds.EditorTools
         // Проверка в редакторе: пробы подгружаются на следующем кадре после открытия сцены — офскрин-кадр в том же
         // вызове, что OpenScene, показывает металл чёрным при исправной пробе (замер 2026-10-22).
         private const string TentReflectionProbeName = "TentReflectionProbe";
-        // Шатёр открытый, кровля тёмная: при ×1 металл тусклый (0,2–0,3 против 0,96 у матовой поверхности).
-        private const float TentReflectionIntensity = 1.75f;
+        // Шатёр открытый, кровля тёмная: при ×1 металл тусклый; ×1.75 в шлеме вместе со светом шатра — пересвет (2026-10-22).
+        private const float TentReflectionIntensity = 1.5f;
 
         // Объём — весь пол арены: под кровлей и полосы у торцов, где стоят спавн и точки стрельбы (аудитор отметил спавн
         // SpawnZone_Lobby на Z 8.06 за кровлей).

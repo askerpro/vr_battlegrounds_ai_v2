@@ -34,8 +34,10 @@ namespace VrBattlegrounds.EditorTools
         private const string LegacyPendantsPath = "OpenTent/WestWallDetail/Pendants";
 
         private const string SteelPath = "Assets/Materials/Lobby/Exterior/CampSteel.mat";
-        // Тёплое непрозрачное Unlit ночного пресета: круг светится, в свет не идёт (свет — у источника на сокете).
-        private const string BulbPath = "Assets/Materials/Lobby/Night/LobbyNightWindowGlow.mat";
+        // Свой материал кругов: тёплое непрозрачное Unlit, тусклее окон (LobbyNightWindowGlow в шлеме выглядел неестественно
+        // ярким, пользователь 2026-10-22). Круг светится, в свет не идёт — свет у источника на сокете. Цвет — sRGB инспектора.
+        private const string DiscGlowPath = "Assets/Materials/Lobby/Night/LobbyTentDiscGlow.mat";
+        private static readonly Color DiscGlow = new Color(.50f, .35f, .19f);
 
         // Кровля TentRoof_LOD0 (как в LobbyCanopyBaysBuilder): карниз y 4.19 при |x| = 7.75, конёк y 5.59 при x = 0.
         private const float RoofEaveY = 4.19f, RoofRidgeY = 5.59f, RoofHalfWidth = 7.75f;
@@ -75,7 +77,7 @@ namespace VrBattlegrounds.EditorTools
                 ?? throw new InvalidOperationException("Нет ArsenalStationAnchor — акцент арсенала не к чему привязать.");
 
             var steel = Load(SteelPath);
-            var bulb = Load(BulbPath);
+            var bulb = DiscMaterial();
             var lampLong = LobbyMilitaryCampSources.Prefab("SM_Lamp_long") ?? throw new InvalidOperationException("Нет MilitaryCamp SM_Lamp_long.");
             var log = new StringBuilder();
 
@@ -196,6 +198,23 @@ namespace VrBattlegrounds.EditorTools
             Bounds b = renderers[0].bounds;
             foreach (var r in renderers) b.Encapsulate(r.bounds);
             return b;
+        }
+
+        // Материал кругов принадлежит этому инструменту: создаётся при отсутствии и получает цвет при каждом запуске.
+        private static Material DiscMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(DiscGlowPath);
+            if (material == null)
+            {
+                var unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? throw new InvalidOperationException("Нет шейдера URP Unlit.");
+                material = new Material(unlit) { name = "LobbyTentDiscGlow" };
+                AssetDatabase.CreateAsset(material, DiscGlowPath);
+            }
+            material.SetColor("_BaseColor", DiscGlow);
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssets();
+            return material;
         }
 
         private static Material Load(string path) =>

@@ -13,7 +13,8 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
     /// Точка ладони P1 на видимой поверхности: луч из центра ладони SDK вдоль GetPalmOutDirection пересекается
     /// с ладонными треугольниками всех SMR аватара, скинованных на кости этой руки (кожа, перчатка поверх неё),
     /// после BakeMesh; берётся внешнее пересечение (максимальное t). Смещение «центр SDK → точка» и нормаль
-    /// считаются один раз и хранятся в системе запястья; ладонь жёсткая относительно запястья.
+    /// считаются один раз и хранятся в рамке кисти <see cref="GripHandFrame"/> (как ручная разметка);
+    /// ладонь жёсткая относительно запястья.
     /// </summary>
     internal sealed class GripPalmSkinPoint
     {
@@ -42,10 +43,10 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         /// <summary>t выбранного (внешнего) попадания, мм.</summary>
         public float SelectedTMm { get; private set; }
         public readonly List<Layer> Layers = new List<Layer>();
-        /// <summary>Смещение «центр ладони SDK → точка на поверхности» в системе запястья.</summary>
-        public Vector3 OffsetWrist { get; private set; }
-        /// <summary>Нормаль поверхности в точке попадания в системе запястья.</summary>
-        public Vector3 NormalWrist { get; private set; }
+        /// <summary>Смещение «центр ладони SDK → точка на поверхности» в рамке кисти <see cref="GripHandFrame"/>.</summary>
+        public Vector3 OffsetHand { get; private set; }
+        /// <summary>Нормаль поверхности в точке попадания в рамке кисти <see cref="GripHandFrame"/>.</summary>
+        public Vector3 NormalHand { get; private set; }
 
         public void Invalidate()
         {
@@ -74,7 +75,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             _avatarId = avatarId;
             _side = side;
             _renderersKey = key.Value;
-            Resolve(skins, side, hand);
+            Resolve(skins, avatar, side, hand);
         }
 
         static bool IsVisible(SkinnedMeshRenderer skin) => skin != null && skin.enabled && skin.gameObject.activeInHierarchy;
@@ -241,14 +242,14 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             return true;
         }
 
-        void Resolve(SkinnedMeshRenderer[] skins, UxrHandSide side, UxrAvatarHand hand)
+        void Resolve(SkinnedMeshRenderer[] skins, UxrAvatar avatar, UxrHandSide side, UxrAvatarHand hand)
         {
             HasSkin = false;
             HasNormal = false;
             UsedAllTriangles = false;
             SelectedTMm = 0f;
-            OffsetWrist = Vector3.zero;
-            NormalWrist = Vector3.zero;
+            OffsetHand = Vector3.zero;
+            NormalHand = Vector3.zero;
             RendererName = "";
             FailReason = "";
             Layers.Clear();
@@ -260,6 +261,11 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             }
 
             palmOut.Normalize();
+            if (!GripHandFrame.TryGet(avatar, side, out GripHandFrame frame, out string frameError))
+            {
+                FailReason = "нет рамки кисти: " + frameError;
+                return;
+            }
 
             List<BakedSkin> meshes;
             try
@@ -316,7 +322,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 }
 
                 Vector3 hit = center + palmOut * bestT;
-                OffsetWrist = hand.Wrist.InverseTransformVector(hit - center);
+                OffsetHand = frame.VectorFromWorld(hit - center);
                 HasSkin = true;
                 RendererName = bestMesh.Name;
                 SelectedTMm = bestT * 1000f;
@@ -338,7 +344,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                         normal = -normal;
                     }
 
-                    NormalWrist = hand.Wrist.InverseTransformDirection(normal);
+                    NormalHand = frame.DirFromWorld(normal);
                     HasNormal = true;
                 }
             }

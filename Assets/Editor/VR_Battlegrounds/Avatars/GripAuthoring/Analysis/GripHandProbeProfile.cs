@@ -1,28 +1,39 @@
 using System;
 using UltimateXR.Core;
-using UltimateXR.Manipulation;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
 {
     /// <summary>
-    /// Ручная рамка ладони в системе запястья (wrist.localToWorld): позиция и поворот.
-    /// Оси рамки (соглашение Quaternion.LookRotation): +Y — нормаль ладони наружу, +Z — «вперёд» от центра ладони
+    /// Ручная рамка ладони в рамке кисти <see cref="GripHandFrame"/> (начало — кость запястья, оси — универсальные оси
+    /// кисти UltimateXR, единицы — метры аватара): позиция и поворот. Не зависит от того, как в риге повёрнута кость
+    /// запястья, поэтому разметка базы одинаково ложится на потомков с разными ригами (MEF, Controllers).
+    /// Оси рамки ладони (соглашение Quaternion.LookRotation): +Y — нормаль ладони наружу, +Z — «вперёд» от центра ладони
     /// к основанию среднего пальца (ортогонально нормали), +X = Y × Z.
+    /// До схемы 2 профиля поля назывались PositionWrist/RotationWrist и хранились в локальных осях кости запястья —
+    /// см. <see cref="GripHandProbeProfile.OnAfterDeserialize"/>.
     /// </summary>
     [Serializable]
     public sealed class GripPalmProbe
     {
         [Tooltip("Рамка задана вручную; иначе анализ берёт автоматическую точку на коже")]
         public bool ManuallySet;
-        public Vector3 PositionWrist;
-        public Quaternion RotationWrist = Quaternion.identity;
+        [FormerlySerializedAs("PositionWrist")]
+        public Vector3 PositionHand;
+        [FormerlySerializedAs("RotationWrist")]
+        public Quaternion RotationHand = Quaternion.identity;
+        [Tooltip("Разметка осталась в старом формате (локальные оси кости запястья неизвестного рига) и не сконвертирована: P1 её не применяет, нужна переразметка")]
+        public bool LegacyWristFrame;
 
-        /// <summary>Нормаль ладони наружу в системе запястья.</summary>
-        public Vector3 NormalWrist => Normalized(RotationWrist) * Vector3.up;
+        /// <summary>Ручная рамка задана и в рамке кисти (не требует переразметки).</summary>
+        public bool HasUsableManual => ManuallySet && !LegacyWristFrame;
 
-        /// <summary>Направление «вперёд» (к основанию среднего пальца) в системе запястья.</summary>
-        public Vector3 ForwardWrist => Normalized(RotationWrist) * Vector3.forward;
+        /// <summary>Нормаль ладони наружу в рамке кисти.</summary>
+        public Vector3 NormalHand => Normalized(RotationHand) * Vector3.up;
+
+        /// <summary>Направление «вперёд» (к основанию среднего пальца) в рамке кисти.</summary>
+        public Vector3 ForwardHand => Normalized(RotationHand) * Vector3.forward;
 
         /// <summary>Рамка из нормали и направления «вперёд»; «вперёд» ортогонализуется к нормали.</summary>
         public static Quaternion FrameFrom(Vector3 normal, Vector3 forward)
@@ -43,41 +54,19 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             return Quaternion.LookRotation(f.normalized, normal);
         }
 
-        static Quaternion Normalized(Quaternion q)
+        /// <summary>Нормированный кватернион (только управляемая арифметика: вызывается и из OnAfterDeserialize).</summary>
+        internal static Quaternion Normalized(Quaternion q)
         {
             float n = Mathf.Sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
             return n < 1e-6f ? Quaternion.identity : new Quaternion(q.x / n, q.y / n, q.z / n, q.w / n);
         }
 
-        /// <summary>
-        /// Поворот UxrGrabber относительно запястья, при котором оси grabber совпадают с рамкой ладони:
-        /// его ось к пальцам (<see cref="UxrGrabber.LocalFingerDirection"/>) идёт в «вперёд» рамки,
-        /// ось из ладони (<see cref="UxrGrabber.LocalPalmOutDirection"/>) — в нормаль. Grabber в префабах — дочерний
-        /// объект кости запястья, поэтому результат — его localRotation, а <see cref="PositionWrist"/> — localPosition.
-        /// </summary>
-        public Quaternion ToGrabberLocalRotation(Vector3 grabberLocalFingerAxis, Vector3 grabberLocalPalmOutAxis)
-        {
-            Quaternion grabberAxes = Quaternion.LookRotation(grabberLocalFingerAxis, grabberLocalPalmOutAxis);
-            return Normalized(RotationWrist) * Quaternion.Inverse(grabberAxes);
-        }
-
-        /// <summary>То же по осям конкретного grabber (SDK выбирает их как ближайшие к HandUniversalLocalAxes).</summary>
-        public Quaternion ToGrabberLocalRotation(UxrGrabber grabber)
-        {
-            return ToGrabberLocalRotation(grabber.LocalFingerDirection, grabber.LocalPalmOutDirection);
-        }
-
-        /// <summary>То же по соглашению SDK без аватара: +Z grabber — к пальцам, −Y — из ладони.</summary>
-        public Quaternion ToGrabberLocalRotationDefault()
-        {
-            return ToGrabberLocalRotation(Vector3.forward, Vector3.down);
-        }
-
         public void CopyFrom(GripPalmProbe other)
         {
             ManuallySet = other.ManuallySet;
-            PositionWrist = other.PositionWrist;
-            RotationWrist = other.RotationWrist;
+            PositionHand = other.PositionHand;
+            RotationHand = other.RotationHand;
+            LegacyWristFrame = other.LegacyWristFrame;
         }
     }
 
@@ -287,10 +276,23 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
     /// Профиль скелетных проб кисти для анализа хвата. Ключ — GUID базового аватара цепочки prefab:
     /// разметка действует для всех потомков (поиск идёт вверх по ParentAvatarPrefab).
     /// Хранится в Git: GripAuthoring/Analysis/Profiles/&lt;аватар&gt;_HandProbes.asset.
+    /// Схемы: 1 — рамка ладони в локальных осях кости запястья рига, на котором размечали;
+    /// 2 — в рамке кисти <see cref="GripHandFrame"/> (универсальные оси кисти, не зависят от рига).
     /// </summary>
-    public sealed class GripHandProbeProfile : ScriptableObject
+    public sealed class GripHandProbeProfile : ScriptableObject, ISerializationCallbackReceiver
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
+
+        /// <summary>GUID prefab CyborgHandsBase: единственный профиль схемы 1, его ладонь размечена на MEF-потомке.</summary>
+        internal const string CyborgHandsBaseGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+
+        // Поворот «универсальные оси кисти → локальные оси кости запястья» рига MEF_cyborg_hands_Player
+        // (= Inverse(_handUniversalLocalAxes._universalToActualAxesRotation) в YAML prefab; столбцы — LocalRight,
+        // LocalUp, LocalForward: левая R (0,000148; 0,011606; 0,999933), F (0,012750; 0,999851; −0,011607),
+        // правая R (0,000148; −0,011606; −0,999933), F (−0,012740; 0,999852; −0,011607)). Зафиксирован константой:
+        // разметка схемы 1 сделана в этой рамке, а риг аватара позже может пересчитаться.
+        static readonly Quaternion LegacyMefLeftHandAxes = new Quaternion(-0.50608939f, -0.49967694f, -0.50024885f, 0.49391046f);
+        static readonly Quaternion LegacyMefRightHandAxes = new Quaternion(-0.50608689f, 0.49967939f, 0.50024647f, 0.49391302f);
 
         [SerializeField] int _schemaVersion = CurrentSchemaVersion;
         [SerializeField] string _avatarPrefabGuid = "";
@@ -299,11 +301,16 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         [SerializeField] GripHandProbeSide _left = new GripHandProbeSide();
         [SerializeField] GripHandProbeSide _right = new GripHandProbeSide();
 
+        // Схема, из которой данные сконвертированы при загрузке (0 — не конвертировались или уже записаны)
+        [NonSerialized] int _migratedFromSchema;
+
         public int SchemaVersion => _schemaVersion;
         public string AvatarPrefabGuid => _avatarPrefabGuid;
         public string AvatarName => _avatarName;
         /// <summary>Растёт при каждом сохранении; входит в сигнатуру пересчёта анализа.</summary>
         public int Revision => _revision;
+        /// <summary>Схема ассета на диске, если данные сконвертированы в памяти при загрузке и ещё не записаны; иначе 0.</summary>
+        public int MigratedFromSchema => _migratedFromSchema;
 
         public GripHandProbeSide Get(UxrHandSide side)
         {
@@ -325,6 +332,57 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         public void BumpRevision()
         {
             _revision++;
+            // Сохранение пишет текущую схему
+            _schemaVersion = CurrentSchemaVersion;
+            _migratedFromSchema = 0;
         }
+
+        void ISerializationCallbackReceiver.OnBeforeSerialize()
+        {
+        }
+
+        /// <summary>
+        /// Однократная миграция схемы 1 → 2 в памяти (файл обновится при следующем сохранении профиля).
+        /// Ладонь CyborgHandsBase размечена на MEF-потомке — переводится из осей запястья MEF в рамку кисти
+        /// константой <see cref="LegacyMefLeftHandAxes"/>/<see cref="LegacyMefRightHandAxes"/> (масштаб кости запястья MEF
+        /// и корня аватара — 1). Для прочих аватаров риг разметки неизвестен: данные остаются как есть
+        /// с флагом <see cref="GripPalmProbe.LegacyWristFrame"/> (P1 их не применяет, панель просит переразметить).
+        /// Только управляемая арифметика: колбэк может вызываться вне главного потока.
+        /// </summary>
+        public void OnAfterDeserialize()
+        {
+            if (_schemaVersion >= CurrentSchemaVersion)
+            {
+                return;
+            }
+
+            bool knownMefFrame = _avatarPrefabGuid == CyborgHandsBaseGuid;
+            MigratePalmV1(_left != null ? _left.Palm : null, knownMefFrame, LegacyMefLeftHandAxes);
+            MigratePalmV1(_right != null ? _right.Palm : null, knownMefFrame, LegacyMefRightHandAxes);
+            _migratedFromSchema = _schemaVersion;
+            _schemaVersion = CurrentSchemaVersion;
+        }
+
+        static void MigratePalmV1(GripPalmProbe palm, bool knownMefFrame, Quaternion handAxesInWrist)
+        {
+            if (palm == null || (!palm.ManuallySet && palm.PositionHand == Vector3.zero))
+            {
+                return;
+            }
+
+            if (!knownMefFrame)
+            {
+                palm.LegacyWristFrame = true;
+                return;
+            }
+
+            // Поля пока содержат значения схемы 1 (FormerlySerializedAs): позиция и поворот в осях запястья MEF
+            Quaternion toHand = Conjugate(GripPalmProbe.Normalized(handAxesInWrist));
+            palm.PositionHand = toHand * palm.PositionHand;
+            palm.RotationHand = GripPalmProbe.Normalized(toHand * GripPalmProbe.Normalized(palm.RotationHand));
+            palm.LegacyWristFrame = false;
+        }
+
+        static Quaternion Conjugate(Quaternion q) => new Quaternion(-q.x, -q.y, -q.z, q.w);
     }
 }

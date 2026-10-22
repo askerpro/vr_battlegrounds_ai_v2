@@ -218,8 +218,9 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 hash.Add(profile.Revision);
                 GripPalmProbe palm = profile.Get(host.Side).Palm;
                 hash.Add(palm.ManuallySet ? 1 : 0);
-                hash.Add(palm.PositionWrist);
-                hash.Add(palm.RotationWrist);
+                hash.Add(palm.LegacyWristFrame ? 1 : 0);
+                hash.Add(palm.PositionHand);
+                hash.Add(palm.RotationHand);
                 float[] rings = profile.Get(host.Side).GetRingsCopy();
                 foreach (float t in rings)
                 {
@@ -498,9 +499,23 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                     EditorGUILayout.LabelField("Профиль не к чему привязать: у аватара нет GUID prefab.", _summaryStyle);
                 }
 
+                if (profile != null && profile.MigratedFromSchema > 0)
+                {
+                    EditorGUILayout.LabelField($"Профиль загружен из схемы {profile.MigratedFromSchema} и сконвертирован в памяти (ладонь — в рамку кисти); файл обновится при следующем сохранении профиля.", _summaryStyle);
+                }
+
                 GripPalmProbe saved = profile != null ? profile.Get(host.Side).Palm : null;
-                bool manualSaved = saved != null && saved.ManuallySet;
-                EditorGUILayout.LabelField($"{sideRu} кисть: {(manualSaved ? "ручная рамка сохранена" : "ручной разметки нет")}", _summaryStyle);
+                bool manualAny = saved != null && saved.ManuallySet;
+                bool manualSaved = saved != null && saved.HasUsableManual;
+                bool legacy = manualAny && saved.LegacyWristFrame;
+                EditorGUILayout.LabelField($"{sideRu} кисть: {(manualSaved ? "ручная рамка сохранена" : legacy ? "ручная рамка в старом формате" : "ручной разметки нет")}", _summaryStyle);
+                bool marking = GripPalmMarking.IsFor(host);
+                if (legacy)
+                {
+                    EditorGUILayout.HelpBox("Разметка ладони этой руки сохранена в старом формате — в локальных осях кости запястья рига, " +
+                                            "на котором размечали; риг неизвестен, поэтому сконвертировать её нельзя. P1 её не применяет (используется авто). " +
+                                            "Переразметьте ладонь («Переразметить ладонь» ниже) и сохраните — профиль запишется в рамке кисти.", MessageType.Warning);
+                }
 
                 int mode = GUILayout.Toolbar(GripAnalysisSettings.PalmUseManual ? 1 : 0, new[] { "Авто (кожа)", "Вручную" });
                 bool useManual = mode == 1;
@@ -510,10 +525,12 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                     SceneView.RepaintAll();
                 }
 
-                bool marking = GripPalmMarking.IsFor(host);
                 if (!marking)
                 {
-                    if (GUILayout.Button(new GUIContent("Разметить центр ладони", "Клик по кисти в SceneView ставит рамку ладони на поверхность; затем ручки позиции и поворота")))
+                    GUIContent markLabel = legacy
+                        ? new GUIContent("Переразметить ладонь", "Старая рамка (оси запястья неизвестного рига) не переносится: клик по кисти в SceneView ставит рамку заново")
+                        : new GUIContent("Разметить центр ладони", "Клик по кисти в SceneView ставит рамку ладони на поверхность; затем ручки позиции и поворота");
+                    if (GUILayout.Button(markLabel))
                     {
                         GripPalmMarking.Begin(host, profile);
                     }
@@ -540,7 +557,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    using (new EditorGUI.DisabledScope(!manualSaved))
+                    using (new EditorGUI.DisabledScope(!manualAny))
                     {
                         if (GUILayout.Button(new GUIContent("Сбросить на авто", "Снять ручную разметку этой руки в профиле (Undo)")))
                         {
@@ -554,10 +571,10 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                     bool hasSource = manualSaved || (marking && GripPalmMarking.HasDraft);
                     using (new EditorGUI.DisabledScope(!hasSource))
                     {
-                        if (GUILayout.Button(new GUIContent("Отзеркалить на другую руку", "Отражение поперёк ладони в анатомической рамке запястья; пишет профиль другой руки (Undo)")))
+                        if (GUILayout.Button(new GUIContent("Отзеркалить на другую руку", "Отражение поперёк ладони в рамке кисти (универсальные оси UltimateXR); пишет профиль другой руки (Undo)")))
                         {
-                            Vector3 position = marking && GripPalmMarking.HasDraft ? GripPalmMarking.DraftPositionWrist : saved.PositionWrist;
-                            Quaternion rotation = marking && GripPalmMarking.HasDraft ? GripPalmMarking.DraftRotationWrist : saved.RotationWrist;
+                            Vector3 position = marking && GripPalmMarking.HasDraft ? GripPalmMarking.DraftPositionHand : saved.PositionHand;
+                            Quaternion rotation = marking && GripPalmMarking.HasDraft ? GripPalmMarking.DraftRotationHand : saved.RotationHand;
                             GripHandProbeProfile written = GripHandProbeProfiles.MirrorPalm(host.Avatar, host.Side, position, rotation, out string error);
                             GripPalmMarking.Status = written != null
                                 ? $"Отзеркалено на {(host.Side == UxrHandSide.Left ? "правую" : "левую")} кисть в {AssetDatabase.GetAssetPath(written)}."

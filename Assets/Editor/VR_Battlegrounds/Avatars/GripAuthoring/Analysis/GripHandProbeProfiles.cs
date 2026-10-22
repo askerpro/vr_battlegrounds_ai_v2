@@ -12,6 +12,77 @@ using UnityEngine;
 namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
 {
     /// <summary>
+    /// Рамка кисти для данных ладони в профиле (схема 2): начало — кость запястья, оси — универсальные оси кисти
+    /// UltimateXR (<see cref="UxrAvatarArmInfo.HandUniversalLocalAxes"/>: +X — вправо по аватару у обеих рук,
+    /// +Y — тыл кисти, +Z — от запястья к середине между основаниями среднего и безымянного пальцев), единицы —
+    /// метры аватара (масштаб корня аватара, без масштаба костей). SDK выводит эти оси из положения костей пальцев,
+    /// поэтому рамка одинаково лежит на кисти любого рига, как бы ни была повёрнута кость запястья (у Controllers —
+    /// на 80° / 100° относительно MEF). Единственная пара преобразований «рамка кисти ↔ мир» для точки ладони P1,
+    /// разметки, зеркала и точки на коже (<see cref="PointToWorld"/>/<see cref="PointFromWorld"/> и их варианты
+    /// для смещений, направлений и поворотов).
+    /// </summary>
+    internal readonly struct GripHandFrame
+    {
+        public readonly Vector3 Origin;
+        /// <summary>Поворот «рамка кисти → мир».</summary>
+        public readonly Quaternion Rotation;
+        /// <summary>Метры аватара → мир (масштаб корня аватара).</summary>
+        public readonly float Scale;
+
+        GripHandFrame(Vector3 origin, Quaternion rotation, float scale)
+        {
+            Origin = origin;
+            Rotation = rotation;
+            Scale = scale;
+        }
+
+        /// <summary>Рамка кисти руки аватара в текущей позе; false — нет запястья или универсальных осей кисти.</summary>
+        public static bool TryGet(UxrAvatar avatar, UxrHandSide side, out GripHandFrame frame, out string error)
+        {
+            frame = default;
+            error = null;
+            UxrAvatarHand hand = avatar != null ? avatar.GetHand(side) : null;
+            if (hand == null || hand.Wrist == null)
+            {
+                error = "нет кости запястья";
+                return false;
+            }
+
+            UxrAvatarArmInfo arm = avatar.AvatarRigInfo != null ? avatar.AvatarRigInfo.GetArmInfo(side) : null;
+            UxrUniversalLocalAxes axes = arm != null ? arm.HandUniversalLocalAxes : null;
+            if (axes == null)
+            {
+                error = "нет HandUniversalLocalAxes (AvatarRigInfo не вычислен)";
+                return false;
+            }
+
+            Vector3 forward = axes.LocalForward;
+            Vector3 up = axes.LocalUp;
+            if (forward.sqrMagnitude < 1e-12f || Vector3.Cross(forward, up).sqrMagnitude < 1e-12f)
+            {
+                error = "вырожденные HandUniversalLocalAxes";
+                return false;
+            }
+
+            float scale = Mathf.Abs(avatar.transform.lossyScale.x);
+            frame = new GripHandFrame(hand.Wrist.position, hand.Wrist.rotation * Quaternion.LookRotation(forward, up), scale > 1e-6f ? scale : 1f);
+            return true;
+        }
+
+        public Vector3 PointToWorld(Vector3 pointHand) => Origin + VectorToWorld(pointHand);
+        public Vector3 PointFromWorld(Vector3 pointWorld) => VectorFromWorld(pointWorld - Origin);
+        public Vector3 VectorToWorld(Vector3 vectorHand) => Rotation * (vectorHand * Scale);
+        public Vector3 VectorFromWorld(Vector3 vectorWorld) => Quaternion.Inverse(Rotation) * vectorWorld / Scale;
+        public Vector3 DirToWorld(Vector3 directionHand) => Rotation * directionHand;
+        public Vector3 DirFromWorld(Vector3 directionWorld) => Quaternion.Inverse(Rotation) * directionWorld;
+        public Quaternion RotationToWorld(Quaternion rotationHand) => Rotation * rotationHand;
+        public Quaternion RotationFromWorld(Quaternion rotationWorld) => Quaternion.Inverse(Rotation) * rotationWorld;
+
+        /// <summary>Отражение поперёк кисти: у обеих рук +X рамки — вправо по аватару, поэтому меняет знак только x.</summary>
+        public static Vector3 Mirror(Vector3 vectorHand) => new Vector3(-vectorHand.x, vectorHand.y, vectorHand.z);
+    }
+
+    /// <summary>
     /// Поиск, создание и запись профилей <see cref="GripHandProbeProfile"/>.
     /// Ассет создаётся только по явному действию пользователя («Сохранить», «Сбросить», «Отзеркалить»).
     /// </summary>
@@ -192,8 +263,8 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             AssetDatabase.SaveAssetIfDirty(profile);
         }
 
-        /// <summary>Сохраняет ручную рамку ладони руки (Undo на профиле).</summary>
-        public static GripHandProbeProfile SavePalm(UxrAvatar avatar, UxrHandSide side, Vector3 positionWrist, Quaternion rotationWrist, out string error)
+        /// <summary>Сохраняет ручную рамку ладони руки в рамке кисти <see cref="GripHandFrame"/> (Undo на профиле).</summary>
+        public static GripHandProbeProfile SavePalm(UxrAvatar avatar, UxrHandSide side, Vector3 positionHand, Quaternion rotationHand, out string error)
         {
             GripHandProbeProfile profile = FindOrCreate(avatar, out error);
             if (profile == null)
@@ -204,8 +275,9 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             Undo.RecordObject(profile, "Разметка центра ладони");
             GripPalmProbe palm = profile.Get(side).Palm;
             palm.ManuallySet = true;
-            palm.PositionWrist = positionWrist;
-            palm.RotationWrist = GripPalmProbe.FrameFrom(rotationWrist * Vector3.up, rotationWrist * Vector3.forward);
+            palm.LegacyWristFrame = false;
+            palm.PositionHand = positionHand;
+            palm.RotationHand = GripPalmProbe.FrameFrom(rotationHand * Vector3.up, rotationHand * Vector3.forward);
             Commit(profile);
             return profile;
         }
@@ -516,7 +588,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             return true;
         }
 
-        /// <summary>Снимает ручную разметку руки: анализ вернётся к авто (кожа).</summary>
+        /// <summary>Снимает ручную разметку руки (и пометку старого формата): анализ вернётся к авто (кожа).</summary>
         public static bool ResetPalm(UxrAvatar avatar, UxrHandSide side)
         {
             GripHandProbeProfile profile = Find(avatar);
@@ -527,64 +599,26 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
 
             Undo.RecordObject(profile, "Сброс центра ладони на авто");
             profile.Get(side).Palm.ManuallySet = false;
+            profile.Get(side).Palm.LegacyWristFrame = false;
             Commit(profile);
             return true;
         }
 
         /// <summary>
-        /// Отражение рамки ладони на другую руку через анатомическую рамку запястья (HandUniversalLocalAxes):
-        /// компонента поперёк ладони (right) меняет знак, вдоль пальцев (forward) и по нормали ладони (up) сохраняется.
-        /// Отражаются нормаль и «вперёд»; рамка собирается заново.
+        /// Отражение рамки ладони на другую руку в рамке кисти <see cref="GripHandFrame"/>: компонента поперёк ладони
+        /// (x) меняет знак, вдоль пальцев (z) и по нормали тыла (y) сохраняется. Отражаются позиция, нормаль и «вперёд»;
+        /// рамка собирается заново. Риг не нужен: оси кисти обеих рук согласованы SDK.
         /// </summary>
-        public static bool TryMirror(UxrAvatar avatar, UxrHandSide fromSide, Vector3 positionWrist, Quaternion rotationWrist,
-            out Vector3 mirroredPosition, out Quaternion mirroredRotation, out string error)
+        public static void Mirror(Vector3 positionHand, Quaternion rotationHand, out Vector3 mirroredPosition, out Quaternion mirroredRotation)
         {
-            mirroredPosition = Vector3.zero;
-            mirroredRotation = Quaternion.identity;
-            error = null;
-            UxrHandSide toSide = fromSide == UxrHandSide.Left ? UxrHandSide.Right : UxrHandSide.Left;
-            UxrAvatarHand fromHand = avatar.GetHand(fromSide);
-            UxrAvatarHand toHand = avatar.GetHand(toSide);
-            UxrAvatarArmInfo fromArm = avatar.AvatarRigInfo != null ? avatar.AvatarRigInfo.GetArmInfo(fromSide) : null;
-            UxrAvatarArmInfo toArm = avatar.AvatarRigInfo != null ? avatar.AvatarRigInfo.GetArmInfo(toSide) : null;
-            if (fromHand?.Wrist == null || toHand?.Wrist == null || fromArm?.HandUniversalLocalAxes == null || toArm?.HandUniversalLocalAxes == null)
-            {
-                error = "Нет запястий или HandUniversalLocalAxes обеих рук.";
-                return false;
-            }
-
-            Transform a = fromHand.Wrist;
-            Transform b = toHand.Wrist;
-            Vector3 ar = a.TransformDirection(fromArm.HandUniversalLocalAxes.LocalRight).normalized;
-            Vector3 au = a.TransformDirection(fromArm.HandUniversalLocalAxes.LocalUp).normalized;
-            Vector3 af = a.TransformDirection(fromArm.HandUniversalLocalAxes.LocalForward).normalized;
-            Vector3 br = b.TransformDirection(toArm.HandUniversalLocalAxes.LocalRight).normalized;
-            Vector3 bu = b.TransformDirection(toArm.HandUniversalLocalAxes.LocalUp).normalized;
-            Vector3 bf = b.TransformDirection(toArm.HandUniversalLocalAxes.LocalForward).normalized;
-            if (Vector3.Cross(ar, af).sqrMagnitude < 1e-6f || Vector3.Cross(br, bf).sqrMagnitude < 1e-6f)
-            {
-                error = "Вырожденная анатомическая рамка запястья.";
-                return false;
-            }
-
-            Vector3 Reflect(Vector3 v) => -br * Vector3.Dot(v, ar) + bu * Vector3.Dot(v, au) + bf * Vector3.Dot(v, af);
-
-            Vector3 offsetWorld = a.TransformPoint(positionWrist) - a.position;
-            mirroredPosition = b.InverseTransformPoint(b.position + Reflect(offsetWorld));
-            Vector3 normal = b.InverseTransformDirection(Reflect(a.TransformDirection(rotationWrist * Vector3.up)));
-            Vector3 forward = b.InverseTransformDirection(Reflect(a.TransformDirection(rotationWrist * Vector3.forward)));
-            mirroredRotation = GripPalmProbe.FrameFrom(normal, forward);
-            return true;
+            mirroredPosition = GripHandFrame.Mirror(positionHand);
+            mirroredRotation = GripPalmProbe.FrameFrom(GripHandFrame.Mirror(rotationHand * Vector3.up), GripHandFrame.Mirror(rotationHand * Vector3.forward));
         }
 
         /// <summary>Записывает отражённую рамку ладони на другую руку (Undo на профиле).</summary>
-        public static GripHandProbeProfile MirrorPalm(UxrAvatar avatar, UxrHandSide fromSide, Vector3 positionWrist, Quaternion rotationWrist, out string error)
+        public static GripHandProbeProfile MirrorPalm(UxrAvatar avatar, UxrHandSide fromSide, Vector3 positionHand, Quaternion rotationHand, out string error)
         {
-            if (!TryMirror(avatar, fromSide, positionWrist, rotationWrist, out Vector3 position, out Quaternion rotation, out error))
-            {
-                return null;
-            }
-
+            Mirror(positionHand, rotationHand, out Vector3 position, out Quaternion rotation);
             UxrHandSide toSide = fromSide == UxrHandSide.Left ? UxrHandSide.Right : UxrHandSide.Left;
             return SavePalm(avatar, toSide, position, rotation, out error);
         }

@@ -34,7 +34,8 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
     /// <summary>
     /// Режим разметки центра ладони в SceneView: клик по кисти ставит рамку на поверхность (нормаль — нормаль поверхности,
     /// «вперёд» — от запястья к проксимальной кости среднего пальца, ортогонально нормали), затем ручки позиции и поворота
-    /// всей рамки. Черновик хранится в системе запястья и пишется в профиль только по «Сохранить».
+    /// всей рамки. Черновик хранится в рамке кисти <see cref="GripHandFrame"/> (как профиль) и пишется в профиль
+    /// только по «Сохранить».
     /// </summary>
     internal static class GripPalmMarking
     {
@@ -49,8 +50,10 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         public static bool Active { get; private set; }
         public static bool HasDraft { get; private set; }
         public static UxrHandSide Side => _side;
-        public static Vector3 DraftPositionWrist { get; private set; }
-        public static Quaternion DraftRotationWrist { get; private set; } = Quaternion.identity;
+        /// <summary>Позиция черновика в рамке кисти <see cref="GripHandFrame"/>.</summary>
+        public static Vector3 DraftPositionHand { get; private set; }
+        /// <summary>Поворот рамки ладони черновика в рамке кисти.</summary>
+        public static Quaternion DraftRotationHand { get; private set; } = Quaternion.identity;
         /// <summary>Растёт при любом изменении черновика; входит в сигнатуру пересчёта.</summary>
         public static int Version { get; private set; }
         public static string Status { get; set; } = "";
@@ -63,7 +66,10 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         public static bool IsFor(GripAnalysisHost host) =>
             Active && host.Avatar != null && host.Avatar.GetHashCode() == _avatarId && host.Side == _side;
 
-        /// <summary>Включает разметку для текущей руки; черновик начинается с сохранённой ручной точки, если она есть.</summary>
+        /// <summary>
+        /// Включает разметку для текущей руки; черновик начинается с сохранённой ручной точки, если она есть
+        /// (разметка старого формата в осях запястья — не начало черновика: её нужно поставить заново).
+        /// </summary>
         public static void Begin(GripAnalysisHost host, GripHandProbeProfile profile)
         {
             UxrAvatarHand hand = host.Avatar != null ? host.Avatar.GetHand(host.Side) : null;
@@ -73,16 +79,22 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return;
             }
 
+            if (!GripHandFrame.TryGet(host.Avatar, host.Side, out _, out string frameError))
+            {
+                Status = "Разметка невозможна: нет рамки кисти (" + frameError + ").";
+                return;
+            }
+
             _skins = GripPalmSkinPoint.BakeHandSkins(host.Avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true), hand);
             _avatarId = host.Avatar.GetHashCode();
             _side = host.Side;
             Active = true;
             HasDraft = false;
             GripPalmProbe saved = profile != null ? profile.Get(host.Side).Palm : null;
-            if (saved != null && saved.ManuallySet)
+            if (saved != null && saved.HasUsableManual)
             {
-                DraftPositionWrist = saved.PositionWrist;
-                DraftRotationWrist = GripPalmProbe.FrameFrom(saved.NormalWrist, saved.ForwardWrist);
+                DraftPositionHand = saved.PositionHand;
+                DraftRotationHand = GripPalmProbe.FrameFrom(saved.NormalHand, saved.ForwardHand);
                 HasDraft = true;
             }
 
@@ -116,9 +128,9 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return new GripPalmOverride
                 {
                     Active = true,
-                    PositionWrist = DraftPositionWrist,
-                    NormalWrist = DraftRotationWrist * Vector3.up,
-                    ForwardWrist = DraftRotationWrist * Vector3.forward,
+                    PositionHand = DraftPositionHand,
+                    NormalHand = DraftRotationHand * Vector3.up,
+                    ForwardHand = DraftRotationHand * Vector3.forward,
                     Source = "вручную (черновик разметки, не сохранён)"
                 };
             }
@@ -134,20 +146,25 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return new GripPalmOverride { Note = "режим «Вручную»: разметки для этой руки нет — используется авто" };
             }
 
+            if (palm.LegacyWristFrame)
+            {
+                return new GripPalmOverride { Note = "режим «Вручную»: разметка в старом формате (оси кости запястья неизвестного рига) — нужна переразметка; используется авто" };
+            }
+
             return new GripPalmOverride
             {
                 Active = true,
-                PositionWrist = palm.PositionWrist,
-                NormalWrist = palm.NormalWrist,
-                ForwardWrist = palm.ForwardWrist,
+                PositionHand = palm.PositionHand,
+                NormalHand = palm.NormalHand,
+                ForwardHand = palm.ForwardHand,
                 Source = $"вручную (профиль {profile.name})"
             };
         }
 
-        static void SetDraft(Vector3 positionWrist, Quaternion rotationWrist)
+        static void SetDraft(Vector3 positionHand, Quaternion rotationHand)
         {
-            DraftPositionWrist = positionWrist;
-            DraftRotationWrist = GripPalmProbe.FrameFrom(rotationWrist * Vector3.up, rotationWrist * Vector3.forward);
+            DraftPositionHand = positionHand;
+            DraftRotationHand = GripPalmProbe.FrameFrom(rotationHand * Vector3.up, rotationHand * Vector3.forward);
             HasDraft = true;
             Version++;
         }
@@ -174,10 +191,9 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             }
 
             UxrAvatarHand hand = host.Avatar.GetHand(host.Side);
-            Transform wrist = hand != null ? hand.Wrist : null;
-            if (wrist == null)
+            if (hand == null || hand.Wrist == null || !GripHandFrame.TryGet(host.Avatar, host.Side, out GripHandFrame handFrame, out _))
             {
-                Cancel("Разметка прервана: нет запястья.");
+                Cancel("Разметка прервана: нет запястья или рамки кисти.");
                 return;
             }
 
@@ -214,7 +230,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 if (hit)
                 {
                     Quaternion frameWorld = GripPalmProbe.FrameFrom(normal, DefaultForward(hand));
-                    SetDraft(wrist.InverseTransformPoint(point), Quaternion.Inverse(wrist.rotation) * frameWorld);
+                    SetDraft(handFrame.PointFromWorld(point), handFrame.RotationFromWorld(frameWorld));
                     Status = "Точка поставлена. Подвиньте ручки или кликните снова; «Сохранить в профиль» — записать.";
                     e.Use();
                 }
@@ -225,9 +241,9 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return;
             }
 
-            Vector3 positionAvatar = wrist.TransformPoint(DraftPositionWrist);
+            Vector3 positionAvatar = handFrame.PointToWorld(DraftPositionHand);
             Vector3 position = map.ToPreview(positionAvatar);
-            Quaternion frame = map.RotToPreview(wrist.rotation * DraftRotationWrist);
+            Quaternion frame = map.RotToPreview(handFrame.RotationToWorld(DraftRotationHand));
             Vector3 normalDir = frame * Vector3.up;
             Vector3 forwardDir = frame * Vector3.forward;
             float size = HandleUtility.GetHandleSize(position);
@@ -248,7 +264,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 Vector3 newPosition = Handles.PositionHandle(position, frame);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    SetDraft(wrist.InverseTransformPoint(map.ToAvatar(newPosition)), DraftRotationWrist);
+                    SetDraft(handFrame.PointFromWorld(map.ToAvatar(newPosition)), DraftRotationHand);
                 }
 
                 // Поворот всей рамки — ручкой на конце стрелки нормали
@@ -257,7 +273,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 Quaternion newFrame = Handles.RotationHandle(frame, tip);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    SetDraft(DraftPositionWrist, Quaternion.Inverse(wrist.rotation) * map.RotToAvatar(newFrame));
+                    SetDraft(DraftPositionHand, handFrame.RotationFromWorld(map.RotToAvatar(newFrame)));
                 }
             }
             finally
@@ -275,7 +291,7 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return;
             }
 
-            GripHandProbeProfile profile = GripHandProbeProfiles.SavePalm(host.Avatar, host.Side, DraftPositionWrist, DraftRotationWrist, out string error);
+            GripHandProbeProfile profile = GripHandProbeProfiles.SavePalm(host.Avatar, host.Side, DraftPositionHand, DraftRotationHand, out string error);
             if (profile == null)
             {
                 Status = "Не сохранено: " + error;

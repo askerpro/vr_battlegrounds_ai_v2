@@ -51,14 +51,14 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
         public Vector2[] OffsetMm;
     }
 
-    /// <summary>Ручная точка ладони для P1 (из профиля или черновика разметки), в системе запястья.</summary>
+    /// <summary>Ручная точка ладони для P1 (из профиля или черновика разметки), в рамке кисти <see cref="GripHandFrame"/>.</summary>
     internal struct GripPalmOverride
     {
         public bool Active;
-        public Vector3 PositionWrist;
-        public Vector3 NormalWrist;
-        /// <summary>Ось «вперёд» рамки ладони (к основанию среднего пальца) в системе запястья.</summary>
-        public Vector3 ForwardWrist;
+        public Vector3 PositionHand;
+        public Vector3 NormalHand;
+        /// <summary>Ось «вперёд» рамки ладони (к основанию среднего пальца) в рамке кисти.</summary>
+        public Vector3 ForwardHand;
         /// <summary>Источник для детализации, например «вручную (профиль X)».</summary>
         public string Source;
         /// <summary>Пометка, когда выбран режим «Вручную», но разметки нет.</summary>
@@ -830,6 +830,14 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
                 return result;
             }
 
+            // Ручная и авто точки ладони хранятся в рамке кисти (универсальные оси UltimateXR), а не в осях кости запястья
+            if (!GripHandFrame.TryGet(avatar, side, out GripHandFrame frame, out string frameError))
+            {
+                result.Status = GripCheckStatus.NotApplicable;
+                result.Summary = "нет рамки кисти: " + frameError;
+                return result;
+            }
+
             float warnDist = GripAnalysisSettings.Get(GripAnalysisSettings.P1, 0) * Mm;
             float failDist = GripAnalysisSettings.Get(GripAnalysisSettings.P1, 1) * Mm;
             float okDeg = GripAnalysisSettings.Get(GripAnalysisSettings.P1, 2);
@@ -840,17 +848,17 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             Vector3 normalWorld;
             if (manual)
             {
-                // Ручная разметка: точка и нормаль из системы запястья
-                pointWorld = hand.Wrist.TransformPoint(palmOverride.PositionWrist);
-                normalWorld = palmOverride.NormalWrist.sqrMagnitude > 1e-12f ? hand.Wrist.TransformDirection(palmOverride.NormalWrist) : outWorld;
+                // Ручная разметка: точка и нормаль из рамки кисти
+                pointWorld = frame.PointToWorld(palmOverride.PositionHand);
+                normalWorld = palmOverride.NormalHand.sqrMagnitude > 1e-12f ? frame.DirToWorld(palmOverride.NormalHand) : outWorld;
             }
             else
             {
-                // Точка на коже ладони: сохранённое в системе запястья смещение от центра SDK (BakeMesh не на каждом кадре)
+                // Точка на коже ладони: сохранённое в рамке кисти смещение от центра SDK (BakeMesh не на каждом кадре)
                 _palmSkin.Ensure(avatar, side, hand);
                 onSkin = _palmSkin.HasSkin;
-                pointWorld = onSkin ? centerWorld + hand.Wrist.TransformVector(_palmSkin.OffsetWrist) : centerWorld;
-                normalWorld = onSkin && _palmSkin.HasNormal ? hand.Wrist.TransformDirection(_palmSkin.NormalWrist) : outWorld;
+                pointWorld = onSkin ? centerWorld + frame.VectorToWorld(_palmSkin.OffsetHand) : centerWorld;
+                normalWorld = onSkin && _palmSkin.HasNormal ? frame.DirToWorld(_palmSkin.NormalHand) : outWorld;
             }
 
             Vector3 centerSdk = toObject(centerWorld);
@@ -945,10 +953,10 @@ namespace VrBattlegrounds.Editor.GripAuthoring.Analysis
             });
             Color normalColor = manual ? new Color(1f, 0.55f, 0.1f, 1f) : new Color(1f, 0.92f, 0.4f, 0.9f);
             report.Lines.Add(new GripProbeLine { From = pointPreview, To = pointPreview + dirToWorld(palmNormal) * 0.025f, Color = normalColor });
-            if (manual && palmOverride.ForwardWrist.sqrMagnitude > 1e-12f)
+            if (manual && palmOverride.ForwardHand.sqrMagnitude > 1e-12f)
             {
                 // Ось «вперёд» ручной рамки ладони
-                Vector3 forward = dirToObject(hand.Wrist.TransformDirection(palmOverride.ForwardWrist)).normalized;
+                Vector3 forward = dirToObject(frame.DirToWorld(palmOverride.ForwardHand)).normalized;
                 report.Lines.Add(new GripProbeLine { From = pointPreview, To = pointPreview + dirToWorld(forward) * 0.02f, Color = new Color(0.25f, 0.6f, 1f, 1f) });
             }
             report.Lines.Add(new GripProbeLine { From = pointPreview, To = toWorld(hit.Closest), Color = StatusColor(result.Status) });

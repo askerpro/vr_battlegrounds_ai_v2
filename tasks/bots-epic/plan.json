@@ -23,6 +23,14 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "stage2-status",
+      "writes": [
+        "tasks/bots-epic/**"
+      ],
+      "after": [],
+      "needs": []
     }
   ]
 }

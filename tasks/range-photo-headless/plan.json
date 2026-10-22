@@ -1,0 +1,21 @@
+{
+  "task_id": "range-photo-headless",
+  "owner": "range-photo-headless",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/range-photo-headless",
+  "base_sha": "fb035153f448083be3e3045c639eefcff613f2e7",
+  "doc_path": "tasks/range-photo-headless/Readme.md",
+  "title": "Фото-захват тира не на сервере без графики",
+  "branch": "task/range-photo-headless",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/range-photo-headless/**",
+        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

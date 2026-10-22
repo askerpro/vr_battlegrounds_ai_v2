@@ -55,7 +55,10 @@ namespace VrBattlegrounds.Maps
         /// (см. <see cref="ShootingTarget"/>), поэтому контакт приходит и на выделенном сервере;
         /// без графического устройства (-nographics) URP не создаёт RenderTexture — захват там выключен.
         /// </summary>
-        public static bool CanRender => SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+        public static bool CanRender => CanRenderOn(SystemInfo.graphicsDeviceType);
+
+        /// <summary>Критерий <see cref="CanRender"/> для заданного графического устройства.</summary>
+        public static bool CanRenderOn(GraphicsDeviceType device) => device != GraphicsDeviceType.Null;
 
         private void OnEnable()
         {

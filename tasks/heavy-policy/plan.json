@@ -1,0 +1,22 @@
+{
+  "task_id": "heavy-policy",
+  "owner": "coordination-maintenance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/heavy-policy",
+  "base_sha": "a1b4876664e52ea851818bedecbeffe7bf3d6e2f",
+  "doc_path": "tasks/heavy-policy/Readme.md",
+  "title": "Политика heavy: обязателен для геймплея и сети, не для визуальных правок",
+  "branch": "task/heavy-policy",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/heavy-policy/**",
+        "AGENTS.md",
+        "Tools/e2e/heavy/README.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

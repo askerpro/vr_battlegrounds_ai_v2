@@ -660,9 +660,37 @@ namespace VrBattlegrounds.EditorTools
             ApplyTentReflectionProbe(container, tent, y0, log);
         }
 
-        // Запечённая проба отражений шатра (QPM-LIGHT-008, правило аудитора lighting.dark-reflection-zone): без неё металл
-        // оружия отражает ночное небо и чернеет. Box Projection по объёму под кровлей; смешивание проб не нужно — проба одна.
+        // Проба отражений шатра (QPM-LIGHT-008, правило аудитора lighting.dark-reflection-zone): без неё металл оружия
+        // отражает ночное небо и чернеет. Box Projection по объёму под кровлей; смешивание проб не нужно — проба одна.
+        // Режим Custom со своим снимком, а не Baked: в Baked проба после Generate Lighting отдавала металлу полную черноту,
+        // хотя её кубмапа светлая; тот же файл через Custom отражал шатёр (замер 2026-10-22, reports/metal-check).
+        // Снимок делает «Ночь: снять пробу отражений шатра» после Generate Lighting — проба видит запечённые лайтмапы.
         private const string TentReflectionProbeName = "TentReflectionProbe";
+        private const string TentReflectionPath = "Assets/Scenes/Lobby/TentReflection.exr";
+        // Шатёр открытый, кровля тёмная: при ×1 металл тусклый (0,2–0,3 против 0,96 у матовой поверхности).
+        private const float TentReflectionIntensity = 1.75f;
+
+        [MenuItem(MenuRoot + "Ночь: снять пробу отражений шатра")]
+        public static void CaptureTentReflection()
+        {
+            var scene = Check();
+            if (LightmapSettings.lightmaps.Length == 0)
+                throw new InvalidOperationException("Лайтмапы не загружены: сначала Generate Lighting, иначе проба снимет тёмный шатёр.");
+            var probe = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ReflectionProbe>(true))
+                .SingleOrDefault(p => p.name == TentReflectionProbeName)
+                ?? throw new InvalidOperationException("Нет " + TentReflectionProbeName + ": сначала «Ночь: подготовить запекание».");
+            if (!Lightmapping.BakeReflectionProbe(probe, TentReflectionPath))
+                throw new InvalidOperationException("Снимок пробы отражений шатра не получен.");
+            AssetDatabase.ImportAsset(TentReflectionPath, ImportAssetOptions.ForceUpdate);
+            var cubemap = AssetDatabase.LoadAssetAtPath<Cubemap>(TentReflectionPath)
+                ?? throw new InvalidOperationException("Снимок не импортирован как кубмапа: " + TentReflectionPath);
+            Undo.RecordObject(probe, "Снимок пробы отражений шатра");
+            probe.mode = ReflectionProbeMode.Custom;
+            probe.customBakedTexture = cubemap;
+            EditorSceneManager.MarkSceneDirty(scene);
+            GameLog.Debug.Info("[LobbyNightLighting] Проба отражений шатра снята в " + TentReflectionPath + ". Сохраните Lobby.");
+        }
+
         private static void ApplyTentReflectionProbe(Transform container, Bounds tent, float floorY, StringBuilder log)
         {
             var go = container.Find(TentReflectionProbeName)?.gameObject;
@@ -678,7 +706,9 @@ namespace VrBattlegrounds.EditorTools
             Undo.RecordObject(probe, "Проба отражений шатра");
             const float height = 4.6f;
             go.transform.SetPositionAndRotation(new Vector3(tent.center.x, floorY + 1.6f, tent.center.z), Quaternion.identity);
-            probe.mode = ReflectionProbeMode.Baked;
+            probe.mode = ReflectionProbeMode.Custom;
+            var snapshot = AssetDatabase.LoadAssetAtPath<Cubemap>(TentReflectionPath);
+            if (snapshot != null) probe.customBakedTexture = snapshot;
             probe.boxProjection = true;
             probe.size = new Vector3(tent.size.x, height, tent.size.z);
             probe.center = new Vector3(0f, height / 2 - 1.6f, 0f);
@@ -686,8 +716,9 @@ namespace VrBattlegrounds.EditorTools
             probe.hdr = true;
             probe.importance = 1;
             probe.blendDistance = 0f;
-            probe.intensity = 1f;
-            log.AppendLine("Проба отражений шатра: " + probe.size + ", Box Projection, 128 px, запекается с Generate Lighting.");
+            probe.intensity = TentReflectionIntensity;
+            log.AppendLine("Проба отражений шатра: " + probe.size + ", Box Projection, 128 px, Custom ×" + TentReflectionIntensity +
+                (snapshot != null ? ", снимок " + TentReflectionPath : ", снимка нет") + "; после Generate Lighting — «Ночь: снять пробу отражений шатра».");
         }
 
         private static string HierarchyPath(Transform t, Transform root)

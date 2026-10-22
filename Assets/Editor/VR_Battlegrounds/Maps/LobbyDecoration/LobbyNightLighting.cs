@@ -42,10 +42,11 @@ namespace VrBattlegrounds.EditorTools
         // Свет шатра (lobby-reflections, решение пользователя 2026-10-22): база ~0,35 по SH на высоте рук — лампы CampLighting
         // и BayLamp притушены до уровня сетки TentFill, над акцентами (стена арсенала) — яркая лампа с короткой дальностью.
         // Начальные значения — модель tasks/lobby-reflections/tools/tent_light_model.py; итог — карта освещённости после запекания.
-        // Уровень света шатра регулируется одним множителем TentLightLevel (решение пользователя 2026-10-22); соотношение
+        // Уровень света шатра регулируется одним множителем TentLightLevel (решение пользователя 2026-10-22; 1 → 0,65 по
+        // отзыву из шлема «всё ещё слишком много света»); соотношение
         // база/акцент задают интенсивности ниже. Вид плафонов от уровня не зависит — его задаёт эмиссия (LampGlowBoost).
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
-        private const float TentLightLevel = 1f;
+        private const float TentLightLevel = .65f;
         private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
         private const float TentFillIntensity = 1.9f, TentFillRange = 10f;
         private const float TentAccentIntensity = 9f, TentAccentRange = 4f;
@@ -691,7 +692,7 @@ namespace VrBattlegrounds.EditorTools
         // вызове, что OpenScene, показывает металл чёрным при исправной пробе (замер 2026-10-22).
         private const string TentReflectionProbeName = "TentReflectionProbe";
         // Шатёр открытый, кровля тёмная: при ×1 металл тусклый; ×1.75 в шлеме вместе со светом шатра — пересвет (2026-10-22).
-        private const float TentReflectionIntensity = 1.5f;
+        private const float TentReflectionIntensity = 1.25f;
 
         // Объём — весь пол арены: под кровлей и полосы у торцов, где стоят спавн и точки стрельбы (аудитор отметил спавн
         // SpawnZone_Lobby на Z 8.06 за кровлей).

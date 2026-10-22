@@ -100,10 +100,22 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
+            if (IsChangingMap())
+            {
+                GameLog.Match.Warning($"[AdminMapCommands] Старт серии отклонён: идёт смена карты.");
+                return false;
+            }
+
             session.SetSeries(modeId, valid);
-            session.StartSession();
-            return true;
+            return session.StartSession();
         }
+
+        /// <summary>
+        /// Сервер уже меняет карту (<c>MapLoader.IsLoading</c>): переход серии — «Следующая карта», «Стоп», «Новая
+        /// серия» — отклоняется с причиной. Клиент этого не видит: кнопка на планшете остаётся, отказывает сервер
+        /// (повтор кнопки во время перехода — e2e <c>scripted-series-next-map</c>, <c>scripted-series-stop</c>).
+        /// </summary>
+        private static bool IsChangingMap() => MapLoader.Instance != null && MapLoader.Instance.IsLoading;
 
         /// <summary>Исполнение на сервере. Зовёт <c>PlayerSession.CmdAdminMapCommand</c>.</summary>
         /// <returns>true — команда исполнена.</returns>
@@ -118,6 +130,12 @@ namespace VrBattlegrounds.Managers
             if (!IsAvailable(command))
             {
                 GameLog.Match.Warning($"[AdminMapCommands] {command} сейчас не имеет смысла — отклонена.");
+                return false;
+            }
+
+            if ((command == MapCommand.NextMap || command == MapCommand.Stop) && IsChangingMap())
+            {
+                GameLog.Match.Warning($"[AdminMapCommands] {command} отклонена: идёт смена карты.");
                 return false;
             }
 

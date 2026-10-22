@@ -148,33 +148,31 @@ namespace VrBattlegrounds.Managers
         /// Начинает выбранную серию (<see cref="Series.ServerBegin"/>): первая карта
         /// грузится и стартует в разминке. Вызывать после <see cref="SetSeries"/>. Только сервер.
         /// </summary>
+        /// <returns>false — серия не начата (нет карты/режима или загрузчик занят переходом).</returns>
         [Server]
-        public void StartSession()
+        public bool StartSession()
         {
             if (_selectedMaps.Count == 0)
             {
                 GameLog.Error("[SessionManager] StartSession: карта не выбрана.");
-                return;
+                return false;
             }
 
             if (string.IsNullOrEmpty(_selectedModeId))
             {
                 GameLog.Error("[SessionManager] StartSession: режим не выбран.");
-                return;
+                return false;
             }
 
             GameLog.Match.Info(
                 $"[SessionManager] Запуск серии: режим={_selectedModeId}, карты={string.Join(" → ", ToArray())}");
 
             if (Series.Instance != null)
-            {
-                Series.Instance.ServerBegin(ToArray(), _selectedModeId);
-                return;
-            }
+                return Series.Instance.ServerBegin(ToArray(), _selectedModeId);
 
             // Без серии (объект не на SessionContext) — одна карта, как раньше.
             GameLog.Match.Warning("[SessionManager] StartSession: Series нет — грузится только первая карта.");
-            MapLoader.Instance?.LoadMap(_selectedMaps[0]);
+            return MapLoader.Instance != null && MapLoader.Instance.LoadMap(_selectedMaps[0]);
         }
 
         private string[] ToArray()

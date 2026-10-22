@@ -1,0 +1,20 @@
+{
+  "name": "series-stop",
+  "steps": [
+    { "op": "activate", "timeoutS": 60 },
+    { "op": "step", "name": "input-active" },
+    { "op": "admin-rights", "client": 1, "timeoutS": 30 },
+    { "op": "choose-team", "timeoutS": 30 },
+    { "op": "step", "name": "team-requested" },
+    { "op": "wait-server", "name": "teams-ok", "timeoutS": 60 },
+    { "op": "admin-command", "client": 1, "target": "GoLive", "timeoutS": 30 },
+    { "op": "wait-server", "name": "match-live", "timeoutS": 90 },
+    { "op": "walk", "target": "own-spawn-zone", "speed": 1.2, "timeoutS": 120 },
+    { "op": "wait-server", "name": "equipment", "timeoutS": 150 },
+    { "op": "admin-command", "client": 1, "target": "Stop", "repeat": 2, "timeoutS": 30 },
+    { "op": "expect-map", "target": "Lobby", "timeoutS": 120 },
+    { "op": "step", "name": "lobby" },
+    { "op": "wait-server", "name": "lobby-verified", "timeoutS": 120 },
+    { "op": "step", "name": "done" }
+  ]
+}

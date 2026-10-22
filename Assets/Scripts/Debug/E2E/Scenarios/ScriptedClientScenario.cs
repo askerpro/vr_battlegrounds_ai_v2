@@ -43,6 +43,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     ///       пауза и продолжение админом.</item>
     /// <item><c>scripted-series-next-map</c> (S + 2): серия из двух карт клиентом-админом, «Следующая карта»
     ///       (<c>ScriptedClientScenario.Series.cs</c>).</item>
+    /// <item><c>scripted-series-stop</c> (S + 2): «Стоп» клиента-админа посреди матча — лобби, команды распущены.</item>
     /// </list>
     /// </summary>
     public sealed partial class ScriptedClientScenario : IE2EScenario
@@ -111,6 +112,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             if (context.IsServerSide)
                 return _name == SmokeName ? RunSmokeServer(context, result)
                     : _name == SeriesNextMapName ? RunSeriesServer(context, result)
+                    : _name == SeriesStopName ? RunSeriesStopServer(context, result)
                     : RunPurchaseServer(context, result);
 
             return RunClient(context, result);

@@ -39,6 +39,24 @@
       "needs": []
     },
     {
+      "id": "stop",
+      "writes": [
+        "Assets/Scripts/Debug/E2E/Input/**",
+        "Assets/Scripts/Debug/E2E/E2ERunner.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ScriptedClientScenario.Series.cs",
+        "Assets/Scripts/Managers/Series.cs",
+        "Assets/Scripts/Managers/AdminMapCommands.cs",
+        "Assets/Scripts/Managers/SessionManager.cs",
+        "Assets/Tests/EditMode/DevTools/ScriptedInputTests.cs",
+        "Assets/Tests/EditMode/GameModes/MatchFlowTests.cs",
+        "experts/*/journal/2026-10-22-e2e-series.md",
+        "tasks/e2e-series/**"
+      ],
+      "after": [],
+      "needs": []
+    },
+    {
       "id": "work",
       "writes": [
         "tasks/e2e-series/**"

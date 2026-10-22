@@ -341,8 +341,7 @@ namespace VrBattlegrounds.Managers
                     return false;
                 }
 
-                commit();
-                EquipmentStrip.ServerStripAll($"переход на карту {scene}");
+                Transition(scene, commit);
                 LoadMapOverride(scene);
                 return true;
             }
@@ -353,16 +352,27 @@ namespace VrBattlegrounds.Managers
                 return false;
             }
 
-            // Снаряжение не переживает перехода на другую карту (и в лобби).
-            if (MapLoader.Instance.LoadMap(scene, () =>
-                {
-                    commit();
-                    EquipmentStrip.ServerStripAll($"переход на карту {scene}");
-                }))
+            if (MapLoader.Instance.LoadMap(scene, () => Transition(scene, commit)))
                 return true;
 
             GameLog.Match.Warning($"[Series] Карта '{scene}' не загружена: загрузчик отклонил запрос — серия не изменена.");
             return false;
+        }
+
+        /// <summary>
+        /// Шаги принятого перехода: состояние серии и изъятие снаряжения (оно не переживает перехода на другую карту
+        /// и в лобби). Шаги независимы: сбой одного не отменяет другой — загрузка всё равно идёт.
+        /// </summary>
+        private static void Transition(string scene, Action commit)
+        {
+            Guarded(commit, $"переход серии на '{scene}'");
+            Guarded(() => EquipmentStrip.ServerStripAll($"переход на карту {scene}"), $"изъятие снаряжения перед '{scene}'");
+        }
+
+        private static void Guarded(Action step, string what)
+        {
+            try { step(); }
+            catch (Exception error) { GameLog.Error($"[Series] {what} отказал: {error}"); }
         }
 
         private static string[] ToArray(SyncList<string> list)

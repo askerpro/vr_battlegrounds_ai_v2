@@ -73,6 +73,22 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             return true;
         }
 
+        // VR Battlegrounds patch 91: обновление по явным avatar/pose/Blend, как BuildForAvatar. Нужно превью базы без рига:
+        // меш и кости — аватара-потомка, поза и Blend — из записи хвата выбранного аватара (Refresh взял бы запись потомка).
+        public bool RefreshForAvatar(UxrAvatar avatar,UxrHandPoseAsset pose,UxrHandSide handSide,float blendValue=0)
+        {
+            if(!avatar || !pose) return false;
+            var grabber=avatar.GetComponentsInChildren<UxrGrabber>().FirstOrDefault(g=>g.Side==handSide&&g.HandRenderer is SkinnedMeshRenderer);
+            if(!grabber) return false;
+            var skin=(SkinnedMeshRenderer)grabber.HandRenderer;
+            if(_skin!=skin || _sourceMesh!=skin.sharedMesh || _side!=handSide || _mappingWrist!=avatar.GetHand(handSide).Wrist || !_mappingBones.SequenceEqual(skin.bones)) {
+                CreateMesh(avatar,skin,handSide);
+            }
+            CreateBoneList(avatar,skin,pose,handSide);
+            SetBlendPoseValue(grabber,avatar.GetHandBone(handSide),pose.PoseType==UxrHandPoseType.Blend,blendValue);
+            return true;
+        }
+
         public void SetBlendPoseValue(UxrGrabber grabber,Transform handTransform,bool blend,float blendValue=0)
         {
             if(!IsValid || !grabber || !handTransform) return;

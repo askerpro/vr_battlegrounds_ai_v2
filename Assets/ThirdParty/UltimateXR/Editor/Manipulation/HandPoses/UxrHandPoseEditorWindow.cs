@@ -89,6 +89,134 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         public static event Action<UxrHandPoseEditorWindow> DiagnosticsClosed;
         private Rect _diagnosticsRect;
 
+        // VR Battlegrounds patch 91: временная правка поз предка без рига (CyborgHandsBase) через открытый потомок с ригом.
+        // Разблокируются только данные позы, запись идёт в существующий UxrHandPoseAsset предка; удаление,
+        // переименование, создание и копирование поз остаются прежними. Состояние общее для сессий, хранится в EditorPrefs.
+        public static bool EditInheritedPosesThroughVariant
+        {
+            get
+            {
+                if (!s_editInheritedPosesLoaded)
+                {
+                    try
+                    {
+                        s_editInheritedPoses = EditorPrefs.GetBool(PrefEditInheritedPosesThroughVariant, false);
+                    }
+                    catch (Exception)
+                    {
+                        s_editInheritedPoses = false;
+                    }
+
+                    s_editInheritedPosesLoaded = true;
+                }
+
+                return s_editInheritedPoses;
+            }
+            set
+            {
+                s_editInheritedPoses       = value;
+                s_editInheritedPosesLoaded = true;
+
+                try
+                {
+                    EditorPrefs.SetBool(PrefEditInheritedPosesThroughVariant, value);
+                }
+                catch (Exception)
+                {
+                    // Без EditorPrefs галочка действует до перезагрузки домена.
+                }
+            }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: предок-владелец унаследованной позы открытого аватара или null, если поза своя,
+        ///     переопределена в этом аватаре или не найдена в цепочке <see cref="UxrAvatar.GetParentPrefabChain" />.
+        /// </summary>
+        public UxrAvatar GetInheritedPoseOwner(UxrHandPoseAsset handPose)
+        {
+            if (_avatar == null || handPose == null || _avatar.GetHandPose(handPose.name, false) != null)
+            {
+                return null;
+            }
+
+            return _avatar.GetParentPrefab(handPose);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: данные унаследованной позы разрешено править через этот аватар (галочка включена).
+        /// </summary>
+        public bool IsInheritedPoseEditableThroughVariant(UxrHandPoseAsset handPose)
+        {
+            return EditInheritedPosesThroughVariant && GetInheritedPoseOwner(handPose) != null && !IsSdkSharedPose(handPose);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: общая поза SDK (ассет под Assets/ThirdParty) — через галочку не редактируется.
+        /// </summary>
+        public static bool IsSdkSharedPose(UxrHandPoseAsset handPose)
+        {
+            string path = handPose != null ? AssetDatabase.GetAssetPath(handPose) : null;
+            return !string.IsNullOrEmpty(path) && path.Replace('\\', '/').StartsWith("Assets/ThirdParty/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: унаследованную позу (через галочку) можно записывать только после явной правки
+        ///     пользователем с момента её загрузки: спиннер, Pose Type, кнопки рук (Copy/Reset/Load), пресет, «Обхватить»/IK.
+        ///     AutoSave, смена позы/аватара, Undo и закрытие окна без такой правки ничего не пишут. Свои позы — как в SDK.
+        /// </summary>
+        private bool CanWritePoseData(UxrHandPoseAsset handPose)
+        {
+            return !IsInheritedPoseEditableThroughVariant(handPose) || (handPose != null && handPose == _userEditedPose);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: отметка явной правки текущей позы пользователем.
+        /// </summary>
+        private void MarkCurrentPoseEditedByUser()
+        {
+            _userEditedPose = _currentHandPose;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: сохранение ассета позы. Для унаследованной позы через галочку — только её файл
+        ///     (SaveAssetIfDirty), чтобы чужие dirty-ассеты не уходили на диск; иначе штатный SaveAssets SDK.
+        /// </summary>
+        private void SavePoseAssetToDisk(UxrHandPoseAsset handPose)
+        {
+            if (handPose != null && IsInheritedPoseEditableThroughVariant(handPose))
+            {
+                AssetDatabase.SaveAssetIfDirty(handPose);
+            }
+            else
+            {
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: при галочке открытый потомок (вариант префаба без своих поз или с унаследованной
+        ///     текущей позой) не принимает записи в префаб: _handPoses, default-позу, bake костей. Без галочки — false.
+        /// </summary>
+        public bool IsVariantPrefabWriteLocked()
+        {
+            return EditInheritedPosesThroughVariant && _avatar != null && _avatar.IsPrefabVariant &&
+                   (!_avatar.GetHandPoses().Any() || GetInheritedPoseOwner(_currentHandPose) != null);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: база, где следует создавать позы: владелец текущей унаследованной позы,
+        ///     иначе первый предок с позами, иначе родительский префаб.
+        /// </summary>
+        private UxrAvatar GetVariantPoseBase()
+        {
+            if (_avatar == null)
+            {
+                return null;
+            }
+
+            return GetInheritedPoseOwner(_currentHandPose) ?? _avatar.GetParentPrefabChain().FirstOrDefault(a => a.GetHandPoses().Any()) ?? _avatar.ParentAvatarPrefab;
+        }
+
         #endregion
 
         #region Public Methods
@@ -278,6 +406,10 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 }
             }
 
+            // VR Battlegrounds patch 91: isReadOnlyPose по-прежнему закрывает удаление/переименование,
+            // isReadOnlyPoseData — правку данных позы, которую галочка открывает для унаследованной позы.
+            bool isReadOnlyPoseData = isReadOnlyPose && !IsInheritedPoseEditableThroughVariant(_currentHandPose);
+
             // Main menu ////////////////////////////////////
 
             EditorGUILayout.BeginVertical("box", GUILayout.Width(HandMarginHorizontal * 2 + _leftHandTex.width + _rightHandTex.width));
@@ -369,7 +501,10 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _avatar != null;
+                // VR Battlegrounds patch 91: при галочке кнопки, пишущие в префаб потомка (_handPoses, default-позу, кости), заблокированы.
+                bool isVariantPrefabWriteLocked = IsVariantPrefabWriteLocked();
+
+                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked;
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Create New Pose...", "Creates a new pose for the currently selected avatar animator")))
                 {
@@ -417,7 +552,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     }
                 }
 
-                GUI.enabled = _currentHandPose != null && _avatar != null && _avatar.DefaultHandPose != _currentHandPose;
+                GUI.enabled = _currentHandPose != null && _avatar != null && _avatar.DefaultHandPose != _currentHandPose && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnMisc, lastY), new GUIContent("Set Current Pose As Default", "The default pose is the one that the avatar will have when it is in idle state")))
                 {
@@ -426,7 +561,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _poseIndex >= 0 && _poseIndex < _currentPoseNames.Count;
+                GUI.enabled = _poseIndex >= 0 && _poseIndex < _currentPoseNames.Count && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Copy Current Pose To New...", "Copies the current pose to a new pose asset file")))
                 {
@@ -450,7 +585,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     }
                 }
 
-                GUI.enabled = _currentPoseNames.Count > 0;
+                GUI.enabled = _currentPoseNames.Count > 0 && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnDelete, lastY), new GUIContent("Delete All Poses...", "Deletes all avatar poses")))
                 {
@@ -476,7 +611,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _avatar != null;
+                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Add Pose From File...", "Creates a new pose using an external pose file")))
                 {
@@ -539,7 +674,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     }
                 }
 
-                GUI.enabled = _currentHandPose != null && _avatar != null;
+                GUI.enabled = _currentHandPose != null && _avatar != null && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnMisc, lastY), new GUIContent("Bake Pose In Avatar", "Sets the hand in the avatar prefab to the current pose")))
                 {
@@ -548,7 +683,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 lastY += VerticalHeightSingleLine;
 
-                GUI.enabled = _avatar != null;
+                GUI.enabled = _avatar != null && !isVariantPrefabWriteLocked; // VR Battlegrounds patch 91: и Add All Preset Poses ниже
 
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Add All Poses From Folder...", "Adds all pose files from a folder to the current avatar")))
                 {
@@ -633,6 +768,16 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 if (GUI.Button(GetPosesMenuButtonRect(PosesMenuColumnCreate, lastY), new GUIContent("Add All Preset Poses", "Creates all presets in the current avatar")))
                 {
                     CreateAllHandPosePresets(_avatar);
+                }
+
+                // VR Battlegrounds patch 91: подсказка к заблокированным кнопкам создания/копирования/default/bake.
+                if (isVariantPrefabWriteLocked)
+                {
+                    GUI.enabled = true;
+                    UxrAvatar poseBase = GetVariantPoseBase();
+                    EditorGUILayout.HelpBox($"Новые позы создавайте в базе {(poseBase != null ? poseBase.name : "родительского префаба")}. " +
+                                            "Пока включена галочка «Править позы базы через этот аватар», кнопки, пишущие в префаб потомка, заблокированы.",
+                                            MessageType.Info);
                 }
             }
 
@@ -757,9 +902,10 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     Color color = GUI.color;
                     GUI.color = Color.yellow;
 
-                    if (isReadOnlyPose && _avatar.GetParentPrefab(_currentHandPose) != null)
+                    // VR Battlegrounds patch 91: при включённой галочке вместо отказа ниже показывается предупреждение о записи в базу.
+                    if (isReadOnlyPoseData && _avatar.GetParentPrefab(_currentHandPose) != null && !(EditInheritedPosesThroughVariant && IsSdkSharedPose(_currentHandPose)))
                     {
-                        EditorGUILayout.LabelField($"Inherited poses are read-only to prevent modifying data from a parent prefab.\nLoad {_avatar.GetParentPrefab(_currentHandPose).name} instead if you want to modify the pose.", textStyle);
+                        EditorGUILayout.LabelField($"Inherited poses are read-only to prevent modifying data from a parent prefab.\nLoad {_avatar.GetParentPrefab(_currentHandPose).name} instead if you want to modify the pose.\nИли включите «Править позы базы через этот аватар» ниже.", textStyle);
                     }
 
                     if (_avatar.IsHandPoseOverriden(_currentHandPose.name, out UxrAvatar originalAvatar))
@@ -777,7 +923,38 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 EditorGUILayout.EndHorizontal();
 
-                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPose;
+                // VR Battlegrounds patch 91: галочка видна только для унаследованной позы открытого аватара-потомка.
+                UxrAvatar inheritedPoseOwner = _currentPoseNames.Count > 0 ? GetInheritedPoseOwner(_currentHandPose) : null;
+
+                if (inheritedPoseOwner != null)
+                {
+                    EditorGUI.BeginChangeCheck();
+                    bool editThroughVariant = EditorGUILayout.ToggleLeft(new GUIContent("Править позы базы через этот аватар",
+                                                                                        $"Разрешает править данные унаследованной позы через риг {_avatar.name}. Запись идёт в ассет позы {inheritedPoseOwner.name}; префаб потомка не меняется. Удаление, переименование, создание и копирование поз остаются заблокированными."),
+                                                                         EditInheritedPosesThroughVariant);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        EditInheritedPosesThroughVariant = editThroughVariant;
+                        isReadOnlyPoseData               = isReadOnlyPose && !IsInheritedPoseEditableThroughVariant(_currentHandPose);
+
+                        if (editThroughVariant)
+                        {
+                            // Сначала вернуть кисть к данным ассета: auto-save не должен внести в базу посторонние повороты костей.
+                            _updateHandTransforms = true;
+                        }
+                    }
+
+                    if (!isReadOnlyPoseData)
+                    {
+                        EditorGUILayout.HelpBox($"Правка пишется в позу базы {inheritedPoseOwner.name}; изменение получат все потомки.", MessageType.Warning);
+                    }
+                    else if (EditInheritedPosesThroughVariant && IsSdkSharedPose(_currentHandPose))
+                    {
+                        EditorGUILayout.HelpBox("Общая поза SDK (Assets/ThirdParty) — правка запрещена.", MessageType.Warning);
+                    }
+                }
+
+                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPoseData;
 
                 EditorGUI.BeginChangeCheck();
                 int oldPoseTypeIndex = _poseTypeIndex;
@@ -795,9 +972,23 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                     if (CheckWarnSaveHandPose(_currentHandPose, SaveHandPoseFlags.HandDescriptors))
                     {
+                        // VR Battlegrounds patch 91: тип унаследованной позы меняется в ассете базы — с Undo и SetDirty.
+                        bool isInheritedPoseEdit = IsInheritedPoseEditableThroughVariant(_currentHandPose);
+                        MarkCurrentPoseEditedByUser();
+
+                        if (isInheritedPoseEdit)
+                        {
+                            Undo.RecordObject(_currentHandPose, "Change Pose Type");
+                        }
+
                         _currentHandPose.PoseType = CurrentPoseType;
                         _updateHandTransforms     = true;
                         _blendValue               = 0.0f;
+
+                        if (isInheritedPoseEdit)
+                        {
+                            EditorUtility.SetDirty(_currentHandPose);
+                        }
                     }
                     else
                     {
@@ -917,7 +1108,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 _selectGameObjectOnClick = GUILayout.Toggle(_selectGameObjectOnClick, new GUIContent("Select finger bone in Hierarchy Window when interacting with spinner"));
                 _mouseRotationSpeed      = EditorGUILayout.Slider(new GUIContent("Spinner Sensitivity"), _mouseRotationSpeed, 0.1f, 3.0f, GUILayout.Width(FieldWidth));
 
-                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPose;
+                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPoseData; // VR Battlegrounds patch 91
 
                 lastY = (int)GUILayoutUtility.GetLastRect().yMax;
 
@@ -1167,7 +1358,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     TryPlaceSnapTransform(_avatar, _poseName, UxrHandSide.Right);
                 }
 
-                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPose;
+                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPoseData; // VR Battlegrounds patch 91
 
                 // Save buttons
 #if SHOW_AUTOSAVE
@@ -1266,7 +1457,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
                 _presetsScrollPosition = EditorGUILayout.BeginScrollView(_presetsScrollPosition, false, false, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
 
-                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPose;
+                GUI.enabled = _currentHandPose != null && _currentPoseNames.Count > 0 && _poseTypeIndex != -1 && !isReadOnlyPoseData; // VR Battlegrounds patch 91
 
                 if (_handPosePresets != null)
                 {
@@ -1323,7 +1514,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                                     RegisterHandsUndo("Load Preset " + _handPosePresets[index].Pose.name);
                                     SetPoseFromAsset(_avatar, _handPosePresets[index].Pose, _currentHandPose);
                                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(_currentHandPose));
-                                    AssetDatabase.SaveAssets();
+                                    SavePoseAssetToDisk(_currentHandPose); // VR Battlegrounds patch 91
 
                                     _poseTypeIndex = GetPoseTypes().IndexOf(_currentHandPose.PoseType.ToString());
                                 }
@@ -1555,6 +1746,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// </summary>
         private void LoadDefaultPoseData()
         {
+            _userEditedPose   = null; // VR Battlegrounds patch 91
             _poseIndex        = 0;
             _poseTypeIndex    = -1;
             _blendValue       = 0.0f;
@@ -1594,6 +1786,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <param name="handPose">The new pose to switch to</param>
         private void SwitchToPose(UxrHandPoseAsset handPose)
         {
+            _userEditedPose       = null; // VR Battlegrounds patch 91: новая поза ещё не правилась
             _currentHandPose      = handPose;
             _currentPoseNames     = GetAvatarPoseNames(_avatar, _showInheritedPoses);
             _poseIndex            = handPose == null ? 0 : _currentPoseNames.IndexOf(_currentHandPose.name);
@@ -1772,7 +1965,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 return true;
             }
 
-            bool isReadOnlyPose    = _avatar && _avatar.GetHandPose(handPose.name, false) != handPose;
+            bool isReadOnlyPose    = IsPoseDataReadOnly(handPose) || !CanWritePoseData(handPose); // VR Battlegrounds patch 91
             bool hasUnsavedChanges = IsCurrentHandDifferentFromPose(handPose, UxrHandSide.Left) || IsCurrentHandDifferentFromPose(handPose, UxrHandSide.Right);
 
             if (!isReadOnlyPose && hasUnsavedChanges)
@@ -1804,13 +1997,26 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         }
 
         /// <summary>
+        ///     VR Battlegrounds patch 91: данные позы read-only — поза не своя у открытого аватара и не разблокирована галочкой.
+        ///     Без галочки совпадает с исходной проверкой SDK.
+        /// </summary>
+        /// <param name="handPose">Проверяемая поза</param>
+        /// <returns>Нельзя ли записывать данные позы</returns>
+        private bool IsPoseDataReadOnly(UxrHandPoseAsset handPose)
+        {
+            return _avatar && handPose && _avatar.GetHandPose(handPose.name, false) != handPose && !IsInheritedPoseEditableThroughVariant(handPose);
+        }
+
+        /// <summary>
         ///     Saves the given hand pose.
         /// </summary>
         /// <param name="handPose">The hand pose to save</param>
         /// <param name="saveFlags">Flags with the elements to save</param>
         private void SaveHandPose(UxrHandPoseAsset handPose, SaveHandPoseFlags saveFlags)
         {
-            bool isReadOnlyPose = _avatar && handPose && _avatar.GetHandPose(handPose.name, false) != handPose;
+            // VR Battlegrounds patch 91: унаследованная поза при включённой галочке сохраняется только в свой ассет
+            // (SavePose пишет дескрипторы handPose); _handPoses и префаб потомка этот путь не трогает.
+            bool isReadOnlyPose = IsPoseDataReadOnly(handPose);
 
             if (handPose && !isReadOnlyPose)
             {
@@ -1831,7 +2037,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 if (saveFlags.HasFlag(SaveHandPoseFlags.Assets))
                 {
                     AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(handPose));
-                    AssetDatabase.SaveAssets();
+                    SavePoseAssetToDisk(handPose); // VR Battlegrounds patch 91
                 }
             }
         }
@@ -1846,6 +2052,13 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <param name="saveFlags">Flags with the elements to save</param>
         private void SavePose(UxrHandPoseAsset handPose, UxrHandSide handSide, UxrHandPoseType poseType, UxrBlendPoseType blendPoseType, SaveHandPoseFlags saveFlags)
         {
+            // VR Battlegrounds patch 91: унаследованная поза без явной правки пользователя не пишется (кости могут
+            // принадлежать предыдущей позе или содержать дрейф пересчёта дескриптора).
+            if (!CanWritePoseData(handPose))
+            {
+                return;
+            }
+
             if (handPose)
             {
                 Undo.RecordObject(handPose, "Update pose");
@@ -1877,7 +2090,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             if (saveFlags.HasFlag(SaveHandPoseFlags.Assets))
             {
                 AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(handPose));
-                AssetDatabase.SaveAssets();
+                SavePoseAssetToDisk(handPose); // VR Battlegrounds patch 91
             }
         }
 
@@ -2105,7 +2318,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                         RegisterHandsUndo("Load Pose " + externalPose.name);
                         SetPoseFromAsset(_avatar, externalPose, _currentHandPose, loadLeft, loadRight);
                         AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(_currentHandPose));
-                        AssetDatabase.SaveAssets();
+                        SavePoseAssetToDisk(_currentHandPose); // VR Battlegrounds patch 91
                         
                         CurrentLoadFolder = Path.GetDirectoryName(path);
                     }
@@ -2469,6 +2682,7 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                     Vector2 mouseRelativePos = Event.current.mousePosition - (_selectedFingerSpinner.HandSide == UxrHandSide.Left ? leftHandTexturePos : rightHandTexturePos);
 
                     Undo.RecordObject(_selectedFingerSpinner.Target, _selectedFingerSpinner.Target.name + " Rotation");
+                    MarkCurrentPoseEditedByUser(); // VR Battlegrounds patch 91: спиннер реально повёрнут
                     Vector2 mouseOffset = mouseRelativePos - _selectedFingerSpinnerMouseStart;
                     float   offset      = _selectedFingerSpinner.Angle == UxrFingerAngleType.Spread ? mouseOffset.x : -mouseOffset.y;
                     _selectedFingerSpinner.Value  = _selectedFingerSpinnerStartValue + offset * _mouseRotationSpeed;
@@ -2590,6 +2804,10 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         /// <param name="undoName">Name to show in the editor undo section</param>
         private void RegisterHandsUndo(string undoName)
         {
+            // VR Battlegrounds patch 91: все явные действия над кистью (Copy/Reset/Load/пресет/контактный коммит) идут через
+            // RegisterHandsUndo — это и есть отметка правки текущей позы пользователем.
+            MarkCurrentPoseEditedByUser();
+
             RegisterFingerUndo(undoName, _avatar.LeftHand.Thumb);
             RegisterFingerUndo(undoName, _avatar.LeftHand.Index);
             RegisterFingerUndo(undoName, _avatar.LeftHand.Middle);
@@ -2886,6 +3104,15 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
         private const string PrefAutoSave                         = "VRMADA.UltimateXR.Manipulation.Editor.HandPoseEditor.UxrHandPoseEditorWindow.AutoSave";
         private const string PrefSelectGameObjectOnClick          = "VRMADA.UltimateXR.Manipulation.Editor.HandPoseEditor.UxrHandPoseEditorWindow.SelectGameObjectOnClick";
         private const string PrefMouseRotationSpeed               = "VRMADA.UltimateXR.Manipulation.Editor.HandPoseEditor.UxrHandPoseEditorWindow.MouseRotationSpeed";
+
+        // VR Battlegrounds patch 91: ключ EditorPrefs галочки «Править позы базы через этот аватар».
+        private const string PrefEditInheritedPosesThroughVariant = "VRBattlegrounds.UltimateXR.HandPoseEditor.EditInheritedPosesThroughVariant";
+
+        private static bool s_editInheritedPoses;
+        private static bool s_editInheritedPosesLoaded;
+
+        // VR Battlegrounds patch 91: поза, явно изменённая пользователем с момента загрузки (сбрасывается при смене позы).
+        [NonSerialized] private UxrHandPoseAsset _userEditedPose;
 
         private static UxrHandPoseEditorWindow s_handPoseEditorWindow;
         private static int                     s_openWindowCount;

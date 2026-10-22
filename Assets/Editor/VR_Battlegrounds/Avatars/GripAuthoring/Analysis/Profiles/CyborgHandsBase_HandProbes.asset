@@ -1,0 +1,188 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 117eb8d930ac8484a89366a8560e73cc, type: 3}
+  m_Name: CyborgHandsBase_HandProbes
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::VrBattlegrounds.Editor.GripAuthoring.Analysis.GripHandProbeProfile
+  _schemaVersion: 1
+  _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
+  _avatarName: CyborgHandsBase
+  _revision: 71
+  _left:
+    Palm:
+      ManuallySet: 1
+      PositionWrist: {x: -0.018112896, y: 0.055637017, z: -0.002685625}
+      RotationWrist: {x: -0.48791742, y: 0.56555516, z: 0.5115385, w: 0.42474973}
+    RingT:
+    - 0.5
+    - 0.5
+    - 0.7959476
+    - 0.5
+    - 0.5
+    - 0.8011769
+    - 0.5
+    - 0.5
+    - 0.59783167
+    - 0.5
+    - 0.5
+    - 0.7662081
+    - 0.5
+    - 0.5
+    - 0.8595304
+    RingRadiusMm:
+    - 12.50933
+    - 10.015141
+    - 7.6472387
+    - 9.464146
+    - 8.319662
+    - 7.0050006
+    - 8.530192
+    - 7.9564366
+    - 6.736616
+    - 9.015707
+    - 7.8590493
+    - 6.421173
+    - 8.668815
+    - 6.87604
+    - 5.416904
+    RingTiltDeg:
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: -38.930756, y: -0.61992604}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    RingContactAzimuthDeg:
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    RingOffsetMm:
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: -0.038221374, y: 3.8843505}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+    - {x: 0, y: 0}
+  _right:
+    Palm:
+      ManuallySet: 1
+      PositionWrist: {x: 0.018112907, y: 0.05564001, z: -0.0026856812}
+      RotationWrist: {x: 0.4879219, y: 0.5655515, z: 0.51154166, w: -0.42474565}
+    RingT:
+    - 0.5
+    - 0.5
+    - 0.7959476
+    - 0.5
+    - 0.5
+    - 0.8011769
+    - 0.5
+    - 0.5
+    - 0.59783167
+    - 0.5
+    - 0.5
+    - 0.7662081
+    - 0.5
+    - 0.5
+    - 0.8595304
+    RingRadiusMm:
+    - 12.50933
+    - 10.015141
+    - 7.6472387
+    - 9.464146
+    - 8.319662
+    - 7.0050006
+    - 8.530192
+    - 7.9564366
+    - 6.736616
+    - 9.015707
+    - 7.8590493
+    - 6.421173
+    - 8.668815
+    - 6.87604
+    - 5.416904
+    RingTiltDeg:
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: -38.930756, y: 0.61992604}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    - {x: 0, y: -0}
+    RingContactAzimuthDeg:
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    RingOffsetMm:
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: 0.038221374, y: 3.8843505}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}
+    - {x: -0, y: 0}

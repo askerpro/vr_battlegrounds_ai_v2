@@ -150,6 +150,130 @@ namespace UltimateXR.Editor.Manipulation
             }
         }
 
+        // VR Battlegrounds patch 91: превью хвата для выбранного аватара без рига/меша кисти (CyborgHandsBase).
+        // Меш и кости берутся у аватара-потомка, поза и Blend — из записи хвата выбранного аватара. Новых записей хвата
+        // и смены _selectedAvatarForGrips нет; меши превью живут в несериализуемом кэше GrabPoseMesh* и HideAndDontSave
+        // объектах, в префаб не попадают.
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: ключ EditorPrefs с GUID префаба-потомка для превью (пусто — константа и поиск).
+        /// </summary>
+        public const string PrefPreviewAvatarPrefabGuid = "VRBattlegrounds.UltimateXR.GrabPreview.PreviewAvatarPrefabGuid";
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: есть ли у аватара данные пальцев и скиннинг-меш, привязанный к костям кисти.
+        ///     Меш ищется по костям, а не через UxrGrabber.HandRenderer: у prefab asset автоопределение рендерера
+        ///     не работает (activeInHierarchy), и аватар с мешем ошибочно ушёл бы на превью по потомку.
+        /// </summary>
+        public static bool HasPreviewHandData(UxrAvatar avatar)
+        {
+            if (avatar == null || avatar.AvatarRig == null || !avatar.AvatarRig.HasFingerData())
+            {
+                return false;
+            }
+
+            HashSet<Transform> handBones = new HashSet<Transform>(avatar.GetHand(UxrHandSide.Left).Transforms.Concat(avatar.GetHand(UxrHandSide.Right).Transforms).Where(t => t != null));
+            return avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true).Any(skin => skin.sharedMesh != null && skin.bones.Any(handBones.Contains));
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: префаб-потомок для превью, если у аватара хватов нет данных кисти; иначе null.
+        ///     Порядок: GUID из EditorPrefs, MEF_cyborg_hands_Player, первый по пути подходящий префаб-вариант.
+        /// </summary>
+        public static UxrAvatar GetPreviewDescendantIfNeeded(UxrAvatar gripAvatar)
+        {
+            if (gripAvatar == null || string.IsNullOrEmpty(gripAvatar.PrefabGuid) || HasPreviewHandData(gripAvatar))
+            {
+                return null;
+            }
+
+            string preferredGuid = string.Empty;
+
+            try
+            {
+                preferredGuid = EditorPrefs.GetString(PrefPreviewAvatarPrefabGuid, string.Empty);
+            }
+            catch (Exception)
+            {
+                preferredGuid = string.Empty;
+            }
+
+            foreach (string guid in new[] { preferredGuid, DefaultPreviewAvatarPrefabGuid })
+            {
+                UxrAvatar candidate = string.IsNullOrEmpty(guid) ? null : UxrAvatarEditorExt.GetFromGuid(guid);
+
+                if (IsPreviewDescendant(candidate, gripAvatar))
+                {
+                    return candidate;
+                }
+            }
+
+            // Запасной поиск дорогой: результат (в том числе отрицательный) кэшируется до перезагрузки домена.
+
+            if (s_previewDescendantGuids.TryGetValue(gripAvatar.PrefabGuid, out string cachedGuid))
+            {
+                UxrAvatar cached = string.IsNullOrEmpty(cachedGuid) ? null : UxrAvatarEditorExt.GetFromGuid(cachedGuid);
+
+                if (string.IsNullOrEmpty(cachedGuid) || IsPreviewDescendant(cached, gripAvatar))
+                {
+                    return cached;
+                }
+            }
+
+            UxrAvatar found = FindPreviewDescendant(gripAvatar);
+            s_previewDescendantGuids[gripAvatar.PrefabGuid] = found != null ? found.PrefabGuid : string.Empty;
+            return found;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: строит превью хвата. Для аватара хватов без данных кисти — по потомку
+        ///     (<see cref="GetPreviewDescendantIfNeeded" />), иначе штатно по сценовому аватару.
+        /// </summary>
+        public static UxrPreviewHandGripMesh BuildGrabPreviewMesh(UxrGrabbableObject grabbableObject, UxrAvatar sceneAvatar, UxrAvatar gripAvatar, int grabPoint, UxrHandSide handSide)
+        {
+            UxrAvatar previewAvatar = GetPreviewDescendantIfNeeded(gripAvatar);
+
+            if (previewAvatar == null)
+            {
+                return sceneAvatar != null ? UxrPreviewHandGripMesh.Build(grabbableObject, sceneAvatar, grabPoint, handSide) : null;
+            }
+
+            if (!TryGetGripPreviewPose(grabbableObject, gripAvatar, grabPoint, out UxrHandPoseAsset pose, out float blend))
+            {
+                return null;
+            }
+
+            UxrPreviewHandGripMesh preview = UxrPreviewHandGripMesh.BuildForAvatar(previewAvatar, pose, handSide, blend);
+
+            if (preview != null)
+            {
+                preview.UnityMesh.name = UxrGrabPointIndex.GetIndexDisplayName(grabbableObject, grabPoint) + (handSide == UxrHandSide.Left ? UxrConstants.LeftGrabPoseMeshSuffix : UxrConstants.RightGrabPoseMeshSuffix);
+            }
+
+            return preview;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: обновляет превью хвата тем же источником, что и <see cref="BuildGrabPreviewMesh" />.
+        /// </summary>
+        public static bool RefreshGrabPreviewMesh(UxrPreviewHandGripMesh previewMesh, UxrGrabbableObject grabbableObject, UxrAvatar sceneAvatar, UxrAvatar gripAvatar, int grabPoint, UxrHandSide handSide, bool reloadBoneData = false)
+        {
+            if (previewMesh == null || grabbableObject == null)
+            {
+                return false;
+            }
+
+            UxrAvatar previewAvatar = GetPreviewDescendantIfNeeded(gripAvatar);
+
+            if (previewAvatar == null)
+            {
+                return sceneAvatar != null && previewMesh.Refresh(grabbableObject, sceneAvatar, grabPoint, handSide, reloadBoneData);
+            }
+
+            return TryGetGripPreviewPose(grabbableObject, gripAvatar, grabPoint, out UxrHandPoseAsset pose, out float blend) &&
+                   previewMesh.RefreshForAvatar(previewAvatar, pose, handSide, blend);
+        }
+
         #endregion
 
         #region Internal Methods
@@ -1094,6 +1218,94 @@ namespace UltimateXR.Editor.Manipulation
         #region Private Methods
 
         /// <summary>
+        ///     VR Battlegrounds patch 91: кандидат — префаб-потомок аватара хватов с данными кисти для превью.
+        /// </summary>
+        private static bool IsPreviewDescendant(UxrAvatar candidate, UxrAvatar gripAvatar)
+        {
+            // BuildForAvatar дополнительно требует UxrGrabber со SkinnedMeshRenderer кисти.
+            return candidate != null && gripAvatar != null && candidate.PrefabGuid != gripAvatar.PrefabGuid &&
+                   candidate.GetPrefabGuidChain().Skip(1).Contains(gripAvatar.PrefabGuid) && HasPreviewHandData(candidate) &&
+                   candidate.GetComponentsInChildren<UxrGrabber>().Any(g => g.HandRenderer is SkinnedMeshRenderer);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: запасной поиск префаба-потомка. Кандидаты отбираются по прямым зависимостям
+        ///     префабов (варианты ссылаются на родителя) до нескольких уровней, затем проверяются по цепочке
+        ///     ParentAvatarPrefab; среди подходящих берётся первый по пути.
+        /// </summary>
+        private static UxrAvatar FindPreviewDescendant(UxrAvatar gripAvatar)
+        {
+            string gripPath = AssetDatabase.GUIDToAssetPath(gripAvatar.PrefabGuid);
+
+            if (string.IsNullOrEmpty(gripPath))
+            {
+                return null;
+            }
+
+            Dictionary<string, string[]> dependencies = new Dictionary<string, string[]>();
+
+            foreach (string prefabGuid in AssetDatabase.FindAssets("t:Prefab"))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(prefabGuid);
+
+                if (!string.IsNullOrEmpty(path) && path != gripPath && !dependencies.ContainsKey(path))
+                {
+                    dependencies.Add(path, AssetDatabase.GetDependencies(path, false));
+                }
+            }
+
+            HashSet<string> ancestors  = new HashSet<string> { gripPath };
+            HashSet<string> candidates = new HashSet<string>();
+
+            for (int level = 0; level < MaxPreviewDescendantDepth; ++level)
+            {
+                List<string> next = dependencies.Where(pair => !candidates.Contains(pair.Key) && pair.Value.Any(ancestors.Contains)).Select(pair => pair.Key).ToList();
+
+                if (next.Count == 0)
+                {
+                    break;
+                }
+
+                candidates.UnionWith(next);
+                ancestors.UnionWith(next);
+            }
+
+            foreach (string path in candidates.OrderBy(p => p, StringComparer.Ordinal))
+            {
+                GameObject prefab    = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                UxrAvatar  candidate = prefab != null ? prefab.GetComponent<UxrAvatar>() : null;
+
+                if (IsPreviewDescendant(candidate, gripAvatar))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: поза и Blend превью — из записи хвата аватара хватов (как в штатном Build).
+        /// </summary>
+        private static bool TryGetGripPreviewPose(UxrGrabbableObject grabbableObject, UxrAvatar gripAvatar, int grabPoint, out UxrHandPoseAsset pose, out float blend)
+        {
+            pose  = null;
+            blend = 0.0f;
+
+            if (grabbableObject == null || gripAvatar == null || grabPoint < 0 || grabPoint >= grabbableObject.GrabPointCount)
+            {
+                return false;
+            }
+
+            UxrGripPoseInfo gripPoseInfo = grabbableObject.GetGrabPoint(grabPoint).GetGripPoseInfo(gripAvatar);
+            UxrHandPoseAsset selected     = gripPoseInfo?.HandPose;
+
+            pose  = selected != null ? gripAvatar.GetHandPose(selected.name) : null;
+            blend = gripPoseInfo?.PoseBlendValue ?? 0.0f;
+            return pose != null;
+        }
+
+        /// <summary>
         ///     Notifies that the preview grab pose meshes should be recomputed.
         /// </summary>
         /// <param name="regeneration">The required regeneration</param>
@@ -1256,14 +1468,24 @@ namespace UltimateXR.Editor.Manipulation
 
             UxrAvatar avatar = TryGetSceneAvatar(avatarPrefab);
 
-            if (avatar == null)
+            // VR Battlegrounds patch 91: у аватара хватов без данных кисти меш и материалы берутся у префаба-потомка,
+            // а запись хвата и snap — по-прежнему у выбранного аватара (сценового или самого префаба).
+            UxrAvatar gripAvatar    = avatarPrefab.GetComponent<UxrAvatar>();
+            UxrAvatar previewAvatar = GetPreviewDescendantIfNeeded(gripAvatar);
+
+            if (avatar == null && previewAvatar == null)
             {
                 return;
             }
 
+            if (avatar == null)
+            {
+                avatar = gripAvatar;
+            }
+
             // Get grabber renderers which will be used to know which materials to use when rendering grab poses
 
-            UxrGrabber[] grabbers             = avatar.GetComponentsInChildren<UxrGrabber>(false);
+            UxrGrabber[] grabbers             = (previewAvatar != null ? previewAvatar : avatar).GetComponentsInChildren<UxrGrabber>(false);
             Renderer     leftGrabberRenderer  = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Left && g.HandRenderer != null)?.HandRenderer;
             Renderer     rightGrabberRenderer = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Right && g.HandRenderer != null)?.HandRenderer;
 
@@ -1276,7 +1498,7 @@ namespace UltimateXR.Editor.Manipulation
                 if (!EditorUtility.IsPersistent(grabbableObject.gameObject))
                 {
                     DestroyGrabPoseTempEditorObjects(grabbableObject, grabPoint);
-                    CreateGrabPoseTempEditorObjects(grabbableObject, avatar, leftGrabberRenderer, rightGrabberRenderer, previewGrabPosesMode, grabPoint);
+                    CreateGrabPoseTempEditorObjects(grabbableObject, avatar, gripAvatar, leftGrabberRenderer, rightGrabberRenderer, previewGrabPosesMode, grabPoint);
                 }
             }
         }
@@ -1286,6 +1508,7 @@ namespace UltimateXR.Editor.Manipulation
         /// </summary>
         /// <param name="grabbableObject">The UxrGrabbableObject to create the temporal grab pose objects for</param>
         /// <param name="avatar">The avatar component that is used to generate previews with</param>
+        /// <param name="gripAvatar">VR Battlegrounds patch 91: выбранный для хватов аватар (решает, нужен ли потомок для превью)</param>
         /// <param name="leftGrabberRenderer">The avatar left hand renderer</param>
         /// <param name="rightGrabberRenderer">The avatar right hand renderer</param>
         /// <param name="previewGrabPosesMode">Which preview hands should be rendered</param>
@@ -1293,6 +1516,7 @@ namespace UltimateXR.Editor.Manipulation
         /// <returns>List with the GameObjects that were created</returns>
         private List<GameObject> CreateGrabPoseTempEditorObjects(UxrGrabbableObject  grabbableObject,
                                                                  UxrAvatar           avatar,
+                                                                 UxrAvatar           gripAvatar,
                                                                  Renderer            leftGrabberRenderer,
                                                                  Renderer            rightGrabberRenderer,
                                                                  UxrPreviewGrabPoses previewGrabPosesMode,
@@ -1320,7 +1544,7 @@ namespace UltimateXR.Editor.Manipulation
 
                         if (previewLeft)
                         {
-                            UxrPreviewHandGripMesh previewMeshLeft = UxrPreviewHandGripMesh.Build(grabbableObject, avatar, i, UxrHandSide.Left);
+                            UxrPreviewHandGripMesh previewMeshLeft = BuildGrabPreviewMesh(grabbableObject, avatar, gripAvatar, i, UxrHandSide.Left); // VR Battlegrounds patch 91
 
                             if (previewMeshLeft != null && previewMeshLeft.UnityMesh != null && leftGrabberRenderer != null)
                             {
@@ -1333,7 +1557,7 @@ namespace UltimateXR.Editor.Manipulation
 
                         if (previewRight)
                         {
-                            UxrPreviewHandGripMesh previewMeshRight = UxrPreviewHandGripMesh.Build(grabbableObject, avatar, i, UxrHandSide.Right);
+                            UxrPreviewHandGripMesh previewMeshRight = BuildGrabPreviewMesh(grabbableObject, avatar, gripAvatar, i, UxrHandSide.Right); // VR Battlegrounds patch 91
 
                             if (previewMeshRight != null && previewMeshRight.UnityMesh != null && rightGrabberRenderer != null)
                             {
@@ -1365,7 +1589,8 @@ namespace UltimateXR.Editor.Manipulation
         {
             UxrAvatar avatar = TryGetSceneAvatar(avatarPrefab);
 
-            if (avatar == null)
+            // VR Battlegrounds patch 91: без сценового аватара превью по потомку ещё возможно; решает RefreshGrabPreviewMesh.
+            if (avatarPrefab == null)
             {
                 return;
             }
@@ -1402,7 +1627,7 @@ namespace UltimateXR.Editor.Manipulation
 
                                 if (previewMeshComponent != null && previewMeshComponent.PreviewMesh is UxrPreviewHandGripMesh previewMeshLeft)
                                 {
-                                    previewMeshLeft.Refresh(grabbableObject, avatar, i, UxrHandSide.Left, true);
+                                    RefreshGrabPreviewMesh(previewMeshLeft, grabbableObject, avatar, selectedAvatar, i, UxrHandSide.Left, true); // VR Battlegrounds patch 91
                                 }
                             }
 
@@ -1413,7 +1638,7 @@ namespace UltimateXR.Editor.Manipulation
 
                                 if (previewMeshComponent != null && previewMeshComponent.PreviewMesh is UxrPreviewHandGripMesh previewMeshRight)
                                 {
-                                    previewMeshRight.Refresh(grabbableObject, avatar, i, UxrHandSide.Right, true);
+                                    RefreshGrabPreviewMesh(previewMeshRight, grabbableObject, avatar, selectedAvatar, i, UxrHandSide.Right, true); // VR Battlegrounds patch 91
                                 }
                             }
                         }
@@ -1436,7 +1661,8 @@ namespace UltimateXR.Editor.Manipulation
         {
             UxrAvatar avatar = TryGetSceneAvatar(avatarPrefab);
 
-            if (avatar == null)
+            // VR Battlegrounds patch 91: без сценового аватара превью по потомку ещё возможно; решает RefreshGrabPreviewMesh.
+            if (avatarPrefab == null)
             {
                 return;
             }
@@ -1471,7 +1697,7 @@ namespace UltimateXR.Editor.Manipulation
 
                             if (previewMeshComponent != null && previewMeshComponent.PreviewMesh is UxrPreviewHandGripMesh previewMeshLeft)
                             {
-                                previewMeshLeft.Refresh(grabbableObject, avatar, i, UxrHandSide.Left);
+                                RefreshGrabPreviewMesh(previewMeshLeft, grabbableObject, avatar, selectedAvatar, i, UxrHandSide.Left); // VR Battlegrounds patch 91
                             }
                         }
 
@@ -1482,7 +1708,7 @@ namespace UltimateXR.Editor.Manipulation
 
                             if (previewMeshComponent != null && previewMeshComponent.PreviewMesh is UxrPreviewHandGripMesh previewMeshRight)
                             {
-                                previewMeshRight.Refresh(grabbableObject, avatar, i, UxrHandSide.Right);
+                                RefreshGrabPreviewMesh(previewMeshRight, grabbableObject, avatar, selectedAvatar, i, UxrHandSide.Right); // VR Battlegrounds patch 91
                             }
                         }
                     }
@@ -1669,6 +1895,13 @@ namespace UltimateXR.Editor.Manipulation
         private static readonly string HasGrabbableModifiers            = $"Some of the parameters are controlled by the following components in this same {nameof(GameObject)}: ";
 
         private static readonly Dictionary<SerializedObject, UxrGrabbableObjectEditor> s_openEditors = new Dictionary<SerializedObject, UxrGrabbableObjectEditor>();
+
+        // VR Battlegrounds patch 91: MEF_cyborg_hands_Player — предпочтительный потомок CyborgHandsBase для превью;
+        // кэш запасного поиска: GUID аватара хватов → GUID найденного потомка (пусто — не найден).
+        private const string DefaultPreviewAvatarPrefabGuid = "2aa0ab6714e2413f9d829637b62df0c0";
+        private const int    MaxPreviewDescendantDepth      = 4;
+
+        private static readonly Dictionary<string, string> s_previewDescendantGuids = new Dictionary<string, string>();
 
         private bool _hideModifierParameters;
 

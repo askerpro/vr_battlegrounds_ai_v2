@@ -173,15 +173,18 @@ namespace UltimateXR.Editor.Manipulation
 
                             if (!Mathf.Approximately(oldBlend, newBlend))
                             {
-                                _previewMeshLeft?.Refresh(grabbableObject, _cachedSingleObjectAvatar, grabPointIndices.First(), UxrHandSide.Left);
-                                _previewMeshRight?.Refresh(grabbableObject, _cachedSingleObjectAvatar, grabPointIndices.First(), UxrHandSide.Right);
+                                // VR Battlegrounds patch 91: для аватара без данных кисти — превью по потомку.
+                                UxrGrabbableObjectEditor.RefreshGrabPreviewMesh(_previewMeshLeft,  grabbableObject, _cachedSingleObjectAvatar, avatarForGrip, grabPointIndices.First(), UxrHandSide.Left);
+                                UxrGrabbableObjectEditor.RefreshGrabPreviewMesh(_previewMeshRight, grabbableObject, _cachedSingleObjectAvatar, avatarForGrip, grabPointIndices.First(), UxrHandSide.Right);
                             }
 
                             EditorGUILayout.Space();
                         }
                     }
 
-                    UxrGrabber[] grabbers     = avatarForGrip.GetComponentsInChildren<UxrGrabber>();
+                    // VR Battlegrounds patch 91: грабберы для зеркалирования — у потомка, если у аватара хватов нет данных кисти.
+                    UxrAvatar    grabberAvatar = UxrGrabbableObjectEditor.GetPreviewDescendantIfNeeded(avatarForGrip);
+                    UxrGrabber[] grabbers     = (grabberAvatar != null ? grabberAvatar : avatarForGrip).GetComponentsInChildren<UxrGrabber>();
                     UxrGrabber   leftGrabber  = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Left);
                     UxrGrabber   rightGrabber = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Right);
                     UxrGrabber grabber = _previewMeshLeft != null  ? leftGrabber :
@@ -216,7 +219,258 @@ namespace UltimateXR.Editor.Manipulation
                             }
                         }
                     }
+
+                    // VR Battlegrounds patch 91: точное зеркало snap-точки противоположной руки той же записи хвата.
+                    DrawMirrorFromOtherHand(snapTransform, grabbableObject, avatarForGrip, grabPointIndices.ToList(), leftGrabber, rightGrabber);
                 }
+            }
+        }
+
+        #endregion
+
+        #region VR Battlegrounds patch 91: зеркало с другой руки
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: зеркалит snap-точку в локальном пространстве контейнера. Плоскость — локальная YZ
+        ///     через начало, нормаль — локальная X. Поворот достраивается по типу зеркала граббера теми же формулами,
+        ///     что в <see cref="TransformExt.ApplyMirroring(Transform,Vector3,Vector3,TransformExt.MirrorType,bool,bool)" />.
+        /// </summary>
+        /// <param name="sourcePosition">Позиция источника в пространстве контейнера</param>
+        /// <param name="sourceRotation">Поворот источника в пространстве контейнера</param>
+        /// <param name="mirrorType">Тип зеркала граббера целевой стороны</param>
+        /// <returns>Позиция и поворот зеркальной snap-точки в том же пространстве</returns>
+        public static (Vector3 position, Quaternion rotation) MirrorSnapLocal(Vector3 sourcePosition, Quaternion sourceRotation, TransformExt.MirrorType mirrorType)
+        {
+            Vector3 normal  = Vector3.right;
+            Vector3 right   = Vector3.Reflect(sourceRotation * Vector3.right,   normal);
+            Vector3 up      = Vector3.Reflect(sourceRotation * Vector3.up,      normal);
+            Vector3 forward = Vector3.Reflect(sourceRotation * Vector3.forward, normal);
+
+            Quaternion rotation;
+
+            switch (mirrorType)
+            {
+                case TransformExt.MirrorType.MirrorXY:
+                    rotation = Quaternion.LookRotation(Vector3.Cross(right, up), up);
+                    break;
+
+                case TransformExt.MirrorType.MirrorXZ:
+                    rotation = Quaternion.LookRotation(forward, Vector3.Cross(forward, right));
+                    break;
+
+                default:
+                    rotation = Quaternion.LookRotation(forward, up);
+                    break;
+            }
+
+            return (new Vector3(-sourcePosition.x, sourcePosition.y, sourcePosition.z), rotation);
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: подбор типа зеркала по паре грабберов аватара. Левый граббер отражается через
+        ///     сагиттальную плоскость аватара (нормаль — правая ось корня, расчёт в пространстве корня) каждым типом;
+        ///     выбирается тип, лучше всего совпадающий с правым граббером. RequiredMirrorType одного граббера не берётся:
+        ///     он зависит от осей рига (HandUniversalLocalAxes), а у prefab asset потомка грабберы лежат в отдельной
+        ///     BigHandsIntegration и не совпадают с рамкой рига — выбор может дать перевёрнутый хват.
+        /// </summary>
+        /// <param name="avatar">Аватар с грабберами</param>
+        /// <param name="leftGrabber">Левый граббер</param>
+        /// <param name="rightGrabber">Правый граббер</param>
+        /// <param name="errorDegrees">Угол между зеркалом левого и правым граббером для выбранного типа</param>
+        /// <returns>Тип зеркала или null, если пары нет</returns>
+        public static TransformExt.MirrorType? FitMirrorTypeByGrabberPair(UxrAvatar avatar, UxrGrabber leftGrabber, UxrGrabber rightGrabber, out float errorDegrees)
+        {
+            errorDegrees = 0.0f;
+
+            if (avatar == null || leftGrabber == null || rightGrabber == null)
+            {
+                return null;
+            }
+
+            Quaternion toRoot = Quaternion.Inverse(avatar.transform.rotation);
+            Quaternion left   = toRoot * leftGrabber.transform.rotation;
+            Quaternion right  = toRoot * rightGrabber.transform.rotation;
+
+            TransformExt.MirrorType? best      = null;
+            float                    bestError = float.MaxValue;
+
+            foreach (TransformExt.MirrorType type in new[] { TransformExt.MirrorType.MirrorXY, TransformExt.MirrorType.MirrorXZ, TransformExt.MirrorType.MirrorYZ })
+            {
+                float error = Quaternion.Angle(MirrorSnapLocal(Vector3.zero, left, type).rotation, right);
+
+                if (error < bestError)
+                {
+                    bestError = error;
+                    best      = type;
+                }
+            }
+
+            errorDegrees = bestError;
+            return best;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: ручной выбор типа зеркала (0 — авто, 1 — XY, 2 — XZ, 3 — YZ), EditorPrefs.
+        /// </summary>
+        private static int MirrorTypeOverride
+        {
+            get
+            {
+                try
+                {
+                    return Mathf.Clamp(EditorPrefs.GetInt(PrefMirrorTypeOverride, 0), 0, 3);
+                }
+                catch (System.Exception)
+                {
+                    return 0;
+                }
+            }
+            set
+            {
+                try
+                {
+                    EditorPrefs.SetInt(PrefMirrorTypeOverride, value);
+                }
+                catch (System.Exception)
+                {
+                    // Без EditorPrefs выбор не запоминается.
+                }
+            }
+        }
+
+        private const string PrefMirrorTypeOverride = "VRBattlegrounds.UltimateXR.SnapMirror.TypeOverride";
+
+        private static readonly string[] MirrorTypeOverrideNames = { "Авто (по паре грабберов)", "XY", "XZ", "YZ" };
+
+        private static string MirrorTypeShortName(TransformExt.MirrorType type)
+        {
+            return type == TransformExt.MirrorType.MirrorXY ? "XY" : type == TransformExt.MirrorType.MirrorXZ ? "XZ" : "YZ";
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 91: кнопка «Отзеркалить с другой руки». Источник — snap противоположной стороны той же
+        ///     записи хвата выбранного аватара (базы); граббер целевой стороны — у потомка для превью, если у базы нет кисти.
+        /// </summary>
+        private void DrawMirrorFromOtherHand(UxrGrabbableObjectSnapTransform snapTransform,
+                                             UxrGrabbableObject              grabbableObject,
+                                             UxrAvatar                       avatarForGrip,
+                                             List<int>                       grabPointIndices,
+                                             UxrGrabber                      leftGrabber,
+                                             UxrGrabber                      rightGrabber)
+        {
+            Transform   target     = snapTransform.transform;
+            Transform   source     = null;
+            string      reason     = null;
+
+            if (grabPointIndices.Count != 1)
+            {
+                reason = grabPointIndices.Count == 0 ? "Snap-точка не найдена в записи хвата выбранного аватара." : "Snap-точка используется в нескольких точках хвата.";
+            }
+            else
+            {
+                UxrGripPoseInfo gripPose = grabbableObject.GetGrabPoint(grabPointIndices[0]).GetGripPoseInfo(avatarForGrip);
+
+                if (gripPose == null)
+                {
+                    reason = "Нет записи хвата выбранного аватара.";
+                }
+                else if (gripPose.GripAlignTransformHandLeft == target && gripPose.GripAlignTransformHandRight == target)
+                {
+                    reason = "Обе руки используют эту же snap-точку.";
+                }
+                else if (gripPose.GripAlignTransformHandLeft == target)
+                {
+                    source = gripPose.GripAlignTransformHandRight;
+                }
+                else if (gripPose.GripAlignTransformHandRight == target)
+                {
+                    source = gripPose.GripAlignTransformHandLeft;
+                }
+                else
+                {
+                    reason = "Snap-точка не принадлежит записи хвата выбранного аватара.";
+                }
+
+                if (reason == null && (source == null || source == target))
+                {
+                    reason = "У противоположной руки нет отдельной snap-точки.";
+                }
+            }
+
+            // Тип зеркала: ручной выбор или подбор по паре грабберов аватара (fallback XZ, если пары нет).
+            UxrAvatar                grabberOwner = leftGrabber != null ? leftGrabber.Avatar : rightGrabber != null ? rightGrabber.Avatar : null;
+            TransformExt.MirrorType? fittedType   = FitMirrorTypeByGrabberPair(grabberOwner, leftGrabber, rightGrabber, out float fitError);
+            int                      typeOverride = MirrorTypeOverride;
+            TransformExt.MirrorType  mirrorType;
+            string                   typeLabel;
+
+            if (typeOverride > 0)
+            {
+                mirrorType = (TransformExt.MirrorType)(typeOverride - 1);
+                typeLabel  = $"{MirrorTypeShortName(mirrorType)}, вручную" + (fittedType.HasValue ? $"; подбор {MirrorTypeShortName(fittedType.Value)} {fitError:0.0}°" : string.Empty);
+            }
+            else if (fittedType.HasValue)
+            {
+                mirrorType = fittedType.Value;
+                typeLabel  = $"{MirrorTypeShortName(mirrorType)}, подбор {fitError:0.0}°";
+            }
+            else
+            {
+                mirrorType = TransformExt.MirrorType.MirrorXZ;
+                typeLabel  = "XZ по умолчанию: нет пары грабберов";
+            }
+
+            string label      = $"Отзеркалить с другой руки ({typeLabel})";
+            bool   sameParent = source != null && source.parent != null && source.parent == target.parent;
+
+            bool guiEnabled = GUI.enabled;
+
+            EditorGUI.BeginChangeCheck();
+            int newOverride = EditorGUILayout.Popup(new GUIContent("Тип зеркала snap", "Авто — подбор по паре грабберов аватара; XY/XZ/YZ — ручной выбор."), typeOverride, MirrorTypeOverrideNames);
+            if (EditorGUI.EndChangeCheck())
+            {
+                MirrorTypeOverride = newOverride;
+            }
+
+            GUI.enabled = guiEnabled && reason == null;
+
+            if (UxrEditorUtils.CenteredButton(new GUIContent(label, "Ставит эту snap-точку точным зеркалом snap-точки другой руки той же точки хвата: плоскость YZ общего родителя, тип зеркала — подбор по паре грабберов или ручной выбор. Ctrl+Z откатывает.")))
+            {
+                Undo.RecordObject(target, "Отзеркалить snap с другой руки");
+
+                if (sameParent)
+                {
+                    (Vector3 position, Quaternion rotation) = MirrorSnapLocal(source.localPosition, source.localRotation, mirrorType);
+                    target.localPosition = position;
+                    target.localRotation = rotation;
+                }
+                else
+                {
+                    Transform root = grabbableObject.transform;
+                    (Vector3 position, Quaternion rotation) = MirrorSnapLocal(root.InverseTransformPoint(source.position), Quaternion.Inverse(root.rotation) * source.rotation, mirrorType);
+                    target.SetPositionAndRotation(root.TransformPoint(position), root.rotation * rotation);
+                }
+
+                EditorUtility.SetDirty(target);
+
+                if (PrefabUtility.IsPartOfPrefabInstance(target))
+                {
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(target);
+                }
+
+                // Превью-кисти — дочерние объекты snap-точки и следуют за ней, как после штатных Mirror-кнопок.
+                SceneView.RepaintAll();
+            }
+
+            GUI.enabled = guiEnabled;
+
+            if (reason != null)
+            {
+                EditorGUILayout.HelpBox(reason, MessageType.Info);
+            }
+            else if (!sameParent)
+            {
+                EditorGUILayout.HelpBox($"Snap-точки рук лежат под разными родителями: зеркало строится относительно корня {grabbableObject.name} (плоскость YZ через его начало).", MessageType.Warning);
             }
         }
 
@@ -261,7 +515,7 @@ namespace UltimateXR.Editor.Manipulation
                     {
                         if (grabbableObject.Editor_GetGrabPointGrabAlignTransform(avatarPrefab, i, UxrHandSide.Left) == transform && (grabPoint.HandSide == UxrHandSide.Left || grabPoint.BothHandsCompatible))
                         {
-                            previewMeshLeft = UxrPreviewHandGripMesh.Build(grabbableObject, avatar, i, UxrHandSide.Left);
+                            previewMeshLeft = UxrGrabbableObjectEditor.BuildGrabPreviewMesh(grabbableObject, avatar, avatarPrefab, i, UxrHandSide.Left); // VR Battlegrounds patch 91
 
                             if (previewMeshLeft != null)
                             {
@@ -271,7 +525,7 @@ namespace UltimateXR.Editor.Manipulation
 
                         if (grabbableObject.Editor_GetGrabPointGrabAlignTransform(avatarPrefab, i, UxrHandSide.Right) == transform && (grabPoint.HandSide == UxrHandSide.Right || grabPoint.BothHandsCompatible))
                         {
-                            previewMeshRight = UxrPreviewHandGripMesh.Build(grabbableObject, avatar, i, UxrHandSide.Right);
+                            previewMeshRight = UxrGrabbableObjectEditor.BuildGrabPreviewMesh(grabbableObject, avatar, avatarPrefab, i, UxrHandSide.Right); // VR Battlegrounds patch 91
 
                             if (previewMeshRight != null)
                             {
@@ -326,7 +580,10 @@ namespace UltimateXR.Editor.Manipulation
 
                 UxrAvatar avatar = UxrGrabbableObjectEditor.TryGetSceneAvatar(avatarPrefab.gameObject);
 
-                if (avatar == null)
+                // VR Battlegrounds patch 91: у аватара хватов без данных кисти меш и материалы берутся у префаба-потомка.
+                UxrAvatar previewAvatar = UxrGrabbableObjectEditor.GetPreviewDescendantIfNeeded(avatarPrefab);
+
+                if (avatar == null && previewAvatar == null)
                 {
                     continue;
                 }
@@ -335,11 +592,11 @@ namespace UltimateXR.Editor.Manipulation
 
                 // Get grabber renderers which will be used to know which materials to use when rendering grab poses
 
-                UxrGrabber[] grabbers             = avatar.GetComponentsInChildren<UxrGrabber>(false);
+                UxrGrabber[] grabbers             = (previewAvatar != null ? previewAvatar : avatar).GetComponentsInChildren<UxrGrabber>(false);
                 Renderer     leftGrabberRenderer  = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Left && g.HandRenderer != null)?.HandRenderer;
                 Renderer     rightGrabberRenderer = grabbers.FirstOrDefault(g => g.Side == UxrHandSide.Right && g.HandRenderer != null)?.HandRenderer;
 
-                if (snapTransform && avatar)
+                if (snapTransform && (avatar || previewAvatar)) // VR Battlegrounds patch 91
                 {
                     TryGetGrabPoseMeshes(avatarPrefab, snapTransform.transform, out _previewMeshLeft, out _previewMeshRight);
 
@@ -378,7 +635,10 @@ namespace UltimateXR.Editor.Manipulation
 
                 UxrAvatar avatar = UxrGrabbableObjectEditor.TryGetSceneAvatar(avatarPrefab.gameObject);
 
-                if (avatar == null)
+                // VR Battlegrounds patch 91: при превью по потомку запись хвата и snap читаются у выбранного аватара.
+                UxrAvatar lookupAvatar = UxrGrabbableObjectEditor.GetPreviewDescendantIfNeeded(selectedAvatar) != null ? selectedAvatar : avatar;
+
+                if (lookupAvatar == null)
                 {
                     continue;
                 }
@@ -386,7 +646,7 @@ namespace UltimateXR.Editor.Manipulation
                 for (int i = 0; i < grabbableObject.GrabPointCount; ++i)
                 {
                     UxrGrabPointInfo grabPoint     = grabbableObject.GetGrabPoint(i);
-                    UxrGripPoseInfo  gripPose      = grabPoint.GetGripPoseInfo(avatar);
+                    UxrGripPoseInfo  gripPose      = grabPoint.GetGripPoseInfo(lookupAvatar);
                     UxrHandPoseAsset gripPoseAsset = gripPose?.HandPose;
 
                     if (gripPoseAsset == null)
@@ -396,11 +656,11 @@ namespace UltimateXR.Editor.Manipulation
 
                     // Does this grab point use the pose?
 
-                    if ((grabbableObject.Editor_GetGrabPointGrabAlignTransform(avatar, i, UxrHandSide.Left) == snapTransform.transform ||
-                         grabbableObject.Editor_GetGrabPointGrabAlignTransform(avatar, i, UxrHandSide.Right) == snapTransform.transform) && gripPoseAsset.name == handPoseAsset.name)
+                    if ((grabbableObject.Editor_GetGrabPointGrabAlignTransform(lookupAvatar, i, UxrHandSide.Left) == snapTransform.transform ||
+                         grabbableObject.Editor_GetGrabPointGrabAlignTransform(lookupAvatar, i, UxrHandSide.Right) == snapTransform.transform) && gripPoseAsset.name == handPoseAsset.name)
                     {
-                        _previewMeshLeft?.Refresh(grabbableObject, _cachedSingleObjectAvatar, i, UxrHandSide.Left, true);
-                        _previewMeshRight?.Refresh(grabbableObject, _cachedSingleObjectAvatar, i, UxrHandSide.Right, true);
+                        UxrGrabbableObjectEditor.RefreshGrabPreviewMesh(_previewMeshLeft,  grabbableObject, _cachedSingleObjectAvatar, selectedAvatar, i, UxrHandSide.Left,  true); // VR Battlegrounds patch 91
+                        UxrGrabbableObjectEditor.RefreshGrabPreviewMesh(_previewMeshRight, grabbableObject, _cachedSingleObjectAvatar, selectedAvatar, i, UxrHandSide.Right, true); // VR Battlegrounds patch 91
                     }
                 }
             }

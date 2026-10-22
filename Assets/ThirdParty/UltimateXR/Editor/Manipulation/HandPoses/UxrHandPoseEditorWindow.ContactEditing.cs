@@ -102,7 +102,8 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             { reason = "Редактор занят Play/compile/import."; return false; }
             if (!_avatar || !_currentHandPose || !_avatar.GetHand(side).Wrist || _updateHandTransforms)
             { reason = "Нет синхронизированного SDK-контекста кисти."; return false; }
-            bool readOnly = _avatar.GetHandPose(_currentHandPose.name, false) != _currentHandPose;
+            // VR Battlegrounds patch 91: та же проверка, что у окна; галочка открывает данные унаследованной позы.
+            bool readOnly = IsPoseDataReadOnly(_currentHandPose);
             context = new UxrHandPoseContactEditContext(this, _avatar, _currentHandPose, side, CurrentPoseType,
                 CurrentBlendPoseType, _blendValue, _autoSave, readOnly, _selectedFingerSpinner != null);
             return true;

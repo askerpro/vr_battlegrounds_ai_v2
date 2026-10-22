@@ -1942,3 +1942,140 @@ state event, различающиеся camera-local poses автора/полу
 идемпотентный ack, AndroidCompileGate. Runtime control с camera-dependent replay отказал на0,837436м;
 исправленный SDK replay и ack входят в зелёные69/69. Ручная проверка пользователем подтверждена;
 детали удалённого двухклиентского transport отдельно не перечислялись.
+
+## Патч 91: правка поз базы через аватар-потомок и превью хвата по потомку (временное решение, 2026-10-20)
+
+Номер выбран вне хаба: последний зарезервированный в coordination — 90 (bots-input), а агент
+основного checkout (`live/grip-analyzer`) в хабе не регистрируется. Записи 56–90 в этом журнале
+отсутствуют (журнал обрывается на 55), здесь не восстанавливаются.
+
+### Проблема
+
+После реструктуризации 2026-10-18 все 65 поз лежат в `_handPoses` CyborgHandsBase
+(GUID `71b74b0d08444f49bbb7aa2828d0890a`), но у базы нет рига и меша. У потомков
+`MEF_cyborg_hands_Player` (`2aa0ab6714e2413f9d829637b62df0c0`) и `PlayerControllersCyborgAvatar`
+риг есть, собственный `_handPoses` пуст. Hand Pose Editor считает унаследованные позы read-only
+(«Load <parent> instead»), а базу открыть нельзя: «Avatar hands and finger nodes could not be
+resolved». Превью хвата в инспекторе `UxrGrabbableObject` строится по выбранному для хватов
+аватару, то есть по базе без меша, и остаётся пустым.
+
+### Решение
+
+1. `Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.cs` — галочка «Править позы базы через
+   этот аватар» (EditorPrefs `VRBattlegrounds.UltimateXR.HandPoseEditor.EditInheritedPosesThroughVariant`,
+   чтение/запись в try/catch). Видна, когда текущая поза унаследована: в открытом аватаре нет позы
+   с этим именем, а владелец — предок из `GetParentPrefabChain()` (`GetParentPrefab(pose)`).
+   Включённая галочка снимает read-only только с данных позы: спиннеры, Pose Type/Blend, Copy
+   Left/Right, Reset/Load External, пресеты и SDK83-коммит «Обхватить»/IK. Признак `isReadOnlyPose`
+   по-прежнему закрывает удаление и переименование. При включении кисть сначала
+   пересинхронизируется с ассетом, чтобы auto-save не внёс в базу посторонние повороты костей.
+   Рядом — предупреждение «Правка пишется в позу базы <имя>; изменение получат все потомки».
+   Смена Pose Type унаследованной позы при галочке записывается с `Undo.RecordObject` и `SetDirty`
+   ассета базы (штатный SDK меняет `PoseType` без них; для собственных поз поведение прежнее).
+   Правило «потомки ничего не переопределяют»: при галочке `IsVariantPrefabWriteLocked()` (открыт
+   вариант префаба без своих поз или с унаследованной текущей позой) отключает кнопки, пишущие
+   в префаб потомка — `_handPoses`, default-позу или кости: Create New Pose, Copy Current Pose To New,
+   Add Pose From File, Add All Poses From Folder, Add All Preset Poses, Delete All Poses,
+   Set Current Pose As Default, Bake Pose In Avatar. Под меню — подсказка «Новые позы создавайте
+   в базе <имя>» (владелец текущей позы, иначе первый предок с позами). Без галочки кнопки прежние.
+2. Путь сохранения: `SaveHandPose`, `AutoSave` (через `SaveHandPose`), `OnDisable`,
+   `CheckWarnSaveHandPose` и SDK83-коммит используют общий `IsPoseDataReadOnly`; без галочки он
+   совпадает с прежней проверкой `GetHandPose(name, false) != pose`. `SavePose` пишет только
+   дескрипторы и `SetDirty` того же `UxrHandPoseAsset` (файл и GUID прежние). `CreatePose`,
+   `CopyPoseAsNew`, `DeletePose`, `RenamePose` и запись `_handPoses` потомка этим путём не
+   вызываются; кнопки, которые их вызывают, а также «Set Current Pose As Default» и «Bake Pose
+   In Avatar», при галочке у потомка заблокированы (см. п. 1).
+3. `UxrHandPoseEditorWindow.ContactEditing.cs` — `readOnly` снимка контекста считается тем же
+   `IsPoseDataReadOnly`. Публичные `EditInheritedPosesThroughVariant`, `GetInheritedPoseOwner`,
+   `IsInheritedPoseEditableThroughVariant` читает проектная панель «Автоснап и IK конечных фаланг»
+   (`Assets/Editor/.../GripAuthoring/ContactPoints/HandPoseSdkContactEditing.cs`): при галочке она
+   открывает сценовый аватар-потомок с ригом, у которого поза разрешается в тот же ассет, а не
+   ищет владельца позы; сообщение об отказе подсказывает включить галочку.
+4. Превью хвата: `UxrGrabbableObjectEditor.cs` и `UxrGrabbableObjectSnapTransformEditor.cs`.
+   Если у выбранного для хватов аватара нет данных пальцев (`AvatarRig.HasFingerData()`) или
+   `SkinnedMeshRenderer`, привязанного к костям кисти (проверка по костям, а не через
+   `UxrGrabber.HandRenderer`, который у prefab asset не автоопределяется), меш, кости и материалы
+   берутся у префаба-потомка с `UxrGrabber` и скиннинг-рендерером кисти:
+   GUID из EditorPrefs `VRBattlegrounds.UltimateXR.GrabPreview.PreviewAvatarPrefabGuid`, затем
+   константа MEF_cyborg_hands_Player, затем первый по пути префаб, чья цепочка `ParentAvatarPrefab`
+   содержит выбранный аватар (поиск по прямым зависимостям префабов, результат кэшируется до
+   перезагрузки домена). Поза и Blend — из записи хвата выбранного аватара; snap — его же.
+   Сборка через `UxrPreviewHandGripMesh.BuildForAvatar` (патч 45/59), обновление — новым
+   `RefreshForAvatar` в `UxrPreviewHandGripMesh.cs` (явные avatar/pose/Blend; штатный `Refresh`
+   взял бы запись хвата потомка). Если потомок не найден, работает прежний путь. Записи хвата не
+   создаются, `_selectedAvatarForGrips` не меняется. Меши превью лежат в несериализуемых
+   `UxrGripPoseInfo.GrabPoseMeshLeft/Right` и объектах `HideAndDontSave`, в префаб не пишутся.
+
+5. `UxrGrabbableObjectSnapTransformEditor.cs` — кнопка «Отзеркалить с другой руки» рядом с
+   Mirror Up/Down и Front/Back. Источник — `GripAlignTransformHandLeft/Right` противоположной стороны
+   той же записи хвата выбранного аватара (базы); если его нет, он совпадает с текущей точкой или
+   точка входит в несколько точек хвата, кнопка неактивна, рядом причина. Математика —
+   `MirrorSnapLocal(srcPos, srcRot, mirrorType)`: в локальном пространстве общего родителя-контейнера
+   позиция `(−x, y, z)`, оси источника отражаются через нормаль (1,0,0), поворот достраивается
+   формулами `TransformExt.ApplyMirroring` (XY: `LookRotation(Cross(right, up), up)`,
+   XZ: `LookRotation(forward, Cross(forward, right))`, YZ: `LookRotation(forward, up)`).
+   Тип зеркала подбирается по паре грабберов аватара (`FitMirrorTypeByGrabberPair`): левый граббер
+   отражается через сагиттальную плоскость аватара (нормаль — правая ось корня, пространство корня)
+   каждым типом, берётся тип с минимальным углом до правого граббера; подпись кнопки показывает тип
+   и ошибку подбора, без пары — XZ по умолчанию. Рядом выпадающий выбор «Авто / XY / XZ / YZ»
+   (EditorPrefs `VRBattlegrounds.UltimateXR.SnapMirror.TypeOverride`). Первая версия брала
+   `UxrGrabber.RequiredMirrorType` граббера prefab asset MEF и перевернула хват AK105 Grip: у ассета
+   грабберы лежат в `PlayerBase/BigHandsIntegration` и не выровнены с запястьем рига
+   (`HandUniversalLocalAxes` из override MEF), поэтому ближайшие оси пальцев/ладони произвольны
+   (офлайн-оценка по YAML даёт для обеих рук совпадение осей → YZ, 178,5° от нужного).
+   Офлайн по YAML PlayerBase: GrabberLeft (0.42085, 0.12265, −0.80186, 0.40602), GrabberRight
+   (0.11726, 0.42246, −0.41545, 0.79699) в пространстве корня; подбор — XZ 1,38°, XY 179,95°, YZ 178,63°.
+   Undo-группа «Отзеркалить snap с другой руки» — Ctrl+Z откатывает нажатие.
+   Разные родители — расчёт в пространстве корня `UxrGrabbableObject` и предупреждение. Запись:
+   `Undo.RecordObject` + `SetDirty` трансформа, для экземпляра префаба —
+   `RecordPrefabInstancePropertyModifications`; превью-кисти дочерние и следуют за точкой.
+   Офлайн-проверка формул на AK105 (Python, те же формулы Unity): Grip Left → Right, XZ — позиция
+   (−0.0019, −0.0709, −0.0487), поворот (0.00240, −0.07755, −0.70491, 0.70504), 1,52° от ручного
+   зеркала пользователя; Support — (−0.0011, 0.0093, 0.25133), (−0.52749, −0.11178, 0.83616, −0.10051).
+   Повторное зеркалирование возвращает исходник (0°). Префабы патч не меняет: кнопку нажимает пользователь.
+6. Защита общих поз от неявной записи (исправление после порчи 2026-10-21: GrabStandard, DemoGun,
+   DemoShotgun записаны одним глобальным сохранением, у DemoGun в Open-дескрипторах обеих рук
+   отклонения до 1,5, у GrabStandard до 0,09 и дрейф 1e-5 в Closed — в позу записались кости
+   предыдущей позы и дрейф пересчёта). Механизм: при включённой галочке унаследованная поза
+   становилась записываемой для всех неявных путей — `AutoSave` на MouseDown, `Undo_OnUndoRedo`,
+   смена позы через окно и `OnDisable` → `SaveHandPose`. Синхронизация панели с Grabbable
+   переоткрывает окно (`Open` → `LoadAvatar` → `SwitchToPose`) без сохранения/синхронизации костей:
+   кости обновляются только в конце следующего OnGUI, а `SaveHandPose` новой позы при `_blendValue = 0`
+   пишет Open-дескрипторы обеих рук из текущих костей, то есть из предыдущей позы; Undo после смены
+   позы возвращает кости чужой позы с тем же итогом. `SavePose` помечает ассет dirty, и любой
+   `AssetDatabase.SaveAssets` (окна или Ctrl+S) сбрасывает на диск все такие позы разом.
+   Исправление:
+   - `SavePose` и `CheckWarnSaveHandPose` пишут унаследованную позу (через галочку) только после явной
+     правки пользователем с момента её загрузки (`_userEditedPose`): спиннер (MouseDrag), Pose Type,
+     все действия через `RegisterHandsUndo` (Copy/Reset/Load External/пресет/«Обхватить»/IK). Смена
+     позы и загрузка аватара сбрасывают отметку. Свои позы и режим без галочки — как в SDK;
+   - позы из `Assets/ThirdParty/**` (`IsSdkSharedPose`) через галочку не редактируются: read-only
+     с надписью «Общая поза SDK (Assets/ThirdParty) — правка запрещена» (отдельной второй галочки нет);
+   - для унаследованной позы через галочку вместо глобального `SaveAssets` — `SaveAssetIfDirty` только
+     этой позы (`SavePoseAssetToDisk`: `SaveHandPose`/`SavePose` с флагом Assets, пресет, Load External).
+   В `HandPoseSdkContactEditing.cs` изменено только сообщение отказа `InheritedPoseReadOnlyStatus`
+   для общей позы SDK; синхронизация и переоткрытие окна не менялись (защищены флагом в SDK).
+
+Связь с другими патчами: SDK83 — граница контактного редактирования, через которую проходит
+коммит «Обхватить»/IK; 84 — порядок обхода `ParentAvatarPrefab`/GUID в `GetGripPoseInfo` и кэш
+родителя, на которые опирается выбор записи хвата и проверка потомка; 59 (и 45) — сборка меша
+превью, переиспользуемая без изменений. Runtime SDK, префабы и ассеты патч не меняет.
+
+### Как откатить
+
+Удалить блоки с маркером `VR Battlegrounds patch 91` в пяти SDK-файлах (`UxrHandPoseEditorWindow.cs`,
+`UxrHandPoseEditorWindow.ContactEditing.cs`, `UxrPreviewHandGripMesh.cs`, `UxrGrabbableObjectEditor.cs`,
+`UxrGrabbableObjectSnapTransformEditor.cs`) и в `HandPoseSdkContactEditing.cs`, вернув прежние
+проверки `GetHandPose(name, false) != pose`, вызовы `UxrPreviewHandGripMesh.Build`/`Refresh` и
+текст «Выберите корневой префаб CyborgHandsBase». Ключи EditorPrefs можно удалить вручную.
+Временное решение снимается, когда база получит собственный скелет кистей и видимый меш.
+
+### Как повторить при обновлении SDK
+
+Перенести галочку и `IsPoseDataReadOnly` во все места, где SDK вычисляет read-only позы (OnGUI,
+`CheckWarnSaveHandPose`, `SaveHandPose`, снимок контакта), оставив удаление/переименование на
+исходном признаке. Перенести helpers превью в `UxrGrabbableObjectEditor` и их вызовы в обоих
+редакторах, `RefreshForAvatar` — рядом с `Refresh`. Проверки: офлайн-компиляция
+`UltimateXR.Editor` и `Assembly-CSharp-Editor`; в Unity — правка унаследованной позы через MEF без
+изменений префаба потомка (`git status`), превью хвата при выбранной CyborgHandsBase.
+Проверено офлайн-компиляцией; в Unity не проверено.

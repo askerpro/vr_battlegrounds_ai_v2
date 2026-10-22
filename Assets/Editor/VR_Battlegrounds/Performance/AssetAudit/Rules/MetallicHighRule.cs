@@ -27,6 +27,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
         [AuditThreshold("Доля «чистого металла» на карте, с которой она ловится (градиентные карты — ниже)")]
         public float MinPureMetalFraction = 0.5f;
 
+        [AuditThreshold("Папки материалов, оставленных с исходной металличностью по решению пользователя (вид проверен в шлеме)")]
+        public string[] KeepOriginal = { "Assets/Art/Weapons/Kinemation/" }; // 2026-10-22: «Kinemation до правок выглядел гораздо лучше»
+
         private readonly Dictionary<Texture, MetallicMapStats> _maps = new Dictionary<Texture, MetallicMapStats>();
 
         public override string Id => "material.metallic-high";
@@ -52,6 +55,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
         {
             if (material.shader == null || !material.HasProperty("_Metallic"))
                 return;
+            foreach (string root in KeepOriginal)
+                if (assetPath.StartsWith(root, StringComparison.Ordinal))
+                    return;
             // URP Lit: _WorkflowMode 0 — specular, 1 — metallic.
             if (material.HasProperty("_WorkflowMode") && material.GetFloat("_WorkflowMode") < 0.5f)
                 return;

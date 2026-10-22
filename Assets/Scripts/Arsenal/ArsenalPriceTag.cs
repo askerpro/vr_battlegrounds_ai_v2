@@ -30,34 +30,44 @@ namespace VrBattlegrounds.Arsenal
             if (created) tag = go.AddComponent<ArsenalPriceTag>();
             Vector2 size = presentation.CardSize;
             if (created) tag.CreateBacking(size);
-            var backing = go.transform.Find("CardBacking");
-            if (backing != null) backing.localScale = new Vector3(size.x, size.y, 0.001f);
             if (tag._text == null) tag._text = go.GetComponentInChildren<TextMeshPro>(true);
             var textObject = tag._text != null ? tag._text.gameObject : new GameObject("CardText");
             if (tag._text == null) textObject.transform.SetParent(go.transform, false);
-            textObject.transform.localPosition = new Vector3(0f, 0f, -0.0007f);
             if (tag._text == null) tag._text = textObject.AddComponent<TextMeshPro>();
-            tag.ConfigureText(size, presentation.CardFontSize);
+            ApplyFrame(go.transform, tag._text, size, presentation.CardFontSize);
             return tag;
         }
 
-        private void ConfigureText(Vector2 size, float baseFontSize)
+        /// <summary>
+        ///     Размер карточки из раскладки: основание, положение и вёрстка текста. Общая вёрстка карточки собранного
+        ///     слота и редакторского превью станций.
+        /// </summary>
+        public static void ApplyFrame(Transform card, TextMeshPro text, Vector2 size, float baseFontSize)
         {
-            _text.font = TMP_Settings.defaultFontAsset;
-            _text.alignment = TextAlignmentOptions.Center;
-            _text.rectTransform.sizeDelta = size - new Vector2(0.014f, 0.014f);
+            var backing = card.Find("CardBacking");
+            if (backing != null) backing.localScale = new Vector3(size.x, size.y, 0.001f);
+            text.transform.localPosition = new Vector3(0f, 0f, -0.0007f);
+            text.font = TMP_Settings.defaultFontAsset;
+            text.alignment = TextAlignmentOptions.Center;
+            text.rectTransform.sizeDelta = size - new Vector2(0.014f, 0.014f);
             // Длинное имя переносится и уменьшает всю карточку; цена и характеристики не обрезаются многоточием.
-            _text.textWrappingMode = TextWrappingModes.Normal;
-            _text.overflowMode = TextOverflowModes.Overflow;
-            _text.enableAutoSizing = true;
-            _text.fontSizeMin = baseFontSize * 0.6f;
-            _text.fontSizeMax = baseFontSize;
-            _text.fontSize = baseFontSize;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = baseFontSize * 0.6f;
+            text.fontSizeMax = baseFontSize;
+            text.fontSize = baseFontSize;
         }
 
         public void Show(WeaponInfo info, bool affordable, bool free = false)
         {
             if (info == null) { Hide(); return; }
+            Present(Text(info, free), TextColor(affordable, free));
+        }
+
+        /// <summary>Текст карточки оружия: имя, цена (или «БЕСПЛАТНО»), характеристики.</summary>
+        public static string Text(WeaponInfo info, bool free)
+        {
             string price = free ? "БЕСПЛАТНО" : $"${info.Price}";
             string heading = $"<size=110%><b>{Escape(info.DisplayName)}</b></size>\n{price}";
             string details;
@@ -72,8 +82,11 @@ namespace VrBattlegrounds.Arsenal
             {
                 details = $"\n{CategoryLabel(info.Category)}";
             }
-            Present(heading + details, free || affordable ? AffordableColor : ExpensiveColor);
+            return heading + details;
         }
+
+        /// <summary>Цвет текста карточки: доступно (или бесплатно) — тёмный, не хватает денег — красный.</summary>
+        public static Color TextColor(bool affordable, bool free) => free || affordable ? AffordableColor : ExpensiveColor;
 
         /// <summary>Совместимость со старым вызывающим кодом до миграции слотов.</summary>
         public void Show(string weaponName, int price, bool affordable) =>

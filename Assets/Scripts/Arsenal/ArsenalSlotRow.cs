@@ -47,18 +47,40 @@ namespace VrBattlegrounds.Arsenal
         public void Arrange(IReadOnlyList<ArsenalSlotController> slots)
         {
             if (slots == null || slots.Count == 0) return;
-            float total = _gap * (slots.Count - 1);
-            foreach (ArsenalSlotController slot in slots) total += slot.SlotWidth;
+            var widths = new float[slots.Count];
+            for (int i = 0; i < slots.Count; i++) widths[i] = slots[i].SlotWidth;
+            Pose[] poses = SlotLocalPoses(widths);
+            for (int i = 0; i < slots.Count; i++) Mount(slots[i].transform, poses[i]);
+        }
+
+        /// <summary>
+        ///     Позы слотов с данными ширинами в этом порядке, в локальных координатах ряда: вдоль оси X с зазором
+        ///     <see cref="Gap" /> и выравниванием <see cref="Alignment" />. Чистый расчёт без объектов — единая геометрия
+        ///     ряда для сборщика станции и редакторского превью.
+        /// </summary>
+        public Pose[] SlotLocalPoses(IReadOnlyList<float> widths)
+        {
+            if (widths == null || widths.Count == 0) return Array.Empty<Pose>();
+            float total = _gap * (widths.Count - 1);
+            foreach (float width in widths) total += width;
             float cursor = _alignment == ArsenalRowAlignment.Center ? -total * .5f
                 : _alignment == ArsenalRowAlignment.End ? -total : 0f;
             Quaternion rotation = SlotRotation;
-            foreach (ArsenalSlotController slot in slots)
+            var poses = new Pose[widths.Count];
+            for (int i = 0; i < widths.Count; i++)
             {
-                float center = cursor + slot.SlotWidth * .5f;
-                slot.transform.SetParent(transform, false);
-                slot.transform.SetLocalPositionAndRotation(_slotOrigin + new Vector3(center, 0f, 0f), rotation);
-                cursor += slot.SlotWidth + _gap;
+                float center = cursor + widths[i] * .5f;
+                poses[i] = new Pose(_slotOrigin + new Vector3(center, 0f, 0f), rotation);
+                cursor += widths[i] + _gap;
             }
+            return poses;
+        }
+
+        /// <summary>Вешает слот в ряд: ребёнок ряда в рассчитанной позе (<see cref="SlotLocalPoses" />).</summary>
+        public void Mount(Transform slot, Pose localPose)
+        {
+            slot.SetParent(transform, false);
+            slot.SetLocalPositionAndRotation(localPose.position, localPose.rotation);
         }
 
         /// <summary>Настройка из редакторского инструмента разметки корпуса.</summary>

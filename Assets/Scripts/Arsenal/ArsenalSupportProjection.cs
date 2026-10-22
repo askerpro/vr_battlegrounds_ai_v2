@@ -75,6 +75,17 @@ namespace VrBattlegrounds.Arsenal
             return output;
         }
 
+        /// <summary>
+        ///     Одна видимая опора раскладки под <paramref name="container" /> (рамка слота): клон модуля опор стиля в позе
+        ///     раскладки. Тот же путь, что у опор собранного слота; редакторское превью станций вызывает его для своих
+        ///     временных копий. Модуль — только визуальная геометрия (<see cref="ArsenalPresentationResolver.ValidateStyle" />).
+        /// </summary>
+        public static Transform MaterializeSupportRole(Transform container, ArsenalSupportPose pose, GameObject module)
+        {
+            MaterializeRole(container, pose, module, null);
+            return container.Find(pose.Role);
+        }
+
         private static void MaterializeRole(Transform parent, ArsenalSupportPose pose, GameObject module, Material ready)
         {
             var role = parent.Find(pose.Role);

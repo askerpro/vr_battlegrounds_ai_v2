@@ -298,6 +298,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             EditorGUILayout.LabelField("Игровая станция", EditorStyles.boldLabel);
             DrawStation(ArsenalPresetAssetBuilder.CommonPath);
             EditorGUILayout.HelpBox("Слоты станций собирает генератор при запуске карты: корпус задаёт ряды (ArsenalSlotRow), пресет — какое оружие в какой ряд, раскладку в слоте — оружие.", MessageType.Info);
+            DrawScenePreview();
             EditorGUILayout.LabelField("Префаб станции лобби", EditorStyles.boldLabel);
             DrawStation(ArsenalPresetAssetBuilder.DemoPath);
             var scene = SceneManager.GetActiveScene();
@@ -310,6 +311,18 @@ namespace VrBattlegrounds.Editor.Arsenal
             Command("Мигрировать игровые карты и Lobby", new[] { "Assets/Scenes/Maps", "Assets/Scenes/Lobby.unity", "Assets/Prefabs/Maps/ZoneBoundaryDisplayHousing.prefab" }, "Все карты и Lobby + общий prefab корпуса display; сохраняет сцены и backups. После геометрии нужен общий Bake Occlusion.", ArsenalMapMigration.Run, new[] { ArsenalPresetAssetBuilder.CommonPath, ArsenalPresetAssetBuilder.DemoPath, "Assets/Art/ArsenalBoundary" }, savesAllAssets: false);
             Command("Обновить общие карточки слотов", new[] { "Assets/Prefabs/Arsenal/Slots", "Assets/Art/ArsenalBoundary/WeaponCardBacking.mat" }, "Общий builder карточек затрагивает slot prefabs и backing material, используемые всеми станциями.", () => { ArsenalCardPrefabBuilder.Build(); return "Общие карточки обновлены."; }, savesAllAssets: false);
         }
+        /// <summary>Превью содержимого станций открытых сцен без Play (всегда включено): итог сборки и ручное обновление.</summary>
+        private static void DrawScenePreview()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                string report = string.IsNullOrEmpty(ArsenalStationScenePreview.LastReport) ? "Превью станций в сцене: ещё не собрано." : ArsenalStationScenePreview.LastReport;
+                EditorGUILayout.HelpBox(report, MessageType.None);
+                using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+                    if (GUILayout.Button("Обновить", GUILayout.Width(90))) ArsenalStationScenePreview.Rebuild();
+            }
+        }
+
         private void DrawStation(string path)
         {
             EditorGUILayout.LabelField(ArsenalEditorStatus.Capacity(path));

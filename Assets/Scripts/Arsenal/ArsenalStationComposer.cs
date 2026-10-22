@@ -107,6 +107,44 @@ namespace VrBattlegrounds.Arsenal
         }
     }
 
+    /// <summary>Место одного слота в плане станции: запись манифеста, ряд корпуса, раскладка слота и поза в ряду.</summary>
+    public sealed class ArsenalSlotPlacement
+    {
+        public ArsenalSlotManifest Manifest { get; }
+        /// <summary>Ряд корпуса; его префаб слота (<see cref="ArsenalSlotRow.SlotPrefab" />) и вид слота монтируются здесь.</summary>
+        public ArsenalSlotRow Row { get; }
+        /// <summary>Раскладка и внешний вид слота: позы оружия, магазина, карточки, опоры, коробка приёма.</summary>
+        public ArsenalPresentationSnapshot Presentation { get; }
+        /// <summary>Поза слота в локальных координатах ряда.</summary>
+        public Pose LocalPose { get; internal set; }
+
+        internal ArsenalSlotPlacement(ArsenalSlotManifest manifest, ArsenalSlotRow row, ArsenalPresentationSnapshot presentation)
+        {
+            Manifest = manifest;
+            Row = row;
+            Presentation = presentation;
+        }
+    }
+
+    /// <summary>
+    ///     План станции (<see cref="ArsenalStationComposer.PlanComposition" />): слоты в порядке манифеста. Только данные:
+    ///     объектов не создаёт и сцену не меняет.
+    /// </summary>
+    public sealed class ArsenalStationPlan
+    {
+        public ArsenalStationDescription Description { get; }
+        public ArsenalStationCompositionBinding Station { get; }
+        public IReadOnlyList<ArsenalSlotPlacement> Slots { get; }
+
+        internal ArsenalStationPlan(ArsenalStationDescription description, ArsenalStationCompositionBinding station,
+            IReadOnlyList<ArsenalSlotPlacement> slots)
+        {
+            Description = description;
+            Station = station;
+            Slots = slots;
+        }
+    }
+
     /// <summary>
     ///     Собирает сгенерированную станцию по описанию: связывает исполнителей и сам геометрии не знает.
     ///     Слот по префабу ряда и содержимому собирает <see cref="ArsenalSlotBuilder" />, место слота задаёт
@@ -123,7 +161,8 @@ namespace VrBattlegrounds.Arsenal
             new Dictionary<ArsenalStationCompositionBinding, ArsenalCompositionHandle>();
 
         /// <summary>
-        ///     Собирает выключенные слоты в порядке манифеста и вешает их в ряды корпуса; назначает ID ролей,
+        ///     Собирает выключенные слоты в порядке манифеста по плану <see cref="PlanComposition" /> и вешает их в ряды
+        ///     корпуса; назначает ID ролей,
         ///     готовит оружие и представление, устанавливает слоты в стену. Повтор с тем же описанием и запуском
         ///     возвращает тот же handle; другое описание или запуск при живой сборке — отказ.
         /// </summary>
@@ -147,39 +186,25 @@ namespace VrBattlegrounds.Arsenal
             if (wall == null || presets == null) throw new InvalidOperationException("ArsenalComposer.ShellIncomplete:" + station.StationKey);
             if (wall.SlotsInstalled) throw new InvalidOperationException("ArsenalComposer.SlotsAlreadyInstalled:" + station.StationKey);
             if (description.Slots.Count == 0) throw new InvalidOperationException("ArsenalComposer.NoSlots:" + station.StationKey);
-            ArsenalSlotRow[] rows = station.GetComponentsInChildren<ArsenalSlotRow>(true);
+            ArsenalStationPlan plan = PlanComposition(description, station);
 
             // Слоты рождаются под выключенным контейнером: ни один не проснётся до назначения ID.
             var staging = new GameObject("ArsenalSlotStaging");
             staging.SetActive(false);
-            var slots = new List<ArsenalSlotController>(description.Slots.Count);
+            var slots = new List<ArsenalSlotController>(plan.Slots.Count);
             try
             {
                 var assignments = new List<NetworkUxrIdentityAssignment>();
-                var presentations = new List<ArsenalPresentationSnapshot>(description.Slots.Count);
-                var rowSlots = new Dictionary<ArsenalSlotRow, List<ArsenalSlotController>>();
-                for (int i = 0; i < description.Slots.Count; i++)
+                var presentations = new List<ArsenalPresentationSnapshot>(plan.Slots.Count);
+                foreach (ArsenalSlotPlacement placement in plan.Slots)
                 {
-                    ArsenalSlotManifest manifest = description.Slots[i];
-                    if (manifest.Entry.NetworkIndex != i) throw new InvalidOperationException("ArsenalComposer.ManifestOrder:" + i);
-                    ArsenalSlotRow row = FindRow(rows, manifest.Entry.RowKey);
-                    if (row == null)
-                        throw new InvalidOperationException("ArsenalComposer.MissingRow:" + station.StationKey + ":" + manifest.Entry.RowKey);
-                    if (row.SlotPrefab == null) throw new InvalidOperationException("ArsenalComposer.RowWithoutSlotPrefab:" + row.name);
-                    // Раскладка слота — своя у оружия для вида слота этого ряда, иначе умолчание префаба слота;
-                    // внешний вид — стиль арсенала.
-                    ArsenalPresentationSnapshot presentation;
-                    try { presentation = ArsenalPresentationResolver.Resolve(manifest.Entry.WeaponResource, row.Zone, description.Style, row.SlotPrefab.DefaultLayout); }
-                    catch (InvalidOperationException ex) { throw new InvalidOperationException("ArsenalComposer.Presentation:" + manifest.Entry.LogicalSlotKey + ":" + ex.Message); }
-                    ArsenalSlotController slot = ArsenalSlotBuilder.Build(row.SlotPrefab, row.Zone, presentation, staging.transform,
-                        manifest.Entry, scope.Key, description.StationKey, assignments);
+                    ArsenalSlotController slot = ArsenalSlotBuilder.Build(placement.Row.SlotPrefab, placement.Row.Zone, placement.Presentation,
+                        staging.transform, placement.Manifest.Entry, scope.Key, description.StationKey, assignments);
                     slots.Add(slot);
-                    presentations.Add(presentation);
-                    if (!rowSlots.TryGetValue(row, out List<ArsenalSlotController> list)) rowSlots.Add(row, list = new List<ArsenalSlotController>());
-                    list.Add(slot);
+                    presentations.Add(placement.Presentation);
                 }
-                // Слоты каждого ряда — в порядке манифеста; ряд сам знает, где и с каким шагом их повесить.
-                foreach (KeyValuePair<ArsenalSlotRow, List<ArsenalSlotController>> pair in rowSlots) pair.Key.Arrange(pair.Value);
+                // Слоты — в позы плана: ряд рассчитал их по ширинам слотов в порядке манифеста.
+                for (int i = 0; i < slots.Count; i++) plan.Slots[i].Row.Mount(slots[i].transform, plan.Slots[i].LocalPose);
 
                 // Сначала всё, что можно откатить уничтожением слотов; необратимое — после.
                 NetworkUxrIdentity.PrepareGeneratedIdentities(assignments);
@@ -202,6 +227,50 @@ namespace VrBattlegrounds.Arsenal
             {
                 UnityEngine.Object.DestroyImmediate(staging);
             }
+        }
+
+        /// <summary>
+        ///     Расчёт размещения станции без создания объектов: для каждой записи манифеста — ряд корпуса, раскладка
+        ///     слота (своя у оружия для вида слота ряда, иначе умолчание префаба слота) и поза слота в ряду. Сцену и
+        ///     ассеты не меняет, Play Mode и сеть не нужны. Сборка (<see cref="PrepareComposition" />) создаёт слоты строго
+        ///     по этому плану; редакторское превью станций рисует по нему визуальные копии.
+        /// </summary>
+        public static ArsenalStationPlan PlanComposition(ArsenalStationDescription description, ArsenalStationCompositionBinding station)
+        {
+            if (description == null || station == null) throw new InvalidOperationException("ArsenalComposer.NullInput");
+            if (!description.Success) throw new InvalidOperationException("ArsenalComposer.DescriptionFailed:" + description.Failures.Count);
+            if (description.StationKey != station.StationKey) throw new InvalidOperationException("ArsenalComposer.StationKeyMismatch:" + station.StationKey);
+            if (description.Slots.Count == 0) throw new InvalidOperationException("ArsenalComposer.NoSlots:" + station.StationKey);
+            ArsenalSlotRow[] rows = station.GetComponentsInChildren<ArsenalSlotRow>(true);
+
+            var placements = new List<ArsenalSlotPlacement>(description.Slots.Count);
+            var rowSlots = new Dictionary<ArsenalSlotRow, List<int>>();
+            for (int i = 0; i < description.Slots.Count; i++)
+            {
+                ArsenalSlotManifest manifest = description.Slots[i];
+                if (manifest.Entry.NetworkIndex != i) throw new InvalidOperationException("ArsenalComposer.ManifestOrder:" + i);
+                ArsenalSlotRow row = FindRow(rows, manifest.Entry.RowKey);
+                if (row == null)
+                    throw new InvalidOperationException("ArsenalComposer.MissingRow:" + station.StationKey + ":" + manifest.Entry.RowKey);
+                if (row.SlotPrefab == null) throw new InvalidOperationException("ArsenalComposer.RowWithoutSlotPrefab:" + row.name);
+                // Раскладка слота — своя у оружия для вида слота этого ряда, иначе умолчание префаба слота;
+                // внешний вид — стиль арсенала.
+                ArsenalPresentationSnapshot presentation;
+                try { presentation = ArsenalPresentationResolver.Resolve(manifest.Entry.WeaponResource, row.Zone, description.Style, row.SlotPrefab.DefaultLayout); }
+                catch (InvalidOperationException ex) { throw new InvalidOperationException("ArsenalComposer.Presentation:" + manifest.Entry.LogicalSlotKey + ":" + ex.Message); }
+                placements.Add(new ArsenalSlotPlacement(manifest, row, presentation));
+                if (!rowSlots.TryGetValue(row, out List<int> list)) rowSlots.Add(row, list = new List<int>());
+                list.Add(i);
+            }
+            // Слоты каждого ряда — в порядке манифеста; ряд сам знает, где и с каким шагом их повесить.
+            foreach (KeyValuePair<ArsenalSlotRow, List<int>> pair in rowSlots)
+            {
+                var widths = new float[pair.Value.Count];
+                for (int i = 0; i < widths.Length; i++) widths[i] = pair.Key.SlotPrefab.SlotWidth;
+                Pose[] poses = pair.Key.SlotLocalPoses(widths);
+                for (int i = 0; i < poses.Length; i++) placements[pair.Value[i]].LocalPose = poses[i];
+            }
+            return new ArsenalStationPlan(description, station, placements.AsReadOnly());
         }
 
         /// <summary>Ряд записи по ключу; два ряда с одним ключом на станции — ошибка корпуса.</summary>

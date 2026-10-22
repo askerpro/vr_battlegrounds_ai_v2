@@ -95,14 +95,26 @@ namespace VrBattlegrounds.Arsenal
             var prefab = magazine ? slot.WeaponData.MagazinePrefab : slot.WeaponData.WeaponPrefab;
             // SDK reparent сохраняет worldScale. Возврат оружия не масштабирует его до anchor scale.
             // Pure root/drop compensation использует actual worldScale предмета, без TRS scale write.
-            var world = RootPose(prefab, slot.transform.TransformPoint(target.Position), slot.transform.rotation * target.Rotation,
-                item.lossyScale.x / prefab.transform.localScale.x);
+            var world = ItemWorldPose(slot.transform, prefab, target, item.lossyScale.x / prefab.transform.localScale.x);
             item.SetPositionAndRotation(world.Position, world.Rotation);
         }
 
-        public static void ApplyCard(ArsenalSlotController slot, Transform card, ArsenalPresentationSnapshot presentation)
+        /// <summary>
+        ///     Мировая поза корня предмета в слоте: drop-выравнивание префаба встаёт в позу раскладки
+        ///     <paramref name="target" /> (координаты слота <paramref name="slotFrame" />). Единый расчёт для выдачи и возврата
+        ///     предмета и для редакторского превью станций; <paramref name="frameScale" /> — мировой масштаб предмета
+        ///     относительно масштаба префаба (выданный предмет — 1).
+        /// </summary>
+        public static ArsenalPresentationPose ItemWorldPose(Transform slotFrame, GameObject prefab, ArsenalPresentationPose target, float frameScale = 1f) =>
+            RootPose(prefab, slotFrame.TransformPoint(target.Position), slotFrame.rotation * target.Rotation, frameScale);
+
+        public static void ApplyCard(ArsenalSlotController slot, Transform card, ArsenalPresentationSnapshot presentation) =>
+            ApplyCard(slot.transform, card, presentation);
+
+        /// <summary>Карточка — ребёнок слота в позе раскладки; та же поза для собранного слота и превью.</summary>
+        public static void ApplyCard(Transform slotFrame, Transform card, ArsenalPresentationSnapshot presentation)
         {
-            if (card.parent != slot.transform) card.SetParent(slot.transform, true);
+            if (card.parent != slotFrame) card.SetParent(slotFrame, true);
             card.SetLocalPositionAndRotation(presentation.CardTarget.Position, presentation.CardTarget.Rotation);
         }
 

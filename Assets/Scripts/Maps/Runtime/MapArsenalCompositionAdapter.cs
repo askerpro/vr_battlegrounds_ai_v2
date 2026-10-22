@@ -33,6 +33,19 @@ namespace VrBattlegrounds.Maps.Runtime
     }
 
     /// <summary>
+    /// Описание одной сгенерированной станции карты из тех же входов, что у запуска: ассортимент карты, каталог,
+    /// заказ оформления и поза станции в сцене. Чистый расчёт без сборки; его вызывают адаптер запуска и
+    /// редакторское превью станций, поэтому превью видит тот же состав, что игра.
+    /// </summary>
+    public static class MapArsenalStationDescriber
+    {
+        public static ArsenalStationDescription Describe(ArsenalStationCompositionBinding station, ArsenalPreset preset,
+            ArsenalCompositionCatalog catalog) =>
+            ArsenalStationResolver.ResolveDescription(ArsenalStationBuildInput.Capture(station.StationKey, preset, catalog,
+                MapArsenalCompositionAdapter.VisualRequest(station), MapArsenalCompositionAdapter.Placement(station)));
+    }
+
+    /// <summary>
     /// Адаптер генерируемых станций арсенала одного запуска карты (задача 7 плана map-runtime-bootstrap).
     /// Вызывает его только <see cref="MapBootstrap"/> — на сервере и на каждом клиенте одинаково, с одним
     /// <see cref="MapRunKey"/>; host вторую сборку не делает.
@@ -100,8 +113,7 @@ namespace VrBattlegrounds.Maps.Runtime
                     continue;
                 }
 
-                ArsenalStationDescription description = ArsenalStationResolver.ResolveDescription(
-                    ArsenalStationBuildInput.Capture(key, preset, catalog, VisualRequest(station), Placement(station)));
+                ArsenalStationDescription description = MapArsenalStationDescriber.Describe(station, preset, catalog);
                 if (!description.Success)
                 {
                     foreach (ArsenalCompositionFailure failure in description.Failures)

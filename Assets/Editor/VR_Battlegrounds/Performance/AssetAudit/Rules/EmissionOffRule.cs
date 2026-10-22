@@ -6,7 +6,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
     /// <summary>
     /// Эмиссия задана, но не рисуется (QPM-SHADER-006). Проверяет сохранённый ассет, а не намерение инструмента:
     /// (а) шейдер с эмиссией, <c>_EmissionColor</c> не чёрный, а GI-флаг без AnyEmissive (None/EmissiveIsBlack) — URP при
-    /// импорте/валидации выключает <c>_EMISSION</c>; (б) шейдер без эмиссии, а в сохранённых свойствах остались не чёрный
+    /// импорте/валидации выключает <c>_EMISSION</c>; EmissiveIsBlack с белым цветом без карты — остаток конвертации HDRP→URP,
+    /// не находка; (б) шейдер без эмиссии, а в сохранённых свойствах остались не чёрный
     /// <c>_EmissionColor</c> и карта <c>_EmissionMap</c> — свечение потеряно при смене шейдера (Unlit не в счёт: он и так не освещается).
     /// </summary>
     public sealed class EmissionOffRule : AuditRule, IMaterialAuditCheck
@@ -46,6 +47,13 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
             {
                 if ((material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.AnyEmissive) != 0)
                     return;
+                // EmissiveIsBlack — так URP хранит снятую галочку Emission. Белый цвет без карты — остаток конвертации HDRP→URP
+                // (у HDRP Lit _EmissionColor по умолчанию белый), а не потерянное свечение: M_Glass_Inst пака PostApocalypticTown,
+                // в HDRP-источнике _EmissiveColor чёрный. Подобранный цвет (WarmLampDiffuser, OwnerIndicator) или карта
+                // (дверная лампа, T_Door_lamp_EM) — признак задуманного свечения, такие материалы ловятся.
+                if ((material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) != 0 && !state.HasMap &&
+                    IsConversionWhite(state.Color))
+                    return;
                 context.Report(this, label, "_EmissionColor не чёрный, GI-флаг " + material.globalIlluminationFlags +
                                             " без AnyEmissive — URP выключает _EMISSION")
                     .WithGroup("emission-flag:" + material.globalIlluminationFlags)
@@ -66,6 +74,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
                 .WithMetric("shader", shaderName)
                 .WithMetric("giFlags", material.globalIlluminationFlags.ToString());
         }
+
+        private static bool IsConversionWhite(Color color) =>
+            Mathf.Abs(color.r - 1f) < 0.001f && Mathf.Abs(color.g - 1f) < 0.001f && Mathf.Abs(color.b - 1f) < 0.001f;
     }
 
     /// <summary>Эмиссия материала по сохранённым свойствам (они переживают смену шейдера) и по самому шейдеру.</summary>

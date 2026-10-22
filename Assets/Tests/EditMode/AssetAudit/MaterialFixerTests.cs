@@ -24,6 +24,8 @@ namespace VrBattlegrounds.Tests.AssetAudit
         private const string EmissionMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Door_lamp_EM.png";
         private const string BaseMap = "Assets/Art/Lobby/Imported/MilitaryCamp/Art/Textures/T_Door_lamp_BC.png";
         private const string LitName = "Universal Render Pipeline/Lit";
+        // HDRP/Lit: в URP-проекте шейдера нет (MI_TopLight пака RuralTown ссылается на него же).
+        private const string MissingShaderGuid = "6e4ae4064600d784cac1e41a9e6f2e59";
         private static readonly Color Warm = new Color(1f, .74f, .46f, 1f);
 
         // Рендереры живут в активной (временной) сцене test runner и удаляются в TearDown.
@@ -68,6 +70,56 @@ namespace VrBattlegrounds.Tests.AssetAudit
 
             Assert.That(context.RawFindings.SelectMany(f => f.FixTargets), Is.EquivalentTo(new[] { "blackFlag", "lost" }));
             Assert.That(context.RawFindings.Single(f => f.FixTargets.Contains("lost")).Message, Does.Contain("свечение потеряно"));
+        }
+
+        // Решение пользователя 2026-10-22 (lobby-material-fixes): M_Glass_Inst не светился в паке — EmissiveIsBlack с белым
+        // цветом без карты (остаток конвертации HDRP→URP) не находка; подобранный цвет (WarmLampDiffuser) и флаг None ловятся.
+        [Test]
+        public void EmissionOff_IgnoresConversionWhiteWithoutMap()
+        {
+            Material glassLeftover = Emissive(LitName, MaterialGlobalIlluminationFlags.EmissiveIsBlack);
+            glassLeftover.SetTexture("_EmissionMap", null);
+            glassLeftover.SetColor("_EmissionColor", Color.white);
+            Material warmNoMap = Emissive(LitName, MaterialGlobalIlluminationFlags.EmissiveIsBlack);
+            warmNoMap.SetTexture("_EmissionMap", null);
+            Material whiteNoFlag = Emissive(LitName, MaterialGlobalIlluminationFlags.None);
+            whiteNoFlag.SetTexture("_EmissionMap", null);
+            whiteNoFlag.SetColor("_EmissionColor", Color.white);
+            AuditContext context = Context();
+            var rule = new EmissionOffRule();
+
+            rule.CheckMaterial(glassLeftover, "glassLeftover", context);
+            rule.CheckMaterial(warmNoMap, "warmNoMap", context);
+            rule.CheckMaterial(whiteNoFlag, "whiteNoFlag", context);
+
+            Assert.That(context.RawFindings.SelectMany(f => f.FixTargets), Is.EquivalentTo(new[] { "warmNoMap", "whiteNoFlag" }));
+        }
+
+        // Приёмка пользователем 2026-10-22 (lobby-material-fixes): розовые HDRP Lit паков RuralTown/PostApocalypticTown
+        // переведены в Baked Lit по сохранённым свойствам, хотя в Lobby не рисуются (назначены только в FBX).
+        [Test]
+        public void BakedLitFixer_ConvertsPinkHdrpLit_EvenWhenNotDrawn()
+        {
+            string hdrp = SaveMissingShaderMaterial(Folder + "/TmpHdrpLit.mat", withHdrpBaseMap: true);
+            string unknown = SaveMissingShaderMaterial(Folder + "/TmpUnknownBroken.mat", withHdrpBaseMap: false);
+            List<AuditFinding> findings = Findings(new ShaderNotMobileRule(), hdrp, unknown);
+            Assert.That(findings.Select(f => f.Severity), Is.All.EqualTo(AuditSeverity.Critical));
+            Assert.That(findings.SelectMany(f => f.FixTargets), Is.EquivalentTo(new[] { hdrp, unknown }));
+            var fixer = new BakedLitMaterialFixer();
+
+            List<AuditFixAction> plan = fixer.Plan(findings);
+            Assert.That(plan.Select(a => a.AssetPath), Is.EqualTo(new[] { hdrp }), string.Join("\n", fixer.LastSkipped));
+            Assert.That(fixer.LastSkipped.Single(s => s.StartsWith(unknown)), Does.Contain("исходник неизвестен"));
+            fixer.Apply(plan);
+
+            Assert.That(plan.Single().Applied, Is.True, plan.Single().ToString());
+            var material = AssetDatabase.LoadAssetAtPath<Material>(hdrp);
+            Assert.That(material.shader.name, Is.EqualTo(BakedLitMaterialFixer.BakedLitName));
+            Assert.That(AssetDatabase.GetAssetPath(material.GetTexture("_BaseMap")), Is.EqualTo(BaseMap));
+            Assert.That(material.GetTextureScale("_BaseMap"), Is.EqualTo(new Vector2(2f, 2f)));
+            Assert.That(material.GetColor("_BaseColor"), Is.EqualTo(new Color(.8f, .8f, .8f, 1f)));
+            Assert.That(AssetImporter.GetAtPath(hdrp).userData, Does.Contain(MissingShaderGuid));
+            Assert.That(BakedLitMaterialFixer.Revert(Folder), Is.EqualTo(0), "исходного шейдера HDRP нет — откат пропускается");
         }
 
         [Test]
@@ -185,6 +237,31 @@ namespace VrBattlegrounds.Tests.AssetAudit
             Material material = Emissive(LitName, MaterialGlobalIlluminationFlags.EmissiveIsBlack);
             material.shader = Shader.Find(BakedLitMaterialFixer.BakedLitName);
             AssetDatabase.CreateAsset(material, path);
+            return path;
+        }
+
+        // Материал HDRP Lit, как в паках «HDRP+URP»: ссылка на шейдер HDRP, которого в проекте нет (InternalErrorShader).
+        private static string SaveMissingShaderMaterial(string path, bool withHdrpBaseMap)
+        {
+            string texEnvs = withHdrpBaseMap
+                ? "    - _BaseColorMap:\n        m_Texture: {fileID: 2800000, guid: " + AssetDatabase.AssetPathToGUID(BaseMap) + ", type: 3}\n" +
+                  "        m_Scale: {x: 2, y: 2}\n        m_Offset: {x: 0, y: 0}\n"
+                : "    - _SomeMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n";
+            string yaml =
+                "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n" +
+                "  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n" +
+                "  m_PrefabAsset: {fileID: 0}\n  m_Name: " + Path.GetFileNameWithoutExtension(path) + "\n" +
+                "  m_Shader: {fileID: 4800000, guid: " + MissingShaderGuid + ", type: 3}\n" +
+                "  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n" +
+                "  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n" +
+                "  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n" +
+                "    serializedVersion: 3\n    m_TexEnvs:\n" + texEnvs +
+                "    m_Ints: []\n    m_Floats:\n    - _AlphaCutoffEnable: 0\n    - _SurfaceType: 0\n" +
+                "    m_Colors:\n    - _BaseColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}\n    - _EmissiveColor: {r: 0, g: 0, b: 0, a: 1}\n" +
+                "  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n";
+            File.WriteAllText(path, yaml);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            Assume.That(AssetDatabase.LoadAssetAtPath<Material>(path).shader.name, Is.EqualTo(BakedLitMaterialFixer.ErrorShaderName));
             return path;
         }
 

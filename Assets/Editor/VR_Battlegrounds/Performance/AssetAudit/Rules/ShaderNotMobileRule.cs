@@ -49,8 +49,19 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
             string label = AuditAssetUtil.AssetLabel(material);
             if (shader == null || shader.name == "Hidden/InternalErrorShader")
             {
-                context.Report(this, label, "шейдер отсутствует или с ошибкой — материал рисуется розовым", AuditSeverity.Critical)
-                    .WithFix("Назначить мобильный шейдер URP или восстановить исходный шейдер пака.");
+                // HDRP Lit узнаётся по сохранённой _BaseColorMap: в URP-проекте шейдера HDRP нет (паки «HDRP+URP»).
+                bool hdrp = material.HasProperty("_BaseColorMap") || new SerializedObject(material)
+                    .FindProperty("m_SavedProperties.m_TexEnvs") is SerializedProperty envs && HasEntry(envs, "_BaseColorMap");
+                context.Report(this, label, (hdrp ? "материал HDRP Lit, шейдера HDRP в проекте нет" : "шейдер отсутствует или с ошибкой") +
+                                            " — там, где назначен, рисуется розовым", AuditSeverity.Critical)
+                    .WithGroup("shader:(ошибка)")
+                    .WithItem(label)
+                    .WithFixTarget(assetPath)
+                    .WithMetric("shader", shader != null ? shader.name : "(нет)")
+                    .WithMetric("hdrp", hdrp)
+                    .WithFix(hdrp
+                        ? "BakedLitMaterialFixer: HDRP Lit → Baked Lit по сохранённым свойствам (_BaseColorMap, _BaseColor)."
+                        : "Назначить мобильный шейдер URP или восстановить исходный шейдер пака.");
                 return;
             }
             if (IsAllowed(shader.name))
@@ -67,6 +78,16 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
                 .WithFixTarget(assetPath)
                 .WithMetric("shader", shader.name)
                 .WithMetric("passes", shader.passCount);
+        }
+
+        private static bool HasEntry(SerializedProperty entries, string name)
+        {
+            for (int i = 0; i < entries.arraySize; i++)
+            {
+                if (entries.GetArrayElementAtIndex(i).FindPropertyRelative("first")?.stringValue == name)
+                    return true;
+            }
+            return false;
         }
 
         private bool IsAllowed(string shaderName)

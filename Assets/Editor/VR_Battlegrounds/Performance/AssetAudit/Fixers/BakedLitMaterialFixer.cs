@@ -15,7 +15,11 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
     /// S_BasicTextured, S_Foliage и URP Lit статичного декора → URP Baked Lit (одна текстура + лайтмапа/пробы);
     /// с видимой эмиссией → URP Simple Lit без бликов. S_VPWorldAligned (трипланар пака MilitaryCamp) — только через
     /// <see cref="PlanWorldAligned"/>: перевод возможен, когда UV меша уже в метрах (box-UV, его зовёт BoxUvTargetScanner).
-    /// Исходный шейдер и перезаписанные поля хранятся в userData .meta материала — <see cref="Revert"/> возвращает их.
+    /// Розовые материалы HDRP Lit (шейдер HDRP не установлен — Hidden/InternalErrorShader) переводятся по сохранённым
+    /// HDRP-свойствам (_BaseColorMap, _BaseColor, _AlphaCutoff, _EmissiveColor): хуже розового не станет, поэтому такой
+    /// материал переводится и тогда, когда в открытых сценах не рисуется (назначен только в FBX через externalObjects).
+    /// Исходный шейдер и перезаписанные поля хранятся в userData .meta материала — <see cref="Revert"/> возвращает их
+    /// (кроме HDRP: исходного шейдера в проекте нет, откат пропускается с предупреждением; его HDRP-свойства остаются в материале).
     ///
     /// Аудит-путь (<see cref="Plan"/>) берёт материалы из находок и переводит только безопасные:
     /// ассет .mat в корнях окружения (<see cref="EnvironmentRoots"/>), не у другого писателя (<see cref="OwnedElsewhere"/>),
@@ -55,7 +59,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
         // Корни сцены с игровыми/интерактивными объектами — их материалы не трогаются.
         private static readonly string[] DynamicRoots = { "Gameplay" };
 
-        private enum SourceKind { None, BasicTextured, Foliage, UrpLit, WorldAligned }
+        public const string ErrorShaderName = "Hidden/InternalErrorShader";
+
+        private enum SourceKind { None, BasicTextured, Foliage, UrpLit, WorldAligned, HdrpLitMissing }
 
         private sealed class Planned
         {
@@ -70,6 +76,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
             public string marker;
             public string shaderName;
             public string shaderPath;
+            // GUID отсутствующего шейдера (HDRP Lit): Shader.Find его не вернёт, откат такого материала пропускается.
+            public string missingShaderGuid;
             public int renderQueue;
             public string[] keywords;
             public string renderType;
@@ -95,8 +103,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
         public override string RuleId => "shader.non-mobile";
         public override string Title => "Шейдер → Baked Lit / Simple Lit";
         public override string WhatChanges =>
-            "Материал окружения: шейдер пака или URP Lit → URP Baked Lit (с эмиссией — Simple Lit без бликов). Переносятся основная " +
-            "текстура, тайлинг, цвет, alpha clip; нормали, ORM, насыщенность/контраст отбрасываются. Исходное — в userData .meta (откат).";
+            "Материал окружения: шейдер пака, URP Lit или розовый HDRP Lit → URP Baked Lit (с эмиссией — Simple Lit без бликов). " +
+            "Переносятся основная текстура, тайлинг, цвет, alpha clip; нормали, ORM, насыщенность/контраст отбрасываются. " +
+            "Исходное — в userData .meta (откат; у HDRP Lit шейдера нет — откат пропускается).";
 
         /// <summary>Пропуски последнего плана: «путь — причина».</summary>
         public IReadOnlyList<string> LastSkipped => _skipped;
@@ -117,9 +126,11 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                 string skip = CommonSkip(path, material, out SourceKind kind);
                 if (skip == null && kind == SourceKind.WorldAligned)
                     skip = "world-aligned: сначала box-UV (Tools/VR Battlegrounds/Performance/Box UV/Scan And Apply)";
-                if (skip == null && !users.TryGetValue(material, out _))
+                bool drawn = users.TryGetValue(material, out List<Renderer> drawnBy);
+                // Розовый материал хуже любого перевода: не рисуется в открытых сценах — всё равно переводится.
+                if (skip == null && !drawn && kind != SourceKind.HdrpLitMissing)
                     skip = "не рисуется в открытых сценах — статичность не проверить";
-                if (skip == null && users[material].FirstOrDefault(IsDynamicUser) is Renderer dynamic)
+                if (skip == null && drawn && drawnBy.FirstOrDefault(IsDynamicUser) is Renderer dynamic)
                     skip = "используется нестатичным/игровым объектом: " + Describe(dynamic);
                 if (skip == null && (foreign ??= ForeignDependencies()).Contains(path))
                     skip = "используется вне открытых сцен (другие сцены сборки или префабы вне корней окружения)";
@@ -160,7 +171,7 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                     action.MarkFailed("действие не из последнего плана этого фиксера — перепланировать");
                 else if (material == null)
                     action.MarkFailed("нет материала");
-                else if (Classify(material.shader) != planned.Kind)
+                else if (Classify(material) != planned.Kind)
                     action.MarkFailed("шейдер изменился после плана: " + material.shader.name);
                 else
                 {
@@ -190,6 +201,11 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                 if (importer == null || string.IsNullOrEmpty(importer.userData) || !importer.userData.Contains(RevertMarker)) continue;
                 if (IsOwnedElsewhere(System.IO.Path.GetFileNameWithoutExtension(path))) continue;
                 RevertData data = JsonUtility.FromJson<RevertData>(importer.userData);
+                if (!string.IsNullOrEmpty(data.missingShaderGuid))
+                {
+                    GameLog.Perf.Warning($"[BakedLitMaterialFixer] {path} не возвращён: исходный шейдер {data.missingShaderGuid} (HDRP) не установлен.");
+                    continue;
+                }
                 var material = AssetDatabase.LoadAssetAtPath<Material>(path);
                 Shader shader = LoadShader(data.shaderName, data.shaderPath);
                 if (material == null || shader == null)
@@ -262,9 +278,11 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                 return "вне корней окружения";
             if (IsOwnedElsewhere(material.name))
                 return "другой писатель материала (QPM-SHADER-007)";
-            kind = Classify(material.shader);
+            kind = Classify(material);
             if (kind != SourceKind.None) return null;
             string shaderName = material.shader != null ? material.shader.name : "(нет)";
+            if (shaderName == ErrorShaderName)
+                return "шейдер с ошибкой, но в материале нет свойств HDRP Lit (_BaseColorMap) — исходник неизвестен";
             return shaderName == BakedLitName || shaderName == SimpleLitName ? "уже " + shaderName : "нет конвертера для шейдера " + shaderName;
         }
 
@@ -274,6 +292,12 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
             target = null;
             if (kind == SourceKind.UrpLit && (GetFloat(m, "_Surface") > 0.5f || m.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT")))
                 return "прозрачный";
+            if (kind == SourceKind.HdrpLitMissing)
+            {
+                if (SavedFloat(m, "_SurfaceType") > 0.5f) return "прозрачный (HDRP _SurfaceType)";
+                notes.Add("из HDRP Lit: шейдер HDRP не установлен");
+                if (SavedTexture(m, "_NormalMap", out _, out _) != null) notes.Add("normal map отброшена");
+            }
             if (kind == SourceKind.BasicTextured)
             {
                 if (GetFloat(m, "_UseWorldAligned") > 0.5f) return "world-aligned (нужен триплан или box-UV)";
@@ -337,9 +361,20 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                     offset = Vector2.zero;
                     if (m.HasProperty("_MainTint")) color = m.GetColor("_MainTint");
                     break;
+                case SourceKind.HdrpLitMissing:
+                    // У шейдера с ошибкой нет свойств: значения — из сохранённых свойств HDRP Lit.
+                    baseMap = SavedTexture(m, "_BaseColorMap", out scale, out offset);
+                    color = SavedColor(m, "_BaseColor", Color.white);
+                    cutoff = SavedFloat(m, "_AlphaCutoff", 0.5f);
+                    cull = SavedFloat(m, "_DoubleSidedEnable") > 0.5f ? 0f : 2f;
+                    emissionMap = SavedTexture(m, "_EmissiveColorMap", out _, out _);
+                    emissionColor = SavedColor(m, "_EmissiveColor", Color.black);
+                    break;
             }
 
             RevertData revert = CaptureRevert(m, cull);
+            if (planned.Kind == SourceKind.HdrpLitMissing)
+                revert.missingShaderGuid = SerializedShaderGuid(path) ?? "?";
 
             // Альфа оттенка в материалах пакетов часто 0 (в графе не используется); в Baked Lit она умножает
             // альфу текстуры и полностью отсекла бы cutout-материалы.
@@ -422,7 +457,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
         };
 
         private static bool IsCutout(Material m, SourceKind kind) =>
-            kind == SourceKind.Foliage || m.IsKeywordEnabled("_ALPHATEST_ON");
+            kind == SourceKind.Foliage || m.IsKeywordEnabled("_ALPHATEST_ON") ||
+            (kind == SourceKind.HdrpLitMissing && SavedFloat(m, "_AlphaCutoffEnable") > 0.5f);
 
         // Эмиссия с чёрным цветом (OutsideGravel, CheckpointRoad) ничего не даёт — такой материал идёт в Baked Lit.
         private static bool IsEmissive(Material m, SourceKind kind)
@@ -433,13 +469,19 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
                     return GetFloat(m, "_UseEmissive") > 0.5f && m.HasProperty("_EmissiveColor") && m.GetColor("_EmissiveColor").maxColorComponent > 0.001f;
                 case SourceKind.UrpLit:
                     return m.IsKeywordEnabled("_EMISSION") && m.HasProperty("_EmissionColor") && m.GetColor("_EmissionColor").maxColorComponent > 0.001f;
+                case SourceKind.HdrpLitMissing:
+                    return SavedColor(m, "_EmissiveColor", Color.black).maxColorComponent > 0.001f;
                 default:
                     return false;
             }
         }
 
-        private static SourceKind Classify(Shader shader)
+        private static SourceKind Classify(Material material)
         {
+            Shader shader = material.shader;
+            // Отсутствующий шейдер Unity подменяет на InternalErrorShader; HDRP Lit узнаётся по сохранённой _BaseColorMap.
+            if ((shader == null || shader.name == ErrorShaderName) && HasSaved(material, "m_TexEnvs", "_BaseColorMap"))
+                return SourceKind.HdrpLitMissing;
             if (shader == null) return SourceKind.None;
             switch (shader.name)
             {
@@ -524,5 +566,43 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
         }
 
         private static float GetFloat(Material m, string name, float fallback = 0f) => m.HasProperty(name) ? m.GetFloat(name) : fallback;
+
+        // Сохранённые свойства (m_SavedProperties) переживают смену и потерю шейдера — по ним читается HDRP Lit.
+        private static SerializedProperty FindSaved(SerializedObject serialized, string array, string name)
+        {
+            SerializedProperty entries = serialized.FindProperty("m_SavedProperties." + array);
+            for (int i = 0; entries != null && i < entries.arraySize; i++)
+            {
+                SerializedProperty entry = entries.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("first")?.stringValue == name)
+                    return entry.FindPropertyRelative("second");
+            }
+            return null;
+        }
+
+        private static bool HasSaved(Material m, string array, string name) => FindSaved(new SerializedObject(m), array, name) != null;
+
+        private static float SavedFloat(Material m, string name, float fallback = 0f) =>
+            FindSaved(new SerializedObject(m), "m_Floats", name)?.floatValue ?? fallback;
+
+        private static Color SavedColor(Material m, string name, Color fallback) =>
+            FindSaved(new SerializedObject(m), "m_Colors", name)?.colorValue ?? fallback;
+
+        private static Texture SavedTexture(Material m, string name, out Vector2 scale, out Vector2 offset)
+        {
+            SerializedProperty env = FindSaved(new SerializedObject(m), "m_TexEnvs", name);
+            scale = env?.FindPropertyRelative("m_Scale").vector2Value ?? Vector2.one;
+            offset = env?.FindPropertyRelative("m_Offset").vector2Value ?? Vector2.zero;
+            return env?.FindPropertyRelative("m_Texture").objectReferenceValue as Texture;
+        }
+
+        /// <summary>GUID шейдера из текста .mat: ссылку на отсутствующий шейдер API не отдаёт.</summary>
+        private static string SerializedShaderGuid(string path)
+        {
+            string text = System.IO.File.ReadAllText(path);
+            System.Text.RegularExpressions.Match match =
+                System.Text.RegularExpressions.Regex.Match(text, @"m_Shader: \{fileID: -?\d+, guid: ([0-9a-f]{32})");
+            return match.Success ? match.Groups[1].Value : null;
+        }
     }
 }

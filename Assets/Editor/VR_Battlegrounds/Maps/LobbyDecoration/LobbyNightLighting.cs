@@ -48,11 +48,11 @@ namespace VrBattlegrounds.EditorTools
         private const string TentLampLight = "InteriorWarmLight", TentFillLight = "InteriorFillLight", TentAccentLight = "InteriorAccentLight";
         private const float TentLightLevel = .585f;
         private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
-        // Фон тише акцентов: ×0.8 по отзыву «чуть уменьшить эмбиент, чтобы акценты были контрастнее» (2026-10-22).
-        private const float TentFillIntensity = 1.52f, TentFillRange = 10f;
+        // Фон тише акцентов: ×0.8, затем ×0.7 по отзывам «уменьшить эмбиент, чтобы акценты были контрастнее» (2026-10-22).
+        private const float TentFillIntensity = 1.06f, TentFillRange = 10f;
         // Акцент — прожектор вниз под плафоном: чёткое пятно на полу точки стрельбы, а не подсвет кровли (контраст с фоном
-        // был слабым при точечной лампе 9, пользователь 2026-10-22).
-        private const float TentAccentIntensity = 18f, TentAccentRange = 4.5f, TentAccentSpotAngle = 80f, TentAccentInnerAngle = 50f;
+        // был слабым, пользователь 2026-10-22: яркость акцента оставить, снизить фон).
+        private const float TentAccentIntensity = 9f, TentAccentRange = 4.5f, TentAccentSpotAngle = 80f, TentAccentInnerAngle = 50f;
         // Круги фонового света: нейтральный тёплый белый — оттенок WarmLamp у них читался коричневым (пользователь 2026-10-22).
         private static readonly Color TentFillColor = new Color(1f, .88f, .74f);
 

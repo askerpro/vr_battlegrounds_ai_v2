@@ -12,7 +12,10 @@
       "id": "work",
       "writes": [
         "tasks/range-photo-headless/**",
-        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs"
+        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
+        "Assets/Tests/EditMode/Maps/ShootingRangePhotoCaptureTests.cs",
+        "Assets/Tests/EditMode/Maps/ShootingRangePhotoCaptureTests.cs.meta",
+        "experts/level-design/journal/2026-10-22-range-photo-headless.md"
       ],
       "after": [],
       "needs": []

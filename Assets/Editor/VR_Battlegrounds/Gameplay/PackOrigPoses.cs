@@ -466,8 +466,21 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             if (canonicalize)
             {
-                NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
-                UxrUniqueIdPersister.Normalize(prefabPath);
+                // Только что собранный префаб ещё не в устоявшемся виде Unity: первое же сохранение (применение объектов
+                // Orig) пересериализует и чужие компоненты (AudioSource, MonoBehaviour), и сверка YAML отвергла бы запись.
+                // Пересохранить до устойчивых байтов, затем канон _assetId и флагов UXR.
+                for (int pass = 0; pass < 3; pass++)
+                {
+                    NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
+                    UxrUniqueIdPersister.Normalize(prefabPath);
+                    byte[] before = File.ReadAllBytes(prefabPath);
+                    GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+                    try { PrefabUtility.SaveAsPrefabAsset(contents, prefabPath); }
+                    finally { PrefabUtility.UnloadPrefabContents(contents); }
+                    NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
+                    UxrUniqueIdPersister.Normalize(prefabPath);
+                    if (File.ReadAllBytes(prefabPath).SequenceEqual(before)) break;
+                }
             }
 
             byte[] original = File.ReadAllBytes(prefabPath);

@@ -947,6 +947,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Записи хвата аватаров магазина — только от базы; своих сборка не добавляет (перенос — WeaponGripCarryOver).
 
             ImpactSoundInstaller.Apply(mag, true);
+            // Звук вставки задаёт AnchorSound гнезда; свой звук размещения боеприпаса (MagPlace донора) дал бы двойной.
+            foreach (var audio in mag.GetComponentsInChildren<UltimateXR.Audio.UxrAudioManipulation>(true))
+            {
+                var place = new SerializedObject(audio);
+                place.FindProperty("_audioOnPlace._clip").objectReferenceValue = null;
+                place.ApplyModifiedPropertiesWithoutUndo();
+            }
+            // Подсветка магазина Hands — в префабе до сборки оружия: установщик подсветки оружия переиспользует её во
+            // вложенном экземпляре, иначе там две GrabHighlight (одна от экземпляра, вторая от префаба).
+            // KINEMATION ставит её позже сам (KinemationFixReview.ApplyMagazine, у R08 — на MechanismVisual).
+            if (!(pack is KinemationWeapon)) WeaponInteractionInstaller.ApplyMagazine(mag);
             // Любая последующая сборка должна сохранять защиту магазина от поздней
             // привязки склада после уже выполненного захвата/броска.
             if (mag.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>() == null)

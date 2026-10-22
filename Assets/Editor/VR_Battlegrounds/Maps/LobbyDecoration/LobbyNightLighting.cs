@@ -50,7 +50,9 @@ namespace VrBattlegrounds.EditorTools
         private const float TentLampIntensity = 1.05f, TentLampRange = 8f;
         // Фон тише акцентов: ×0.8 по отзыву «чуть уменьшить эмбиент, чтобы акценты были контрастнее» (2026-10-22).
         private const float TentFillIntensity = 1.52f, TentFillRange = 10f;
-        private const float TentAccentIntensity = 9f, TentAccentRange = 4f;
+        // Акцент — прожектор вниз под плафоном: чёткое пятно на полу точки стрельбы, а не подсвет кровли (контраст с фоном
+        // был слабым при точечной лампе 9, пользователь 2026-10-22).
+        private const float TentAccentIntensity = 18f, TentAccentRange = 4.5f, TentAccentSpotAngle = 80f, TentAccentInnerAngle = 50f;
         // Круги фонового света: нейтральный тёплый белый — оттенок WarmLamp у них читался коричневым (пользователь 2026-10-22).
         private static readonly Color TentFillColor = new Color(1f, .88f, .74f);
 
@@ -406,7 +408,15 @@ namespace VrBattlegrounds.EditorTools
                 // TentAccent — яркое пятно над точкой акцента; в запечённой ночи runtime-стоимость любого числа ламп — ноль.
                 else if (name == TentLampLight) { Warm(light, bake, TentLampIntensity * TentLightLevel, TentLampRange); if (bake) baked++; else realtime++; }
                 else if (name == TentFillLight) { Warm(light, bake, TentFillIntensity * TentLightLevel, TentFillRange); light.color = TentFillColor; if (bake) baked++; else realtime++; }
-                else if (name == TentAccentLight) { Warm(light, bake, TentAccentIntensity * TentLightLevel, TentAccentRange); if (bake) baked++; else realtime++; }
+                else if (name == TentAccentLight)
+                {
+                    Warm(light, bake, TentAccentIntensity * TentLightLevel, TentAccentRange);
+                    light.type = LightType.Spot;
+                    light.spotAngle = TentAccentSpotAngle;
+                    light.innerSpotAngle = TentAccentInnerAngle;
+                    light.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    if (bake) baked++; else realtime++;
+                }
                 else if (name == "ExteriorWarmLight" || name == "CanopyWarmLight")
                 {
                     if (SnapToFixture(light, environment, log)) snapped++;

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "updated": "2026-10-20",
-  "baseSha": "2d2e7becf9dcb90317e5a408cd27a6b12b9116fc",
-  "source": "heavy --editmode also на worker, аренда 894 (2026-10-20): 2895 тестов, 35 красных; совпадает с базой этапа 1 (43332888b)",
+  "updated": "2026-10-22",
+  "baseSha": "e29417d5d4c1f3caf24b015ce223a5b0887617f9",
+  "source": "heavy --editmode also на кандидате e2e-series (20261022-070345, origin/dev 6f77bfa08): 2930 тестов, 19 красных; 18 GrabPoseCoverage позеленели, 2 новых пришли с dev",
   "tests": [
     {
       "name": "VrBattlegrounds.Tests.Arsenal.ArsenalMapGeometryTests.WalletAndDogTagAreVisibleAndEquipmentPathIsClear(\"Assets/Scenes/Maps/TestMap1.unity\",8)",
@@ -45,6 +45,10 @@
       "reason": "выстрел: повтор у наблюдателя"
     },
     {
+      "name": "VrBattlegrounds.Tests.Prefabs.GameTagsTests.Prefabs_TagsMatchRules",
+      "reason": "регрессия dev: теги Untagged у AK105/Mk14/MP5K (починка Apply Game Tags), weapon-system"
+    },
+    {
       "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTagPanel, MEF_cyborg_hands_Player)",
       "reason": "хваты: покрытие поз хвата аватаров"
     },
@@ -57,76 +61,8 @@
       "reason": "хваты: покрытие поз хвата аватаров"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_NativeProbe_b1bbb91d, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_NativeProbe_b1bbb91d, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_NativeProbe_b1bbb91d, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_SightReview, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_SightReview, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_SightReview, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_SightReview, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_SightReview, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_SightReview, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_SightReview, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_SightReview, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_SightReview, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_SightReview, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_SightReview, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_SightReview, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_SightReview, MEF_cyborg_hands_Player)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_SightReview, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_SightReview, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
+      "name": "VrBattlegrounds.Tests.Prefabs.HandsPackWeaponTests.Детали_стоят_как_в_паке(Scar)",
+      "reason": "регрессия dev: детали Scar повёрнуты на 90° после пересборки стволов, weapon-system"
     },
     {
       "name": "VrBattlegrounds.Tests.Prefabs.KinemationWeaponTests.Лишних_патронов_нет_и_треугольники_в_бюджете(R08)",

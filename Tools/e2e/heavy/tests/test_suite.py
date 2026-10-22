@@ -28,7 +28,9 @@ class SuiteTests(unittest.TestCase):
         suite = S.load("default")
         chosen = {s.name: s.topology for s in S.select(suite, "editor")}
         self.assertEqual(chosen, {"scripted-input-smoke": "S+1", "scripted-wall-purchase": "S+2",
-                                  "scripted-combat-hit": "S+2"})
+                                  "scripted-combat-hit": "S+2", "scripted-combat-round": "S+2",
+                                  "scripted-combat-next-round": "S+2", "scripted-admin-pause": "S+2",
+                                  "scripted-series-next-map": "S+2", "scripted-series-stop": "S+2"})
 
     def test_defaults_apply_and_scenario_overrides(self):
         smoke, purchase = parse().scenarios

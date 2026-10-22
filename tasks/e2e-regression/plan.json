@@ -72,6 +72,23 @@
         }
       ],
       "needs": []
+    },
+    {
+      "id": "suite-1",
+      "writes": [
+        "tasks/e2e-regression/**",
+        "Tools/e2e/suites/default.json",
+        "Tools/e2e/editmode-known-red.json",
+        "Tools/e2e/heavy/tests/test_suite.py"
+      ],
+      "after": [
+        {
+          "task": "e2e-regression",
+          "stage": "docs-3",
+          "state": "merged"
+        }
+      ],
+      "needs": []
     }
   ]
 }

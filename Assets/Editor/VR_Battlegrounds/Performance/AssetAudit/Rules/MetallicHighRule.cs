@@ -9,7 +9,9 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
     /// Металличность выше потолка Quest (QPM-SHADER-008). URP Lit в metallic-режиме: с <c>_METALLICSPECGLOSSMAP</c>
     /// металличность — канал R карты <c>_MetallicGlossMap</c> (как его видит шейдер: при sRGB-импорте с гамма-декодированием),
     /// <c>_Metallic</c> игнорируется; без карты — <c>_Metallic</c>. Карта читается с GPU (импортированная текстура не читаема
-    /// с CPU), оценка — 95-й перцентиль R.
+    /// с CPU). Ловится карта, где «чистый металл» (R &gt; 0.8) занимает не меньше половины площади и 95-й перцентиль выше
+    /// потолка: бинарные маски пака Hands чернели; градиентные карты Kinemation выглядели лучше без правки (пользователь
+    /// в шлеме 2026-10-22) и под правило не попадают.
     /// </summary>
     public sealed class MetallicHighRule : AuditRule, IMaterialAuditCheck
     {
@@ -18,6 +20,12 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
 
         [AuditThreshold("Допуск сверх потолка (сжатие и фильтрация карты)")]
         public float Tolerance = 0.03f;
+
+        [AuditThreshold("Значение R карты, с которого тексель — «чистый металл»")]
+        public float PureMetal = 0.8f;
+
+        [AuditThreshold("Доля «чистого металла» на карте, с которой она ловится (градиентные карты — ниже)")]
+        public float MinPureMetalFraction = 0.5f;
 
         private readonly Dictionary<Texture, MetallicMapStats> _maps = new Dictionary<Texture, MetallicMapStats>();
 
@@ -33,7 +41,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
 
         public override string Evidence => AuditEvidence.LobbyWeaponReflection +
             " Замер оружия 2026-10-22: у 14 из 84 материалов средняя металличность 0,57–0,86, карты пака Hands почти бинарные " +
-            "(медиана R 1.0) при альбедо металла 0,08–0,30; пользователь в шлеме: револьвер «слишком металлический».";
+            "(медиана R 1.0) при альбедо металла 0,08–0,30; пользователь в шлеме: револьвер «слишком металлический». " +
+            "Потолок для всех карт сделал Kinemation «пластиковым» — градиентные карты (доля R > 0,8 ≈ 0) исключены.";
 
         public override string FixHint =>
             "Фиксер MetallicCapFixer: копия карты металличности с R × потолок (гладкость в A сохраняется, импорт линейный) " +
@@ -51,17 +60,19 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
             if (map != null && material.IsKeywordEnabled("_METALLICSPECGLOSSMAP"))
             {
                 if (!_maps.TryGetValue(map, out MetallicMapStats stats))
-                    _maps[map] = stats = MetallicMapStats.Measure(map);
-                if (stats.P95 <= MaxMetallic + Tolerance)
+                    _maps[map] = stats = MetallicMapStats.Measure(map, PureMetal);
+                if (stats.P95 <= MaxMetallic + Tolerance || stats.PureFraction < MinPureMetalFraction)
                     return;
                 string texturePath = AssetDatabase.GetAssetPath(map);
                 var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
-                context.Report(this, label, "металличность по карте до " + stats.P95.ToString("0.00") + " (потолок " + MaxMetallic.ToString("0.0#") + ")")
+                context.Report(this, label, "«чистый металл» на " + (stats.PureFraction * 100).ToString("0") + " % карты, до " + stats.P95.ToString("0.00") +
+                        " (потолок " + MaxMetallic.ToString("0.0#") + ")")
                     .WithGroup("metallic-map")
                     .WithItem(label + " ← " + texturePath)
                     .WithFixTarget(assetPath)
                     .WithMetric("p95", stats.P95)
                     .WithMetric("mean", stats.Mean)
+                    .WithMetric("pureMetalFraction", stats.PureFraction)
                     .WithMetric("map", texturePath)
                     .WithMetric("mapSrgb", importer != null && importer.sRGBTexture);
                 return;
@@ -83,27 +94,32 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Rules
     /// </summary>
     internal readonly struct MetallicMapStats
     {
-        private MetallicMapStats(float mean, float p95)
+        private MetallicMapStats(float mean, float p95, float pureFraction)
         {
             Mean = mean;
             P95 = p95;
+            PureFraction = pureFraction;
         }
 
         public float Mean { get; }
         public float P95 { get; }
+        public float PureFraction { get; }
 
-        public static MetallicMapStats Measure(Texture map)
+        public static MetallicMapStats Measure(Texture map, float pureMetal)
         {
             Color[] pixels = ReadLinear(map, 256);
             var r = new float[pixels.Length];
             double sum = 0;
+            int pure = 0;
             for (int i = 0; i < pixels.Length; i++)
             {
                 r[i] = pixels[i].r;
                 sum += r[i];
+                if (r[i] > pureMetal) pure++;
             }
             Array.Sort(r);
-            return new MetallicMapStats((float)(sum / Math.Max(1, r.Length)), r.Length > 0 ? r[(int)(r.Length * 0.95f)] : 0f);
+            int n = Math.Max(1, r.Length);
+            return new MetallicMapStats((float)(sum / n), r.Length > 0 ? r[(int)(r.Length * 0.95f)] : 0f, (float)pure / n);
         }
 
         /// <summary>Пиксели текстуры в линейных значениях шейдера, размер не больше <paramref name="maxSize"/>.</summary>

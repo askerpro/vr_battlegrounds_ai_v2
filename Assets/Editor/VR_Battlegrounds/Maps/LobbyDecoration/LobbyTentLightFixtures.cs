@@ -14,7 +14,7 @@ namespace VrBattlegrounds.EditorTools
     /// <summary>
     /// Светильники шатра Lobby для ровного базового света и акцентов (задача lobby-reflections, решение пользователя
     /// 2026-10-22: «по всему шатру маленькие тусклые источники равномерно, над точками акцента — большая яркая лампа»;
-    /// фон — плоские светящиеся круги под кровлей, акценты — длинные плафоны у арсенала и над точками стрельбы у торцов).
+    /// фон — плоские светящиеся круги под кровлей, акценты — длинные плафоны над точками стрельбы у торцов).
     /// Владеет группой <c>ArmoryRangeZone/OpenTent/TentLightFixtures</c> и пересобирает её целиком при каждом запуске.
     /// Ставит только геометрию и сокеты «LightingSocket__&lt;светильник&gt;__CommonLightingOwner»: источники света, их
     /// яркость, пробы и GI задаёт ночной пресет (<see cref="LobbyNightLighting"/>).
@@ -59,9 +59,8 @@ namespace VrBattlegrounds.EditorTools
             new Vector2(7.3f, -3.0f), new Vector2(7.3f, 3.0f),
         };
 
-        // Акценты — длинные плафоны SM_Lamp_long: над стеной арсенала CT вдоль стены перед её корпусом (корпус до X −6.09,
-        // высота 4.05) и поперёк шатра у северного и южного торцов над точками стрельбы (кровля до |Z| 7.48).
-        private const float AccentArsenalX = -5.75f, AccentArsenalTopY = 3.45f;
+        // Акценты — длинные плафоны SM_Lamp_long поперёк шатра у северного и южного торцов над точками стрельбы (кровля до
+        // |Z| 7.48). Над арсеналом плафона нет: акцент арсенала — подсветка слотов (отдельная задача, решение пользователя 2026-10-22).
         private const float AccentRangeZ = 6.9f, AccentRangeTopY = 3.9f;
 
         [MenuItem(MenuPath)]
@@ -76,9 +75,6 @@ namespace VrBattlegrounds.EditorTools
                 ?? throw new InvalidOperationException("В Lobby нет корня Environment.");
             var zone = environment.transform.Find("ArmoryRangeZone") ?? throw new InvalidOperationException("Нет Environment/ArmoryRangeZone.");
             var tent = zone.Find("OpenTent") ?? throw new InvalidOperationException("Нет ArmoryRangeZone/OpenTent.");
-            var arsenal = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<MonoBehaviour>(true))
-                .FirstOrDefault(c => c != null && c.GetType().Name == "ArsenalStationAnchor")
-                ?? throw new InvalidOperationException("Нет ArsenalStationAnchor — акцент арсенала не к чему привязать.");
 
             var steel = Load(SteelPath);
             var bulb = DiscMaterial();
@@ -114,12 +110,9 @@ namespace VrBattlegrounds.EditorTools
 
                 for (int i = 0; i < FillPoints.Length; i++)
                     FillDisc(root, FillPrefix + (i + 1), FillPoints[i], bulb);
-                Vector3 anchor = arsenal.transform.position;
-                AccentLamp(root, AccentPrefix + "ArsenalCT", lampLong, new Vector3(AccentArsenalX, AccentArsenalTopY, anchor.z), 0f, steel);
                 AccentLamp(root, AccentPrefix + "RangeNorth", lampLong, new Vector3(0f, AccentRangeTopY, AccentRangeZ), 90f, steel);
                 AccentLamp(root, AccentPrefix + "RangeSouth", lampLong, new Vector3(0f, AccentRangeTopY, -AccentRangeZ), 90f, steel);
-                log.AppendLine("Круги фонового света: " + FillPoints.Length + "; акценты: стена арсенала CT (z " + anchor.z.ToString("F2") +
-                    "), точки стрельбы север/юг.");
+                log.AppendLine("Круги фонового света: " + FillPoints.Length + "; акценты: точки стрельбы север/юг.");
                 Undo.CollapseUndoOperations(group);
             }
             catch

@@ -1,0 +1,22 @@
+{
+  "task_id": "broker-cmd-timeouts",
+  "owner": "coordination-maintenance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/broker-cmd-timeouts",
+  "base_sha": "233e9691a436a5fe3deda75e68ee101ce22a1b8a",
+  "doc_path": "tasks/broker-cmd-timeouts/Readme.md",
+  "title": "Длинный таймаут для begin/finish/recover/publish-base",
+  "branch": "task/broker-cmd-timeouts",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/broker-cmd-timeouts/**",
+        "AGENTS.md",
+        ".agents/rules/unity_sharing.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

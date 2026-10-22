@@ -464,96 +464,51 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (PrefabStageUtility.GetCurrentPrefabStage()?.assetPath == prefabPath)
                 throw new InvalidOperationException("префаб открыт в Prefab Mode — закройте его и повторите");
 
-            if (canonicalize)
-            {
-                // Только что собранный префаб ещё не в устоявшемся виде Unity: первое же сохранение (применение объектов
-                // Orig) пересериализует и чужие компоненты (AudioSource, MonoBehaviour), и сверка YAML отвергла бы запись.
-                // Пересохранить до устойчивых байтов, затем канон _assetId и флагов UXR.
-                for (int pass = 0; pass < 3; pass++)
-                {
-                    NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
-                    UxrUniqueIdPersister.Normalize(prefabPath);
-                    byte[] before = File.ReadAllBytes(prefabPath);
-                    GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
-                    try { PrefabUtility.SaveAsPrefabAsset(contents, prefabPath); }
-                    finally { PrefabUtility.UnloadPrefabContents(contents); }
-                    NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
-                    UxrUniqueIdPersister.Normalize(prefabPath);
-                    if (File.ReadAllBytes(prefabPath).SequenceEqual(before)) break;
-                }
-            }
+            // Без записи: нужны ли изменения.
+            GameObject probe = PrefabUtility.LoadPrefabContents(prefabPath);
+            int created, changed, same;
+            try { PlaceSnaps(probe, points, problems, out created, out changed, out same); }
+            finally { PrefabUtility.UnloadPrefabContents(probe); }
+            if (created == 0 && changed == 0) return $"snap-точки без изменений ({same})";
 
             byte[] original = File.ReadAllBytes(prefabPath);
-            Scene scene = EditorSceneManager.NewPreviewScene();
             bool applied = false;
             try
             {
-                var root = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath), scene);
-                Transform grabs = root.transform.Find("MeshContainer/Grabs") ?? root.transform.Find("Grabs") ?? root.transform;
-                Transform orig = grabs.Find(SnapFolder);
-                var created = new HashSet<GameObject>();
-                var changed = new List<Transform>();
-                int same = 0;
-
-                foreach (OrigPoint point in points)
-                {
-                    Transform body = root.transform.Find(point.BodyPath);
-                    string bodyProblem = body == null ? $"нет детали {point.BodyPath}" : point.CheckBody?.Invoke(body);
-                    if (bodyProblem != null)
-                    {
-                        problems[point.Name] = bodyProblem;
-                        continue;
-                    }
-
-                    foreach (var (side, _, sample) in point.SnapSides())
-                    {
-                        sample.PalmInBody(side, body.lossyScale.x / sample.BodyScale, out Vector3 position, out Quaternion rotation);
-                        Vector3 worldPosition = body.position + body.rotation * position;
-                        Quaternion worldRotation = body.rotation * rotation;
-
-                        orig = orig != null ? orig : Child(grabs, SnapFolder, created);
-                        Transform node = Child(Child(orig, point.Name, created), side.ToString(), created);
-                        if (created.Contains(node.gameObject))
-                        {
-                            node.SetPositionAndRotation(worldPosition, worldRotation);
-                        }
-                        else if (!SamePose(root.transform, node, worldPosition, worldRotation))
-                        {
-                            node.SetPositionAndRotation(worldPosition, worldRotation);
-                            changed.Add(node);
-                        }
-                        else
-                        {
-                            same++;
-                        }
-                    }
-                }
-
-                // Корни добавленного: объекты, чей родитель уже был в префабе.
-                List<GameObject> added = created.Where(g => !created.Contains(g.transform.parent.gameObject)).ToList();
-                if (added.Count == 0 && changed.Count == 0) return $"snap-точки без изменений ({same})";
-
                 applied = true;
-                foreach (GameObject go in added) PrefabUtility.ApplyAddedGameObject(go, prefabPath, InteractionMode.AutomatedAction);
-                foreach (Transform node in changed) PrefabUtility.ApplyObjectOverride(node, prefabPath, InteractionMode.AutomatedAction);
-                AssetDatabase.SaveAssetIfDirty(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath));
+                // Запись — тем же путём, что сохранение префаба (LoadPrefabContents → SaveAsPrefabAsset), от устоявшегося
+                // вида Unity: применение добавленных объектов к экземпляру в preview-сцене пересериализовало чужие
+                // компоненты (AudioSource ImpactAudio у магазинов набора Hands), и сверка YAML отвергала запись. Канон
+                // _assetId и флагов UXR — после каждого сохранения.
+                Converge(prefabPath);
+                string baseline = File.ReadAllText(prefabPath);
+                GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+                try
+                {
+                    PlaceSnaps(root, points, problems, out created, out changed, out same);
+                    PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                }
+                finally { PrefabUtility.UnloadPrefabContents(root); }
+                Canonicalize(prefabPath);
 
+                Transform grabs = GrabsOf(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath).transform);
+                Transform orig = grabs.Find(SnapFolder);
                 var free = new HashSet<long>();
                 foreach (Transform t in orig.GetComponentsInChildren<Transform>(true))
                 {
-                    AddFileId(free, t, prefabPath);
-                    AddFileId(free, t.gameObject, prefabPath);
+                    AddFileId(free, t);
+                    AddFileId(free, t.gameObject);
                 }
 
                 var additive = new HashSet<long>();
-                AddFileId(additive, grabs, prefabPath);
+                AddFileId(additive, grabs);
 
                 string written = File.ReadAllText(prefabPath);
-                if (written == Encoding.UTF8.GetString(original)) throw new InvalidOperationException("применение не дошло до файла префаба");
-                string problem = YamlProblems(Encoding.UTF8.GetString(original), written, free, additive);
+                if (written == baseline) throw new InvalidOperationException("применение не дошло до файла префаба");
+                string problem = YamlProblems(baseline, written, free, additive);
                 if (problem != null) throw new InvalidOperationException("в YAML не только объекты Orig — файл возвращён: " + problem);
 
-                return $"snap-точки: новых объектов {created.Count}, сдвинуто {changed.Count}, без изменений {same}";
+                return $"snap-точки: новых объектов {created}, сдвинуто {changed}, без изменений {same}";
             }
             catch
             {
@@ -565,10 +520,76 @@ namespace VrBattlegrounds.Editor.Gameplay
 
                 throw;
             }
-            finally
+        }
+
+        private static Transform GrabsOf(Transform root) => root.Find("MeshContainer/Grabs") ?? root.Find("Grabs") ?? root;
+
+        /// <summary>Snap-точки предмета в загруженном содержимом префаба: создать недостающие, сдвинуть отличающиеся.</summary>
+        private static void PlaceSnaps(GameObject root, List<OrigPoint> points, Dictionary<string, string> problems,
+            out int createdCount, out int changedCount, out int same)
+        {
+            Transform grabs = GrabsOf(root.transform);
+            Transform orig = grabs.Find(SnapFolder);
+            var created = new HashSet<GameObject>();
+            changedCount = 0;
+            same = 0;
+            foreach (OrigPoint point in points)
             {
-                EditorSceneManager.ClosePreviewScene(scene);
+                Transform body = root.transform.Find(point.BodyPath);
+                string bodyProblem = body == null ? $"нет детали {point.BodyPath}" : point.CheckBody?.Invoke(body);
+                if (bodyProblem != null)
+                {
+                    problems[point.Name] = bodyProblem;
+                    continue;
+                }
+
+                foreach (var (side, _, sample) in point.SnapSides())
+                {
+                    sample.PalmInBody(side, body.lossyScale.x / sample.BodyScale, out Vector3 position, out Quaternion rotation);
+                    Vector3 worldPosition = body.position + body.rotation * position;
+                    Quaternion worldRotation = body.rotation * rotation;
+
+                    orig = orig != null ? orig : Child(grabs, SnapFolder, created);
+                    Transform node = Child(Child(orig, point.Name, created), side.ToString(), created);
+                    if (created.Contains(node.gameObject))
+                    {
+                        node.SetPositionAndRotation(worldPosition, worldRotation);
+                    }
+                    else if (!SamePose(root.transform, node, worldPosition, worldRotation))
+                    {
+                        node.SetPositionAndRotation(worldPosition, worldRotation);
+                        changedCount++;
+                    }
+                    else
+                    {
+                        same++;
+                    }
+                }
             }
+
+            createdCount = created.Count;
+        }
+
+        /// <summary>Пересохранить префаб до устойчивых байтов (с каноном после каждого сохранения).</summary>
+        private static void Converge(string prefabPath)
+        {
+            Canonicalize(prefabPath);
+            for (int pass = 0; pass < 3; pass++)
+            {
+                byte[] before = File.ReadAllBytes(prefabPath);
+                GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+                try { PrefabUtility.SaveAsPrefabAsset(contents, prefabPath); }
+                finally { PrefabUtility.UnloadPrefabContents(contents); }
+                Canonicalize(prefabPath);
+                if (File.ReadAllBytes(prefabPath).SequenceEqual(before)) break;
+            }
+        }
+
+        /// <summary>SaveAsPrefabAsset пишет _assetId = 0 и флаги UXR как вне префаба — вернуть канон на диске.</summary>
+        private static void Canonicalize(string prefabPath)
+        {
+            NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
+            UxrUniqueIdPersister.Normalize(prefabPath);
         }
 
         private static Transform Child(Transform parent, string name, HashSet<GameObject> created)
@@ -589,10 +610,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             return Vector3.Distance(current.Position, position) <= 1e-5f && Quaternion.Angle(current.Rotation, rotation) <= 1e-3f;
         }
 
-        private static void AddFileId(HashSet<long> ids, Object instanceObject, string prefabPath)
+        private static void AddFileId(HashSet<long> ids, Object assetObject)
         {
-            Object source = PrefabUtility.GetCorrespondingObjectFromSourceAtPath(instanceObject, prefabPath);
-            if (source != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(source, out string _, out long id)) ids.Add(id);
+            if (assetObject != null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(assetObject, out string _, out long id)) ids.Add(id);
         }
 
         private static readonly Regex DocHeader = new Regex(@"^--- !u!(\d+) &(-?\d+)");

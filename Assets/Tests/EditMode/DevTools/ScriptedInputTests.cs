@@ -22,7 +22,7 @@ namespace VrBattlegrounds.Tests.DevTools
     public class ScriptedInputTests
     {
         private static readonly string[] BuiltInScripts =
-            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round", "admin-pause", "series-next-map" };
+            { "input-smoke", "wall-purchase", "combat-hit", "combat-round", "combat-next-round", "admin-pause", "series-next-map", "series-stop" };
 
         private static readonly string[] AvatarPrefabs =
         {
@@ -256,6 +256,26 @@ namespace VrBattlegrounds.Tests.DevTools
         }
 
         [Test]
+        public void SeriesStop_AdminStopsMidMatchTwice_AllWaitForLobby()
+        {
+            InputScript script = InputScript.Load("series-stop", null, out string error);
+            Assert.That(error, Is.Null);
+
+            int goLive = Index(script, s => s.op == "admin-command" && s.target == "GoLive");
+            int equipment = Index(script, s => s.op == "wait-server" && s.name == "equipment");
+            int stop = Index(script, s => s.op == "admin-command" && s.target == "Stop");
+            int lobby = Index(script, s => s.op == "expect-map" && s.target == "Lobby");
+            int verified = Index(script, s => s.op == "wait-server" && s.name == "lobby-verified");
+
+            Assert.That(goLive, Is.GreaterThan(0).And.LessThan(equipment));
+            Assert.That(stop, Is.GreaterThan(equipment), "«Стоп» — посреди матча, после начала закупки");
+            Assert.That(script.steps[stop].client, Is.EqualTo(1));
+            Assert.That(script.steps[stop].repeat, Is.GreaterThanOrEqualTo(2), "повтор «Стоп» одним кадром");
+            Assert.That(lobby, Is.GreaterThan(stop).And.LessThan(verified));
+            Assert.That(script.steps[lobby].client, Is.Zero, "лобби ждут оба клиента");
+        }
+
+        [Test]
         public void AdminCommands_MatchMapCommand()
         {
             Assert.That(InputScript.AdminCommands, Is.EquivalentTo(System.Enum.GetNames(typeof(MapCommand))),
@@ -338,6 +358,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(E2ERunner.IsRegistered("scripted-combat-next-round"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-admin-pause"), Is.True);
             Assert.That(E2ERunner.IsRegistered("scripted-series-next-map"), Is.True);
+            Assert.That(E2ERunner.IsRegistered("scripted-series-stop"), Is.True);
         }
 
         [TestCaseSource(nameof(AvatarPrefabs))]

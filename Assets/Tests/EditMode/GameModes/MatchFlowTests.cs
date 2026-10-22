@@ -433,6 +433,24 @@ namespace VrBattlegrounds.Tests.Modes
         /// Повтор «Следующая карта»/«Стоп»/«Новая серия», пока загрузчик занят переходом, отклоняется целиком: серия не
         /// сдвигается и не останавливается, команды не снимаются (дефект найден e2e <c>scripted-series-next-map</c>).
         /// </summary>
+        /// <summary>«Новая серия», пока загрузчик занят, — отказ доходит до админа (раньше StartSession молчал).</summary>
+        [Test]
+        public void Новая_серия_при_занятом_загрузчике_возвращает_отказ()
+        {
+            SilenceMirrorNoise();
+            SessionManager session = CreateSession("elimination");
+            Series series = CreateSeries();
+            session.SetSeries("elimination", new[] { _mapA.sceneName, _mapB.sceneName });
+
+            series.LoadMapAcceptsOverride = _ => false;
+            Assert.IsFalse(session.StartSession(), "Отклонённая загрузка первой карты выдана за начатую серию.");
+            Assert.IsFalse(series.IsRunning);
+
+            series.LoadMapAcceptsOverride = null;
+            Assert.IsTrue(session.StartSession());
+            Assert.IsTrue(series.IsRunning);
+        }
+
         [Test]
         public void Отклонённая_загрузка_не_меняет_серию_и_команды()
         {

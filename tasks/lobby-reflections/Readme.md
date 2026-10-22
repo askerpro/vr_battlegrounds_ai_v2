@@ -38,6 +38,22 @@
   остальные 0,5–0,7; центр шатра 0,15–0,25. Стена арсенала 0,23, столы 0,27–0,58, ящик на шкафу запад 0,11.
 - Light probes арены — сетка 2,5 м, высоты 0,3 / 1,3 / 2,5 м (`ApplyLightProbes`); у стены арсенала плотнее нет.
 
+## Решения пользователя 2026-10-22
+
+- Базовый уровень шатра ~0,35 (полумрак): по всему шатру равномерно маленькие тусклые лампы, над точками акцента —
+  большая яркая лампа. Акцент в этой задаче — стена арсенала CT.
+- Лампы `Shade__SM_TopLight` (Pendant_NW/SW, сборщик `LobbyCanopyBaysBuilder.Pendant`) не военные — убрать; убрать
+  `SM_TopLight` и из подборки ассетов (`tasks/lobby-decoration/Details.md`, «Источники моделей») и из
+  `Assets/Art/Lobby/Imported/Catalog/RuralTown` (префаб, FBX, `M_TopLight.mat`; `M_Emissive` общий — оставить).
+- Остальные гражданские лампы импортированной базы (RuralTown SM_Lamp/SM_LampPost/SM_Lamp_02, PostApocalypticTown
+  SM_Lamp/SM_Light1/SM_Light3, AbandonedFactory SM_Lamp_01a/SM_CoverLight_01) — сначала показать снимки, решает пользователь.
+  `PortableWorkLamp` (SM_Light2) оставить.
+- Следующей задачей в этой же сессии, после света: чистка арены `lobby-arena-cleanup` — граница по краю арены с запасом
+  внутрь (вытянутые руки не достают до физической стены): секции забора вперемешку со штабелями мешков одной высоты;
+  `ShootingPositionNorth/South` без надписи перед забором — точки акцента (лампы и перезапекание там же); убрать Caption
+  над мониторами (ссылка `ShootingRangeDisplay._caption`), `RangeDistanceLabel`; цифры дорожек «Цифра» →
+  TextMeshPro (RobotoCondensed SDF). Разбор объектов — отчёт субагента в этой сессии, 2026-10-22.
+
 ## План
 
 - [x] Замер

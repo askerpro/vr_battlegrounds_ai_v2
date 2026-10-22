@@ -56,6 +56,13 @@
       "scenarioTimeoutSeconds": 300
     },
     {
+      "name": "dedicated-server-arsenal",
+      "clients": 2,
+      "profiles": ["windows"],
+      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "scenarioTimeoutSeconds": 300
+    },
+    {
       "name": "map-run-startup-route",
       "clients": 2,
       "profiles": ["windows"],

@@ -1,14 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {
-      "id": "teleport-state-unknown-target",
-      "kind": "defect",
-      "owner": "network",
-      "ticket": "backlog network teleport-state-unknown-target (inbox 6054)",
-      "scope": "server",
-      "regex": "UxrSyncEventArgs\\.DeserializeEventBinary: Target component wasn't found for event\\. Event is Method call UpdateTeleportState",
-      "reason": "Сервер получает UpdateTeleportState для компонентов рук клиента, которых нет в его реестре UniqueId. Прогон dedicated-server-arsenal 2026-10-13 (Tools/e2e/results/20261013-211416-dedicated-server-arsenal), ошибка с августа. Дефект, а не шум: прогон остаётся красным до исправления."
-    }
-  ]
+  "entries": []
 }

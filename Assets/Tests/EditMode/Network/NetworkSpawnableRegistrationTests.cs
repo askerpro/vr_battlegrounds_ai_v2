@@ -100,6 +100,41 @@ namespace VrBattlegrounds.Tests.Network
         }
 
         /// <summary>
+        /// Жетон готовности стена тоже выдаёт по сети: <c>ArsenalWallController.ServerUpdateDogTag</c>
+        /// спавнит <c>_tagPrefab</c> панели жетона. Каждый такой префаб обязан быть зарегистрирован,
+        /// иначе у клиентов жетона нет, и объявить готовность нечем.
+        /// </summary>
+        [Test]
+        public void Жетоны_панелей_арсенала_зарегистрированы_в_spawnPrefabs()
+        {
+            NetworkManager manager = LoadNetworkManager();
+            HashSet<GameObject> registered = Registered(manager);
+            List<string> missing = new List<string>();
+            int checks = 0;
+
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null) continue;
+
+                foreach (DogTagController panel in prefab.GetComponentsInChildren<DogTagController>(true))
+                {
+                    checks++;
+                    if (panel.TagPrefab == null)
+                        missing.Add($"{path}: у панели '{panel.name}' не задан _tagPrefab");
+                    else if (!registered.Contains(panel.TagPrefab))
+                        missing.Add($"{path}: жетон '{panel.TagPrefab.name}'");
+                }
+            }
+
+            Assert.That(checks, Is.GreaterThan(0), "Не найдено ни одной панели жетона — тест ничего не проверил.");
+            Assert.IsEmpty(missing,
+                "Жетоны панелей не зарегистрированы в spawnPrefabs — у клиентов жетона не будет.\n  " +
+                string.Join("\n  ", missing));
+        }
+
+        /// <summary>
         /// Дыры в самом списке. <c>null</c>-элемент Mirror пропускает с ошибкой при
         /// старте, дубль регистрирует поверх — и то и другое означает, что список
         /// правили руками и промахнулись.

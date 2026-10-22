@@ -129,6 +129,36 @@ namespace VrBattlegrounds.Arsenal
         private readonly System.Collections.Generic.Dictionary<int, NetworkIdentity> _homeItems =
             new System.Collections.Generic.Dictionary<int, NetworkIdentity>();
 
+        /// <summary>
+        /// <c>netId</c> выданного стеной жетона готовности (<see cref="DogTagController"/>); 0 — не выдан.
+        ///
+        /// <para>
+        /// Жетон — такой же предмет стены, как оружие слотов: в сцене его нет, сервер создаёт его из
+        /// префаба панели (<see cref="ServerEnsureDogTag"/>) и спавнит Mirror. На крючок каждая машина
+        /// вешает его сама по этой привязке — состоянием, а не разовым <c>ClientRpc</c>, по той же
+        /// причине, что у слотов (NET-23): поздний клиент получает значение начальным спавном стены.
+        /// </para>
+        /// </summary>
+        [SyncVar(hook = nameof(OnDogTagSynced))]
+        private uint _dogTagNetId;
+
+        /// <summary>
+        /// Висит ли жетон на крючке у сервера. Пишет только сервер, по учёту якоря UltimateXR
+        /// (<see cref="DogTagController.IsTagOnRack"/>). Нужен клиенту, получающему жетон: висящий жетон
+        /// он вешает на крючок сам (спавн-сообщение Mirror несёт лишь локальную позу), а снятый — нет:
+        /// жетон в чужой руке или на полу, перевешенный на крючок, разошёлся бы с сервером.
+        /// </summary>
+        [SyncVar] private bool _dogTagOnRack;
+
+        /// <summary>Клиент знает <see cref="_dogTagNetId"/>, но жетон ещё не принят: не приехал или не проснулся.</summary>
+        private bool _dogTagBindingPending;
+
+        /// <summary>Сервер: выдача жетона отказала по конфигурации — не повторять каждый кадр.</summary>
+        private bool _dogTagSpawnFailed;
+
+        /// <summary>Сервер: сколько секунд выданного жетона нет (уничтожен). Замена — через <see cref="_lostWeaponReplaceDelay"/>.</summary>
+        private float _dogTagLostTime;
+
         /// <summary>Буфер разобранных привязок: не хочется плодить мусор в <c>Update</c>.</summary>
         private readonly System.Collections.Generic.List<int> _resolvedSlotBindings =
             new System.Collections.Generic.List<int>();
@@ -293,6 +323,9 @@ namespace VrBattlegrounds.Arsenal
             // На хосте предметы разложил сервер, второй раз не надо.
             if (isServer) return;
 
+            if (_dogTagNetId != 0)
+                _dogTagBindingPending = true;
+
             _slotItems.OnChange += HandleSlotItemChanged;
 
             foreach (var pair in _slotItems)
@@ -414,6 +447,11 @@ namespace VrBattlegrounds.Arsenal
             }
             if (_pendingSlotBindings.Count > 0)
                 ResolvePendingSlotBindings();
+
+            if (isServer)
+                ServerUpdateDogTag(Time.deltaTime);
+            else if (_dogTagBindingPending)
+                ResolvePendingDogTagBinding();
 
             ApplyModeRules(Time.deltaTime);
             RefreshOffers();
@@ -622,6 +660,141 @@ namespace VrBattlegrounds.Arsenal
                 _pendingSlotBindings.Remove(slotIndex);
 
             _resolvedSlotBindings.Clear();
+        }
+
+        // ── Жетон: выдача и привязка ──────────────────────────
+
+        /// <summary>
+        /// Сервер, каждый кадр: выдать жетон, если его нет; объявить, висит ли он на крючке; вернуть
+        /// брошенный жетон на крючок, пока он не нужен.
+        /// </summary>
+        [Server]
+        private void ServerUpdateDogTag(float deltaTime)
+        {
+            if (_dogTagController == null) return;
+
+            if (!_dogTagController.HasTag)
+            {
+                ServerEnsureDogTag(deltaTime);
+                return;
+            }
+
+            bool onRack = _dogTagController.IsTagOnRack;
+            if (_dogTagOnRack != onRack) _dogTagOnRack = onRack;
+
+            if (!onRack && !IsDogTagInUse())
+                _dogTagController.ReturnLooseTag();
+        }
+
+        /// <summary>
+        /// Сервер: выдаёт панели жетон, если его нет, а режим объявляет готовность жетоном. Так жетон
+        /// появляется и после поздней готовности карты, и взамен пропавшего (уничтожен
+        /// <c>OutOfWorldGuard</c>) — с той же задержкой, что замена пропавшего оружия.
+        ///
+        /// <para>
+        /// Путь — тот же, что у оружия слотов (<see cref="ReplenishSlotsWhere"/>): экземпляр создаёт
+        /// <c>MapRunAdmission.CreateMapItem</c> (до server Ready карты и после Closing — ничего), на крючок
+        /// он попадает до <c>NetworkServer.Spawn</c>, а синхронизируемые свойства (<c>IsGrabbable</c>,
+        /// возврат на крючок) пишутся только после спавна, когда <c>UniqueId</c> выровнены по <c>netId</c>.
+        /// </para>
+        /// </summary>
+        [Server]
+        private void ServerEnsureDogTag(float deltaTime)
+        {
+            if (_dogTagSpawnFailed) return;
+
+            // Жетон не нужен (разминка, старт по таймеру) — не выдаём. Уже выданный остаётся, его прячет SetInUse.
+            if (!IsDogTagInUse()) return;
+
+            // Выданный жетон пропал — замена не в тот же кадр.
+            if (_dogTagNetId != 0)
+            {
+                _dogTagLostTime += deltaTime;
+                if (_dogTagLostTime < _lostWeaponReplaceDelay) return;
+            }
+
+            GameObject prefab = _dogTagController.TagPrefab;
+            if (prefab == null) return;
+
+            GameObject spawned = MapRunAdmission.CreateMapItem(gameObject.scene, prefab);
+            if (spawned == null) return;
+
+            spawned.SetActive(true);
+
+            if (!_dogTagController.BindTag(spawned))
+            {
+                _dogTagSpawnFailed = true;
+                Destroy(spawned);
+                GameLog.Arsenal.Error($"[Arsenal] Стена '{name}': жетон из '{prefab.name}' не повешен — выдача жетона остановлена.", this);
+                return;
+            }
+
+            NetworkUxrIdentity.SpawnServerObject(spawned);
+
+            NetworkIdentity identity = spawned.GetComponent<NetworkIdentity>();
+            _dogTagLostTime = 0f;
+            _dogTagOnRack = true;
+            _dogTagNetId = identity != null ? identity.netId : 0u;
+
+            ApplyDogTagState();
+            GameLog.Arsenal.Info($"[Arsenal] Стена '{name}' выдала жетон netId={_dogTagNetId}.", this);
+        }
+
+        /// <summary>Хук SyncVar: сервер выдал жетон (или заменил пропавший).</summary>
+        private void OnDogTagSynced(uint oldNetId, uint newNetId)
+        {
+            // На хосте жетон повесил сервер.
+            if (isServer) return;
+
+            _dogTagBindingPending = newNetId != 0;
+        }
+
+        /// <summary>
+        /// Клиент: принимает жетон, когда он приехал и проснулся, и вешает на крючок, если у сервера он
+        /// там (<see cref="_dogTagOnRack"/>). Ждать приходится явно, как привязки слотов
+        /// (<see cref="ResolvePendingSlotBindings"/>): порядок спавн-сообщений и дельт стены Mirror не
+        /// согласует, а до включения объекта <c>UxrGrabbableObject.Awake</c> ещё не отработал и стёр бы учёт крючка.
+        /// </summary>
+        private void ResolvePendingDogTagBinding()
+        {
+            if (_dogTagController == null || _dogTagNetId == 0)
+            {
+                _dogTagBindingPending = false;
+                return;
+            }
+
+            if (!NetworkClient.spawned.TryGetValue(_dogTagNetId, out NetworkIdentity tag) || tag == null) return;
+            if (!tag.gameObject.activeInHierarchy) return;
+
+            _dogTagBindingPending = false;
+
+            UxrGrabbableObject current = _dogTagController.TagObject;
+            if (current != null && current.gameObject == tag.gameObject) return;
+
+            bool accepted = _dogTagOnRack
+                ? _dogTagController.BindTag(tag.gameObject)
+                : _dogTagController.AdoptTag(tag.gameObject);
+
+            if (accepted)
+                ApplyDogTagState();
+        }
+
+        /// <summary>
+        /// Жетон появился на этой машине — привести его к текущим правилам: нужен ли он и можно ли его
+        /// брать. Новой закупки это не начинает: отметка «жетон уже брали» остаётся
+        /// (<see cref="DogTagController.EnableGrab"/>), иначе замена пропавшего жетона давала бы объявить
+        /// готовность второй раз.
+        /// </summary>
+        private void ApplyDogTagState()
+        {
+            bool inUse = IsDogTagInUse();
+            _appliedDogTagInUse = inUse;
+            _dogTagController.SetInUse(inUse);
+
+            if (!inUse || _currentState != ArsenalState.Open)
+                _dogTagController.Disable();
+            else
+                _dogTagController.EnableGrab();
         }
 
         public override void OnStartServer()

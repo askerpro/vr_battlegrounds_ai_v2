@@ -38136,18 +38136,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 918920782}
     m_Modifications:
-    - target: {fileID: 1351546200729758578, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1351546200729758578, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
-      propertyPath: __prefabGuid
-      value: 88273a27f53bfdd4697ec9e56448a068
-      objectReference: {fileID: 0}
-    - target: {fileID: 1351546200729758578, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
-      propertyPath: _uxrUniqueId
-      value: 91b73169-382d-4946-b781-299302a16769
-      objectReference: {fileID: 0}
     - target: {fileID: 1952301212111237558, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       propertyPath: sceneId
       value: 701398374
@@ -38260,9 +38248,6 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5781502117619950991, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
     - targetCorrespondingSourceObject: {fileID: 8474264821709171549, guid: 88273a27f53bfdd4697ec9e56448a068, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}

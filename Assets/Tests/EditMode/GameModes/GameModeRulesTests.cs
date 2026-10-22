@@ -125,12 +125,16 @@ namespace VrBattlegrounds.Tests.Modes
             ArsenalSlotController slot = slotObject.AddComponent<ArsenalSlotController>();
             SetPrivateField(slot, "_itemAnchor", anchorObject.AddComponent<UxrGrabbableObjectAnchor>());
 
+            // Жетон выдаёт стена в рантайме и вешает на крючок панели; здесь — уже повешенный.
             GameObject tagPanel = new GameObject("DogTagPanel");
             tagPanel.transform.SetParent(wallObject.transform);
+            GameObject tagAnchor = new GameObject("DogTagAnchor");
+            tagAnchor.transform.SetParent(tagPanel.transform);
             GameObject tagObject = new GameObject("DogTag");
-            tagObject.transform.SetParent(tagPanel.transform);
+            tagObject.transform.SetParent(tagAnchor.transform);
 
             dogTag = tagPanel.AddComponent<DogTagController>();
+            SetPrivateField(dogTag, "_tagAnchor", tagAnchor.AddComponent<UxrGrabbableObjectAnchor>());
             SetPrivateField(dogTag, "_tagObject", tagObject.AddComponent<UxrGrabbableObject>());
 
             ArsenalWallController wall = wallObject.AddComponent<ArsenalWallController>();
@@ -236,14 +240,14 @@ namespace VrBattlegrounds.Tests.Modes
             SilenceMirrorNoise();
 
             ArsenalWallController wall = CreateServerWall(out DogTagController dogTag);
-            GameObject tagObject = dogTag.transform.Find("DogTag").gameObject;
-            Assert.IsTrue(tagObject.activeSelf, "Контроль: без режима жетон на стене есть.");
+            GameObject tagObject = dogTag.TagObject.gameObject;
+            Assert.IsTrue(tagObject.activeInHierarchy, "Контроль: без режима жетон на стене есть.");
 
             CreateActiveMode<WarmupMode>(CreateMapReferee());
             Tick(wall);
 
             Assert.AreEqual(Open, wall.CurrentState, "Контроль: стена открыта.");
-            Assert.IsFalse(tagObject.activeSelf,
+            Assert.IsFalse(tagObject.activeInHierarchy,
                 "В разминке раунда нет, а жетон объявляет готовность к раунду. Схваченный " +
                 "в разминке, он записал бы готовность, которую никто не ждёт.");
         }
@@ -285,7 +289,7 @@ namespace VrBattlegrounds.Tests.Modes
             Tick(wall);
 
             Assert.IsTrue(mode.ArsenalRules.UsesReadinessTag, "RoundStartRule.Readiness — жетон нужен.");
-            Assert.IsTrue(dogTag.transform.Find("DogTag").gameObject.activeSelf,
+            Assert.IsTrue(dogTag.TagObject.gameObject.activeInHierarchy,
                 "Закупка по готовности, а жетона на открытой стене нет.");
         }
 

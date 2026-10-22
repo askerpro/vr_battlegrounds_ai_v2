@@ -307,15 +307,19 @@ namespace VrBattlegrounds.DevTools.E2E.Input
             if (wall == null) Fail(label, "своей стены нет");
 
             DogTagController tagController = wall.GetComponentInChildren<DogTagController>(true);
-            UxrGrabbableObject tag = tagController != null ? tagController.GetComponentInChildren<UxrGrabbableObject>(true) : null;
-            if (tag == null) Fail(label, $"у стены netId={wall.netId} нет жетона");
+            if (tagController == null) Fail(label, $"у стены netId={wall.netId} нет панели жетона");
 
+            // Жетон выдаёт сервер в рантайме: у клиента он появляется после спавна и привязки к крючку.
             float deadline = Now + step.timeoutS;
-            while (wall.CurrentState != ArsenalWallController.ArsenalState.Open || !tagController.IsTagOnRack || !tag.IsGrabbable)
+            UxrGrabbableObject tag = tagController.TagObject;
+            while (tag == null || wall.CurrentState != ArsenalWallController.ArsenalState.Open || !tagController.IsTagOnRack || !tag.IsGrabbable)
             {
                 if (Now > deadline)
-                    Fail(label, $"жетон недоступен: стена {wall.CurrentState}, на крючке={tagController.IsTagOnRack}, можно взять={tag.IsGrabbable}");
+                    Fail(label, tag == null
+                        ? $"у стены netId={wall.netId} жетон не появился"
+                        : $"жетон недоступен: стена {wall.CurrentState}, на крючке={tagController.IsTagOnRack}, можно взять={tag.IsGrabbable}");
                 yield return null;
+                tag = tagController.TagObject;
             }
 
             yield return ReachAndGrab(tag, side, step.speed, deadline, label);

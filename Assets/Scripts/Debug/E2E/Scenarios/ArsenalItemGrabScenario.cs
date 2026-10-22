@@ -536,7 +536,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// хватаемый объект с наименьшим <c>netId</c>.
         ///
         /// <para>
-        /// <c>sceneId != 0</c> отсекает объекты сцены — стены и жетоны. Остаются только
+        /// <c>sceneId != 0</c> отсекает объекты сцены — стены. Жетоны стена тоже выдаёт
+        /// по сети, их отсекает <see cref="DogTagItem"/>. Остаются только
         /// те, что создал <c>ReplenishWeaponsNetwork</c>. Декоративные магазины сюда
         /// не попадают: их <c>FirearmSlotController</c> инстанцирует локально,
         /// без <c>NetworkServer.Spawn</c>.
@@ -554,6 +555,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
             {
                 if (identity == null || identity.sceneId != 0) continue;
                 if (identity.GetComponent<UxrGrabbableObject>() == null) continue;
+                // Жетон готовности стена тоже выдаёт по сети, но в слоте он не лежит: общий предмет — из слота.
+                if (identity.GetComponent<DogTagItem>() != null) continue;
                 if (best == null || identity.netId < best.netId) best = identity;
             }
 

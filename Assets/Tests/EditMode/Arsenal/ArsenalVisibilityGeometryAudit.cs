@@ -24,25 +24,45 @@ namespace VrBattlegrounds.Tests.Arsenal
                 var tag = station.GetComponentInChildren<DogTagController>(true);
                 var display = wallet == null ? null : new SerializedObject(wallet)
                     .FindProperty("_display").objectReferenceValue as TextMeshPro;
-                var tagObject = tag == null ? null : new SerializedObject(tag)
-                    .FindProperty("_tagObject").objectReferenceValue as UxrGrabbableObject;
                 if (display == null) errors.Add($"{scene.path}/{station.name}: не назначено табло.");
                 else Check(scene, station.transform, display.transform, "табло", DisplayPoints(display), errors);
-                if (tagObject == null) errors.Add($"{scene.path}/{station.name}: не назначен жетон.");
-                else
-                {
-                    var renderers = tagObject.GetComponentsInChildren<MeshRenderer>(true)
-                        .Where(r => r.enabled && r.gameObject.activeInHierarchy).ToArray();
-                    if (renderers.Length == 0) errors.Add($"{scene.path}/{station.name}: у жетона нет видимого меша.");
-                    else
-                    {
-                        var bounds = renderers[0].bounds;
-                        foreach (var renderer in renderers.Skip(1)) bounds.Encapsulate(renderer.bounds);
-                        Check(scene, station.transform, tagObject.transform, "жетон", new[] { bounds.center }, errors);
-                    }
-                }
+                if (tag == null || tag.TagAnchor == null || tag.TagPrefab == null)
+                    errors.Add($"{scene.path}/{station.name}: у панели не назначен крючок или префаб жетона.");
+                else if (!TryTagCenter(tag, out Vector3 center))
+                    errors.Add($"{scene.path}/{station.name}: у жетона нет видимого меша.");
+                else Check(scene, station.transform, tag.TagAnchor.transform, "жетон", new[] { center }, errors);
             }
             return errors;
+        }
+
+        /// <summary>
+        /// Центр видимых мешей жетона, повешенного на крючок. Жетона в сцене нет — его выдаёт стена в рантайме
+        /// (<c>DogTagController.BindTag</c>: поза крючка, масштаб префаба), поэтому меши берутся из префаба.
+        /// </summary>
+        private static bool TryTagCenter(DogTagController tag, out Vector3 center)
+        {
+            center = default;
+            Transform root = tag.TagPrefab.transform;
+            Matrix4x4 rack = tag.TagAnchor.transform.localToWorldMatrix * Matrix4x4.Scale(root.localScale);
+            bool any = false;
+            Bounds bounds = default;
+            foreach (var renderer in tag.TagPrefab.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var filter = renderer.GetComponent<MeshFilter>();
+                if (!renderer.enabled || !renderer.gameObject.activeSelf || filter == null || filter.sharedMesh == null) continue;
+                Matrix4x4 toWorld = rack * (root.worldToLocalMatrix * renderer.transform.localToWorldMatrix);
+                Bounds local = filter.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = local.center + Vector3.Scale(local.extents,
+                        new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    Vector3 world = toWorld.MultiplyPoint3x4(corner);
+                    if (!any) { bounds = new Bounds(world, Vector3.zero); any = true; }
+                    else bounds.Encapsulate(world);
+                }
+            }
+            if (any) center = bounds.center;
+            return any;
         }
 
         private static Vector3[] DisplayPoints(TextMeshPro display)

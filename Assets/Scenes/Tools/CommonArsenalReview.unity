@@ -878,18 +878,6 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.638
       objectReference: {fileID: 0}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: __prefabGuid
-      value: dfac27aa288176547ac630b37c71ee4f
-      objectReference: {fileID: 0}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: _uxrUniqueId
-      value: cd3849d7-7b36-46e8-90d2-879627f5470e
-      objectReference: {fileID: 0}
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
@@ -901,14 +889,6 @@ PrefabInstance:
     - target: {fileID: 2023571043236983407, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: m_LocalPosition.z
       value: -0.41
-      objectReference: {fileID: 0}
-    - target: {fileID: 2136999801915701101, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4279045899
-      objectReference: {fileID: 0}
-    - target: {fileID: 2136999801915701101, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 2409347659757352827, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1002,9 +982,6 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4325370894868259450, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
     - targetCorrespondingSourceObject: {fileID: 5172843331770344377, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}
@@ -1940,30 +1917,10 @@ PrefabInstance:
       propertyPath: _zone
       value: 
       objectReference: {fileID: 1721019434}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: __isInPrefab
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: __prefabGuid
-      value: dfac27aa288176547ac630b37c71ee4f
-      objectReference: {fileID: 0}
-    - target: {fileID: 979125439790524047, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: _uxrUniqueId
-      value: 322ef265-a792-4629-a6b2-8eb443b3fd07
-      objectReference: {fileID: 0}
     - target: {fileID: 1339075061608160628, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: _boundary
       value: 
       objectReference: {fileID: 8422457493640080530}
-    - target: {fileID: 2136999801915701101, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4279045899
-      objectReference: {fileID: 0}
-    - target: {fileID: 2136999801915701101, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
     - target: {fileID: 2409347659757352827, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.08499986
@@ -2048,9 +2005,6 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4325370894868259450, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
     - targetCorrespondingSourceObject: {fileID: 5172843331770344377, guid: dfac27aa288176547ac630b37c71ee4f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}

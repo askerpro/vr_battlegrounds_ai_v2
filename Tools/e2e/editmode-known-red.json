@@ -49,15 +49,15 @@
       "reason": "регрессия dev: теги Untagged у AK105/Mk14/MP5K (починка Apply Game Tags), weapon-system"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTagPanel, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, MEF_cyborg_hands_Player)",
       "reason": "хваты: покрытие поз хвата аватаров"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTagPanel, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, MEF_cyborg_hands_Player_Black)",
       "reason": "хваты: покрытие поз хвата аватаров"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTagPanel, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, PlayerControllersCyborgAvatar)",
       "reason": "хваты: покрытие поз хвата аватаров"
     },
     {

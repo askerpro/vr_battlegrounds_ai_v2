@@ -1,0 +1,43 @@
+{
+  "task_id": "dogtag-runtime-spawn",
+  "owner": "dogtag-runtime-spawn",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/dogtag-runtime-spawn",
+  "base_sha": "57f935031eacebc74dcb8d28dc857f8f9b040fd9",
+  "doc_path": "tasks/dogtag-runtime-spawn/Readme.md",
+  "title": "Жетон арсенала спавнится в рантайме из префаба",
+  "branch": "task/dogtag-runtime-spawn",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/dogtag-runtime-spawn/**",
+        "Assets/Scripts/Arsenal/DogTagController.cs",
+        "Assets/Scripts/Arsenal/DogTagItem.cs",
+        "Assets/Scripts/Arsenal/DogTagItem.cs.meta",
+        "Assets/Scripts/Arsenal/ArsenalWallController.cs",
+        "Assets/Scripts/Debug/E2E/Scenarios/ArsenalItemGrabScenario.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/DogTagRuntimeSpawnMigration.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/DogTagRuntimeSpawnMigration.cs.meta",
+        "Assets/Prefabs/Arsenal/DogTag/**",
+        "Assets/Prefabs/Arsenal/CommonOpenArsenalStation.prefab",
+        "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab",
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+        "Assets/Scenes/Maps/TestMap1.unity",
+        "Assets/Scenes/Maps/TestMap2.unity",
+        "Assets/Scenes/Maps/TestMap3.unity",
+        "Assets/Scenes/Maps/ServiceYard.unity",
+        "Assets/Scenes/Maps/ReferenceMap04.unity",
+        "Assets/Scenes/Debug/BotCombatStand.unity",
+        "Assets/Scenes/Tools/CommonArsenalReview.unity",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Assets/Tests/EditMode/Network/NetworkSpawnableRegistrationTests.cs",
+        "Assets/Tests/EditMode/Prefabs/**",
+        "Tools/e2e/editmode-known-red.json"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

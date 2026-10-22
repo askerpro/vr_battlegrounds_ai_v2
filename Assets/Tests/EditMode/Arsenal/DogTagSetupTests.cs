@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Mirror;
 using NUnit.Framework;
 using UltimateXR.Manipulation;
 using UnityEditor;
@@ -13,23 +14,19 @@ using VrBattlegrounds.Tests.Prefabs;
 namespace VrBattlegrounds.Tests.ArsenalWall
 {
     /// <summary>
-    /// Жетон стоит в своём якоре с первого кадра и не падает на пол при старте сцены.
+    /// Жетон готовности — сетевой предмет стены, а не часть панели.
     ///
     /// <para>
-    /// UltimateXR ставит grabbable в якорь и делает его тело kinematic в <c>Awake</c>, только
-    /// если заданы <b>оба</b> поля: <c>_startAnchor</c> и <c>_rigidBodySource</c>. Без них жетон —
-    /// обычное физическое тело с гравитацией: он падает на пол, а событие якоря <c>Removed</c>
-    /// не приходит никогда, и объявить готовность жетоном нельзя.
+    /// Панель (<see cref="DogTagController"/>) держит крючок и префаб жетона; экземпляр выдаёт сервер
+    /// (<c>ArsenalWallController.ServerUpdateDogTag</c>) и сам вешает на крючок до спавна. Поэтому:
+    /// в панели и в сценах жетона нет (иначе вернутся per-instance id в каждой сцене), а префаб годится
+    /// для сетевой выдачи — <c>NetworkIdentity</c>, метка <see cref="DogTagItem"/>, без стартового якоря
+    /// и Auto Anchor (на крючок его ставит выдача, а лишний якорь разошёлся бы между машинами).
     /// </para>
     ///
     /// <para>
-    /// После отпускания жетон динамический, поэтому к нему применяются правила PHY-01:
-    /// твёрдый коллайдер, не-<c>Discrete</c> и <see cref="OutOfWorldGuard" />.
-    /// </para>
-    ///
-    /// <para>
-    /// Проверяются и префабы, и сцены: стены стоят на картах вложенными экземплярами, и
-    /// переопределение в экземпляре сломало бы жетон мимо проверки ассета.
+    /// Висит жетон кинематическим, после отпускания он динамический — правила PHY-01: твёрдый коллайдер,
+    /// не-<c>Discrete</c> и <see cref="OutOfWorldGuard" />.
     /// </para>
     /// </summary>
     public class DogTagSetupTests
@@ -39,11 +36,16 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         {
             "Assets/Scenes/Lobby.unity",
             "Assets/Scenes/Maps/TestMap1.unity",
-            "Assets/Scenes/Maps/TestMap2.unity"
+            "Assets/Scenes/Maps/TestMap2.unity",
+            "Assets/Scenes/Maps/TestMap3.unity",
+            "Assets/Scenes/Maps/ServiceYard.unity",
+            "Assets/Scenes/Maps/ReferenceMap04.unity",
+            "Assets/Scenes/Debug/BotCombatStand.unity",
+            "Assets/Scenes/Tools/CommonArsenalReview.unity"
         };
 
         [Test]
-        public void DogTagInPrefabs_StartsPlacedAndKinematic()
+        public void DogTagPanelsInPrefabs_HaveAnchorAndNetworkTagPrefab()
         {
             var failures = new List<string>();
             int checks   = 0;
@@ -56,7 +58,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
                 foreach (var controller in prefab.GetComponentsInChildren<DogTagController>(true))
                 {
                     checks++;
-                    Validate(controller, path, failures);
+                    ValidatePanel(controller, path, failures);
                 }
             }
 
@@ -65,9 +67,10 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         }
 
         [Test]
-        public void DogTagInScenes_StartsPlacedAndKinematic()
+        public void DogTagPanelsInScenes_HaveNoBakedTag()
         {
             var failures = new List<string>();
+            int checks   = 0;
 
             foreach (var scenePath in Scenes)
             {
@@ -77,7 +80,10 @@ namespace VrBattlegrounds.Tests.ArsenalWall
                 {
                     foreach (var root in scene.GetRootGameObjects())
                     foreach (var controller in root.GetComponentsInChildren<DogTagController>(true))
-                        Validate(controller, scenePath, failures);
+                    {
+                        checks++;
+                        ValidatePanel(controller, scenePath, failures);
+                    }
                 }
                 finally
                 {
@@ -85,17 +91,19 @@ namespace VrBattlegrounds.Tests.ArsenalWall
                 }
             }
 
+            Assert.That(checks, Is.GreaterThan(0), "Не найдено ни одной панели жетона в сценах — тест ничего не проверил.");
             Assert.IsEmpty(failures, "Жетон настроен неверно:\n" + string.Join("\n", failures));
         }
 
         /// <summary>
-        /// У якоря и жетона каждой стены в сцене свой <c>UniqueId</c>: по нему UltimateXR
-        /// адресует захват по сети, и два жетона с одним id сливаются в один.
+        /// У крючка каждой стены в сцене свой <c>UniqueId</c>: по нему UltimateXR адресует размещение
+        /// жетона по сети, и два крючка с одним id сливаются в один. Сам жетон сюда не входит — его id
+        /// выравнивается по <c>netId</c> при выдаче.
         ///
         /// <para>
-        /// Id экземпляров живут переопределениями в <c>Environment.prefab</c> и сценах.
-        /// Перестройка префаба стены (например, вынос панели во вложенный префаб) меняет
-        /// fileID, переопределения сиротеют, и все экземпляры наследуют один id.
+        /// Id экземпляров живут переопределениями в сценах. Перестройка префаба стены (например, вынос
+        /// панели во вложенный префаб) меняет fileID, переопределения сиротеют, и все экземпляры
+        /// наследуют один id.
         /// </para>
         ///
         /// <para>
@@ -150,38 +158,55 @@ namespace VrBattlegrounds.Tests.ArsenalWall
                 EditorPrefs.SetBool(prefsKey, autoIds);
             }
 
-            Assert.That(checks, Is.GreaterThan(0), "Не найдено ни одного компонента жетона в сценах — тест ничего не проверил.");
-            Assert.IsEmpty(failures, "Жетоны делят UniqueId — сетевой захват спутает их:\n" + string.Join("\n", failures));
+            Assert.That(checks, Is.GreaterThan(0), "Не найдено ни одного компонента панели жетона в сценах — тест ничего не проверил.");
+            Assert.IsEmpty(failures, "Крючки жетонов делят UniqueId — сетевое размещение спутает их:\n" + string.Join("\n", failures));
         }
 
-        private static void Validate(DogTagController controller, string where, List<string> failures)
+        private static void ValidatePanel(DogTagController controller, string where, List<string> failures)
         {
             var so     = new SerializedObject(controller);
             var anchor = so.FindProperty("_tagAnchor").objectReferenceValue as UxrGrabbableObjectAnchor;
-            var tag    = so.FindProperty("_tagObject").objectReferenceValue as UxrGrabbableObject;
+            var prefab = so.FindProperty("_tagPrefab").objectReferenceValue as GameObject;
             string at  = $"{where} / {controller.name}";
 
-            if (anchor == null) { failures.Add($"{at}: _tagAnchor не задан"); return; }
-            if (tag == null)    { failures.Add($"{at}: _tagObject не задан"); return; }
+            if (anchor == null) failures.Add($"{at}: _tagAnchor не задан");
+            else if (!anchor.transform.IsChildOf(controller.transform)) failures.Add($"{at}: _tagAnchor не внутри панели");
 
-            var body = tag.GetComponent<Rigidbody>();
+            var baked = controller.GetComponentInChildren<UxrGrabbableObject>(true);
+            if (baked != null)
+                failures.Add($"{at}: в панели вшит хватаемый объект '{baked.name}' — жетон выдаёт стена, в панели и сценах его быть не должно");
 
-            if (tag.StartAnchor != anchor)
-                failures.Add($"{at}: _startAnchor жетона = '{(tag.StartAnchor ? tag.StartAnchor.name : "null")}', а не '{anchor.name}' — жетон не встанет в якорь");
+            if (prefab == null) { failures.Add($"{at}: _tagPrefab не задан"); return; }
+            ValidateTagPrefab(prefab, $"{at} → {AssetDatabase.GetAssetPath(prefab)}", failures);
+        }
+
+        private static void ValidateTagPrefab(GameObject prefab, string at, List<string> failures)
+        {
+            var tag  = prefab.GetComponent<UxrGrabbableObject>();
+            var body = prefab.GetComponent<Rigidbody>();
+
+            if (prefab.GetComponent<DogTagItem>() == null)       failures.Add($"{at}: на корне нет DogTagItem");
+            if (prefab.GetComponent<NetworkIdentity>() == null)  failures.Add($"{at}: на корне нет NetworkIdentity — NetworkServer.Spawn невозможен");
+            if (tag == null) { failures.Add($"{at}: на корне нет UxrGrabbableObject"); return; }
+
+            if (tag.StartAnchor != null)
+                failures.Add($"{at}: задан _startAnchor '{tag.StartAnchor.name}' — на крючок жетон ставит выдача");
+            if (tag.AutoCreateStartAnchor)
+                failures.Add($"{at}: включён Auto Anchor — лишний якорь разойдётся между машинами");
             if (body == null)
             {
                 failures.Add($"{at}: у жетона нет Rigidbody");
                 return;
             }
             if (tag.RigidBodySource != body)
-                failures.Add($"{at}: _rigidBodySource не указывает на Rigidbody жетона — UltimateXR не сделает его kinematic в якоре");
+                failures.Add($"{at}: _rigidBodySource не указывает на Rigidbody жетона");
             if (!body.isKinematic)
-                failures.Add($"{at}: Rigidbody жетона не kinematic в ассете — до Awake UltimateXR он уже под гравитацией");
+                failures.Add($"{at}: Rigidbody жетона не kinematic в ассете — до привязки к крючку он уже под гравитацией");
             if (body.collisionDetectionMode == CollisionDetectionMode.Discrete)
                 failures.Add($"{at}: Collision Detection = Discrete (PHY-01)");
-            if (!WeaponDropPhysicsTests.HasSolidCollider(tag.gameObject, body))
+            if (!WeaponDropPhysicsTests.HasSolidCollider(prefab, body))
                 failures.Add($"{at}: у жетона нет не-trigger коллайдера (PHY-01)");
-            if (tag.GetComponent<OutOfWorldGuard>() == null)
+            if (prefab.GetComponent<OutOfWorldGuard>() == null)
                 failures.Add($"{at}: нет OutOfWorldGuard (PHY-01)");
         }
     }

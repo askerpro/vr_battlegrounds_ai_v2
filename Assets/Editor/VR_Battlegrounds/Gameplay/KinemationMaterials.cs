@@ -1,6 +1,7 @@
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor.Gameplay
 {
@@ -11,9 +12,15 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// Шейдер пака <c>Shader_TacticalShooterWeapon</c> читает шесть карт (цвет, нормаль, металличность,
     /// шероховатость отдельно, эмиссия, альфа), материалы сделаны под HDRP. URP Lit — три карты: цвет, нормаль
     /// и упакованная <c>_MetallicGlossMap</c> (R — металличность, A — гладкость). Упакованная карта
-    /// генерируется из двух карт пака с их диапазонами (<c>_MetallicRemapping</c>, <c>_RoughnessRemapping</c>:
-    /// значение = lerp(x, y, карта)), 1024. Эмиссия и альфа не берутся: у оружия пака <c>_EmissionStrength</c> = 0,
-    /// поверхность непрозрачная.
+    /// генерируется из двух карт пака так же, как их считает шейдер пака: металличность = lerp(x, y, карта),
+    /// гладкость = lerp(x, y, 1 − карта шероховатости) (<c>_MetallicRemapping</c>, <c>_RoughnessRemapping</c>),
+    /// карты — в том виде, в каком их видит шейдер (импорт пака sRGB, значит линеаризованные), 1024.
+    /// Эмиссия и альфа не берутся: у оружия пака <c>_EmissionStrength</c> = 0, поверхность непрозрачная.
+    /// </para>
+    ///
+    /// <para>
+    /// Уже созданные материалы <see cref="Convert" /> не пересобирает; карты металличности и гладкости
+    /// всех материалов <see cref="MaterialsFolder" /> пересчитывает <see cref="RepackAll" /> (те же PNG, GUID сохраняются).
     /// </para>
     ///
     /// <para>
@@ -25,6 +32,8 @@ namespace VrBattlegrounds.Editor.Gameplay
     {
         public const int TextureSize = 1024;
         public const string Shader = "Universal Render Pipeline/Lit";
+        public const string MaterialsFolder = KinemationWeapon.ArtRoot + "/Materials";
+        private const string PackWeapons = KinemationWeapon.Pack + "Meshes/Weapons";
 
         public static Material Convert(Material src, string folder)
         {
@@ -81,6 +90,46 @@ namespace VrBattlegrounds.Editor.Gameplay
             return mat;
         }
 
+        /// <summary>
+        /// Пересчитать <c>_MetallicGlossMap</c> всех материалов <see cref="MaterialsFolder" /> из одноимённых материалов
+        /// пака. Материал без пары в паке пропускается; материал и его остальные карты не меняются.
+        /// </summary>
+        [MenuItem("Tools/VR Battlegrounds/Weapons/KINEMATION: перепаковать металличность и гладкость")]
+        public static void RepackAll()
+        {
+            int done = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { MaterialsFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                Material src = PackMaterial(mat.name);
+                if (src == null)
+                {
+                    GameLog.WeaponSystem.Warning($"KINEMATION: у {path} нет материала пака, карта не пересчитана");
+                    continue;
+                }
+
+                Texture2D packed = PackMetallicSmoothness(src, Tex(src, "_Metallic"), Tex(src, "_Roughness"),
+                                                          $"{MaterialsFolder}/Textures/{mat.name}_MetallicSmoothness.png");
+                if (packed == null) continue;
+                mat.SetTexture("_MetallicGlossMap", packed);
+                EditorUtility.SetDirty(mat);
+                done++;
+            }
+            AssetDatabase.SaveAssets();
+            GameLog.WeaponSystem.Info($"KINEMATION: карты металличности и гладкости пересчитаны — {done}");
+        }
+
+        private static Material PackMaterial(string name)
+        {
+            foreach (string guid in AssetDatabase.FindAssets($"t:Material {name}", new[] { PackWeapons }))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                if (m != null && m.name == name) return m;
+            }
+            return null;
+        }
+
         private static Texture Tex(Material m, string property) => m.HasProperty(property) ? m.GetTexture(property) : null;
 
         /// <summary>Remap пака: <c>(x, y)</c> — значение при карте 0 и 1.</summary>
@@ -89,6 +138,17 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (!m.HasProperty(property)) return fallback;
             Color c = m.GetColor(property);
             return new Vector2(c.r, c.g);
+        }
+
+        /// <summary>
+        /// Пиксель <c>_MetallicGlossMap</c> (R — металличность, A — гладкость) из значений карт пака, как их считает
+        /// шейдер пака: диапазон гладкости — к инвертированной карте, а не инверсия диапазона шероховатости.
+        /// </summary>
+        public static Color PackPixel(float metallicMap, float roughnessMap, Vector2 metallicRemap, Vector2 roughnessRemap)
+        {
+            float metal = Mathf.Lerp(metallicRemap.x, metallicRemap.y, metallicMap);
+            float smooth = Mathf.Lerp(roughnessRemap.x, roughnessRemap.y, 1f - roughnessMap);
+            return new Color(metal, metal, metal, smooth);
         }
 
         private static Texture2D PackMetallicSmoothness(Material src, Texture metallic, Texture roughness, string path)
@@ -103,11 +163,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             var tex = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false, true);
             var pixels = new Color[TextureSize * TextureSize];
             for (int i = 0; i < pixels.Length; i++)
-            {
-                float metal = Mathf.Lerp(mRemap.x, mRemap.y, m != null ? m[i].r : 0f);
-                float rough = Mathf.Lerp(rRemap.x, rRemap.y, r != null ? r[i].r : 1f);
-                pixels[i] = new Color(metal, metal, metal, 1f - rough);
-            }
+                pixels[i] = PackPixel(m != null ? m[i].r : 0f, r != null ? r[i].r : 1f, mRemap, rRemap);
             tex.SetPixels(pixels);
             tex.Apply();
             File.WriteAllBytes(path, tex.EncodeToPNG());
@@ -123,20 +179,21 @@ namespace VrBattlegrounds.Editor.Gameplay
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        /// <summary>Пиксели карты пака в <see cref="TextureSize" />: через рендер-текстуру, без флага Read/Write у TGA.</summary>
+        /// <summary>
+        /// Пиксели карты пака в <see cref="TextureSize" /> такими, какими их выбирает шейдер (sRGB-импорт уже
+        /// линеаризован выборкой): через линейную рендер-текстуру, без флага Read/Write у TGA.
+        /// </summary>
         private static Color[] Read(Texture texture)
         {
             if (texture == null) return null;
-            var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture)) as TextureImporter;
-            bool srgb = importer == null || importer.sRGBTexture;
             RenderTexture rt = RenderTexture.GetTemporary(TextureSize, TextureSize, 0, RenderTextureFormat.ARGB32,
-                                                          srgb ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
+                                                          RenderTextureReadWrite.Linear);
             RenderTexture previous = RenderTexture.active;
             try
             {
                 Graphics.Blit(texture, rt);
                 RenderTexture.active = rt;
-                var read = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false, !srgb);
+                var read = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false, true);
                 read.ReadPixels(new Rect(0, 0, TextureSize, TextureSize), 0, 0);
                 read.Apply();
                 Color[] pixels = read.GetPixels();

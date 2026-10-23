@@ -1,0 +1,20 @@
+{
+  "task_id": "weapon-metal-materials",
+  "owner": "weapon-metal-materials",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/weapon-metal-materials",
+  "base_sha": "efeac3fc2fbb7da9afd43eb77c688e211971d5ef",
+  "doc_path": "tasks/weapon-metal-materials/Readme.md",
+  "title": "Материалы оружия M_*: тёмный оружейный металл как у Hands_*",
+  "branch": "task/weapon-metal-materials",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/weapon-metal-materials/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -49,10 +49,6 @@
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, CyborgHandsBase)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
       "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },

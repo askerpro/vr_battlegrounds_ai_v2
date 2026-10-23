@@ -11,7 +11,12 @@
     {
       "id": "work",
       "writes": [
-        "tasks/weapon-metal-materials/**"
+        "tasks/weapon-metal-materials/**",
+        "Assets/Art/Weapons/Kinemation/Materials/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationMaterials.cs",
+        "Assets/Tests/EditMode/Weapons/KinemationMaterialsTests.cs",
+        "Assets/Tests/EditMode/Weapons/KinemationMaterialsTests.cs.meta",
+        "experts/weapon-system/journal/2026-10-23-weapon-metal-materials.md"
       ],
       "after": [],
       "needs": []

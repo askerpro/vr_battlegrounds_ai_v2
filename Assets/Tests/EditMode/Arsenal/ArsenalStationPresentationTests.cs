@@ -30,14 +30,17 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         }
 
         [Test]
-        public void Пять_слотов_в_каждом_ряду_и_MKR9_на_полке()
+        public void Слотов_в_ряду_по_пресету_и_MKR9_на_полке()
         {
             var instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Station));
             try
             {
                 var built = ArsenalTestStation.BuildSlots(instance, GameplayPreset);
+                // Боевой состав карт (arsenal-combat-lineup, 2026-10-23): 4 ствола на перфопанели, 3 на полке.
+                var preset = AssetDatabase.LoadAssetAtPath<ArsenalPreset>(GameplayPreset);
                 foreach (var row in instance.GetComponentsInChildren<ArsenalSlotRow>(true))
-                    Assert.That(row.GetComponentsInChildren<FirearmSlotController>(true).Length, Is.EqualTo(5), row.RowKey);
+                    Assert.That(row.GetComponentsInChildren<FirearmSlotController>(true).Length,
+                        Is.EqualTo(preset.Entries.Count(e => e.Row == row.RowKey)), row.RowKey);
                 var mkr9 = built.Single(b => b.Manifest.Entry.WeaponResource.name.Contains("MKR9"));
                 Assert.That(mkr9.Row.RowKey, Is.EqualTo("shelf"));
                 Assert.That(mkr9.Slot.transform.parent, Is.SameAs(mkr9.Row.transform));
@@ -52,7 +55,7 @@ namespace VrBattlegrounds.Tests.ArsenalWall
             try
             {
                 var built = ArsenalTestStation.BuildSlots(instance, GameplayPreset);
-                Assert.That(built.Count, Is.EqualTo(10));
+                Assert.That(built.Count, Is.EqualTo(AssetDatabase.LoadAssetAtPath<ArsenalPreset>(GameplayPreset).Entries.Count));
                 foreach (var b in built)
                 {
                     var card = b.Slot.GetComponentsInChildren<ArsenalPriceTag>(true).Single();

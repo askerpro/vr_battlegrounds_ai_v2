@@ -196,8 +196,11 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
    с узким полем (FOV = 2·atan(K / M)) рендерит в RT 320², только пока окуляр у глаза локального игрока; шейдер линзы
    показывает RT вокруг точки сведения (UV = 0,5 + 0,5·угол/K), сетка поверх. Писатель MPB линзы по-прежнему один —
    `WeaponOpticView` (точку сведения считает только он, `TryGetZero`). Комплект с кратностью — `OpticKitSpec.ScopeMagnification`
-   (`SightKit_Sight08`, ×2, поле окуляра tg 0,18; меш — `PackOpticBuilder`: заднее стекло пака — линза, переднее — в корпусе).
-   Стоит на SniperRifleAuto; у болтового SniperRifle увеличения нет. Открыто: замер на Quest.
+   (`SightKit_Sight08`, ×2; меш — `PackOpticBuilder`: заднее стекло пака — линза, переднее — в корпусе). Принято в шлеме
+   2026-10-23: картинка и сетка в координатах стекла окуляра (центр и радиус — submesh стекла, `TryGetLens`); поле
+   окуляра = радиус / удаление глаза; включение — глаз ≤ 15 см за окуляром и ≤ 2 см от оси; зрачок выхода — допуск
+   ракурса `WeaponSightCalibrationSettings._scopeEyeTolerance` (5 мм), вне ракурса светлое пятно указывает, куда сдвинуть
+   голову. Стоит на SniperRifleAuto. Открыто: замер GPU на Quest (отдельная задача).
 8. Stereo Quest и eyebox для `FiniteFocusReticle`; звук щитов не выбран; ожидания `LobbyLayoutTests` устарели.
 9. Единое обозначение дистанции сведения в будущем `Docs/weapons/` (R или Z).
 
@@ -281,7 +284,7 @@ pivot на точке прицеливания (F — вершина мушки,
 | Часть | Где |
 |---|---|
 | Окно | вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`WeaponSetupWindow`, `SightAutoZeroPanel`) |
-| Комплекты | `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68,XPS2}.prefab`; FBX механики — `Assets/Art/Weapons/Sights/IronKits/`; сборка — `…/Weapons/Sights/Build Iron Sight Kits`, `Build Optic Sight Kits` (`SightKitBuilder`) |
+| Комплекты | `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68,XPS2,Sight08}.prefab` (стенд показывает все `SightKit_*` папки); FBX механики — `Assets/Art/Weapons/Sights/IronKits/`; сборка — `…/Weapons/Sights/Build Iron Sight Kits`, `Build Optic Sight Kits` (`SightKitBuilder`) |
 | Решатель / подвижная деталь | `Weapons/Sights/Core/SightAutoZeroSolver.cs` / `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` |
 | Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, генерируемая `SightSplitTable`) |
 | Писатель | `Weapons/Sights/WeaponSightAuthoring.cs` |
@@ -302,6 +305,7 @@ pivot на точке прицеливания (F — вершина мушки,
 | M16 (`AR15.prefab`) / SniperRifle | `SightKit_TR15` в пазу | −5,24 / −6,34 мм; сложенный BUIS M16 оставлен |
 | MKR9 | `SightKit_MX68` в пазу | +0,08 мм; канал MX68 уже планки — принято; бюджет треугольников 32 000 |
 | TR15 | `SightKit_XPS2` в пазу | сетка на 15 м |
+| SniperRifleAuto (AX-50 Auto) | `SightKit_Sight08` (призма ×2) в пазу над ствольной коробкой | сетка на 15 м, камера кратности |
 | ShotgunReal (FABARM) | не калибруется | — |
 | SDKGun, SDK ShotGun, Machinegun | убраны из арсенала | ассеты удалены 2026-10-22 (были в `Assets/Unused/Weapons/`) |
 

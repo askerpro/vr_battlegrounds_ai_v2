@@ -42,6 +42,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             { "PPK",              new Vector2(0.17f, 0.23f) }, // Walther PPK: 15.5 см; модель пака крупнее — по руке пака 20 см
             { "Revolver",         new Vector2(0.30f, 0.40f) }, // Taurus Raging Bull 6.5": ~31 см; по руке пака 35
             { "SniperRifle",      new Vector2(1.05f, 1.25f) }, // AX-50: ~123 см; по руке пака 115
+            { "SniperRifleAuto",  new Vector2(1.05f, 1.25f) }, // AX-50 Auto — та же модель, что SniperRifle
 
             // T-39, пак KINEMATION: модели в реальном масштабе, корень ×1.
             { "SRM12",            new Vector2(0.85f, 1.00f) }, // Desert Tech SRS A2 (булл-пап, ствол 26"): ~95 см; модель 91

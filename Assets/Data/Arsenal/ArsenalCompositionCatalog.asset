@@ -23,7 +23,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 3900771781936566667, guid: 732e5b48d3557594583580ed383cc981, type: 3}
       SourceGuid: 732e5b48d3557594583580ed383cc981
-      SourceFingerprint: e347120504c0e08298a396529976b0ba
+      SourceFingerprint: c4cc8fd16dd9e8e646f2b90ddc092b22
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -34,7 +34,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1786085660339194700, guid: 63981a783100f704195a8e10cb89fc47, type: 3}
       SourceGuid: 63981a783100f704195a8e10cb89fc47
-      SourceFingerprint: 971d855bc3ca06fe037c65af011b9369
+      SourceFingerprint: 7840e1fda34d46ae6c749c2a8759b057
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -48,24 +48,24 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1013363612589426, guid: a89abddac5809dc47a6715d7ebeab24e, type: 3}
       SourceGuid: a89abddac5809dc47a6715d7ebeab24e
-      SourceFingerprint: cfbcc6675991793aeea14bdb54d16523
+      SourceFingerprint: aa2bd196b1ac682d70c1507d1f5593d4
       PhysicalScale: {x: 0.68, y: 0.68, z: 0.68}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: -0.000000007450581, y: -0.02389314, z: 0.01591961}
-        m_Extent: {x: 0.01652303, y: 0.072752416, z: 0.10048564}
+        m_Center: {x: -0.000000007450581, y: -0.01702781, z: 0.01591961}
+        m_Extent: {x: 0.01652303, y: 0.06588708, z: 0.10048564}
     Magazine:
       Present: 1
       Resource: {fileID: 7658064994636483981, guid: 7cc1b24032fe06543b2b7edf8c18c8b4, type: 3}
       SourceGuid: 7cc1b24032fe06543b2b7edf8c18c8b4
-      SourceFingerprint: 33e9d3b8d2bc5b84117d7a05535171ed
+      SourceFingerprint: a78c9ae5bf97daa75296b51df6aa6d16
       PhysicalScale: {x: 0.68, y: 0.68, z: 0.68}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: -0.00047599524, y: -0.0068653338, z: -0.00092819333}
-        m_Extent: {x: 0.012395032, y: 0.05977713, z: 0.025143526}
+        m_Center: {x: 0.0000000018626451, y: -0.000000011175871, z: -0.00000019557774}
+        m_Extent: {x: 0.011919035, y: 0.052911803, z: 0.023882462}
   - Weapon: {fileID: 11400000, guid: f140291be0d87d9409f937afc390abf0, type: 2}
     WeaponId: Herrington
     SourceGuid: f140291be0d87d9409f937afc390abf0
@@ -73,7 +73,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 5766990037059969871, guid: 69f24b275bfb4e34a93e038d9cacf6a9, type: 3}
       SourceGuid: 69f24b275bfb4e34a93e038d9cacf6a9
-      SourceFingerprint: 9cf005462460755277449ce44f525a40
+      SourceFingerprint: d8c0d87375415aa3f869f12813eae378
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -84,7 +84,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 5706746622394682049, guid: eb4946d84a27da8488cd9a1dd7bd005c, type: 3}
       SourceGuid: eb4946d84a27da8488cd9a1dd7bd005c
-      SourceFingerprint: 9aefe7adf703997460de01c3254b6f14
+      SourceFingerprint: af9bec507913cf7b59a6f5d4094ba5eb
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -98,18 +98,18 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1013363612589426, guid: cc00fcab78d7cee4faad59a02b2b7183, type: 3}
       SourceGuid: cc00fcab78d7cee4faad59a02b2b7183
-      SourceFingerprint: d3baaf7b685ec46f150eb9ceba2d03e8
+      SourceFingerprint: 22f93e9e95a3e968f76f010e834b4d11
       PhysicalScale: {x: 0.7, y: 0.7, z: 0.7}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0, y: -0.01656299, z: 0.123910695}
-        m_Extent: {x: 0.03355573, y: 0.11546353, z: 0.4204147}
+        m_Center: {x: 0, y: -0.00072935224, z: 0.123910695}
+        m_Extent: {x: 0.03355573, y: 0.13129717, z: 0.4204147}
     Magazine:
       Present: 1
       Resource: {fileID: 6308617285841064264, guid: b36fa7fe2791fba44aa22d7da2dfd50b, type: 3}
       SourceGuid: b36fa7fe2791fba44aa22d7da2dfd50b
-      SourceFingerprint: 906a89ecb9d9d7a109133fc27bb13cd2
+      SourceFingerprint: 0cc4fb24f78a9ba8086bae4ad514f702
       PhysicalScale: {x: 0.7, y: 0.7, z: 0.7}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -123,18 +123,18 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 8777186694099186684, guid: 47ad3a62d3b700b439a7e493e7f06902, type: 3}
       SourceGuid: 47ad3a62d3b700b439a7e493e7f06902
-      SourceFingerprint: 853a1ca0035cfe05dbc2b09101e0dee2
+      SourceFingerprint: 7ae7c20290b3c6d8c28b2ceb39b65bc2
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0.0028015207, y: -0.060697287, z: -0.024020195}
-        m_Extent: {x: 0.030954953, y: 0.13577405, z: 0.30171126}
+        m_Center: {x: 0.0028015207, y: -0.04126604, z: -0.024020195}
+        m_Extent: {x: 0.030954953, y: 0.1552053, z: 0.30171126}
     Magazine:
       Present: 1
       Resource: {fileID: 4230906836973670970, guid: 4d3a79244e8df3f498b26da0ff300b22, type: 3}
       SourceGuid: 4d3a79244e8df3f498b26da0ff300b22
-      SourceFingerprint: 46075aa81178ec8f0c22eb50e6ea8785
+      SourceFingerprint: c744c1aa1bad4890177e39687f1a512b
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -148,7 +148,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 165259757907161205, guid: fb9ee97dde176d3439ae7de27efa2e3b, type: 3}
       SourceGuid: fb9ee97dde176d3439ae7de27efa2e3b
-      SourceFingerprint: 7d2b4dbc791096724411fe9f75925037
+      SourceFingerprint: 766066c820a6d01636d33a12e788ec2d
       PhysicalScale: {x: 4.5333433, y: 4.5333433, z: 4.5333433}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -159,7 +159,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 8531509035156370268, guid: 0e8830f395e24fa4999164bbeb582eb5, type: 3}
       SourceGuid: 0e8830f395e24fa4999164bbeb582eb5
-      SourceFingerprint: 00f6c791e4d7773a2d1c25401edc54ef
+      SourceFingerprint: 8f4b89915006eb3c30e5f417819e3d20
       PhysicalScale: {x: 4.5333433, y: 4.5333433, z: 4.5333433}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -173,7 +173,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 2847518032690409953, guid: 26b1fd63ab9a4274cb17304b23cb6318, type: 3}
       SourceGuid: 26b1fd63ab9a4274cb17304b23cb6318
-      SourceFingerprint: f8113ef4dedb5867a36161208b6effc5
+      SourceFingerprint: 1fbfdba6707efc0347246e6af9164ddd
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -184,7 +184,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 3521067315164190836, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
       SourceGuid: bb9de8cc9dc96064695457eb90647c70
-      SourceFingerprint: a5b35acf10f62f44f0e65be21a8a5e80
+      SourceFingerprint: 91ac1475fe3daa03572d831cf678c2b5
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -198,7 +198,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 7674922350059574561, guid: 53b2af502e94d13489397cef90c86925, type: 3}
       SourceGuid: 53b2af502e94d13489397cef90c86925
-      SourceFingerprint: 33fd81c8387064be24d687a8122a8645
+      SourceFingerprint: 4174451a372f35bf8c9eb5f1a6c539a7
       PhysicalScale: {x: 0.65456605, y: 0.65456605, z: 0.65456605}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -209,7 +209,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 3850768520735387343, guid: 68884ec49d8d8df4bb08344406635740, type: 3}
       SourceGuid: 68884ec49d8d8df4bb08344406635740
-      SourceFingerprint: 5d4e6dd4c7cdc98430c6b983eaceb625
+      SourceFingerprint: 42c3328b0cf40fff697a34d6f967ce11
       PhysicalScale: {x: 0.65456605, y: 0.65456605, z: 0.65456605}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -223,24 +223,24 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 8504929066865201802, guid: fac3a1d89b21c3c42b8292f09026d44b, type: 3}
       SourceGuid: fac3a1d89b21c3c42b8292f09026d44b
-      SourceFingerprint: 314505be6606efff80b00cb955061e9d
+      SourceFingerprint: 514b5ebc1999fa1640506d5ad184d7f8
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0.000000014901161, y: -0.008957528, z: 0.030228049}
-        m_Extent: {x: 0.022608193, y: 0.08041005, z: 0.13386855}
+        m_Center: {x: 0.000000014901161, y: -0.00883013, z: 0.030228049}
+        m_Extent: {x: 0.022608193, y: 0.080537446, z: 0.13386855}
     Magazine:
       Present: 1
       Resource: {fileID: 4089589820379981812, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
       SourceGuid: a2ee1d507e0d63140a4d137bd3077eec
-      SourceFingerprint: c654f32beab95afc112e8f91ea2eddf0
+      SourceFingerprint: 9b2b443dd4c83c81102b04ffb2fddf29
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0, y: -0.0000000037252903, z: 0.02866349}
-        m_Extent: {x: 0.022608193, y: 0.02260822, z: 0.053049598}
+        m_Center: {x: 0, y: -0.0000000037252903, z: 0.028663483}
+        m_Extent: {x: 0.022608193, y: 0.02260822, z: 0.0530496}
   - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
     WeaponId: Revolver
     SourceGuid: 71578ee82c8283640ab0a08d6396549b
@@ -248,18 +248,18 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1347677723873503563, guid: 3eee9bb131ea6a64ca4fc336d3eea0b9, type: 3}
       SourceGuid: 3eee9bb131ea6a64ca4fc336d3eea0b9
-      SourceFingerprint: e66ae51ebb7fc2c890b2ee7d3e63b7f1
+      SourceFingerprint: cb873b6fa6b77b4c82e965b87a2bf4af
       PhysicalScale: {x: 0.7058332, y: 0.7058332, z: 0.7058332}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0.000073518604, y: 0.07641242, z: 0.0005835593}
-        m_Extent: {x: 0.02209707, y: 0.07916402, z: 0.17500003}
+        m_Center: {x: 0.000073518604, y: 0.076608546, z: 0.0005835593}
+        m_Extent: {x: 0.02209707, y: 0.07936015, z: 0.17500003}
     Magazine:
       Present: 1
       Resource: {fileID: 6196372738328328043, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
       SourceGuid: 24bb8e6e4c7897848802a0c534714580
-      SourceFingerprint: 7d854cbf0ccbcb4bd04f4f481a95bed1
+      SourceFingerprint: 97f98e86313a877da294978db7aca78c
       PhysicalScale: {x: 0.7058332, y: 0.7058332, z: 0.7058332}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -273,7 +273,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 2269598592341582059, guid: 2472d08be23174c4b9863d83cddf68f8, type: 3}
       SourceGuid: 2472d08be23174c4b9863d83cddf68f8
-      SourceFingerprint: d7681c4ca2fb779186f5b1710587536b
+      SourceFingerprint: 1ab74a5be8cfb8a5ea5e1a8e0d7e84d2
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -284,7 +284,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 2754127896509867834, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
       SourceGuid: 32bac82101ae21544b671d744fd34d82
-      SourceFingerprint: 6c46ddb039386084c7c6755f8709f825
+      SourceFingerprint: f76e6361421ccceda246b23a1491a16c
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -298,18 +298,18 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 99182336922691436, guid: 29b19734d45bd464c8faff6700ec8624, type: 3}
       SourceGuid: 29b19734d45bd464c8faff6700ec8624
-      SourceFingerprint: 8a46b6f01316428c14cf3ee673f8d14c
+      SourceFingerprint: 7a5e1a09bd0e6819739f4d570451894e
       PhysicalScale: {x: 0.71620476, y: 0.71620476, z: 0.71620476}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: -0.003330335, y: -0.00387536, z: 0.056074858}
-        m_Extent: {x: 0.031761155, y: 0.1166352, z: 0.31750003}
+        m_Center: {x: -0.003330335, y: 0.009833679, z: 0.056074858}
+        m_Extent: {x: 0.031761155, y: 0.13034424, z: 0.31750003}
     Magazine:
       Present: 1
       Resource: {fileID: 3324518201893827815, guid: ea4c4f7c1f3bec74bbfa0160ec3fb922, type: 3}
       SourceGuid: ea4c4f7c1f3bec74bbfa0160ec3fb922
-      SourceFingerprint: bdbc19ad18faa34fcea311e9b53a9326
+      SourceFingerprint: bbea3b20653f7e5f3f86cde8c669e240
       PhysicalScale: {x: 0.71620476, y: 0.71620476, z: 0.71620476}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -323,7 +323,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 6455569017325164971, guid: d586c5e550bf0ee4a9619d4bd368ca54, type: 3}
       SourceGuid: d586c5e550bf0ee4a9619d4bd368ca54
-      SourceFingerprint: c328d108effebfe7574f2c51623d4fe6
+      SourceFingerprint: 76ad79f32305e2d222b862e574d4ba84
       PhysicalScale: {x: 1.1892964, y: 1.1892964, z: 1.1892964}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -334,7 +334,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1507515040717537900, guid: 4c0598d66f467ea4690a960b022f58da, type: 3}
       SourceGuid: 4c0598d66f467ea4690a960b022f58da
-      SourceFingerprint: ea1f016772ff483f866973e6fbfe76c0
+      SourceFingerprint: 645ec895ee07fe94de63c75b521e74ff
       PhysicalScale: {x: 1.1892964, y: 1.1892964, z: 1.1892964}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -348,18 +348,43 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 4144354778344050857, guid: ae620c2caa0384243bbe976dc7e1199d, type: 3}
       SourceGuid: ae620c2caa0384243bbe976dc7e1199d
-      SourceFingerprint: 577da2869903b11b56786727ced71ac2
+      SourceFingerprint: 10a7cf746a505c9be21c9376806c594f
       PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0.008897949, y: 0.0017610341, z: 0.25447327}
-        m_Extent: {x: 0.056349088, y: 0.08476563, z: 0.57500005}
+        m_Center: {x: 0.008897949, y: 0.023425668, z: 0.25447327}
+        m_Extent: {x: 0.056349088, y: 0.10643026, z: 0.57500005}
     Magazine:
       Present: 1
       Resource: {fileID: 8141809575723388705, guid: 07afbe3c7f538ec4399eca18cb85cb4e, type: 3}
       SourceGuid: 07afbe3c7f538ec4399eca18cb85cb4e
-      SourceFingerprint: 68f0bbeca0b2e666b1b56119a6a18aef
+      SourceFingerprint: 32d6456f3bbc9f0184551938fa2644a8
+      PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0, y: 0, z: 0.0000000037252903}
+        m_Extent: {x: 0.013785878, y: 0.047951832, z: 0.048536107}
+  - Weapon: {fileID: 11400000, guid: 62612a82d013f22478d2acdea44a330b, type: 2}
+    WeaponId: SniperRifleAuto
+    SourceGuid: 62612a82d013f22478d2acdea44a330b
+    Item:
+      Present: 1
+      Resource: {fileID: 1830703560352251074, guid: 5c541f465965b424885809dee48efdc1, type: 3}
+      SourceGuid: 5c541f465965b424885809dee48efdc1
+      SourceFingerprint: 4f4d16aa9d4fc29dbaf7737658f35bb4
+      PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
+      DropOffsetPhysical: {x: 0, y: 0, z: 0}
+      DropRotation: {x: 0, y: 0, z: 0, w: 1}
+      PhysicalRootBounds:
+        m_Center: {x: 0.008897949, y: 0.044386074, z: 0.25447327}
+        m_Extent: {x: 0.056349088, y: 0.12739067, z: 0.57500005}
+    Magazine:
+      Present: 1
+      Resource: {fileID: 2695822721092902424, guid: da943d1a621b551469fa6bd4eef6fa1e, type: 3}
+      SourceGuid: da943d1a621b551469fa6bd4eef6fa1e
+      SourceFingerprint: 6e22b926b33408ec6a4457cd453b3a2b
       PhysicalScale: {x: 1.0959959, y: 1.0959959, z: 1.0959959}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -373,18 +398,18 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 3664258485270452095, guid: 3935229bb05b32b45b3af04c07bfbfbe, type: 3}
       SourceGuid: 3935229bb05b32b45b3af04c07bfbfbe
-      SourceFingerprint: a23fd5851099fafd4a61db5f38e4b275
+      SourceFingerprint: 197ce0e04bb3158e681fe7696e5af246
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
       PhysicalRootBounds:
-        m_Center: {x: 0.0021569263, y: -0.013794512, z: 0.14902529}
-        m_Extent: {x: 0.029850047, y: 0.13910505, z: 0.42779917}
+        m_Center: {x: 0.0021569263, y: -0.013732582, z: 0.14902529}
+        m_Extent: {x: 0.029850047, y: 0.13916698, z: 0.42779917}
     Magazine:
       Present: 1
       Resource: {fileID: 3254853512004640353, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
       SourceGuid: c1288aacdfca72346b6966bf7d6b906e
-      SourceFingerprint: 769f10d8249ac40e83d18e71edd39114
+      SourceFingerprint: 732e104470dcd9f6e41a09a10ccd9a85
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -398,7 +423,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 1151490975763823724, guid: 997df2bcc8be41c41980b1edb216fd5d, type: 3}
       SourceGuid: 997df2bcc8be41c41980b1edb216fd5d
-      SourceFingerprint: 06a2710690aca493cc82d8e49a301af3
+      SourceFingerprint: 95adfd191386a4aa33d4fd8a9b2744b4
       PhysicalScale: {x: 0.20867454, y: 0.20867454, z: 0.20867454}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -409,7 +434,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 7182258339646233927, guid: 6064c964013ccf24ca87fb5aee2b829b, type: 3}
       SourceGuid: 6064c964013ccf24ca87fb5aee2b829b
-      SourceFingerprint: a0c5a90f4077ef63e3e12876e685fc05
+      SourceFingerprint: fe0b7dcb6c69e224d3f4b2c396fef0fb
       PhysicalScale: {x: 0.20867454, y: 0.20867454, z: 0.20867454}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -423,7 +448,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 4014381441530705613, guid: 188e4570e48eabf418fa869094785d53, type: 3}
       SourceGuid: 188e4570e48eabf418fa869094785d53
-      SourceFingerprint: 0050b3f0bef0f0e2ba4104a984b6fbb4
+      SourceFingerprint: 99b918f3806d8b877dd8fbd91d70b448
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -434,7 +459,7 @@ MonoBehaviour:
       Present: 1
       Resource: {fileID: 6924759405784432587, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
       SourceGuid: e2881f975378c1d4c865fc5f94053e45
-      SourceFingerprint: 5984b699a8e71b00f012f53530f726a6
+      SourceFingerprint: d7051747e170c75543a5c93293145558
       PhysicalScale: {x: 1, y: 1, z: 1}
       DropOffsetPhysical: {x: 0, y: 0, z: 0}
       DropRotation: {x: 0, y: 0, z: 0, w: 1}

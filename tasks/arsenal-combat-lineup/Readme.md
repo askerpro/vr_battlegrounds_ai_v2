@@ -15,16 +15,14 @@
 
 ## Состояние
 
-- [x] Состав карт: `CurrentGameplayArsenal` — TR15, MKR9, Herrington, SRM12, Viper, Revolver, SniperRifleAuto. Все игровые `MapData` ссылаются на этот пресет, Lobby — на `FullDemoArsenal` (+ SniperRifleAuto).
-- [x] Баланс TR15 (32) и Revolver (180/мин, 1250) в `WeaponInfo` и префабах.
-- [x] SniperRifleAuto: рецепт `HandsPackWeaponBuilder.SniperRifleAuto` (автомат), первая сборка, реестр, spawnPrefabs, пресеты; магазин — тег `MagSniper` (тот же магазин, что у SniperRifle).
-- [x] Оптика: `WeaponScopeCamera` + `WeaponOpticView` + шейдер; `PackOpticBuilder` → `SightKit_Sight08` ×2, посажен в паз над ствольной коробкой, сведён на 15 м.
-- [x] Barrett снят (ассеты, реестр, сеть, карманы, таблица прицелов); источник `LowPolyWeapon` остался без рецептов.
-- [x] Docs/gameplay.md, Docs/weapons/decisions.md, sight-calibration.md п. 7. Android compile gate — PASS.
-- [ ] Хваты аватаров у SniperRifleAuto (сейчас хват по умолчанию) — регистрация из `_orig`.
-- [ ] Приёмка в шлеме (список ниже), затем тесты (см. Details).
-- [ ] Замер камеры прицела и XPS2 на Quest 3 (бюджет +1 мс ovr_gpu p50).
+- [x] Состав карт: `CurrentGameplayArsenal` — TR15, MKR9, Herrington, SRM12, Viper, Revolver, SniperRifleAuto (AX-50 Auto). Lobby (`FullDemoArsenal`) — весь арсенал, AX-50 Auto на месте SniperRifle. Каталог композиции пересобран.
+- [x] Баланс TR15 (32), Revolver (180/мин, 1250), AX-50 Auto (55/0,98/240/10/3700).
+- [x] AX-50 Auto: модель SniperRifle, автомат, хваты перенесены с SniperRifle, выстрел без болтовки.
+- [x] Оптика `SightKit_Sight08` ×2: картинка и снайперская сетка на стекле, зрачок выхода с подсказкой, допуск 5 мм (ползунок `WeaponSightCalibrationSettings`).
+- [x] **Принято пользователем в шлеме (worker) 2026-10-23.**
+- [ ] Тесты: `WeaponBalanceTests`, `HitsToKillTests`, `WeaponScaleTests` обновлены; новые `ScopeOpticTests`, `CombatLineupTests` — прогон EditMode.
 - [ ] Ревью зон, heavy, вливание.
+- Замер GPU камеры прицела на Quest 3 — отдельная задача (решение пользователя).
 
 ## Проверка в шлеме
 

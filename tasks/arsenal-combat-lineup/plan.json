@@ -34,7 +34,10 @@
         "Assets/Editor/VR_Battlegrounds/Gameplay/**",
         "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**",
         "Assets/Art/HandPoses/Orig/**",
-        "Assets/Audio/SFX/Weapons/SniperRifleAuto/**"
+        "Assets/Audio/SFX/Weapons/SniperRifleAuto/**",
+        "Assets/Tests/EditMode/Sights/**",
+        "Assets/Tests/EditMode/Prefabs/WeaponScaleTests.cs",
+        "Assets/Data/Weapons/SightCalibration/**"
       ],
       "after": [],
       "needs": []

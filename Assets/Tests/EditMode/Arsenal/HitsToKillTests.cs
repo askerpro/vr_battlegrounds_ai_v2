@@ -40,9 +40,12 @@ namespace VrBattlegrounds.Tests.Arsenal
             { "MKR9_Weapon",        new[,] { { 2, 4, 6 }, { 2, 5, 6 }, { 2, 5, 7 } } },
             { "ShotgunReal_Weapon", new[,] { { 1, 1, 1 }, { 1, 1, 2 }, { 1, 2, 2 } } },
             { "Herrington_Weapon",  new[,] { { 1, 2, 2 }, { 1, 2, 3 }, { 1, 3, 3 } } },
-            { "TR15_Weapon",        new[,] { { 1, 3, 4 }, { 1, 3, 4 }, { 1, 3, 4 } } },
+            // arsenal-combat-lineup (2026-10-23): голова не убивает (96 вблизи), голова + нога — до 45 м.
+            { "TR15_Weapon",        new[,] { { 2, 4, 5 }, { 2, 4, 5 }, { 2, 4, 5 } } },
             { "SRM12_Weapon",       new[,] { { 1, 2, 2 }, { 1, 2, 2 }, { 1, 2, 2 } } },
             { "Mk14_Weapon",        new[,] { { 1, 2, 2 }, { 1, 2, 2 }, { 1, 2, 2 } } },
+            // AX-50 Auto: два попадания в тело на всей арене (до 60 м), голова — с одного.
+            { "SniperRifleAuto_Weapon", new[,] { { 1, 2, 3 }, { 1, 2, 3 }, { 1, 2, 3 } } },
         };
 
         private static readonly HitZone[] Zones = { HitZone.Head, HitZone.Torso, HitZone.Leg };

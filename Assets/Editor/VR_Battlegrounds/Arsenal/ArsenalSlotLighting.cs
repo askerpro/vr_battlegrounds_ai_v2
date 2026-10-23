@@ -58,11 +58,12 @@ namespace VrBattlegrounds.Editor.Arsenal
         // Полосы подобраны с пользователем в Play (tools/softbox_prototype.cs): большая ровная панель делает гладкий металл
         // «серебряным», узкие полосы с тёмными промежутками дают тёмный металл с бликами. Стена: 3 полосы по 15 см в 1,2 м
         // перед стеной, на −0,4 / +0,3 / +1,0 м от центра досок — верх стволов отражает область выше глаз. Полка: полоса
-        // над ней, наклонена к ней. Яркость >1 — в HDR-пробе это блик.
+        // над ней, наклонена к ней. Яркость >1 — в HDR-пробе это блик; 4 давало оружию вид хрома (пользователь в шлеме-
+        // режиме Play 2026-10-23) — 1,5.
         internal const float StripDistance = 1.2f, StripTall = 0.15f, StripOverhang = 0.2f, BoardWidth = 0.45f;
         internal static readonly float[] WallStripHeights = { -0.4f, 0.3f, 1.0f };
         internal const float ShelfStripUp = 0.55f, ShelfStripForward = 0.15f;
-        internal const float StripBrightness = 4f;
+        internal const float StripBrightness = 1.5f;
         internal static readonly Color StripColor = new Color(1f, .93f, .85f);
 
         // Рассеянный свет — 4 запечённые лампы на слот в точках LampPoints префаба слота (углы доски, 20 см перед ней),
@@ -75,8 +76,14 @@ namespace VrBattlegrounds.Editor.Arsenal
         internal const float LampRefDistance = 0.35f;
         internal static readonly Color LampColor = new Color(1f, .85f, .6f);
 
-        internal const float ReflectionMargin = 0.4f;
+        // Влияние пробы станции — только слой, где висит оружие: от 3 см за лицом доски до 25 см перед ним, выше доски на
+        // 25 см (ствол снайперской винтовки). Коробка во всю станцию с запасом 0,4 м накрывала место игрока: его руки и
+        // оружие в руках отражали полосы «хромом» (пользователь 2026-10-23). Проба своя у каждого ряда (стена наклонена,
+        // полка горизонтальна), снимок — с места игрока (ReflectionEyeDistance перед стеной, на высоте центра досок).
+        // Box Projection выключена: в тонкой коробке параллакс исказил бы полосы, которые висят за её пределами.
+        internal const float VolumeBehind = 0.03f, VolumeFront = 0.25f, VolumeAbove = 0.25f, ReflectionEyeDistance = 1f;
         internal const int ReflectionResolution = 128, ReflectionImportance = 2;
+        public const string WallReflectionName = ReflectionName + "_Wall", ShelfReflectionName = ReflectionName + "_Shelf";
 
         /// <summary>Расчётные точки слота в мире.</summary>
         public readonly struct SlotPoints
@@ -84,12 +91,14 @@ namespace VrBattlegrounds.Editor.Arsenal
             public readonly ArsenalSlotRow Row;
             public readonly Vector3 Aim, Front, BoardTop, Up, Forward, Along;
             public readonly Vector3[] Lamps, LampAims;
+            /// <summary>Объём, где висит содержимое слота: влияние пробы отражений станции.</summary>
+            public readonly Bounds Volume;
 
             public SlotPoints(ArsenalSlotRow row, Vector3 aim, Vector3 front, Vector3 boardTop, Vector3 up, Vector3 forward, Vector3 along,
-                Vector3[] lamps, Vector3[] lampAims)
+                Vector3[] lamps, Vector3[] lampAims, Bounds volume)
             {
                 Row = row; Aim = aim; Front = front; BoardTop = boardTop; Up = up; Forward = forward; Along = along;
-                Lamps = lamps; LampAims = lampAims;
+                Lamps = lamps; LampAims = lampAims; Volume = volume;
             }
 
             public bool IsShelf => Row != null && Row.Zone == ArsenalPresentationZone.Shelf;
@@ -184,7 +193,9 @@ namespace VrBattlegrounds.Editor.Arsenal
                         frame.Width, stripMaterial));
                 }
                 stripRoot.gameObject.SetActive(false);
-                CreateReflectionProbe(group, slots, strips, frame.WallCenter.y);
+                Vector3 eye = frame.WallCenter + frame.Face * (ReflectionEyeDistance - AimOffset);
+                CreateReflectionProbe(group, WallReflectionName, slots.Where(s => !s.IsShelf), eye);
+                CreateReflectionProbe(group, ShelfReflectionName, slots.Where(s => s.IsShelf), eye);
                 stations++;
                 report.Append(station.StationKey).Append(": ").Append(slots.Count).Append(" слотов. ");
             }
@@ -199,8 +210,9 @@ namespace VrBattlegrounds.Editor.Arsenal
         }
 
         /// <summary>
-        ///     Запечь пробы отражений станций с полосами: полосы включаются только на время снимка, проба получает свой EXR
-        ///     в режиме Custom. Вызывается сам после Generate Lighting; вручную — из меню. Возвращает отчёт.
+        ///     Запечь пробы отражений станций с полосами: полосы включаются только на время снимка. Пробы рядов снимают
+        ///     с одной точки, поэтому у станции один EXR на все её пробы (режим Custom). Вызывается сам после Generate
+        ///     Lighting; вручную — из меню. Возвращает отчёт.
         /// </summary>
         public static string BakeReflections(Scene scene)
         {
@@ -209,20 +221,25 @@ namespace VrBattlegrounds.Editor.Arsenal
             var report = new StringBuilder();
             foreach (Transform group in container)
             {
-                var probe = group.Find(ReflectionName)?.GetComponent<ReflectionProbe>();
+                ReflectionProbe[] probes = group.GetComponentsInChildren<ReflectionProbe>(true)
+                    .Where(p => p.name.StartsWith(ReflectionName, StringComparison.Ordinal)).ToArray();
                 Transform strips = group.Find(StripsName);
-                if (probe == null || strips == null) continue;
+                if (probes.Length == 0 || strips == null) continue;
                 string path = ReflectionFolder + "/" + scene.name + "_" + group.name + ".exr";
                 strips.gameObject.SetActive(true);
                 bool baked;
-                try { baked = Lightmapping.BakeReflectionProbe(probe, path); }
+                try { baked = Lightmapping.BakeReflectionProbe(probes[0], path); }
                 finally { strips.gameObject.SetActive(false); }
                 if (!baked) { report.Append(group.name).Append(": проба не запеклась. "); continue; }
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-                probe.mode = ReflectionProbeMode.Custom;
-                probe.customBakedTexture = AssetDatabase.LoadAssetAtPath<Texture>(path);
-                EditorUtility.SetDirty(probe);
-                report.Append(group.name).Append(": ").Append(path).Append(". ");
+                var texture = AssetDatabase.LoadAssetAtPath<Texture>(path);
+                foreach (ReflectionProbe probe in probes)
+                {
+                    probe.mode = ReflectionProbeMode.Custom;
+                    probe.customBakedTexture = texture;
+                    EditorUtility.SetDirty(probe);
+                }
+                report.Append(group.name).Append(": ").Append(path).Append(" (").Append(probes.Length).Append(" проб). ");
             }
             EditorSceneManager.MarkSceneDirty(scene);
             return report.Length == 0 ? "Станций с пробой нет." : report + "Сохраните сцену.";
@@ -260,6 +277,15 @@ namespace VrBattlegrounds.Editor.Arsenal
             Vector3 front = aim + Vector3.back * ProbeForward;
             Vector3 top = center + boardUp * halfHeight;
 
+            // Объём содержимого: доска от VolumeBehind за лицом до VolumeFront перед ним, вверх по доске ещё VolumeAbove.
+            Vector3 boardRight = rotation * Vector3.right;
+            float halfWidth = board != null ? board.localScale.x * .5f : BoardWidth * .5f;
+            var volume = new Bounds(frame.MultiplyPoint3x4(center), Vector3.zero);
+            foreach (float x in new[] { -halfWidth, halfWidth })
+            foreach (float y in new[] { -halfHeight, halfHeight + VolumeAbove })
+            foreach (float z in new[] { -VolumeBehind, VolumeFront })
+                volume.Encapsulate(frame.MultiplyPoint3x4(center + boardRight * x + boardUp * y + face * z));
+
             // Лампы: точки LampPoints/Lamp_0..3 префаба (низ-лево, низ-право, верх-лево, верх-право), цель — центр
             // четверти доски того же угла в LampAimForward перед ней.
             Transform points = row.SlotPrefab != null ? row.SlotPrefab.transform.Find(LampPointsName) : null;
@@ -281,7 +307,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             }
             return new SlotPoints(row, frame.MultiplyPoint3x4(aim), frame.MultiplyPoint3x4(front), frame.MultiplyPoint3x4(top),
                 frame.MultiplyVector(Vector3.up).normalized, frame.MultiplyVector(Vector3.back).normalized,
-                frame.MultiplyVector(Vector3.right).normalized, lamps.ToArray(), lampAims.ToArray());
+                frame.MultiplyVector(Vector3.right).normalized, lamps.ToArray(), lampAims.ToArray(), volume);
         }
 
         /// <summary>Мировая матрица ряда, когда подвижное оборудование станции полностью выдвинуто.</summary>
@@ -364,25 +390,23 @@ namespace VrBattlegrounds.Editor.Arsenal
             light.shadows = LightShadows.None;
         }
 
-        /// <summary>Проба отражений станции: коробка вокруг слотов и полос с запасом, точка съёмки — на уровне глаз.</summary>
-        private static void CreateReflectionProbe(Transform parent, IReadOnlyList<SlotPoints> slots, IReadOnlyList<Transform> strips, float eyeY)
+        /// <summary>
+        ///     Проба отражений ряда: влияние — объёмы содержимого его слотов (<see cref="SlotPoints.Volume" />), снимок —
+        ///     с места игрока <paramref name="eye" /> (точка съёмки пробы может лежать вне её коробки).
+        /// </summary>
+        private static void CreateReflectionProbe(Transform parent, string name, IEnumerable<SlotPoints> slots, Vector3 eye)
         {
-            var bounds = new Bounds(slots[0].Aim, Vector3.zero);
-            foreach (SlotPoints slot in slots)
-            {
-                bounds.Encapsulate(slot.Aim);
-                bounds.Encapsulate(slot.Front);
-                bounds.Encapsulate(slot.BoardTop);
-            }
-            foreach (Transform strip in strips) bounds.Encapsulate(strip.position);
-            bounds.Expand(ReflectionMargin * 2f);
+            List<SlotPoints> row = slots.ToList();
+            if (row.Count == 0) return;
+            Bounds bounds = row[0].Volume;
+            foreach (SlotPoints slot in row) bounds.Encapsulate(slot.Volume);
 
-            var go = new GameObject(ReflectionName);
+            var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(bounds.center.x, Mathf.Clamp(eyeY, bounds.min.y, bounds.max.y), bounds.center.z);
+            go.transform.position = eye;
             var probe = go.AddComponent<ReflectionProbe>();
             probe.mode = ReflectionProbeMode.Custom;
-            probe.boxProjection = true;
+            probe.boxProjection = false;
             probe.size = bounds.size;
             probe.center = bounds.center - go.transform.position;
             probe.resolution = ReflectionResolution;

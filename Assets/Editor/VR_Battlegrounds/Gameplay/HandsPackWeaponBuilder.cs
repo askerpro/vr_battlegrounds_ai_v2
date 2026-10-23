@@ -385,14 +385,15 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>
         /// Делает <see cref="SniperRifleAutoShotPath" /> и ставит его на спуск префаба SniperRifleAuto (без пересборки: одно
         /// поле). Файлы выстрелов снайперского набора пака (1,88 с) несут и звук болтовки (подъём, назад, вперёд, вниз
-        /// после 0,55 с): у автомата он звучал на каждый выстрел как перезарядка (шлем 2026-10-23). Оставляем 0,5 с.
+        /// после 0,55 с): у автомата он звучал на каждый выстрел как перезарядка (шлем 2026-10-23). Оставляем 0,55 с с плавным
+        /// хвостом 0,3 с (квадратичная кривая): срез 0,5 с с затуханием 80 мс обрывал ещё громкий выстрел (шлем 2026-10-24).
         /// </summary>
         public static string MakeSniperRifleAutoShot()
         {
             string folder = SniperRifleAutoShotPath.Substring(0, SniperRifleAutoShotPath.LastIndexOf('/'));
             KinemationWeapon.EnsureFolder(folder);
-            AudioClip clip = KinemationAudio.Shot(SniperRifleAutoShotSource, 0.5f, folder,
-                                                  System.IO.Path.GetFileNameWithoutExtension(SniperRifleAutoShotPath));
+            AudioClip clip = KinemationAudio.Shot(SniperRifleAutoShotSource, 0.55f, folder,
+                                                  System.IO.Path.GetFileNameWithoutExtension(SniperRifleAutoShotPath), 0.3f, true);
             string prefabPath = $"Assets/Prefabs/Weapons/{SniperRifleAuto.PrefabFolder}/{SniperRifleAuto.Name}.prefab";
             if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) == null) return $"{SniperRifleAutoShotPath} ({clip.length:F2} с); префаба ещё нет";
             GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);

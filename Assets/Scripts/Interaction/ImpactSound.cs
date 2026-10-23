@@ -76,7 +76,13 @@ namespace VrBattlegrounds.Interaction
 
         private void Awake() => _grabbable = GetComponent<UxrGrabbableObject>();
 
-        private void OnCollisionEnter(Collision collision) => OnImpact(collision.relativeVelocity.magnitude, Time.time);
+        private void OnCollisionEnter(Collision collision)
+        {
+            // Гильза или вылетевший патрон, попавшие на лежащий магазин/ствол, звучат своим касанием (WeaponEjecta) —
+            // предмет от них не «падает» (шлем 2026-10-24: лишний звук падения на каждую гильзу).
+            if (collision.rigidbody != null && collision.rigidbody.TryGetComponent(out WeaponEjecta _)) return;
+            OnImpact(collision.relativeVelocity.magnitude, Time.time);
+        }
 
         /// <summary>Удар со скоростью <paramref name="speed"/> в момент <paramref name="time"/>.</summary>
         public void OnImpact(float speed, float time)

@@ -29,7 +29,14 @@ namespace VrBattlegrounds.Editor.Gameplay
         private const float PreRoll = 0.03f;
 
         /// <summary>Кусок <paramref name="length" /> с от <paramref name="start" /> (моно, затухание в конце).</summary>
-        public static AudioClip Cut(string sourcePath, float start, float length, string folder, string name)
+        public static AudioClip Cut(string sourcePath, float start, float length, string folder, string name) =>
+            Cut(sourcePath, start, length, folder, name, Fade, false);
+
+        /// <summary>
+        /// Кусок с затуханием <paramref name="fadeOut" /> с в конце; <paramref name="smoothTail" /> — квадратичная кривая
+        /// (громкость спадает как естественный хвост, а не линейным срезом).
+        /// </summary>
+        public static AudioClip Cut(string sourcePath, float start, float length, string folder, string name, float fadeOut, bool smoothTail)
         {
             var src = AssetDatabase.LoadAssetAtPath<AudioClip>(sourcePath) ?? throw new FileNotFoundException(sourcePath);
             float[] mono = Mono(src);
@@ -39,8 +46,12 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             var data = new float[count];
             Array.Copy(mono, from, data, 0, count);
-            int fade = Mathf.Min(count, Mathf.RoundToInt(Fade * freq));
-            for (int i = 0; i < fade; i++) data[count - 1 - i] *= i / (float)fade;
+            int fade = Mathf.Min(count, Mathf.RoundToInt(fadeOut * freq));
+            for (int i = 0; i < fade; i++)
+            {
+                float k = i / (float)fade;
+                data[count - 1 - i] *= smoothTail ? k * k : k;
+            }
             int fadeIn = Mathf.Min(count, Mathf.RoundToInt(0.004f * freq)); // без щелчка на срезе
             for (int i = 0; i < fadeIn; i++) data[i] *= i / (float)fadeIn;
 
@@ -86,15 +97,23 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Выстрел: от начала до спада громкости ниже 1 % пика (с хвостом помещения), не дольше <paramref name="maxLength" /> с.</summary>
-        public static AudioClip Shot(string sourcePath, float maxLength, string folder, string name)
+        public static AudioClip Shot(string sourcePath, float maxLength, string folder, string name) =>
+            Shot(sourcePath, maxLength, folder, name, Fade, false);
+
+        /// <summary>
+        /// Выстрел с заданным хвостом: если потолок <paramref name="maxLength" /> обрывает ещё громкий звук (за ним в файле
+        /// другой звук — болтовка снайперского набора), <paramref name="fadeOut" /> с и квадратичная кривая дают естественное
+        /// затухание вместо среза.
+        /// </summary>
+        public static AudioClip Shot(string sourcePath, float maxLength, string folder, string name, float fadeOut, bool smoothTail)
         {
             var src = AssetDatabase.LoadAssetAtPath<AudioClip>(sourcePath) ?? throw new FileNotFoundException(sourcePath);
             float[] env = Envelope(Mono(src), src.frequency, 0.01f);
             float peak = Max(env);
             int last = 0;
             for (int i = 0; i < env.Length; i++) if (env[i] > peak * 0.01f) last = i;
-            float length = Mathf.Min(maxLength, (last + 1) * 0.01f + Fade);
-            return Cut(sourcePath, 0f, length, folder, name);
+            float length = Mathf.Min(maxLength, (last + 1) * 0.01f + fadeOut);
+            return Cut(sourcePath, 0f, length, folder, name, fadeOut, smoothTail);
         }
 
         // ── Анализ ──────────────────────────────────────────────────────────────

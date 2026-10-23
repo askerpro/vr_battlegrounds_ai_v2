@@ -1237,8 +1237,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                     bestClip = windows;
                 }
 
-                Window candidateStill = still.OrderByDescending(w => w.EndTime - w.StartTime).ThenBy(w => w.RigidMm).FirstOrDefault();
-                if (Longer(candidateStill, bestStill))
+                // Запасное окно: деталь стоит, рука её не ведёт — длина окна ничего не говорит (AK105: левая рука на цевье
+                // в 46 мм от рукоятки дала окно длиннее правой на рукоятке, шлем 2026-10-24). Берётся ближайшая к детали ладонь.
+                Window candidateStill = still.OrderBy(w => w.PalmMm).ThenByDescending(w => w.EndTime - w.StartTime).FirstOrDefault();
+                if (candidateStill != null && (bestStill == null || candidateStill.PalmMm < bestStill.PalmMm))
                 {
                     bestStill = candidateStill;
                     bestStillClip = still;
@@ -1259,8 +1261,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 return null;
             }
 
-            // Вторая рука — снятая с клипа, только если в том же клипе и кадре тоже ведёт деталь; иначе — зеркало.
-            UxrHandSide[] holding = Sides.Where(s => s == best.Side || bestClip.Any(w => w.Side == s && w.Start <= best.Mid && best.Mid <= w.End)).ToArray();
+            // Вторая рука — снятая с клипа, только если в том же клипе и кадре тоже ведёт деталь; иначе — зеркало. В запасном
+            // окне деталь не движется, и «тоже рядом» не значит «держит» — там вторая рука всегда зеркало.
+            UxrHandSide[] holding = standby
+                ? new[] { best.Side }
+                : Sides.Where(s => s == best.Side || bestClip.Any(w => w.Side == s && w.Start <= best.Mid && best.Mid <= w.End)).ToArray();
             OrigPoint point = ActionOrigPoint(item, best.Clip, best.WeaponClip, best.MidTime, best.Rate, best.Side);
             foreach (UxrHandSide side in holding) point.Samples[side] = ActionSample(a, best.Clip, best.WeaponClip, best.MidTime, side);
             report.note = $"выбран {best.Clip.name}{(best.WeaponClip != null ? " + " + best.WeaponClip.name : "")}, " +

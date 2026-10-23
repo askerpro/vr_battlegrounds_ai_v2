@@ -814,7 +814,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
       propertyPath: _handPoses.Array.size
-      value: 97
+      value: 99
       objectReference: {fileID: 0}
     - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
       propertyPath: '_handPoses.Array.data[0]'
@@ -1204,6 +1204,14 @@ PrefabInstance:
       propertyPath: '_handPoses.Array.data[96]'
       value: 
       objectReference: {fileID: 11400000, guid: 64ffd1584a8943f4591ae6751655f1d5, type: 2}
+    - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
+      propertyPath: '_handPoses.Array.data[97]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 7c35151de55209d42995cb274b32ff50, type: 2}
+    - target: {fileID: 4643550973335066570, guid: eee4c6960159a24459810d9c0851279c, type: 3}
+      propertyPath: '_handPoses.Array.data[98]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 412a18dabe7ffc24e8f73816d9cba549, type: 2}
     - target: {fileID: 4679785075321548196, guid: eee4c6960159a24459810d9c0851279c, type: 3}
       propertyPath: __prefabGuid
       value: 71b74b0d08444f49bbb7aa2828d0890a

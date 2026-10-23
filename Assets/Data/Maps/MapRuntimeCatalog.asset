@@ -21,31 +21,31 @@ MonoBehaviour:
   _content:
   - Map: {fileID: 11400000, guid: c836ec814acc21a4e82f9cae9b2b3df2, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap1.unity
-    ContentFingerprint: 028fc7dcf77d86fa5b1d6a189367f235fe2bf6bee7ee9fa47ef8334d0b6366cb
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: c24947600b86d0f89808218fd4ef1f7b7c6a6d38c76fbc6253d57124cfb7c955
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 42dbd48ebf8c61d4d9ff696663519780, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap2.unity
-    ContentFingerprint: 4df9a8dab98d1429f1d0d9a3fc916ebab027c5c3c6e7d892873247fd6ca7cbfb
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: 0656b154c9b1bb2a922b8505751649cec59e82162105bad5ecb74e18eeb23435
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 4fd1a4cc3f42c4045a45e634233bb6c0, type: 2}
     ScenePath: Assets/Scenes/Maps/TestMap3.unity
-    ContentFingerprint: 1b539673c4c5b3945f66c2436fe319815888aee1cb3bf41bae483670d3a1a0f7
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: 32d5b09d06de175e240bd9a8c8acb80bb6d0575b21d2ce01a0d107b095c4e747
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
-    ContentFingerprint: a88d5a4e37c3f354ff3d94f6669c8fadf7cfa45cd43acd866875a5e4251cd713
-    ArsenalFingerprint: 77fedaa094aa2ca72d4ed8b195ee3625c8714c48dbef897a2f50695803b3e70b
+    ContentFingerprint: 2a05c5c72c8b136786c6c63648e05321609016393548f50174f19fe71f27e8c9
+    ArsenalFingerprint: 2e770345005ecd64204ab8f13ae613d944f6d8e6e277e9b5f903119fefbf02e0
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
     ScenePath: Assets/Scenes/Maps/ServiceYard.unity
-    ContentFingerprint: 8fe9822111b39db9dc6a6d967b62528736d688dcda6f1ea3ebaced124755116b
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: 8f4b8e1cc298ccc6c1b27dd2a17bcf35986186c40cc412c3d82641aa321b0f65
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 757969f4d7c8e9544935e2be06549423, type: 2}
     ScenePath: Assets/Scenes/Maps/ReferenceMap04.unity
-    ContentFingerprint: 1d7430ce9ef6539bd77d47219604fa10ee0a29779086cfed5319cb6358048aca
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: 49b28b12efa1fc0c20e6fe6894443f1533a354297c3dbe5c2988e2aa74b7c364
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
     ScenePath: Assets/Scenes/Debug/BotCombatStand.unity
-    ContentFingerprint: 320ce131f6ef49c1af17010575382aa9de923a4be46ac677fbc01347869f5b0f
-    ArsenalFingerprint: 88fc1db8a454d12174a5aff3bf1b7133190f9e07c74de60fe3689d342db1461b
+    ContentFingerprint: 45f6b02b77ae079c23319059fdaa7e11e67c7938f811e8ed9adf58abb2829193
+    ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   _compositionVersion: 1
   _arsenalComposition: {fileID: 11400000, guid: b8538636e1c0b6c4f92d6b8d8e4737b0, type: 2}

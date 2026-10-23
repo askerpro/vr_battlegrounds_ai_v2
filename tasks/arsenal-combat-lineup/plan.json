@@ -26,6 +26,7 @@
         "Assets/Art/Weapons/Sights/Pack.meta",
         "Assets/Audio/SFX/Weapons/SniperRifleAuto.meta",
         "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
         "Assets/Data/WeaponSystem/Sights/WeaponSightTable.asset",
         "Assets/Data/Weapons/CurrentGameplayArsenal.asset",
         "Assets/Data/Weapons/FullDemoArsenal.asset",

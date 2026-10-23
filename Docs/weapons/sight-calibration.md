@@ -84,7 +84,7 @@ SightType с eye relief, exit pupil, zoom и фокусом. Вид ассета
 | Адресный zero | `WeaponSightCalibrationProfile`: WeaponInfo + SightId + trigger/shotType index. Ручной стенд пишет в `…/SightCalibration/Manual/` |
 | Опоры R/F | `SightAlignmentMarker` (роль Rear/Front) на Empty внутри детали целика/мушки, в префабе проверочной копии |
 | Сессия стенда | `ManualSightCalibrationSession` (сцена `Assets/Scenes/Tools/WeaponSightManualCalibration.unity`, вне Build Settings) |
-| Оптика | `WeaponOpticView` на линзе (`TR15_SightReview` и с 2026-10-12 основной `TR15` через `Tr15OpticBuilder`, `_sightId: XPS2`, 15 м) + `Assets/Art/Weapons/Sights/FiniteFocusReticle.shader` |
+| Оптика | `WeaponOpticView` на линзе (+ `WeaponScopeCamera` у увеличивающей оптики) (`TR15_SightReview` и с 2026-10-12 основной `TR15` через `Tr15OpticBuilder`, `_sightId: XPS2`, 15 м) + `Assets/Art/Weapons/Sights/FiniteFocusReticle.shader` |
 | Проверочные копии | `Assets/Prefabs/Weapons/SightReview/*_SightReview.prefab` (5 шт.), черновики — `…/SightCalibrationDrafts/` |
 
 ## 3. Инварианты
@@ -192,7 +192,11 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
 4. SniperRifle: переходные площадки 34×3×35 мм — эскиз (фаски, зажим, пересечения); масштаб донорной сборки.
 5. MKR9: выпечь масштаб ≈100 в game-owned mesh или оставить на контейнере (раздел 8).
 6. Полный fingerprint/Approved/Apply не реализован: строить конвейер [D] или ограничиться ручным стендом + writer?
-7. Zoom: поля нет. Нужна ли увеличивающая оптика хоть одному стволу (для SniperRifle — нет).
+7. Zoom (решено 2026-10-23, задача `arsenal-combat-lineup`): `WeaponScopeCamera` рядом с `WeaponOpticView` — моно-камера
+   с узким полем (FOV = 2·atan(K / M)) рендерит в RT 320², только пока окуляр у глаза локального игрока; шейдер линзы
+   показывает RT вокруг точки сведения (UV = 0,5 + 0,5·угол/K), сетка поверх. Писатель MPB линзы по-прежнему один —
+   `WeaponOpticView` (точку сведения считает только он, `TryGetZero`). Комплект с кратностью — `OpticKitSpec.ScopeMagnification`
+   (`SightKit_M82Scope`, ×1,75; меш — `LowPolyOpticBuilder`). Для SniperRifle увеличения нет. Открыто: замер на Quest.
 8. Stereo Quest и eyebox для `FiniteFocusReticle`; звук щитов не выбран; ожидания `LobbyLayoutTests` устарели.
 9. Единое обозначение дистанции сведения в будущем `Docs/weapons/` (R или Z).
 

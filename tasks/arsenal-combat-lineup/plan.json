@@ -1,0 +1,41 @@
+{
+  "task_id": "arsenal-combat-lineup",
+  "owner": "arsenal-combat-lineup",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/arsenal-combat-lineup",
+  "base_sha": "40e59c6d188e5755f170786bf4b141301181fb4d",
+  "doc_path": "tasks/arsenal-combat-lineup/Readme.md",
+  "title": "Боевой состав арсенала карт и перебаланс оружия",
+  "branch": "task/arsenal-combat-lineup",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/arsenal-combat-lineup/**",
+        "Assets/Data/Weapons/**",
+        "Assets/Data/Arsenal/**",
+        "Assets/Prefabs/Weapons/**",
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
+        "Assets/Art/Weapons/**",
+        "Assets/Scripts/Weapons/Sights/**",
+        "Assets/Editor/VR_Battlegrounds/Weapons/**",
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Assets/Tests/EditMode/Weapons/**",
+        "Docs/gameplay.md",
+        "Docs/weapons/**",
+        "Docs/Arsenal/**",
+        "experts/weapon-system/journal/**",
+        "experts/gameplay/journal/**",
+        "experts/avatar-grip/journal/**",
+        "Assets/Prefabs/Player/Equipment/Pockets/MagazinePocket.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Data/WeaponSystem/**",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/**",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -2,7 +2,6 @@ using System;
 using UltimateXR.Core;
 using UltimateXR.Extensions.Unity;
 using UltimateXR.Manipulation;
-using UltimateXR.Mechanics.Weapons;
 using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Weapons;
@@ -186,40 +185,6 @@ namespace VrBattlegrounds.Editor.Gameplay
                 result.Encapsulate(matrix.MultiplyPoint3x4(source.center + Vector3.Scale(source.extents, signs)));
             }
             return result;
-        }
-
-        /// <summary>Обновляет только alignment двух существующих дробовиков, без пересборки модели/хватов.</summary>
-        public static string ApplyCurrentShotguns()
-        {
-            if (EditorApplication.isPlayingOrWillChangePlaymode)
-                throw new InvalidOperationException("Изменение якорей запрещено в Play Mode.");
-            var output = new System.Text.StringBuilder();
-            foreach (HandsPackWeaponRecipe recipe in new[] { HandsPackWeaponBuilder.ShotgunReal, KinemationWeaponBuilder.Herrington.Weapon })
-            {
-                if (!recipe.MagazineIsInternal) throw new InvalidOperationException(recipe.Name + ": не задан внутренний магазин.");
-                string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
-                GameObject root = PrefabUtility.LoadPrefabContents(path);
-                try
-                {
-                    Transform frame = root.transform.Find("MeshContainer");
-                    var anchor = frame.Find("MagAnchor").GetComponent<UxrGrabbableObjectAnchor>();
-                    var magazine = anchor.GetComponentInChildren<UxrFirearmMag>(true).GetComponent<UxrGrabbableObject>();
-                    Transform loading = frame.Find(HandsPackWeaponBuilder.Clean(recipe.LoadingPart));
-                    Vector3 proximity = anchor.DropProximityTransform.position;
-                    int rounds = magazine.GetComponent<UxrFirearmMag>().Rounds;
-                    int capacity = magazine.GetComponent<UxrFirearmMag>().Capacity;
-                    ConfigureAnchor(anchor, loading, magazine);
-                    if ((anchor.DropProximityTransform.position - proximity).sqrMagnitude > 1e-12f ||
-                        magazine.GetComponent<UxrFirearmMag>().Rounds != rounds || magazine.GetComponent<UxrFirearmMag>().Capacity != capacity)
-                        throw new InvalidOperationException("Alignment изменил точку приёма или боезапас: " + path);
-                    PrefabUtility.SaveAsPrefabAsset(root, path);
-                    output.AppendLine(path + ": align=" + frame.InverseTransformPoint(anchor.AlignTransform.position).ToString("F6") +
-                        ", proximity=" + frame.InverseTransformPoint(anchor.DropProximityTransform.position).ToString("F6") +
-                        ", ejection=" + frame.InverseTransformPoint(anchor.transform.Find(EjectionName).position).ToString("F6"));
-                }
-                finally { PrefabUtility.UnloadPrefabContents(root); }
-            }
-            return output.ToString();
         }
     }
 }

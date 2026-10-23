@@ -16,8 +16,10 @@ using VrBattlegrounds.Weapons;
 namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
-    /// Рецепт оружия из пака Hands Weapons Animations: что взять из пака и у каких префабов
-    /// позаимствовать настройки. Всё, что можно вычислить, вычисляет <see cref="HandsPackWeaponBuilder" />.
+    /// Рецепт оружия из пака Hands Weapons Animations (и KINEMATION через <see cref="KinemationWeaponRecipe" />): что взять
+    /// из пака. Всё, что можно вычислить, вычисляет <see cref="HandsPackWeaponBuilder" />; то, что не выводится из пака и
+    /// не входит в баланс, — общие значения <see cref="HandsPackBuildDefaults" /> (доноров нет, решение 2026-10-23), отличия
+    /// конкретного ствола — явными полями здесь.
     /// </summary>
     public sealed class HandsPackWeaponRecipe
     {
@@ -33,28 +35,49 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string ActionClip;      // клип, где ходят затвор/помпа и спуск: Shot
         public string RestClip = "Idle";
         public float TargetLength;     // габарит в метрах, по реальному прототипу
+        // Масштаб корня при сборке напрямую (единицы меша → метры) вместо TargetLength: размер принятой легаси-сборки,
+        // где длина была габаритом × масштабом корпуса донора, то есть масштаб корня = масштаб корпуса донора. 0 — по TargetLength.
+        public float RootScale;
         public float FinalRootScale;   // 0 — без override; итоговый размер после расчёта authored child frames
 
-        public string[] StaticParts;   // детали корпуса без движения
+        // Детали корпуса без движения; null — все детали источника пака Hands, не названные иначе и не исключённые
+        // (HandsPackMechanism.ResolveStaticParts, как у легаси-сборки).
+        public string[] StaticParts;
         public string[] ExcludedSourceParts; // FPS reload props вне игрового оружия; preflight обязан учесть явно
+        public bool ClaimAllSourceParts; // каждая деталь источника названа или исключена: иначе отказ до первой записи
         public string MuzzlePart;      // деталь среза ствола: пламегаситель/глушитель; null — корпус
         public string TriggerPart;
         public string ActionPart;      // помпа или затвор; по нему меряется ход
         public string ActionGripPart;  // видимая ручка: независима от детали, по которой меряется ход
         public Vector3? ActionGripContact; // явный контакт в локальных осях меша ручки
         public Vector3? ActionTravelAxis; // явная ось линейной VR-тяги в осях готового корня; длина проецируется из источника
+        // «Нет в паке»: ход затвора в осях готового корня (единицы меша), если в клипе деталь неподвижна (AR15).
+        public Vector3? StaticActionTravel;
+        // «Нет в паке»: угол спуска вокруг X, если в клипе спуск неподвижен; null — угол 0, как в паке (Uzi, MP5K).
+        public float? StaticTriggerDegrees;
         public string[] ActionExtraParts; // детали, которые ходят вместе с затвором (рукоять затвора болтовки)
         public ActionKind Action;
-        public string LoadingPart;     // деталь внешней точки приёма; null — приём на месте магазина пака
-        public bool SupportGrip;       // вторая рука на корне (цевьё или поддержка пистолета) — точка 1 донора
-        public UxrShotCycle? ShotCycle; // режим огня вместо донорского (болтовка — ManualReload: затвор после каждого выстрела)
+        // Ручной цикл механизма (помпа, болт): затвор/помпа после каждого выстрела (UxrShotCycle.ManualReload). Иначе режим
+        // огня — баланс (WeaponInfo.FullAuto, WeaponBalanceApplier). Помпа — всегда ручной цикл.
+        public bool ManualCycle;
         public bool Pellets;           // дробь без помпы (полуавтоматический дробовик); у помпового — всегда
+        // Анимация механизма из клипа выстрела пака (HandsPackMechanism): затвор, спуск и подвижные детали корпуса ходят
+        // при стрельбе и перезарядке; хост WeaponSystem ставится после неё.
+        public bool MechanismMotion;
+        public string EmptyActionClip; // клип пака «последний выстрел» (затвор на задержке) — поза Empty механизма; null — нет
+        public string LoadingPart;     // деталь внешней точки приёма; null — приём на месте магазина пака
+        public bool SupportGrip;       // вторая рука на корне (цевьё или поддержка пистолета) — точка 1
+
+        // Снаряд: отличия ствола от общего набора (HandsPackBuildDefaults); null — общее значение.
+        public string MuzzleEffect;    // вспышка у дула; null — Effects/Muzzle_Default
+        public float? ProjectileLength;
+        public float? ProjectileImpactForce; // множитель толчка попадания (CorpseTests: дробина FABARM 300×50)
+        public int? DecalLayers;       // слои декалей попадания
 
         public string UxrTag;          // тег хвата корня: по нему карманы и слоты принимают оружие
         public string MagazineBase;    // шаблон магазина первой сборки (сеть, физика, звук); дальше шаблон — текущий магазин ствола
         public string MagazineName;    // прежнее имя ассета магазина; null — Name + "_mag"
         public string InteractionFolder; // ассеты областей подсветки; null — Art/Weapons/Interaction/<имя>
-        public string MagazineGripDonor; // прежняя калибровка хвата MEF магазина; сборка его не читает (хваты аватаров не пишет)
         public string MagazinePart;    // меш магазина из пака
         public string[] MagazineExtraParts; // вынимаются вместе с магазином: патроны, гильзы барабана
         public string MagazineTag;     // тег хвата магазина: его принимают якорь и карманы
@@ -65,21 +88,18 @@ namespace VrBattlegrounds.Editor.Gameplay
         // Явный профиль готовности съёмного магазина (патронник, ручной цикл, Empty-поза); пусто — legacy без ledger.
         public string ReadinessProfile;
 
-        public string GripDonor;       // префаб, у которого берутся физика и поля хвата, якорь и затвор
-        public string GripDonorBodyPath; // путь его корпуса в префабе
-        // Папка, корпус и клип донора в паке — прежняя калибровка хвата MEF; сборка их не читает.
-        public string GripDonorFolder; // его папка в паке
-        public string GripDonorBody;   // рендерер его корпуса в паке
-        public string GripDonorPoseClip;
-        public string FirearmDonor;    // префаб, у которого берутся снаряд, звук выстрела, отдача
-        public bool PreserveDonorGameplay; // пересборка существующего оружия: баланс и эффекты не заменяются defaults
-        public uint NetworkAssetId;    // сетевой id зарегистрированного префаба до создания donor snapshot
-        public uint MagazineAssetId;
-        public string ShotAudio;       // свой звук выстрела вместо донорского (необязательно)
-        public string LoadAudio;       // звук вставки патрона в окно приёма (ручное заряжание); магазины — общий звук
-        public string TakeOutAudio;    // звук снятия магазина (необязательно; иначе донорский)
-        public string SlideBackAudio;  // оттягивание затвора (необязательно; иначе донорский)
-        public string SlideForwardAudio; // обратный ход затвора (необязательно; иначе донорский)
+        // Звуки пака Hands: что резать (HandsPackAudio). Куски сборка записывает в поля ниже; null — без нарезки.
+        public HandsPackSoundRecipe PackSounds;
+        // Итоговые клипы (пути ассетов): готовый клип или кусок пака (HandsPackAudio, KinemationWeaponBuilder.MakeSounds).
+        public string ShotAudio;       // выстрел; у ствола реестра свой (WeaponShotSoundTests)
+        public string LoadAudio;       // звук вставки патрона в окно приёма (ручное заряжание)
+        public string InsertAudio;     // звук вставки магазина в гнездо (кусок перезарядки пака); пусто — дефолт категории/роли гнезда в рантайме
+        public string TakeOutAudio;    // звук снятия магазина (кусок пака); пусто — дефолт категории/роли гнезда в рантайме (AnchorSound)
+        public string SlideBackAudio;  // оттягивание затвора/помпы; пусто — дефолт категории хоста
+        public string SlideForwardAudio; // обратный ход затвора/помпы; пусто — дефолт категории хоста
+
+        /// <summary>Механизм с ручным циклом: режим огня — <see cref="UxrShotCycle.ManualReload" />, баланс его не меняет.</summary>
+        public bool IsManualCycle => ManualCycle || Action == ActionKind.Pump;
     }
 
     /// <summary>
@@ -87,9 +107,10 @@ namespace VrBattlegrounds.Editor.Gameplay
     ///
     /// <para>
     /// Геометрия и механика — из пака (<see cref="HandsPackWeapon" />): детали на точных местах,
-    /// ход помпы/затвора и угол спуска из клипа. Настройки, которые не выводятся
-    /// из пака (снаряд, звук, отдача, физика хвата), копируются у доноров по полям — без
-    /// <c>_uxrUniqueId</c>, чтобы не делить id с донором.
+    /// ход помпы/затвора и угол спуска из клипа, звуки — нарезкой звуков пака (<see cref="HandsPackAudio" />). Доноров нет
+    /// (решение пользователя 2026-10-23): физика, хват, якорь, снаряд и вход механики — общие значения
+    /// <see cref="HandsPackBuildDefaults" />; баланс (урон, темп, отдача, разлёт, скорость и дальность снаряда, режим огня)
+    /// — <see cref="WeaponBalanceApplier" /> в общем конце пересборки (<see cref="WeaponRebuildFinish" />).
     /// </para>
     ///
     /// <para>
@@ -110,7 +131,17 @@ namespace VrBattlegrounds.Editor.Gameplay
         private const string ImpactEffect = "Assets/Prefabs/Weapons/Effects/Impact_Concrete.prefab";
         private const string ImpactDecal = "Assets/Prefabs/Weapons/Effects/ImpactDecal_Concrete.prefab";
         private const string MuzzleEffect = "Assets/Prefabs/Weapons/Effects/Muzzle_Default.prefab";
+        // Вспышки принятых легаси-сборок (AR15, BrowningHiPower): прежде приходили с эффектами донора, теперь — поле рецепта.
+        internal const string MuzzleRifle = "Assets/Prefabs/Weapons/Effects/Muzzle_Rifle.prefab";
+        internal const string MuzzlePistol = "Assets/Prefabs/Weapons/Effects/Muzzle_Pistol.prefab";
+        private const string Snd = HandsPackAudio.Pack;
 
+        /// <summary>
+        /// Помповый дробовик (роль Nova): FABARM SDASS, трубчатый магазин на 8, патрон — в окно у скобы. Полный рецепт без
+        /// доноров (решение 2026-10-23; раньше — легаси-набор из снимков): ручной цикл помпы явно, спуск и помпа ходят по
+        /// анимации механизма пака, снаряд — поля сэмпла SDK, принятые у FABARM (дробина 0,34, толчок ×50, декали только на
+        /// Default; CorpseTests). Второй патрон пака — prop руки в Recharge, не часть оружия.
+        /// </summary>
         public static HandsPackWeaponRecipe ShotgunReal => new HandsPackWeaponRecipe
         {
             Name              = "FabarmSDASS",
@@ -120,12 +151,22 @@ namespace VrBattlegrounds.Editor.Gameplay
             BodyPart          = "Shogun_Base_mesh",
             PoseClip          = "Aming_Idle",
             ActionClip        = "Shot",
-            TargetLength      = 0.72f, // Сохраняем принятый игровой размер FABARM SDASS; точный вариант не установлен.
-            StaticParts       = new[] { "Shogun_Staple_mesh", "Shogun_Gate_mesh" },
+            // Принятый игровой размер: масштаб корня легаси-сборки (= корпус снимка Shotgun_real). Прежняя длина 0.72 м
+            // полного рецепта с ним не сверена — размер по ней мог отличаться от принятого.
+            RootScale         = 1.1892964f,
+            StaticParts       = null, // Staple (окно приёма), Gate и прочие детали корпуса — как у легаси, по источнику
+            // Live probe: в bind/Shot второй патрон выше корпуса; Recharge переносит его из руки к окну заряжания.
+            ExcludedSourceParts = new[] { "Shogun_Patron_mesh001" },
+            ClaimAllSourceParts = true,
             TriggerPart       = "Shogun_Triger_mesh",
             ActionPart        = "Shogun_Fore-End_mesh",
             Action            = HandsPackWeaponRecipe.ActionKind.Pump,
+            ManualCycle       = true,
+            MechanismMotion   = true,
             LoadingPart       = "Shogun_Staple_mesh",
+            ProjectileLength  = 0.34f,
+            ProjectileImpactForce = 50f,
+            DecalLayers       = 1, // Default
             UxrTag            = "Shotgun",
             MagazineBase      = MagShotgunBase,
             MagazinePart      = "Shogun_Patron_mesh",
@@ -134,71 +175,75 @@ namespace VrBattlegrounds.Editor.Gameplay
             MagazineIsInternal = true,
             ManualLoading = true,
             ManualLoadingProfile = "Assets/Data/Weapons/Profiles/ManualLoadFabarmReadiness.asset",
-            GripDonor         = "Assets/Prefabs/Weapons/AR15/AR15.prefab",
-            GripDonorFolder   = "Hands_Automatic_Rifle03",
-            GripDonorBody     = "Rifle_Body_Mesh",
-            GripDonorBodyPath = "MeshContainer/Rifle_Body_Mesh",
-            GripDonorPoseClip = "Aim_Idle",
-            // Сэмпл SDK Shotgun убран из арсенала (2026-10-20, Assets/Unused/Weapons): донор спуска — неизменный снимок
-            // самого FABARM, как и в HandsPackLegacyRebuild (recipe.FirearmDonor = Donor(...)).
-            FirearmDonor      = "Assets/Art/Weapons/HandsPack/LegacyBuildDonors/Shotgun_real.prefab",
-            ShotAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/edit/shot.mp3",
-            LoadAudio         = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/10Shotgun_Set/Reload_1.mp3"
+            PackSounds = new HandsPackSoundRecipe
+            {
+                Shot = Snd + "10Shotgun_Set/edit/shot.mp3", Bolt = Snd + "10Shotgun_Set/Zatvor.mp3", Load = Snd + "10Shotgun_Set/Reload_1.mp3"
+            }
         };
 
-        private static void BuildShotgunReal()
+        /// <summary>
+        /// Автомат (роль M4A4): AR-15, магазин на 30. Полный рецепт без доноров (решение 2026-10-23; раньше — легаси-набор).
+        /// Затвор и спуск в клипах пака неподвижны — ход 0,06 и спуск 40° явными полями «нет в паке» (значения принятой
+        /// легаси-сборки, приходили от снимка M16); анимация четырёх деталей механизма — <see cref="HandsPackMechanism" />.
+        /// Размер — как у легаси: масштаб сборки 0,83 (корпус снимка M16), итоговый корень 0,70 (контакт рукоятки с TR15).
+        /// </summary>
+        public static HandsPackWeaponRecipe AR15 => Rifle(new HandsPackWeaponRecipe
         {
-            VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenWeapon(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build, "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab");
-            VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenMaintenance(VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.Tab.Build);
-        }
+            Name = "AR15", PrefabFolder = "AR15", MagazineName = "AR15_Magazine", Folder = "Hands_Automatic_Rifle03",
+            BodyPart = "Rifle_Body_Mesh", BodyObjectName = "Rifle_Body_Mesh", PoseClip = "Aim_Idle", ActionClip = "Shot",
+            RootScale = 0.83f, FinalRootScale = 0.70f,
+            StaticParts = null, ClaimAllSourceParts = true, // остальные детали корпуса (Rifle_Detail_03/04) — по источнику
+            TriggerPart = "Rifle_Detail_02_Mesh", ActionPart = "Rifle_Detail_01_Mesh", SupportGrip = true,
+            StaticActionTravel = new Vector3(0f, 0f, -0.06f), StaticTriggerDegrees = 40f,
+            MechanismMotion = true, MuzzleEffect = MuzzleRifle,
+            UxrTag = "M16_Rifle", MagazinePart = "Rifle_Magazine_Mesh", MagazineTag = "M16_Mag", MagazineCapacity = 30,
+            PackSounds = new HandsPackSoundRecipe
+            {
+                Shot = Snd + "1Assault_Rifle_Set/Rifle_Shot_1.mp3",
+                Reload = Snd + "1Assault_Rifle_Set/Reload.mp3", ReloadClip = "Reload", SlideFromReload = true
+            }
+        });
 
         // ── Оружие T-38 ─────────────────────────────────────────────────────────
         // Длина — по руке пака: длина в паке × 0,707 (как у Gun_real), чтобы хват из клипа пака
-        // ложился в ладонь. Доноры: длинноствольное — M16 (хват, снаряд, автоматический огонь),
-        // пистолеты — Gun_real. Позы кисти снимаются отдельно — HandsPackPoseImporter.Recipes.
+        // ложился в ладонь. Позы кисти снимаются отдельно — HandsPackPoseImporter.Recipes. Звуки — из набора пака
+        // ствола (Sounds/<N>_Set, решение 2026-10-23): у каждого ствола реестра свой выстрел (WeaponShotSoundTests).
 
-        private const string M16 = "Assets/Prefabs/Weapons/AR15/AR15.prefab";
-        private const string GunReal = "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab";
         // Шаблон магазина первой сборки нового ствола — готовый магазин паков того же типа (базы SDK удалены 2026-10-22).
         private const string MagRifleBase = "Assets/Prefabs/Weapons/Scar/Scar_mag.prefab";
         private const string MagPistolBase = "Assets/Prefabs/Weapons/PPK/PPK_mag.prefab";
         internal const string MagShotgunBase = "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab";
 
-        internal static HandsPackWeaponRecipe RifleDonor(HandsPackWeaponRecipe r)
+        /// <summary>Длинноствольное с затвором: шаблон магазина первой сборки — магазин винтовки паков.</summary>
+        internal static HandsPackWeaponRecipe Rifle(HandsPackWeaponRecipe r)
         {
-            r.GripDonor = M16;
-            r.GripDonorFolder = "Hands_Automatic_Rifle03";
-            r.GripDonorBody = "Rifle_Body_Mesh";
-            r.GripDonorBodyPath = "MeshContainer/Rifle_Body_Mesh";
-            r.GripDonorPoseClip = "Aim_Idle";
-            r.FirearmDonor = M16;
             r.MagazineBase = MagRifleBase;
             r.Action = HandsPackWeaponRecipe.ActionKind.Slide;
             return r;
         }
 
-        internal static HandsPackWeaponRecipe PistolDonor(HandsPackWeaponRecipe r)
+        /// <summary>Пистолет с затвором-кожухом: шаблон магазина первой сборки — магазин пистолета паков.</summary>
+        internal static HandsPackWeaponRecipe Pistol(HandsPackWeaponRecipe r)
         {
-            r.GripDonor = GunReal;
-            r.GripDonorFolder = "Hands_Gun";
-            r.GripDonorBody = "Base_mesh";
-            r.GripDonorBodyPath = "MeshContainer/Base";
-            r.GripDonorPoseClip = "Aiming_Idle";
-            r.FirearmDonor = GunReal;
             r.MagazineBase = MagPistolBase;
             r.Action = HandsPackWeaponRecipe.ActionKind.Slide;
             return r;
         }
 
         /// <summary>Автомат-карабин (роль AK-47): SCAR-L CQC.</summary>
-        public static HandsPackWeaponRecipe Scar => RifleDonor(new HandsPackWeaponRecipe
+        public static HandsPackWeaponRecipe Scar => Rifle(new HandsPackWeaponRecipe
         {
             Name = "Scar", PrefabFolder = "Scar", Folder = "Hands_Automatic_Rifle01", BodyPart = "Scar_Base_mesh",
             PoseClip = "Aiming_Idle", ActionClip = "Singl_Shot", RestClip = "idle",
             TargetLength = 0.635f, // SCAR-L CQC: 63.5 см; по руке пака 64.5
             StaticParts = new[] { "Scar_Detail_01_mesh", "Scar_Detail_02_mesh", "Scar_Detail_03_mesh", "Scar_Planck_mesh" },
             TriggerPart = "Scar_Triger_mesh", ActionPart = "Scar_Grip_mesh", SupportGrip = true,
-            UxrTag = "BackWeapon", MagazinePart = "Scar_Magazine_mesh", MagazineTag = "MagScar", MagazineCapacity = 30
+            UxrTag = "BackWeapon", MagazinePart = "Scar_Magazine_mesh", MagazineTag = "MagScar", MagazineCapacity = 30,
+            PackSounds = new HandsPackSoundRecipe
+            {
+                Shot = Snd + "1Assault_Rifle_Set/Rifle_Shot_2.mp3",
+                Reload = Snd + "1Assault_Rifle_Set/Reload.mp3", ReloadClip = "Recharge", SlideFromReload = true
+            }
         });
 
         /// <summary>Пистолет-пулемёт одной рукой (роль MAC-10): Uzi. Вторая рука пака не на оружии — точки поддержки нет.</summary>
@@ -206,14 +251,19 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             get
             {
-                HandsPackWeaponRecipe r = RifleDonor(new HandsPackWeaponRecipe
+                HandsPackWeaponRecipe r = Rifle(new HandsPackWeaponRecipe
                 {
                     Name = "Uzi", PrefabFolder = "Uzi", Folder = "Hands_Tommy_gun", BodyPart = "body_Mesh",
                     PoseClip = "Aiming_Idle", ActionClip = "Shot",
                     TargetLength = 0.35f, // Mini-Uzi со сложенным прикладом: 36 см; по руке пака 35
                     StaticParts = new string[0],
                     TriggerPart = "Trigger_mesh", ActionPart = "Reload_frame_mesh", SupportGrip = false,
-                    UxrTag = "Gun", MagazinePart = "Magazine_Mesh", MagazineTag = "MagUzi", MagazineCapacity = 30
+                    UxrTag = "Gun", MagazinePart = "Magazine_Mesh", MagazineTag = "MagUzi", MagazineCapacity = 30,
+                    PackSounds = new HandsPackSoundRecipe
+                    {
+                        Shot = Snd + "12Tommy_Gun/Tommy_GunI_1.mp3",
+                        Reload = Snd + "12Tommy_Gun/Tommy_Gun_Reload.mp3", ReloadClip = "Reloading", SlideFromReload = true
+                    }
                 });
                 r.MagazineBase = MagPistolBase;
                 return r;
@@ -221,18 +271,23 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Пистолет-пулемёт (роль MP9): HK MP5K. Затвор в выстреле пака неподвижен — ход рукоятки взведения из перезарядки.</summary>
-        public static HandsPackWeaponRecipe MP5K => RifleDonor(new HandsPackWeaponRecipe
+        public static HandsPackWeaponRecipe MP5K => Rifle(new HandsPackWeaponRecipe
         {
             Name = "MP5K", PrefabFolder = "MP5K", Folder = "Hands_Automatic_Rifle04", BodyPart = "Rifle04_Body_Mesh",
             PoseClip = "Idle_Aim", ActionClip = "Reload",
             TargetLength = 0.33f, // HK MP5K: 32.5 см
             StaticParts = new string[0],
             TriggerPart = "Rifle04_Trigger_Mesh", ActionPart = "Rifle04_Detail_Mesh", ActionTravelAxis = Vector3.back, SupportGrip = true,
-            UxrTag = "BackWeapon", MagazinePart = "Rifle04_Magazine_Mesh", MagazineTag = "MagMP5K", MagazineCapacity = 30
+            UxrTag = "BackWeapon", MagazinePart = "Rifle04_Magazine_Mesh", MagazineTag = "MagMP5K", MagazineCapacity = 30,
+            PackSounds = new HandsPackSoundRecipe
+            {
+                Shot = Snd + "1Assault_Rifle_Set/Rifle_Shot_3.mp3",
+                Reload = Snd + "1Assault_Rifle_Set/Reload.mp3", ReloadClip = "Reload", SlideFromReload = true
+            }
         });
 
         /// <summary>Стартовый пистолет (роль Glock): Walther PPK. Патроны — часть магазина.</summary>
-        public static HandsPackWeaponRecipe PPK => PistolDonor(new HandsPackWeaponRecipe
+        public static HandsPackWeaponRecipe PPK => Pistol(new HandsPackWeaponRecipe
         {
             Name = "PPK", PrefabFolder = "PPK", Folder = "Hands_Gun02", BodyPart = "Gun02_Body_Mesh",
             PoseClip = "Aim_Idle", ActionClip = "Shot",
@@ -240,7 +295,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             StaticParts = new[] { "Gun02_Detail_02_Mesh" },
             TriggerPart = "Gun02_Trigger_Mesh", ActionPart = "Gun02_Detail_01_Mesh", SupportGrip = true,
             UxrTag = "Gun", MagazinePart = "Gun02_Magazine_Mesh", MagazineExtraParts = new[] { "Gun02_Bulets_Mesh" },
-            MagazineTag = "MagPPK", MagazineCapacity = 20
+            MagazineTag = "MagPPK", MagazineCapacity = 20,
+            PackSounds = new HandsPackSoundRecipe
+            {
+                Shot = Snd + "8Pistol/Shot_1.mp3", Reload = Snd + "8Pistol/Reload_Full.mp3", ReloadClip = "Reload",
+                Bolt = Snd + "8Pistol/Zatvor.mp3"
+            }
         });
 
         /// <summary>
@@ -253,7 +313,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             get
             {
-                HandsPackWeaponRecipe r = PistolDonor(new HandsPackWeaponRecipe
+                HandsPackWeaponRecipe r = Pistol(new HandsPackWeaponRecipe
                 {
                     Name = "Revolver", PrefabFolder = "Revolver", Folder = "Hands_Gun_03", BodyPart = "Gun_03_Body_Mesh",
                     PoseClip = "Idle_Aiming", ActionClip = "Shot",
@@ -266,8 +326,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                     MagazineTag = "MagRevolver", MagazineCapacity = 6
                 });
                 r.Action = HandsPackWeaponRecipe.ActionKind.None;
-                // Выстрел пака Hands (9Run_Set/Shot 4) — тот же, что у лёгких пистолетов, и звучал «как с глушителем»;
-                // свой громкий — выстрел револьвера R08 из пака KINEMATION (KinemationWeaponBuilder.MakeRevolverShot).
+                // Выстрел пака Hands (8Pistol/9Run_Set) — тот же, что у лёгких пистолетов, и звучал «как с глушителем»
+                // (жалоба пользователя 2026-10-01); свой громкий — выстрел револьвера R08 из пака KINEMATION
+                // (KinemationWeaponBuilder.MakeRevolverShot). Звука барабана в наборе пака нет — снятие общим звуком.
                 r.ShotAudio = KinemationWeaponBuilder.RevolverShotPath;
                 return r;
             }
@@ -277,24 +338,21 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// Тяжёлая винтовка (роль SSG 08), заглушка: болтовой механики у сборщика нет — затвор идёт по прямой,
         /// как у автомата (рукоять не поднимается), но огонь ручной: затвор после каждого выстрела.
         /// </summary>
-        public static HandsPackWeaponRecipe SniperRifle
+        public static HandsPackWeaponRecipe SniperRifle => Rifle(new HandsPackWeaponRecipe
         {
-            get
+            Name = "SniperRifle", PrefabFolder = "SniperRifle", Folder = "Hands_Sniper_Rifle", BodyPart = "Sniper_Rifle_Base_Mesh",
+            PoseClip = "Aiming_Idle", ActionClip = "Shot", RestClip = "Idel",
+            TargetLength = 1.15f, // AX-50: ~123 см; по руке пака 115
+            StaticParts = new string[0],
+            TriggerPart = "Sniper_Rifle_Triger_Mesh", ActionPart = "Sniper _Rifle_Gate_End_Mesh",
+            ActionExtraParts = new[] { "Sniper _Rifle_Gate_Mesh" }, SupportGrip = true, ManualCycle = true,
+            UxrTag = "BackWeapon", MagazinePart = "Sniper_Rifle_Magazine_Mesh", MagazineTag = "MagSniper", MagazineCapacity = 10,
+            PackSounds = new HandsPackSoundRecipe
             {
-                HandsPackWeaponRecipe r = RifleDonor(new HandsPackWeaponRecipe
-                {
-                    Name = "SniperRifle", PrefabFolder = "SniperRifle", Folder = "Hands_Sniper_Rifle", BodyPart = "Sniper_Rifle_Base_Mesh",
-                    PoseClip = "Aiming_Idle", ActionClip = "Shot", RestClip = "Idel",
-                    TargetLength = 1.15f, // AX-50: ~123 см; по руке пака 115
-                    StaticParts = new string[0],
-                    TriggerPart = "Sniper_Rifle_Triger_Mesh", ActionPart = "Sniper _Rifle_Gate_End_Mesh",
-                    ActionExtraParts = new[] { "Sniper _Rifle_Gate_Mesh" }, SupportGrip = true,
-                    UxrTag = "BackWeapon", MagazinePart = "Sniper_Rifle_Magazine_Mesh", MagazineTag = "MagSniper", MagazineCapacity = 10
-                });
-                r.ShotCycle = UxrShotCycle.ManualReload;
-                return r;
+                Shot = Snd + "11Sniper_Rifle_Set/Sniper_Rifle_Shot_1.mp3",
+                Reload = Snd + "11Sniper_Rifle_Set/Reload.mp3", ReloadClip = "Recharge", SlideFromReload = true
             }
-        }
+        });
 
         /// <summary>
         /// Автоматическая винтовка дальнего боя (arsenal-combat-lineup, решение пользователя 2026-10-23): вид SniperRifle
@@ -308,9 +366,13 @@ namespace VrBattlegrounds.Editor.Gameplay
                 HandsPackWeaponRecipe r = SniperRifle;
                 r.Name = "SniperRifleAuto";
                 r.PrefabFolder = "SniperRifleAuto";
-                r.ShotCycle = UxrShotCycle.FullyAutomatic;
-                // Свой выстрел (WeaponShotSoundTests): обрезанный выстрел снайперского набора пака Hands — см. MakeSniperRifleAutoShot.
+                // Автоматический огонь — из баланса (WeaponInfo.FullAuto, решение пользователя 2026-10-23): механизм не ручной,
+                // в отличие от болтовой SniperRifle, иначе сверка «паспорт ↔ механизм» откажет.
+                r.ManualCycle = false;
+                // Свой выстрел (WeaponShotSoundTests): обрезанный выстрел снайперского набора пака Hands — см. MakeSniperRifleAutoShot;
+                // нарезка выстрела пака у этого ствола не нужна (перезарядка и затвор — общие с SniperRifle).
                 r.ShotAudio = SniperRifleAutoShotPath;
+                r.PackSounds.Shot = null;
                 return r;
             }
         }
@@ -350,35 +412,124 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         public static IEnumerable<HandsPackWeaponRecipe> T38 => new[] { Scar, Uzi, MP5K, PPK, Revolver, SniperRifle, SniperRifleAuto };
 
+        /// <summary>
+        /// Все стволы пака Hands на полном рецепте: T-38, AR15 и FabarmSDASS (решение 2026-10-23). BrowningHiPower остаётся
+        /// на легаси-сборке (<see cref="HandsPackLegacyRebuild.Browning" />): Shot_end, HoldOpen и расширение хода.
+        /// </summary>
+        public static IEnumerable<HandsPackWeaponRecipe> Full => T38.Concat(new[] { AR15, ShotgunReal });
+
         private static void BuildT38() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenBuildSet(T38.Select(r => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab"));
 
+        public static string WeaponPath(HandsPackWeaponRecipe r) => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
+
+        public static string MagazinePath(HandsPackWeaponRecipe r) => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
+
         /// <summary>
-        /// Полный маршрут одного T-38: сборка (точка отдачи и области хвата — по центрам ладоней пака,
-        /// <see cref="PalmPoints" />) → перенос хватов из текущего префаба → подсветка магазина → прицел, хост
+        /// Что пишет <see cref="BuildFull" /> помимо текущих префабов ствола и их зависимостей — для отката: области подсветки,
+        /// анимация механизма (<see cref="HandsPackMechanism.Folder" />), нарезанные звуки (<see cref="HandsPackAudio.Folder" />).
+        /// </summary>
+        public static IEnumerable<string> RebuildOutputs(HandsPackWeaponRecipe r)
+        {
+            // Области: Interaction/<имя> (у стволов KINEMATION — папка ствола KINEMATION).
+            var outputs = new List<string> { "Assets/Art/Weapons/Interaction/" + r.Name, KinemationFixReview.InteractionFolder(r.Name) };
+            if (r.MechanismMotion) outputs.Add(HandsPackMechanism.Folder(r));
+            if (r.PackSounds != null) outputs.Add(HandsPackAudio.Folder(r.Name));
+            return outputs;
+        }
+
+        /// <summary>
+        /// Полный маршрут одного ствола пака Hands: звуки из пака (<see cref="HandsPackAudio" />) → проверка деталей источника
+        /// → сборка (точка отдачи и области хвата — по центрам ладоней пака, <see cref="PalmPoints" />) → при
+        /// <see cref="HandsPackWeaponRecipe.MechanismMotion" /> анимация механизма и затем хост (<see cref="HandsPackMechanism" />)
+        /// → проверка GUID/root localFileID/assetId → перенос хватов из текущего префаба → подсветка магазина → прицел, хост
         /// WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />) → исходные позы пака и snap-точки <c>_orig</c>
         /// (<see cref="PackOrigPoses" />). Позы и хваты аватаров не регистрируются — отдельная команда
-        /// (<see cref="HandsPackPoseImporter.ImportFor" />, Grip Extraction). <paramref name="poses" /> — только
+        /// (<c>AvatarGripRegistration</c> из <c>_orig</c>, Grip Extraction). <paramref name="poses" /> — только
         /// <see cref="WeaponGripPoseMode.KeepCurrent" />.
         /// </summary>
         public static void BuildFull(HandsPackWeaponRecipe r, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Пересборка запрещена в Play Mode.");
             WeaponGripCarryOver.RequireBuilderMode(poses, "HandsPackWeaponBuilder");
-            string path = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
-            string magazine = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
-            // Области: Interaction/<имя> (у стволов KINEMATION — папка ствола KINEMATION).
-            var outputs = new List<string> { "Assets/Art/Weapons/Interaction/" + r.Name, KinemationFixReview.InteractionFolder(r.Name) };
+            string path = WeaponPath(r);
+            string magazine = MagazinePath(r);
             // Всё или ничего: отказ любого шага, включая прицел и _orig, возвращает файлы ствола к состоянию до сборки.
-            WeaponRebuildFinish.Run("HandsPackWeaponBuilder", path, magazine, outputs, () =>
+            WeaponRebuildFinish.Run("HandsPackWeaponBuilder", path, magazine, RebuildOutputs(r), () =>
             {
+                // Внешние ссылки (WeaponInfo, spawnPrefabs, карманы) держатся на GUID и корне — сверка в конце сборки.
+                PrefabIdentity identity = PrefabIdentity.Capture(path, magazine);
                 // Хваты снимаются до сборки: она перезаписывает оружие и магазин.
                 WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
-                Build(r);
-                WeaponGripCarryOver.Restore(grips, poses, MagazineBaseGeometry(r), SdkSampleAvatars);
+                // Звуки — до геометрии и на своём экземпляре модели, как у KINEMATION: импорт новых WAV обновляет базу ассетов.
+                if (r.PackSounds != null)
+                    using (var timing = new HandsPackWeapon(r.Folder, r.BodyPart))
+                        HandsPackAudio.MakeSounds(r, timing);
+
+                using var pack = new HandsPackWeapon(r.Folder, r.BodyPart);
+                HandsPackMechanism.ResolveStaticParts(r, pack);
+                // Ошибка структуры источника — до перезаписи игровых префабов.
+                HandsPackMechanism.ValidateSourceParts(r, pack);
+                if (r.MechanismMotion)
+                {
+                    HandsPackMechanism.Export(r, pack);
+                    OwnAssetSave.Save(new[] { HandsPackMechanism.Folder(r) });
+                }
+                // Хост WeaponSystem — после клипов механизма: профиль HoldOpen без них не настраивается.
+                Build(r, pack, configureHost: !r.MechanismMotion);
+                if (r.MechanismMotion)
+                {
+                    HandsPackMechanism.Install(path, r, pack);
+                    ConfigureHost(path, r);
+                }
+                identity.Verify();
+                WeaponGripCarryOver.Restore(grips, poses, MagazineBaseGeometry(r), DroppedGripAvatars);
                 // Подсветка выдаваемого отдельно магазина. Области хвата оружия сборка уже испекла по центрам ладоней
                 // пака — перенесённые хваты аватаров их не меняют.
                 WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
             });
+        }
+
+        /// <summary>
+        /// GUID, persistent localFileID корня и <c>NetworkIdentity._assetId</c> префабов ствола до пересборки: на них держатся
+        /// WeaponInfo, <c>spawnPrefabs</c>, карманы и сеть. Новый префаб (ещё не на диске) не сверяется.
+        /// </summary>
+        internal sealed class PrefabIdentity
+        {
+            private readonly List<(string Path, string Guid, long Root, uint AssetId)> entries = new List<(string, string, long, uint)>();
+
+            public static PrefabIdentity Capture(params string[] paths)
+            {
+                var identity = new PrefabIdentity();
+                foreach (string path in paths)
+                    if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+                        identity.entries.Add((path, AssetDatabase.AssetPathToGUID(path), ReadRootLocalId(path), ReadAssetId(path)));
+                return identity;
+            }
+
+            /// <summary>Отказ, если пересборка сменила GUID, корень или сетевой id; <c>_assetId</c> на диске — сначала канон.</summary>
+            public void Verify()
+            {
+                // SaveAsPrefabAsset пишет _assetId = 0 — канон (от GUID) возвращается до сверки.
+                VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(entries.Select(e => e.Path), false);
+                foreach (var (path, guid, root, assetId) in entries)
+                    if (AssetDatabase.AssetPathToGUID(path) != guid || ReadRootLocalId(path) != root || ReadAssetId(path) != assetId)
+                        throw new System.InvalidOperationException($"Изменён GUID/root localFileID/NetworkIdentity assetId: {path}");
+            }
+
+            // Без NetworkIdentity — 0: пропажа компонента у сетевого префаба тоже расходится с прежним id.
+            internal static uint ReadAssetId(string path)
+            {
+                var identity = AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponent<NetworkIdentity>();
+                return identity == null ? 0u : (uint)new SerializedObject(identity).FindProperty("_assetId").longValue;
+            }
+
+            internal static long ReadRootLocalId(string path)
+            {
+                GameObject root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (root == null || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(root, out string _, out long localId) || localId == 0)
+                    throw new System.InvalidOperationException($"Нет persistent root localFileID: {path}");
+                return localId;
+            }
         }
 
         /// <summary>
@@ -434,7 +585,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         /// <param name="configureHost">
         /// false — хост WeaponSystem (и трубка ручного заряжания) не настраивается: клипы затвора ставит следующий шаг
-        /// (KINEMATION — <see cref="KinemationFixReview" />, набор Hands — <c>HandsPackLegacyRebuild.InstallMotion</c>),
+        /// (KINEMATION — <see cref="KinemationFixReview" />, пак Hands — <see cref="HandsPackMechanism.Install" />),
         /// и вызывающий настраивает хост после них (<see cref="ConfigureHost(string, HandsPackWeaponRecipe)" />). Без клипов
         /// профиль HoldOpen не настраивается (отказ «затвор без клипов»).
         /// </param>
@@ -446,6 +597,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                 throw new System.InvalidOperationException("Профиль готовности не найден или конфликтует с ManualLoading: " + r.ReadinessProfile);
             if (r.FinalRootScale < 0f || float.IsNaN(r.FinalRootScale) || float.IsInfinity(r.FinalRootScale))
                 throw new System.InvalidOperationException("Некорректный итоговый масштаб корня: " + r.Name);
+            if (r.RootScale < 0f || !Finite(r.RootScale) || (r.RootScale > 0f && r.TargetLength > 0f))
+                throw new System.InvalidOperationException($"{r.Name}: масштаб корня задаётся либо RootScale, либо TargetLength");
+            RequireCycleMatchesBalance(r);
+            if (pack is HandsPackWeapon hands) HandsPackMechanism.ResolveStaticParts(r, hands);
             string folder = $"Assets/Prefabs/Weapons/{r.PrefabFolder}";
             if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder("Assets/Prefabs/Weapons", r.PrefabFolder);
 
@@ -453,9 +608,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
             try
             {
-                // Масштаб корня: габарит корпуса в единицах меша → реальная длина.
+                // Масштаб корня: габарит корпуса в единицах меша → реальная длина (или явный масштаб легаси-сборки).
                 Mesh body = pack.MeshOf(r.BodyPart);
-                float scale = r.TargetLength > 0f ? r.TargetLength / Mathf.Max(body.bounds.size.x, body.bounds.size.y, body.bounds.size.z) : 1f;
+                float scale = r.RootScale > 0f ? r.RootScale :
+                    r.TargetLength > 0f ? r.TargetLength / Mathf.Max(body.bounds.size.x, body.bounds.size.y, body.bounds.size.z) : 1f;
 
                 Matrix4x4 bodyLocal = BodyPlacement(r, pack);
 
@@ -488,8 +644,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             return Matrix4x4.Translate(new Vector3(0f, -trigger.y, -trigger.z)) * rotation;
         }
 
-        /// <summary>Нулевой ход FBX не отменяет ручную механику immutable донора существующего оружия.</summary>
-        internal static Vector3 ResolveActionTravel(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, out bool usesDonor)
+        /// <summary>
+        /// Ход затвора/помпы в осях готового корня: наибольшее смещение детали из клипа (с проекцией на явную ось тяги). Деталь
+        /// в клипе неподвижна — <see cref="HandsPackWeaponRecipe.StaticActionTravel" /> («нет в паке», AR15);
+        /// <paramref name="fromRecipe" /> — ход взят из рецепта.
+        /// </summary>
+        internal static Vector3 ResolveActionTravel(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, out bool fromRecipe)
         {
             Vector3 travel = bodyLocal.MultiplyVector(pack.Measure(r.ActionPart, r.ActionClip, r.RestClip).Far);
             if (r.ActionTravelAxis.HasValue)
@@ -503,56 +663,60 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (!Finite(travel) || travel.sqrMagnitude < 1e-10f)
                     throw new System.InvalidOperationException($"{r.Name}: исходный клип не содержит тяги по заданной оси.");
             }
-            usesDonor = r.PreserveDonorGameplay && travel.magnitude < 1e-5f;
-            if (!usesDonor) return travel;
+            fromRecipe = travel.magnitude < 1e-5f && r.StaticActionTravel.HasValue;
+            if (!fromRecipe)
+            {
+                if (travel.magnitude < 1e-5f)
+                    GameLog.WeaponSystem.Warning($"[HandsPackWeaponBuilder] {r.Name}: в клипе {r.ActionClip} деталь {r.ActionPart} неподвижна, " +
+                                                 "StaticActionTravel не задан — у затвора нет хода");
+                return travel;
+            }
 
-            GameObject donor = AssetDatabase.LoadAssetAtPath<GameObject>(r.GripDonor);
-            if (donor == null) throw new System.InvalidOperationException($"{r.Name}: нет immutable action donor: {r.GripDonor}");
-            var main = donor.GetComponent<UxrGrabbableObject>();
-            UxrGrabbableObject[] candidates = donor.GetComponentsInChildren<UxrGrabbableObject>(true)
-                .Where(g => g != main && g.GetComponentsInParent<UxrGrabbableObjectAnchor>(true).Length == 0).ToArray();
-            Transform body = donor.transform.Find(r.GripDonorBodyPath);
-            if (candidates.Length != 1 || body == null || candidates[0].transform.parent == null)
-                throw new System.InvalidOperationException($"{r.Name}: некорректный immutable action/body: {r.GripDonor}, {r.GripDonorBodyPath}");
-            var action = candidates[0];
-            if (!AutomaticWeaponSlideFeedback.TryGetSlideTravel(action, out Vector3 direction, out float length) ||
-                !Finite(direction) || !Finite(length) || !Finite(action.TranslationLimitsMin) || !Finite(action.TranslationLimitsMax) ||
-                (action.TranslationLimitsMin.sqrMagnitude > 1e-10f && action.TranslationLimitsMax.sqrMagnitude > 1e-10f) ||
-                MovingAxes(direction * length) != 1)
-                throw new System.InvalidOperationException($"{r.Name}: FBX не содержит хода {r.ActionPart}, donor не задаёт односторонний ручной ход от нуля: {r.GripDonor}");
-
-            // SDK clamps в initial local-space и возвращает через InitialRelativeMatrix; reciprocalScale
-            // компенсирует localScale action. В parent-space остаётся initial rotation, затем масштаб родителя.
-            // Через корпус возвращаем в source body-space, затем в parent-space нового action (корень).
-            Vector3 inBody = body.InverseTransformVector(action.transform.parent.TransformVector(action.transform.localRotation * (direction * length)));
-            travel = bodyLocal.MultiplyVector(inBody);
-            if (!Finite(travel) || travel.magnitude < 1e-5f || MovingAxes(travel) != 1)
-                throw new System.InvalidOperationException($"{r.Name}: перенос immutable ручного хода в новый корень дал некорректный вектор: {travel}");
+            // RestrictLocalOffset задаёт box: ход «нет в паке» — по одной оси, от нуля.
+            travel = r.StaticActionTravel.Value;
+            if (!Finite(travel) || MovingAxes(travel) != 1)
+                throw new System.InvalidOperationException($"{r.Name}: StaticActionTravel должен иметь одну ненулевую координату: {travel}");
             return travel;
         }
 
-        internal static (int Axis, float Degrees, bool UsesDonor) ResolveTriggerRotation(HandsPackWeaponRecipe r, PartMotion motion)
+        /// <summary>
+        /// Ось и угол спуска: из клипа; спуск в клипе неподвижен — <see cref="HandsPackWeaponRecipe.StaticTriggerDegrees" />
+        /// вокруг X («нет в паке», AR15), без него угол 0, как в паке (Uzi, MP5K).
+        /// </summary>
+        internal static (int Axis, float Degrees, bool FromRecipe) ResolveTriggerRotation(HandsPackWeaponRecipe r, PartMotion motion)
         {
-            if (!r.PreserveDonorGameplay || Mathf.Abs(motion.MaxAngle) >= 1e-5f)
+            if (Mathf.Abs(motion.MaxAngle) >= 1e-5f || !r.StaticTriggerDegrees.HasValue)
                 return (DominantAxis(motion.RotationAxis), Mathf.Round(motion.MaxAngle) * Mathf.Sign(AxisComponent(motion.RotationAxis)), false);
-            GameObject donor = AssetDatabase.LoadAssetAtPath<GameObject>(r.FirearmDonor);
-            var firearm = donor == null ? null : donor.GetComponent<UxrFirearmWeapon>();
-            if (firearm == null) throw new System.InvalidOperationException($"{r.Name}: нет immutable firearm donor: {r.FirearmDonor}");
-            var triggers = new SerializedObject(firearm).FindProperty("_triggers");
-            if (triggers.arraySize == 0) throw new System.InvalidOperationException($"{r.Name}: immutable donor не содержит спуска: {r.FirearmDonor}");
-            var trigger = triggers.GetArrayElementAtIndex(0);
-            int axis = trigger.FindPropertyRelative("_triggerRotationAxis._axis").intValue;
-            float degrees = trigger.FindPropertyRelative("_triggerRotationDegrees").floatValue;
-            if (axis < 0 || axis > 2 || !Finite(degrees) || Mathf.Abs(degrees) < 1e-5f)
-                throw new System.InvalidOperationException($"{r.Name}: FBX не содержит поворота спуска, immutable donor не задаёт корректный угол/ось: {r.FirearmDonor}");
-            return (axis, degrees, true);
+            float degrees = r.StaticTriggerDegrees.Value;
+            if (!Finite(degrees) || Mathf.Abs(degrees) < 1e-5f)
+                throw new System.InvalidOperationException($"{r.Name}: StaticTriggerDegrees должен быть ненулевым числом: {degrees}");
+            return (0, degrees, true);
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool Finite(Vector3 value) => Finite(value.x) && Finite(value.y) && Finite(value.z);
-        // RestrictLocalOffset задаёт box. Диагональный fallback расширил бы старый одномерный ход до box.
+        // RestrictLocalOffset задаёт box. Диагональный ход расширил бы одномерный ход до box.
         private static int MovingAxes(Vector3 value) => (Mathf.Abs(value.x) >= 1e-5f ? 1 : 0) +
             (Mathf.Abs(value.y) >= 1e-5f ? 1 : 0) + (Mathf.Abs(value.z) >= 1e-5f ? 1 : 0);
+
+        /// <summary>
+        /// Режим огня — баланс (<see cref="VrBattlegrounds.Arsenal.WeaponInfo.FullAuto" />, <see cref="WeaponBalanceApplier" />),
+        /// ручной цикл — свойство механизма (<see cref="HandsPackWeaponRecipe.IsManualCycle" />). Паспорт ствола с автоматическим
+        /// огнём при ручном механизме — противоречие: отказ до первой записи.
+        /// </summary>
+        private static void RequireCycleMatchesBalance(HandsPackWeaponRecipe r)
+        {
+            if (!r.IsManualCycle) return;
+            string path = WeaponPath(r);
+            foreach (string guid in AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" }))
+            {
+                var info = AssetDatabase.LoadAssetAtPath<VrBattlegrounds.Arsenal.WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid));
+                if (info == null || info.WeaponPrefab == null || AssetDatabase.GetAssetPath(info.WeaponPrefab) != path) continue;
+                if (info.FullAuto)
+                    throw new System.InvalidOperationException($"{r.Name}: механизм с ручным циклом ({(r.Action == HandsPackWeaponRecipe.ActionKind.Pump ? "помпа" : "ManualCycle")}), " +
+                                                               $"а в балансе {info.name} включён автоматический огонь (FullAuto) — исправьте паспорт или рецепт");
+            }
+        }
 
         private static GameObject BuildWeapon(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, float scale, Scene scene, GameObject magPrefab,
                                               bool configureHost)
@@ -561,22 +725,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             SceneManager.MoveGameObjectToScene(root, scene);
             root.transform.localScale = Vector3.one * scale;
 
-            GameObject gripDonor = AssetDatabase.LoadAssetAtPath<GameObject>(r.GripDonor);
-            GameObject fireDonor = AssetDatabase.LoadAssetAtPath<GameObject>(r.FirearmDonor);
-
             var rb = root.AddComponent<Rigidbody>();
-            CopyFields(gripDonor.GetComponent<Rigidbody>(), rb);
+            HandsPackBuildDefaults.ApplyRigidbody(rb);
             var grabbable = root.AddComponent<UxrGrabbableObject>();
             var projectile = root.AddComponent<UxrProjectileSource>();
             var firearm = root.AddComponent<UxrFirearmWeapon>();
-            var identity = root.AddComponent<NetworkIdentity>();
-            if (r.PreserveDonorGameplay)
-            {
-                CopyFields(gripDonor.GetComponent<NetworkIdentity>(), identity);
-                var network = new SerializedObject(identity);
-                network.FindProperty("_assetId").longValue = r.NetworkAssetId;
-                network.ApplyModifiedPropertiesWithoutUndo();
-            }
+            // Сетевой id — канон от GUID префаба (NetworkAssetIdNormalizer): сборка его не задаёт, GUID сохраняется.
+            root.AddComponent<NetworkIdentity>();
 
             // Детали
             var container = new GameObject("MeshContainer").transform;
@@ -590,7 +745,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Помпа/затвор — отдельный граббабл у корня, как Recoil у M16. У револьвера его нет.
             PartMotion triggerMotion = pack.Measure(r.TriggerPart, r.ActionClip, r.RestClip);
             if (r.Action != HandsPackWeaponRecipe.ActionKind.None)
-                BuildAction(r, pack, bodyLocal, root, gripDonor, fireDonor);
+                BuildAction(r, pack, bodyLocal, root);
 
             root.AddComponent<AnchoredItemCollisionIgnore>();
             root.AddComponent<OutOfWorldGuard>();
@@ -634,27 +789,24 @@ namespace VrBattlegrounds.Editor.Gameplay
             var anchorGo = Empty("MagAnchor", container, anchorPosition).gameObject;
             var anchor = anchorGo.AddComponent<UxrGrabbableObjectAnchor>();
             var anchorSo = new SerializedObject(anchor);
-            CopyFields(gripDonor.GetComponentInChildren<UxrGrabbableObjectAnchor>(true), anchor, anchorSo);
+            HandsPackBuildDefaults.ApplyAnchor(anchorSo);
             anchorSo.FindProperty("_compatibleTags").arraySize = 1;
             anchorSo.FindProperty("_compatibleTags").GetArrayElementAtIndex(0).stringValue = r.MagazineTag;
-            foreach (string field in new[] { "_alignTransform", "_dropProximityTransform", "_activateOnCompatibleNear", "_activateOnPlaced", "_activateOnCompatibleNotNear", "_activateOnHandNearAndGrabbable", "_activateOnEmpty", "_grabProxy" })
-                anchorSo.FindProperty(field).objectReferenceValue = null;
             anchorSo.FindProperty("_alignTransformUseSelf").boolValue = true;
             anchorSo.FindProperty("_dropProximityTransformUseSelf").boolValue = true;
             anchorSo.ApplyModifiedPropertiesWithoutUndo();
-            // Источник со звуком вставки — копия донорского (AnchorSound играет его по Placed).
+            // Источник звуков гнезда (AnchorSound играет вставку по Placed и снятие по Removed): настройки Unity по умолчанию.
             // Не на Activate On Placed и без Play On Awake: AnchorActivationAudioTests.
             var source = anchorGo.AddComponent<AudioSource>();
-            EditorUtility.CopySerialized(gripDonor.GetComponentInChildren<UxrGrabbableObjectAnchor>(true).GetComponent<AudioSource>(), source);
             source.playOnAwake = false;
-            // Своего клипа у гнезда магазина нет — общий MagazineAnchorSoundDefaults. LoadAudio — только окну приёма
-            // патронов (ручное заряжание, ManualLoadingAuthoring).
-            source.clip = null;
+            // Звук вставки принадлежит гнезду (не магазину — иначе звучит дважды): свой кусок перезарядки пака ствола
+            // (решение пользователя 2026-10-23) — оверрайд в объекте. Нет своей нарезки — поле пустое, AnchorSound в момент
+            // вставки/снятия берёт запасную пару категории ствола (WeaponFeedbackDefaults), затем дефолт роли гнезда
+            // (MagazineAnchorSoundDefaults). Дефолты в префаб не копируются. LoadAudio — окну приёма патронов.
+            source.clip = string.IsNullOrEmpty(r.InsertAudio) ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(r.InsertAudio) ??
+                throw new System.InvalidOperationException($"{r.Name}: нет звука вставки {r.InsertAudio}");
             var sound = new SerializedObject(anchorGo.AddComponent<AnchorSound>());
-            CopyFields(gripDonor.GetComponentInChildren<AnchorSound>(true), sound.targetObject, sound);
-            sound.FindProperty("_source").objectReferenceValue = source;
-            if (!string.IsNullOrEmpty(r.TakeOutAudio))
-                sound.FindProperty("_takeOutClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(r.TakeOutAudio);
+            HandsPackBuildDefaults.ApplyAnchorSound(sound, source, r.TakeOutAudio);
             sound.ApplyModifiedPropertiesWithoutUndo();
 
             var nested = (GameObject)PrefabUtility.InstantiatePrefab(magPrefab, anchorGo.transform);
@@ -668,37 +820,26 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (r.MagazineIsInternal)
                 WeaponInternalAmmoAlignment.ConfigureAnchor(anchor, parts[r.LoadingPart], nested.GetComponent<UxrGrabbableObject>());
 
-            // Хват корня
+            // Хват корня; вторая рука — дополнительная точка (цевьё или поддержка пистолета).
             var so = new SerializedObject(grabbable);
-            CopyFields(gripDonor.GetComponent<UxrGrabbableObject>(), grabbable, so);
+            HandsPackBuildDefaults.ApplyRootGrab(so, r.SupportGrip ? 1 : 0);
             so.FindProperty("_rigidBodySource").objectReferenceValue = rb;
             so.FindProperty("_tag").stringValue = r.UxrTag;
-            // Вторая рука — дополнительная точка донора (цевьё M16 или поддержка Gun_real).
-            so.FindProperty("_additionalGrabPoints").arraySize = r.SupportGrip ? 1 : 0;
             UseGripAsProximity(so);
             so.FindProperty("_startAnchor").objectReferenceValue = null;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            // Снаряд и спуск
+            // Снаряд и спуск. Помповое — дробь: второй тип выстрела для дробинок, без вспышки у дула на каждую.
             var ps = new SerializedObject(projectile);
-            CopyFields(fireDonor.GetComponent<UxrProjectileSource>(), projectile, ps);
-            ps.FindProperty("_weaponAnimator").objectReferenceValue = null;
-
-            // Помповое — дробь: второй тип выстрела для дробинок, без вспышки у дула на каждую.
             SerializedProperty shotTypes = ps.FindProperty("_shotTypes");
             bool pellets = r.Action == HandsPackWeaponRecipe.ActionKind.Pump || r.Pellets;
-            if (!r.PreserveDonorGameplay) shotTypes.arraySize = pellets ? 2 : 1;
-            if (shotTypes.arraySize < (pellets ? 2 : 1))
-                throw new System.InvalidOperationException($"{r.Name}: у immutable донора нет необходимых типов выстрела");
-
+            HandsPackBuildDefaults.NewShots(shotTypes, pellets ? 2 : 1);
+            string muzzleEffect = r.MuzzleEffect ?? MuzzleEffect;
             for (int i = 0; i < shotTypes.arraySize; i++)
             {
                 SerializedProperty shot = shotTypes.GetArrayElementAtIndex(i);
-                if (i > 0 && !r.PreserveDonorGameplay) shot.boxedValue = shotTypes.GetArrayElementAtIndex(0).boxedValue;
-
                 shot.FindPropertyRelative("_shotSource").objectReferenceValue = shotSource;
                 shot.FindPropertyRelative("_tip").objectReferenceValue = tip;
-                if (r.PreserveDonorGameplay) continue;
 
                 // Вид выстрела оружия проекта: белый трассер и попадание без сэмплов SDK
                 // (TracerVisibilityTests, ImpactEffectTests).
@@ -709,13 +850,19 @@ namespace VrBattlegrounds.Editor.Gameplay
 
                 // Вспышка у дула — только частицы, привязана к оружию и масштабируется с ним
                 // (MuzzleEffectTests). Дробинкам своя вспышка не нужна — она обнуляется ниже.
-                shot.FindPropertyRelative("_prefabInstantiateOnTipWhenShot").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(MuzzleEffect);
+                shot.FindPropertyRelative("_prefabInstantiateOnTipWhenShot").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(muzzleEffect) ??
+                    throw new System.InvalidOperationException($"{r.Name}: нет вспышки у дула {muzzleEffect}");
                 shot.FindPropertyRelative("_prefabInstantiateOnTipParent").boolValue = true;
                 shot.FindPropertyRelative("_prefabInstantiateOnTipLife").floatValue = 1f;
 
+                // Отличия снаряда ствола от общего набора (FABARM: дробина сэмпла SDK, толчок трупа, декали только на Default).
+                if (r.ProjectileLength.HasValue) shot.FindPropertyRelative("_projectileLength").floatValue = r.ProjectileLength.Value;
+                if (r.ProjectileImpactForce.HasValue) shot.FindPropertyRelative("_projectileImpactForceMultiplier").floatValue = r.ProjectileImpactForce.Value;
+                if (r.DecalLayers.HasValue) shot.FindPropertyRelative("_createDecalLayerMask").intValue = r.DecalLayers.Value;
+
                 if (pellets)
                 {
-                    // 8 дробинок × 14 — 112 в упор при здоровье 100 (ShotgunPelletsTests).
+                    // 8 дробинок × 14 — 112 в упор при здоровье 100 (ShotgunPelletsTests); урон и дальность затем — баланс.
                     shot.FindPropertyRelative("_projectileDamageNear").floatValue = 14f;
                     shot.FindPropertyRelative("_projectileDamageFar").floatValue = 4f;
                     shot.FindPropertyRelative("_projectileMaxDistance").floatValue = 60f;
@@ -723,54 +870,35 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
             ps.ApplyModifiedPropertiesWithoutUndo();
-            if (pellets)
-            {
-                var component = root.AddComponent<ShotgunPellets>();
-                if (r.PreserveDonorGameplay) CopyFields(fireDonor.GetComponent<ShotgunPellets>(), component);
-            }
+            if (pellets) root.AddComponent<ShotgunPellets>();
 
             var fw = new SerializedObject(firearm);
-            CopyFields(fireDonor.GetComponent<UxrFirearmWeapon>(), firearm, fw);
             var recoil = Empty("RecoilSourceAxes", container, Vector3.zero);
             fw.FindProperty("_recoilAxes").objectReferenceValue = recoil;
-            SerializedProperty trig = fw.FindProperty("_triggers").GetArrayElementAtIndex(0);
+            // Без затвора патрон досылать нечем: выстрел — прямо из барабана.
+            SerializedProperty trig = HandsPackBuildDefaults.NewTrigger(fw.FindProperty("_triggers"), r.Action != HandsPackWeaponRecipe.ActionKind.None,
+                HandsPackBuildDefaults.CategoryDefaults(r.Name));
             trig.FindPropertyRelative("_triggerGrabbable").objectReferenceValue = grabbable;
             trig.FindPropertyRelative("_grabbableGrabPointIndex").intValue = 0;
             trig.FindPropertyRelative("_triggerTransform").objectReferenceValue = parts[r.TriggerPart];
             var triggerRotation = ResolveTriggerRotation(r, triggerMotion);
-            // При отсутствии source rotation CopyFields уже сохранил точные axis/degrees immutable донора.
-            if (!triggerRotation.UsesDonor)
-            {
-                trig.FindPropertyRelative("_triggerRotationAxis._axis").intValue = triggerRotation.Axis;
-                trig.FindPropertyRelative("_triggerRotationDegrees").floatValue = triggerRotation.Degrees;
-            }
+            trig.FindPropertyRelative("_triggerRotationAxis._axis").intValue = triggerRotation.Axis;
+            trig.FindPropertyRelative("_triggerRotationDegrees").floatValue = triggerRotation.Degrees;
             trig.FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue = anchor;
-            // Без затвора патрон досылать нечем: выстрел — прямо из барабана.
-            if (r.Action == HandsPackWeaponRecipe.ActionKind.None)
-                trig.FindPropertyRelative("_useHasReloadedForSemiAndFullAuto").boolValue = false;
-            if (r.ShotCycle.HasValue)
-                trig.FindPropertyRelative("_cycleType").enumValueIndex = (int)r.ShotCycle.Value;
+            // Ручной цикл — от механизма; иначе режим огня пишет баланс по WeaponInfo.FullAuto (общий конец пересборки),
+            // до него — полуавтомат.
+            trig.FindPropertyRelative("_cycleType").intValue = (int)(r.IsManualCycle ? UxrShotCycle.ManualReload : UxrShotCycle.SemiAutomatic);
             if (!string.IsNullOrEmpty(r.ShotAudio))
-                trig.FindPropertyRelative("_shotAudio._clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(r.ShotAudio);
+                trig.FindPropertyRelative("_shotAudio._clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(r.ShotAudio) ??
+                    throw new System.InvalidOperationException($"{r.Name}: нет звука выстрела {r.ShotAudio}");
+            else GameLog.WeaponSystem.Warning($"[HandsPackWeaponBuilder] {r.Name}: у рецепта нет звука выстрела (ShotAudio/PackSounds.Shot)");
             fw.ApplyModifiedPropertiesWithoutUndo();
 
             // Нейтральные точки хвата — центры ладоней пака: правая — рукоять, левая — цевьё/поддержка. Записей
-            // хвата аватаров сборка не пишет; точка отдачи — у правой ладони на рукояти.
+            // хвата аватаров сборка не пишет; точка отдачи — у правой ладони на рукояти. RecoilAccumulator и WeaponSpread
+            // ставит баланс (WeaponBalanceApplier.EnsureComponent).
             Vector3[] palms = PalmPoints(pack, r.PoseClip, root.transform, parts[r.BodyPart]);
             recoil.position = root.transform.TransformPoint(palms[0]);
-            if (r.PreserveDonorGameplay)
-            {
-                if (fireDonor.TryGetComponent(out RecoilAccumulator donorRecoil))
-                {
-                    var target = root.AddComponent<RecoilAccumulator>();
-                    CopyFields(donorRecoil, target);
-                    var recoilSo = new SerializedObject(target);
-                    recoilSo.FindProperty("_axes").objectReferenceValue = recoil;
-                    recoilSo.ApplyModifiedPropertiesWithoutUndo();
-                }
-                if (fireDonor.TryGetComponent(out WeaponSpread donorSpread))
-                    CopyFields(donorSpread, root.AddComponent<WeaponSpread>());
-            }
 
             // Вторая рука пистолета обнимает первую: она не должна поворачивать оружие и браться
             // одна (GunTwoHandAimTests, SupportGripTests; порог — TwoHandGrabCases.SupportGripMaxGap).
@@ -827,9 +955,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { path }, false);
         }
 
-        /// <summary>Помпа или затвор: ход из клипа либо сохранённая ручная механика immutable донора.</summary>
-        private static void BuildAction(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal,
-                                        GameObject root, GameObject gripDonor, GameObject fireDonor)
+        /// <summary>
+        /// Помпа или затвор: ход из клипа (или «нет в паке» из рецепта), общий граббабл механизма
+        /// (<see cref="HandsPackBuildDefaults.ApplyActionGrab" />) и вход хоста — <see cref="UxrShotgunPump" /> или
+        /// <see cref="AutomaticWeaponSlideFeedback" /> с порогом, возвратом и звуками рецепта.
+        /// </summary>
+        private static void BuildAction(HandsPackWeaponRecipe r, IWeaponModel pack, Matrix4x4 bodyLocal, GameObject root)
         {
             var action = new GameObject(r.Action == HandsPackWeaponRecipe.ActionKind.Pump ? "Pump" : "Slide");
             action.transform.SetParent(root.transform, false);
@@ -844,15 +975,15 @@ namespace VrBattlegrounds.Editor.Gameplay
             var actionGrab = action.AddComponent<UxrGrabbableObject>();
             action.AddComponent<GrabOnlyWhenParentHeld>();
             var ag = new SerializedObject(actionGrab);
-            CopyFields(FindPart(gripDonor), actionGrab, ag);
+            HandsPackBuildDefaults.ApplyActionGrab(ag);
             ag.FindProperty("_translationConstraintMode").enumValueIndex = (int)UxrTranslationConstraintMode.RestrictLocalOffset;
             ag.FindProperty("_translationLimitsMin").vector3Value = Vector3.Min(travel, Vector3.zero);
             ag.FindProperty("_translationLimitsMax").vector3Value = Vector3.Max(travel, Vector3.zero);
             ag.FindProperty("_rotationConstraintMode").enumValueIndex = (int)UxrRotationConstraintMode.RestrictLocalRotation;
             UseGripAsProximity(ag);
 
-            // Донор — рукоятка затвора M16: она не наводит ствол и от винтовки не зависит. Помпу
-            // держит вторая рука, она наводит ствол, как цевьё (так у сэмплового дробовика SDK).
+            // Рукоятка затвора не наводит ствол и от винтовки не зависит (как Recoil у M16). Помпу держит вторая рука,
+            // она наводит ствол, как цевьё (так у сэмплового дробовика SDK, PumpAimTests).
             bool isPump = r.Action == HandsPackWeaponRecipe.ActionKind.Pump;
             ag.FindProperty("_controlParentDirection").boolValue = isPump;
             ag.FindProperty("_ignoreGrabbableParentDependency").boolValue = !isPump;
@@ -861,10 +992,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (isPump)
             {
                 var pump = new SerializedObject(root.AddComponent<UxrShotgunPump>());
-                CopyFields(fireDonor.GetComponent<UxrShotgunPump>(), pump.targetObject, pump);
+                HandsPackBuildDefaults.ApplyPump(pump);
                 pump.FindProperty("_pump").objectReferenceValue = actionGrab;
                 pump.FindProperty("_localPumpDirection").vector3Value = travel.normalized;
                 pump.FindProperty("_localPumpOffset").vector3Value = travel;
+                // Хост читает звуки помпы по смыслу: _audioSlide — оттяжка, _audioSlideBack — возврат (WeaponSystemAuthoring).
+                HandsPackBuildDefaults.SetAudio(pump, "_audioSlide", r.SlideBackAudio, HandsPackBuildDefaults.PumpVolume);
+                HandsPackBuildDefaults.SetAudio(pump, "_audioSlideBack", r.SlideForwardAudio, HandsPackBuildDefaults.PumpVolume);
                 pump.ApplyModifiedPropertiesWithoutUndo();
                 // С этапа drive помпой управляет хост WeaponSystem: компонент — только источник хода, порога и звуков
                 // для WeaponSystemAuthoring.Configure, который его затем снимает. Включённый он считается legacy-помпой.
@@ -878,33 +1012,20 @@ namespace VrBattlegrounds.Editor.Gameplay
             else
             {
                 var slide = new SerializedObject(root.AddComponent<AutomaticWeaponSlideFeedback>());
-                var donorFeedback = gripDonor.GetComponent<AutomaticWeaponSlideFeedback>();
-                if (donorFeedback == null)
-                {
-                    // Живой донор (AR15, BrowningHiPower) переведён на WeaponSystem и затвора AWSF больше не несёт —
-                    // порог, возврат и звуки затвора берутся из его immutable снимка (LegacyBuildDonors). Иначе
-                    // WeaponSystemAuthoring.Configure брал значения по умолчанию: порог 0,7 вместо 0,855 и без звуков.
-                    var snapshot = AssetDatabase.LoadAssetAtPath<GameObject>(HandsPackLegacyRebuild.DonorSnapshot(r.GripDonor) ?? "");
-                    donorFeedback = snapshot != null ? snapshot.GetComponent<AutomaticWeaponSlideFeedback>() : null;
-                }
-                CopyFields(donorFeedback, slide.targetObject, slide);
+                HandsPackBuildDefaults.ApplySlide(slide);
                 slide.FindProperty("_slide").objectReferenceValue = actionGrab;
-                // Свои звуки затвора (KINEMATION) — и для пустого, и для заряженного хода.
+                // Свои звуки затвора (куски пака) — и для пустого, и для заряженного хода; без них — дефолт категории хоста.
                 foreach (var (field, audio) in new[] { ("_audioSlideBack", r.SlideBackAudio), ("_audioSlideBackWhenLoaded", r.SlideBackAudio),
                                                        ("_audioSlideForward", r.SlideForwardAudio), ("_audioSlideForwardWhenLoaded", r.SlideForwardAudio) })
-                {
-                    if (string.IsNullOrEmpty(audio)) continue;
-                    slide.FindProperty(field + "._clip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(audio);
-                }
+                    HandsPackBuildDefaults.SetAudio(slide, field, audio);
                 slide.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 
         /// <summary>
-        /// Близость руки к точке хвата — от её же точки выравнивания (Use Self), как у доноров. CopyFields
-        /// пропускает всё с <c>_grabProximityTransform</c> в пути, включая флаг, и у новой
-        /// дополнительной точки он оставался выключенным при пустом трансформе: близость мерилась от
-        /// корня, и вторая рука у револьвера выбирала основную точку (GunTwoHandGrabTests).
+        /// Близость руки к точке хвата — от её же точки выравнивания (Use Self), как у принятых стволов. Без флага при
+        /// пустом трансформе близость мерилась от корня, и вторая рука у револьвера выбирала основную точку
+        /// (GunTwoHandGrabTests).
         /// </summary>
         private static void UseGripAsProximity(SerializedObject grabbable)
         {
@@ -941,18 +1062,13 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Отделённая копия: магазин — не вариант базы SDK (базы удалены, решение пользователя 2026-10-22).
             // SaveAsPrefabAsset сопоставляет прежний корень по имени и сохраняет внешние WeaponInfo/spawn-ссылки.
             PrefabUtility.UnpackPrefabInstance(mag, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            if (template != path && !r.PreserveDonorGameplay) ClearTemplateGrips(mag);
+            if (template != path) ClearTemplateGrips(mag);
             mag.name = r.MagazineName ?? r.Name + "_mag";
             mag.transform.localScale = Vector3.one * scale;
-            if (r.PreserveDonorGameplay)
-            {
-                // Старые Animation/Animator не должны повторно двигать детали нового generic механизма.
-                foreach (var animation in mag.GetComponentsInChildren<Animation>(true)) Object.DestroyImmediate(animation);
-                foreach (var animator in mag.GetComponentsInChildren<Animator>(true)) Object.DestroyImmediate(animator);
-                var network = new SerializedObject(mag.GetComponent<NetworkIdentity>());
-                network.FindProperty("_assetId").longValue = r.MagazineAssetId;
-                network.ApplyModifiedPropertiesWithoutUndo();
-            }
+            // Старые Animation/Animator шаблона не должны повторно двигать детали нового механизма. Сетевой id — канон от
+            // GUID магазина (NetworkAssetIdNormalizer), GUID и корень сохраняются.
+            foreach (var animation in mag.GetComponentsInChildren<Animation>(true)) Object.DestroyImmediate(animation);
+            foreach (var animator in mag.GetComponentsInChildren<Animator>(true)) Object.DestroyImmediate(animator);
 
             // Геометрия базы уходит целиком, вместе с индикатором патронов, который на неё ссылается.
             foreach (var indicator in mag.GetComponents<MonoBehaviour>().Where(c => c != null && c.GetType().Name == "MagAmmoIndicator").ToList())
@@ -1002,11 +1118,14 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Записи хвата аватаров магазина — только от базы; своих сборка не добавляет (перенос — WeaponGripCarryOver).
 
             ImpactSoundInstaller.Apply(mag, true);
-            // Звук вставки задаёт AnchorSound гнезда; свой звук размещения боеприпаса (MagPlace донора) дал бы двойной.
+            // Звук вставки задаёт AnchorSound гнезда; свой звук размещения боеприпаса (MagPlace шаблона) дал бы двойной.
+            // Звук хвата шаблона (SDK Magazine_attach) звучал при каждом взятии, в том числе вместе со звуком кармана:
+            // доставание озвучивает AnchorSound приёмника (решение пользователя 2026-10-23).
             foreach (var audio in mag.GetComponentsInChildren<UltimateXR.Audio.UxrAudioManipulation>(true))
             {
                 var place = new SerializedObject(audio);
                 place.FindProperty("_audioOnPlace._clip").objectReferenceValue = null;
+                place.FindProperty("_audioOnGrab._clip").objectReferenceValue = null;
                 place.ApplyModifiedPropertiesWithoutUndo();
             }
             // Подсветка магазина Hands — в префабе до сборки оружия: установщик подсветки оружия переиспользует её во
@@ -1028,8 +1147,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>Шаблон магазина: текущий префаб магазина ствола, у первой сборки — <see cref="HandsPackWeaponRecipe.MagazineBase" />.</summary>
         internal static string MagazineTemplate(HandsPackWeaponRecipe r)
         {
-            if (r.PreserveDonorGameplay) return r.MagazineBase;
-            string own = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab";
+            string own = MagazinePath(r);
             return AssetDatabase.LoadAssetAtPath<GameObject>(own) != null ? own : r.MagazineBase;
         }
 
@@ -1086,8 +1204,22 @@ namespace VrBattlegrounds.Editor.Gameplay
         };
 
         /// <summary>
-        /// Записи хвата сэмпловых аватаров SDK (у доноров набора Hands их точки лежат в собственном <c>Grabs</c>) и записи,
-        /// у которых обе трансформы выравнивания удалены вместе с геометрией базы; ставшие ненужными точки — тоже.
+        /// Аватары, выведенные из схемы хватов (решение пользователя 2026-10-23): MEF_Base_Avatar в игре не используется,
+        /// хваты семейства Cyborg регистрирует <c>AvatarGripRegistration</c> из <c>_orig</c>. Их записи сборка не пишет и не переносит.
+        /// </summary>
+        public static readonly string[] RetiredGripAvatars = { HandsPackPoseImporter.MefBaseAvatarGuid };
+
+        /// <summary>Аватары, чьи записи хвата сборка убирает и не переносит: сэмплы SDK и выведенные из схемы.</summary>
+        public static readonly string[] DroppedGripAvatars = SdkSampleAvatars.Concat(RetiredGripAvatars).ToArray();
+
+        /// <summary>Папка выравнивания выведенного аватара в <c>Grabs</c> (MEF у доноров набора Hands).</summary>
+        private const string RetiredGripFolder = "MEF_Base_Avatar";
+
+        /// <summary>
+        /// Записи хвата убранных аватаров (<see cref="DroppedGripAvatars" />: у доноров набора Hands их точки лежат в собственном
+        /// <c>Grabs</c>) и записи, у которых обе трансформы выравнивания удалены вместе с геометрией базы; ставшие ненужными
+        /// точки — тоже. Дополнительные точки хвата магазина без записей удаляются (вторая точка BrowningHiPower_Magazine
+        /// из сэмпла SDK — решение пользователя 2026-10-23), как и пустые папки выведенных аватаров.
         /// </summary>
         private static void RemoveOrphanGripEntries(UxrGrabbableObject grabbable)
         {
@@ -1104,87 +1236,24 @@ namespace VrBattlegrounds.Editor.Gameplay
                     SerializedProperty entry = entries.GetArrayElementAtIndex(i);
                     var left = entry.FindPropertyRelative("_gripAlignTransformHandLeft").objectReferenceValue as Transform;
                     var right = entry.FindPropertyRelative("_gripAlignTransformHandRight").objectReferenceValue as Transform;
-                    bool sample = SdkSampleAvatars.Contains(entry.FindPropertyRelative("_avatarPrefabGuid").stringValue);
-                    if (!sample && (left != null || right != null)) continue;
+                    bool dropped = DroppedGripAvatars.Contains(entry.FindPropertyRelative("_avatarPrefabGuid").stringValue);
+                    if (!dropped && (left != null || right != null)) continue;
                     orphans.Add(left);
                     orphans.Add(right);
                     entries.DeleteArrayElementAtIndex(i);
                 }
+            for (int i = additional.arraySize - 1; i >= 0; i--)
+                if (additional.GetArrayElementAtIndex(i).FindPropertyRelative("_avatarGripPoseEntries").arraySize == 0)
+                    additional.DeleteArrayElementAtIndex(i);
             so.ApplyModifiedPropertiesWithoutUndo();
             foreach (Transform orphan in orphans.Where(t => t != null).Distinct().ToList())
                 if (orphan != null) HandsPackPoseImporter.RemoveUnused(grabbable.gameObject, orphan, null);
+            foreach (Transform folder in grabbable.GetComponentsInChildren<Transform>(true).Where(t => t != null && t.name == RetiredGripFolder).ToList())
+                if (folder != null && folder.GetComponentsInChildren<Transform>(true).All(t => t.GetComponents<Component>().Length == 1))
+                    Object.DestroyImmediate(folder.gameObject);
         }
 
         // ── Вспомогательное ─────────────────────────────────────────────────────
-
-        private static UxrGrabbableObject FindPart(GameObject donor)
-        {
-            UxrGrabbableObject root = donor.GetComponent<UxrGrabbableObject>();
-            return donor.GetComponentsInChildren<UxrGrabbableObject>(true)
-                        .First(g => g != root && g.GetComponentsInParent<UxrGrabbableObjectAnchor>(true).Length == 0);
-        }
-
-        /// <summary>
-        /// Копирует сериализованные поля донора, кроме id UltimateXR и ссылок на объекты донора
-        /// внутри его префаба (они обнуляются — их назначает сборщик). Ассеты (звуки, позы,
-        /// префабы эффектов) копируются.
-        /// </summary>
-        private static void CopyFields(Object donor, Object target, SerializedObject dst = null)
-        {
-            if (donor == null) return;
-            bool apply = dst == null;
-            dst ??= new SerializedObject(target);
-            var src = new SerializedObject(donor);
-            string donorPath = AssetDatabase.GetAssetPath(donor);
-
-            SerializedProperty p = src.GetIterator();
-            bool enter = true;
-            while (p.Next(enter))
-            {
-                enter = p.propertyType == SerializedPropertyType.Generic;
-                if (PrefabBookkeeping.Contains(p.propertyPath) || p.propertyPath.Contains("uxrUniqueId") ||
-                    p.propertyPath.StartsWith("__") || p.propertyPath.Contains("_avatarGripPoseEntries") || p.propertyPath.Contains("_grabProximityBox") ||
-                    p.propertyPath.Contains("_enableOnHandNear") || p.propertyPath.Contains("_alignToControllerAxes") || p.propertyPath.Contains("_grabProximityTransform"))
-                {
-                    enter = false;
-                    continue;
-                }
-
-                if (p.propertyType == SerializedPropertyType.Generic && !p.isArray) continue;
-
-                if (p.isArray && p.propertyType == SerializedPropertyType.Generic)
-                {
-                    dst.FindProperty(p.propertyPath)?.SetArraySize(p.arraySize);
-                    continue;
-                }
-
-                SerializedProperty d = dst.FindProperty(p.propertyPath);
-                if (d == null || d.propertyType != p.propertyType) continue;
-
-                if (p.propertyType == SerializedPropertyType.ObjectReference)
-                {
-                    Object o = p.objectReferenceValue;
-                    bool insideDonor = o != null && AssetDatabase.GetAssetPath(o) == donorPath && !(o is ScriptableObject);
-                    d.objectReferenceValue = insideDonor ? null : o;
-                }
-                else if (p.propertyType != SerializedPropertyType.ArraySize)
-                {
-                    d.boxedValue = p.boxedValue;
-                }
-            }
-
-            if (apply) dst.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        // Служебные поля объекта и префаба: у донора-варианта m_CorrespondingSourceObject указывает
-        // на его базу, скопированный он привязал бы новый компонент к чужому префабу.
-        private static readonly HashSet<string> PrefabBookkeeping = new HashSet<string>
-        {
-            "m_Script", "m_GameObject", "m_Name", "m_ObjectHideFlags", "m_CorrespondingSourceObject",
-            "m_PrefabInstance", "m_PrefabAsset", "m_EditorHideFlags", "m_EditorClassIdentifier", "m_Enabled"
-        };
-
-        private static void SetArraySize(this SerializedProperty p, int size) => p.arraySize = size;
 
         private static Transform Empty(string name, Transform parent, Vector3 localPosition)
         {

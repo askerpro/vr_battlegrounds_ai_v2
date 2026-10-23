@@ -25,8 +25,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             KinemationWeaponRecipe kinemation = KinemationWeaponBuilder.All.FirstOrDefault(k => k.Weapon.Name == root.name);
             LowPolyWeaponRecipe lowPoly = LowPolyWeaponBuilder.Find(root.name);
-            HandsPackWeaponRecipe source = kinemation?.Weapon ?? lowPoly?.Weapon ?? HandsPackWeaponBuilder.T38
-                .Concat(new[] { HandsPackWeaponBuilder.ShotgunReal }).FirstOrDefault(r => r.Name == root.name);
+            HandsPackWeaponRecipe source = kinemation?.Weapon ?? lowPoly?.Weapon ?? HandsPackWeaponBuilder.Full.FirstOrDefault(r => r.Name == root.name);
             var recipe = WeaponInteractionRecipes.For(root, source, Palms(root, kinemation, lowPoly));
             if (kinemation != null) recipe.AssetFolder = KinemationFixReview.InteractionFolder(root.name);
             return recipe;
@@ -57,27 +56,14 @@ namespace VrBattlegrounds.Editor.Gameplay
                 using var model = LowPolyWeaponBuilder.Model(lowPoly);
                 return HandsPackWeaponBuilder.PalmPoints(model, null, root.transform, Body(lowPoly.Weapon));
             }
-            HandsPackWeaponRecipe hands = HandsPackWeaponBuilder.T38.Concat(new[] { HandsPackWeaponBuilder.ShotgunReal })
-                .Concat(LegacyPalmSources).FirstOrDefault(r => r.Name == root.name);
+            HandsPackWeaponRecipe hands = HandsPackWeaponBuilder.Full.Concat(new[] { HandsPackLegacyRebuild.Browning })
+                .FirstOrDefault(r => r.Name == root.name);
             if (hands == null)
                 throw new InvalidOperationException($"{root.name}: нет snap-точек Orig и рецепта пака — центры ладоней недоступны. " +
                                                     "Записи хвата аватаров для областей подсветки не используются: экспортируйте _orig или добавьте рецепт.");
             using var pack = new HandsPackWeapon(hands.Folder, hands.BodyPart);
             return HandsPackWeaponBuilder.PalmPoints(pack, hands.PoseClip, root.transform, Body(hands));
         }
-
-        /// <summary>
-        /// Набор HandsPackLegacyRebuild без его immutable baseline: только то, что нужно для центров ладоней — папка,
-        /// корпус, клип позы и путь корпуса в префабе (те же значения, что в его рецептах и в <see cref="PackOrigPoses" />).
-        /// </summary>
-        private static IEnumerable<HandsPackWeaponRecipe> LegacyPalmSources => new[]
-        {
-            new HandsPackWeaponRecipe { Name = "BrowningHiPower", Folder = "Hands_Gun", BodyPart = "Base_mesh", PoseClip = "Aiming_Idle" },
-            new HandsPackWeaponRecipe
-            {
-                Name = "AR15", Folder = "Hands_Automatic_Rifle03", BodyPart = "Rifle_Body_Mesh", BodyObjectName = "Rifle_Body_Mesh", PoseClip = "Aim_Idle"
-            }
-        };
 
         public static string Preflight() => Preflight(WeaponPaths());
 

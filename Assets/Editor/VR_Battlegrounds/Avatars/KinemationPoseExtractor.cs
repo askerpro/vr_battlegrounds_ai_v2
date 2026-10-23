@@ -75,8 +75,8 @@ namespace VrBattlegrounds.Editor.Avatars
                 VrBattlegrounds.Editor.Gameplay.KinemationWeapon.SampleFullMagazines(weapon, weaponAnimator);
                 if (weaponMotion != null && weaponAnimator != null) weaponMotion.SampleAnimation(weaponAnimator.gameObject, Mathf.Min(time, weaponMotion.length));
 
-                Transform body = weapon.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == bodyBone)
-                                 ?? throw new KeyNotFoundException($"{weaponPrefab.name}: нет кости корпуса {bodyBone}");
+                // Кость детали — по правилу KinemationWeapon: одноимённый сокет без вершин (TR15: Magazine) не корпус кадра.
+                Transform body = PartBone(weapon, bodyBone) ?? throw new KeyNotFoundException($"{weaponPrefab.name}: нет кости корпуса {bodyBone}");
 
                 Matrix4x4 hand     = Matrix4x4.TRS(arm.Hand.Wrist.position, handAxes.UniversalRotation, Vector3.one);
                 Matrix4x4 relative = hand.inverse * Matrix4x4.TRS(body.position, body.rotation, Vector3.one);
@@ -95,6 +95,38 @@ namespace VrBattlegrounds.Editor.Avatars
                 Object.DestroyImmediate(weapon);
                 Object.DestroyImmediate(character);
             }
+        }
+
+        /// <summary>
+        /// Кость детали <paramref name="part" /> в экземпляре оружия пака — по правилу
+        /// <see cref="VrBattlegrounds.Editor.Gameplay.KinemationWeapon" />: деталь — кость скина, у которой есть свои вершины
+        /// (главная кость хотя бы одной вершины); одноимённая кость другого рендерера — <c>&lt;рендерер&gt;.&lt;кость&gt;</c>.
+        /// Так одноимённый сокет или пустой узел (у TR15 — <c>Magazine</c> выше кости магазина) не подменяет деталь, и кадр
+        /// снимается в осях вырезанного меша детали проекта. Нет такой кости (обвес — <see cref="MeshFilter" />, меш без весов на
+        /// CPU) — первый <see cref="Transform" /> с этим именем, как прежде; нет и его — null.
+        /// </summary>
+        public static Transform PartBone(GameObject weapon, string part)
+        {
+            var parts = new Dictionary<string, Transform>();
+            foreach (SkinnedMeshRenderer r in weapon.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (r.sharedMesh == null) continue;
+                var count = new int[r.bones.Length];
+                foreach (BoneWeight w in r.sharedMesh.boneWeights)
+                {
+                    if (w.boneIndex0 >= 0 && w.boneIndex0 < count.Length) count[w.boneIndex0]++;
+                }
+
+                for (int b = 0; b < count.Length; b++)
+                {
+                    if (count[b] == 0 || r.bones[b] == null) continue;
+                    string name = r.bones[b].name;
+                    if (parts.TryGetValue(name, out Transform other) && other != r.bones[b]) name = $"{r.name}.{name}";
+                    parts[name] = r.bones[b];
+                }
+            }
+
+            return parts.TryGetValue(part, out Transform bone) ? bone : weapon.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == part);
         }
 
         /// <summary>

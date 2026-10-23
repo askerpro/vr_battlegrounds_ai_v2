@@ -9,7 +9,7 @@ using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Editor.Gameplay
 {
-    /// <summary>Узкое обновление восьми KINEMATION из T-39 без сборки из донора и без изменения реестра.</summary>
+    /// <summary>Механика восьми KINEMATION (T-39) — шаг полной сборки <see cref="KinemationWeaponBuilder" />; узкой команды нет.</summary>
     public static class KinemationFixReview
     {
         /// <summary>Ассеты областей подсветки ствола KINEMATION (их же печёт сборка, <c>HandsPackWeaponRecipe.InteractionFolder</c>).</summary>

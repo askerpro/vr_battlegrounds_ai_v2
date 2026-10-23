@@ -1,0 +1,26 @@
+// execute_code на worker, только чтение: ход деталей AR15 и FabarmSDASS по всем клипам пака.
+var sb = new System.Text.StringBuilder();
+foreach (var (folder, body) in new[] { ("Hands_Automatic_Rifle03", "Rifle_Body_Mesh"), ("Hands_Shotgun", "Shogun_Base_mesh") })
+{
+    using (var pack = new VrBattlegrounds.Editor.Gameplay.HandsPackWeapon(folder, body))
+    {
+        sb.AppendLine("== " + folder + " model " + pack.ModelPath);
+        sb.AppendLine(pack.Report());
+        string dir = System.IO.Path.GetDirectoryName(pack.ModelPath).Replace('\\', '/');
+        var clips = AssetDatabase.FindAssets("t:AnimationClip", new[] { dir })
+            .Select(AssetDatabase.GUIDToAssetPath).SelectMany(AssetDatabase.LoadAllAssetsAtPath).OfType<AnimationClip>()
+            .Where(c => !c.name.StartsWith("__preview")).Select(c => c.name).Distinct().ToList();
+        sb.AppendLine("clips: " + string.Join(", ", clips));
+        foreach (string part in pack.Parts)
+            foreach (string clip in clips)
+            {
+                try
+                {
+                    var m = pack.Measure(part, clip);
+                    if (m.Travel > 0.0005f || (m.MaxAngle - m.MinAngle) > 0.5f) sb.AppendLine($"  {part} @ {clip}: {m}");
+                }
+                catch (System.Exception e) { sb.AppendLine($"  {part} @ {clip}: ERR {e.Message.Split('\n')[0]}"); }
+            }
+    }
+}
+return sb.ToString();

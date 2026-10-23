@@ -1,0 +1,438 @@
+// execute_code на worker (C# 6, обёртка MCP: using System/Collections.Generic/Linq/Reflection/UnityEngine/UnityEditor),
+// только чтение: ничего не сохраняет, временные экземпляры HideAndDontSave уничтожаются.
+// Исследование C: (1) кость магазина TR15/Viper/AK105 — что берёт прежний KinemationRig.Find (первый Transform с именем) и
+// правило KinemationWeapon (кость скина с вершинами), покадрово Reload_Empty/Tac/Mag_Check: сдвиг, ладонь до начала/меша,
+// окна, дрейф узла; (2) детали механики всех стволов с затвором/помпой — ход от покоя, ладонь до меша, жёсткость, окна по
+// правилу PackOrigPoses.SlidePoint; помпа FabarmSDASS — кадр позы Aming_Idle t=0 и жёсткость в Shot; проверка узлов префабов.
+// Не зависит от правок ветки: внутренние помощники (BuildArm) — отражением. Итог — одна строка-отчёт.
+var sb = new System.Text.StringBuilder();
+var nonPublic = BindingFlags.NonPublic | BindingFlags.Static;
+MethodInfo buildArmK = typeof(VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor).GetMethod("BuildArm", nonPublic);
+MethodInfo buildArmH = typeof(VrBattlegrounds.Editor.Avatars.HandsPackPoseExtractor).GetMethod("BuildArm", nonPublic);
+var sides = new[] { UltimateXR.Core.UxrHandSide.Left, UltimateXR.Core.UxrHandSide.Right };
+const float NearMesh = 0.06f, NearOrigin = 0.10f, MinSeat = 0.02f, RigidM = 0.005f, RigidDeg = 5f;
+const int MinFrames = 3, MaxPoints = 400;
+string kinPack = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Pack;
+string artRoot = VrBattlegrounds.Editor.Gameplay.KinemationWeapon.ArtRoot;
+string handsModels = VrBattlegrounds.Editor.Gameplay.HandsPackWeapon.PackModels;
+var Slide = VrBattlegrounds.Editor.Gameplay.HandsPackWeaponRecipe.ActionKind.Slide;
+var Pump = VrBattlegrounds.Editor.Gameplay.HandsPackWeaponRecipe.ActionKind.Pump;
+var None = VrBattlegrounds.Editor.Gameplay.HandsPackWeaponRecipe.ActionKind.None;
+
+Func<Matrix4x4, Matrix4x4> Rigid = m => Matrix4x4.TRS(m.GetColumn(3), m.rotation, Vector3.one);
+Func<Transform, string> PathOf = t => { string p = t.name; for (Transform x = t.parent; x != null; x = x.parent) p = x.name + "/" + p; return p; };
+Func<string, List<AnimationClip>> Clips = folder => AssetDatabase.FindAssets("t:AnimationClip", new[] { folder })
+    .SelectMany(g => AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(g))).OfType<AnimationClip>()
+    .Where(c => !c.name.StartsWith("__preview")).Distinct().ToList();
+Func<IEnumerable<AnimationClip>, AnimationClip> Prefer = cs => cs.FirstOrDefault(c => AssetDatabase.GetAssetPath(c).EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)) ?? cs.First();
+Func<string, string, string> Key = (name, prefix) => (name.StartsWith(prefix) ? name.Substring(prefix.Length) : name).Replace("Tactical", "Tac");
+Func<Vector3[], Vector3[]> Thin = pts => { int step = Mathf.Max(1, pts.Length / MaxPoints); return pts.Where((p, i) => i % step == 0).ToArray(); };
+Func<SkinnedMeshRenderer, int> MainBone = r => { var c = new int[r.bones.Length]; foreach (BoneWeight w in r.sharedMesh.boneWeights) c[w.boneIndex0]++; int b = 0; for (int i = 1; i < c.Length; i++) if (c[i] > c[b]) b = i; return b; };
+Func<UltimateXR.Avatar.Rig.UxrAvatarArm, Vector3> Palm = arm => { Vector3 c; if (!arm.Hand.GetPalmCenter(out c)) throw new Exception("нет центра ладони"); return c; };
+Func<string, string> CleanH = p => p.Replace("Shogun_", "").Replace("_mesh", "").Replace("_Mesh", "").Replace("-", "").Replace(" ", "");
+
+// Правило KinemationWeapon: деталь — кость скина с вершинами; одноимённая другого рендерера — "<рендерер>.<кость>".
+// Значение: Item1 кость, Item2 рендерер, Item3 индекс кости, Item4 вершин.
+Func<GameObject, Dictionary<string, Tuple<Transform, SkinnedMeshRenderer, int, int>>> KinParts = wgo =>
+{
+    var d = new Dictionary<string, Tuple<Transform, SkinnedMeshRenderer, int, int>>();
+    foreach (SkinnedMeshRenderer r in wgo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+    {
+        if (r.sharedMesh == null) continue;
+        var c = new int[r.bones.Length];
+        foreach (BoneWeight bw in r.sharedMesh.boneWeights) if (bw.boneIndex0 >= 0 && bw.boneIndex0 < c.Length) c[bw.boneIndex0]++;
+        for (int b = 0; b < c.Length; b++)
+        {
+            if (c[b] == 0 || r.bones[b] == null) continue;
+            string n = r.bones[b].name;
+            Tuple<Transform, SkinnedMeshRenderer, int, int> o;
+            if (d.TryGetValue(n, out o) && o.Item1 != r.bones[b]) n = r.name + "." + n;
+            d[n] = Tuple.Create(r.bones[b], r, b, c[b]);
+        }
+    }
+    return d;
+};
+// Деталь по правилу; нет — первый Transform с именем (прежнее поведение), без рендерера.
+Func<GameObject, string, Tuple<Transform, SkinnedMeshRenderer, int, int>> KinPart = (wgo, part) =>
+{
+    Tuple<Transform, SkinnedMeshRenderer, int, int> found;
+    if (KinParts(wgo).TryGetValue(part, out found)) return found;
+    Transform t0 = wgo.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == part);
+    if (t0 == null) throw new Exception(wgo.name + ": нет кости " + part);
+    return Tuple.Create(t0, (SkinnedMeshRenderer)null, -1, 0);
+};
+// Точки меша детали в жёстких осях кости (как KinemationWeapon.MeshOf); пусто — вырезанный меш проекта (weaponName != null).
+Func<SkinnedMeshRenderer, int, Transform, string, string, Vector3[]> KinPoints = (r, index, bone, weaponName, part) =>
+{
+    var pts = new List<Vector3>();
+    if (r != null && index >= 0 && r.sharedMesh.isReadable)
+    {
+        Vector3[] v = r.sharedMesh.vertices;
+        BoneWeight[] bw = r.sharedMesh.boneWeights;
+        Matrix4x4 to = Rigid(bone.localToWorldMatrix).inverse * bone.localToWorldMatrix * r.sharedMesh.bindposes[index];
+        if (v.Length == r.sharedMesh.vertexCount) for (int i = 0; i < v.Length; i++) if (bw[i].boneIndex0 == index) pts.Add(to.MultiplyPoint3x4(v[i]));
+    }
+    if (pts.Count == 0 && weaponName != null)
+    {
+        var saved = AssetDatabase.LoadAssetAtPath<Mesh>(artRoot + "/" + weaponName + "/Meshes/" + weaponName + "_" + VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Clean(part) + ".asset");
+        if (saved != null && saved.isReadable) pts.AddRange(saved.vertices);
+    }
+    return Thin(pts.ToArray());
+};
+// Прежний KinemationRig.BonePoints: первый рендерер, где узел — кость с вершинами.
+Func<GameObject, Transform, Vector3[]> OldPoints = (wgo, bone) =>
+{
+    foreach (SkinnedMeshRenderer r in wgo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+    {
+        int ix = Array.IndexOf(r.bones, bone);
+        if (ix < 0 || r.sharedMesh == null) continue;
+        Vector3[] p = KinPoints(r, ix, bone, null, null);
+        if (p.Length > 0) return p;
+    }
+    return new Vector3[0];
+};
+Func<VrBattlegrounds.Editor.Gameplay.KinemationWeaponRecipe, string, AnimationClip> WeaponClip = (k, name) =>
+{
+    AnimationClip[] cands = Clips(kinPack + "Animations/" + k.AnimFolder + "/Weapon").Where(c => c.name == name).ToArray();
+    if (cands.Length <= 1) return cands.FirstOrDefault();
+    Animator an0 = AssetDatabase.LoadAssetAtPath<GameObject>(kinPack + "Prefabs/Weapons/" + k.PackPrefab + ".prefab").GetComponentInChildren<Animator>(true);
+    AnimationClip[] refd = an0 != null && an0.runtimeAnimatorController != null ? an0.runtimeAnimatorController.animationClips.Where(cands.Contains).Distinct().ToArray() : new AnimationClip[0];
+    return refd.Length == 1 ? refd[0] : Prefer(cands);
+};
+// Пары: клип рук A_FP_* и синхронный клип оружия A_W_* (Tactical = Tac), как PackOrigPoses.KinemationPairs.
+Func<VrBattlegrounds.Editor.Gameplay.KinemationWeaponRecipe, Func<string, bool>, List<Tuple<AnimationClip, AnimationClip>>> Pairs = (k, filter) =>
+{
+    string f = kinPack + "Animations/" + k.AnimFolder + "/";
+    var weapon = Clips(f + "Weapon").Where(c => filter(c.name)).GroupBy(c => Key(c.name, "A_W_")).ToList();
+    var list = new List<Tuple<AnimationClip, AnimationClip>>();
+    foreach (var ch in Clips(f + "Character").Where(c => filter(c.name)).GroupBy(c => c.name).OrderBy(g => g.Key, StringComparer.Ordinal))
+    {
+        AnimationClip clip = Prefer(ch);
+        var pair = weapon.FirstOrDefault(g => g.Key == Key(clip.name, "A_FP_"));
+        if (pair != null) list.Add(Tuple.Create(clip, Prefer(pair)));
+    }
+    return list;
+};
+
+// Кадры: [0] t, [1] сдвиг детали (от покоя rest или от кадра 0), [2..3] ладонь L/R до меша (или начала детали),
+// [4..10] деталь в рамке запястья L (позиция, поворот), [11..17] — R. Жёсткость по запястью равна жёсткости по
+// универсальным осям кисти (между ними постоянный поворот).
+Func<Action<float>, Func<Matrix4x4>, Func<Matrix4x4>, UltimateXR.Avatar.Rig.UxrAvatarArm[], Vector3[], float, float, Vector3?, List<float[]>> Scan =
+    (sample, part, body, arms, pts, length, rate, rest) =>
+{
+    var frames = new List<float[]>();
+    int count = Mathf.FloorToInt(length * rate + 1e-3f) + 1;
+    Vector3 seat0 = Vector3.zero;
+    for (int i = 0; i < count; i++)
+    {
+        float t = Mathf.Min(i / rate, length);
+        sample(t);
+        Matrix4x4 p = part(), rp = Rigid(p);
+        Vector3 seat = (Rigid(body()).inverse * rp).GetColumn(3);
+        if (i == 0) seat0 = rest.HasValue ? rest.Value : seat;
+        var f = new float[18];
+        f[0] = t;
+        f[1] = Vector3.Distance(seat, seat0);
+        for (int s = 0; s < 2; s++)
+        {
+            Vector3 palm = Palm(arms[s]);
+            Quaternion wr = arms[s].Hand.Wrist.rotation;
+            f[2 + s] = pts.Length == 0 ? Vector3.Distance(palm, rp.GetColumn(3)) : pts.Min(q => Vector3.Distance(palm, p.MultiplyPoint3x4(q)));
+            Vector3 rel = Quaternion.Inverse(wr) * ((Vector3)rp.GetColumn(3) - palm);
+            Quaternion rr = Quaternion.Inverse(wr) * rp.rotation;
+            int o = 4 + s * 7;
+            f[o] = rel.x; f[o + 1] = rel.y; f[o + 2] = rel.z; f[o + 3] = rr.x; f[o + 4] = rr.y; f[o + 5] = rr.z; f[o + 6] = rr.w;
+        }
+        frames.Add(f);
+    }
+    return frames;
+};
+Func<float[], int, Vector3> RelP = (f, s) => new Vector3(f[4 + s * 7], f[5 + s * 7], f[6 + s * 7]);
+Func<float[], int, Quaternion> RelQ = (f, s) => new Quaternion(f[7 + s * 7], f[8 + s * 7], f[9 + s * 7], f[10 + s * 7]);
+// Окна руки s: ладонь <= near, сдвиг >= minSeat, жёстко от первого кадра окна, >= 3 кадров. Item1 начало, Item2 конец,
+// Item3 жёсткость от середины (мм), Item4 размах сдвига в окне (мм).
+Func<List<float[]>, int, float, float, List<Tuple<int, int, float, float>>> Windows = (fr, s, near, minSeat) =>
+{
+    var res = new List<Tuple<int, int, float, float>>();
+    int i = 0;
+    while (i < fr.Count)
+    {
+        if (!(fr[i][2 + s] <= near && fr[i][1] >= minSeat)) { i++; continue; }
+        int e = i;
+        while (e + 1 < fr.Count && fr[e + 1][2 + s] <= near && fr[e + 1][1] >= minSeat &&
+               Vector3.Distance(RelP(fr[i], s), RelP(fr[e + 1], s)) <= RigidM && Quaternion.Angle(RelQ(fr[i], s), RelQ(fr[e + 1], s)) <= RigidDeg) e++;
+        if (e - i + 1 >= MinFrames)
+        {
+            float[] m = fr[(i + e) / 2];
+            float rig = 0f, lo = float.MaxValue, hi = float.MinValue;
+            for (int k = i; k <= e; k++)
+            {
+                rig = Mathf.Max(rig, Vector3.Distance(RelP(fr[k], s), RelP(m, s)) * 1000f);
+                lo = Mathf.Min(lo, fr[k][1]);
+                hi = Mathf.Max(hi, fr[k][1]);
+            }
+            res.Add(Tuple.Create(i, e, rig, (hi - lo) * 1000f));
+        }
+        i = e + 1;
+    }
+    return res;
+};
+Func<List<Tuple<int, int, float, float>>, List<float[]>, string> Best = (ws, fr) =>
+{
+    if (ws.Count == 0) return "нет";
+    var w = ws.OrderByDescending(x => x.Item2 - x.Item1).ThenBy(x => x.Item3).First();
+    return string.Format("{0}-{1}({2}к, сер {3:F2}с, жёстк {4:F1}мм, размах {5:F0}мм)", w.Item1, w.Item2, w.Item2 - w.Item1 + 1, fr[(w.Item1 + w.Item2) / 2][0], w.Item3, w.Item4);
+};
+Func<List<float[]>, int, float, float> MinPalm = (fr, s, minSeat) => fr.Where(f => f[1] >= minSeat).Select(f => f[2 + s] * 1000f).DefaultIfEmpty(-1f).Min();
+
+// KINEMATION: персонаж + оружие на ik_hand_gun, покой оружия, полные магазины. Item1 персонаж, Item2 оружие, Item3 аниматор, Item4 руки.
+Func<VrBattlegrounds.Editor.Gameplay.KinemationWeaponRecipe, Tuple<GameObject, GameObject, Animator, UltimateXR.Avatar.Rig.UxrAvatarArm[]>> KinRig = k =>
+{
+    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(kinPack + "Prefabs/Weapons/" + k.PackPrefab + ".prefab");
+    var ch = (GameObject)UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.Character));
+    ch.hideFlags = HideFlags.HideAndDontSave;
+    var wgo = (GameObject)UnityEngine.Object.Instantiate(prefab);
+    wgo.hideFlags = HideFlags.HideAndDontSave;
+    var bones = ch.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
+    var arms = sides.Select(s => (UltimateXR.Avatar.Rig.UxrAvatarArm)buildArmK.Invoke(null, new object[] { bones, s })).ToArray();
+    wgo.transform.SetParent(bones[VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.WeaponBone], false);
+    wgo.transform.localPosition = Vector3.zero;
+    wgo.transform.localRotation = VrBattlegrounds.Editor.Avatars.KinemationPoseExtractor.WeaponRotationOffset(prefab);
+    wgo.transform.localScale = Vector3.one;
+    var an = wgo.GetComponentInChildren<Animator>(true);
+    if (k.RestClip != null) { var rc = WeaponClip(k, k.RestClip); if (rc != null) rc.SampleAnimation(an.gameObject, 0f); }
+    VrBattlegrounds.Editor.Gameplay.KinemationWeapon.SampleFullMagazines(wgo, an);
+    return Tuple.Create(ch, wgo, an, arms);
+};
+Action<GameObject, GameObject> Kill = (a, b) => { if (a != null) UnityEngine.Object.DestroyImmediate(a); if (b != null) UnityEngine.Object.DestroyImmediate(b); };
+Func<string, string, string, string> PrefabCheck = (prefabPath, partPath, expectedMesh) =>
+{
+    var go = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+    if (go == null) return "префаба нет";
+    Transform t = go.transform.Find(partPath);
+    MeshFilter mf = t != null ? t.GetComponent<MeshFilter>() : null;
+    string mesh = mf != null && mf.sharedMesh != null ? mf.sharedMesh.name : "нет";
+    return t == null ? "нет " + partPath : partPath + " меш " + mesh + (mesh == expectedMesh ? " =" : " != " + expectedMesh);
+};
+Func<string, string, string> BodyCheck = (prefabPath, bodyName) =>
+{
+    var go = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+    return "корпус MeshContainer/" + bodyName + (go != null && go.transform.Find("MeshContainer/" + bodyName) != null ? " есть" : " НЕТ");
+};
+// Строки клипов детали механики: только клипы, где деталь сдвигается не меньше 30 % хода.
+Action<List<Tuple<string, List<float[]>, bool>>, float> ActionLines = (scans, travel) =>
+{
+    foreach (var sc in scans.Where(q => q.Item2.Max(f => f[1]) >= travel * 0.3f))
+    {
+        float near = sc.Item3 ? NearMesh : NearOrigin;
+        var line = new System.Text.StringBuilder("  " + sc.Item1 + string.Format(": сдвиг max {0:F0}мм", sc.Item2.Max(f => f[1]) * 1000f));
+        for (int h = 0; h < 2; h++)
+        {
+            var all = Windows(sc.Item2, h, near, travel * 0.3f);
+            var moving = all.Where(w => w.Item4 >= travel * 200f).ToList(); // размах (мм) >= 20 % хода
+            line.Append(string.Format(" | {0} ладонь min {1:F0}мм, окон {2}/с движением {3}, лучшее {4}", h == 0 ? "L" : "R",
+                                      MinPalm(sc.Item2, h, travel * 0.3f), all.Count, moving.Count, Best(moving, sc.Item2)));
+        }
+        sb.AppendLine(line.ToString());
+    }
+};
+
+// ── 1. Магазин TR15 / Viper / AK105 ─────────────────────────────────────────
+sb.AppendLine("=== 1. Кость магазина KINEMATION (прежний Find = первый Transform; правило = кость скина с вершинами)");
+foreach (var k in VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All.Where(q => q.Weapon.Name == "TR15" || q.Weapon.Name == "Viper" || q.Weapon.Name == "AK105"))
+{
+    string part = k.Weapon.MagazinePart, wname = k.Weapon.Name;
+    sb.AppendLine("== " + wname + " (" + k.PackPrefab + ") деталь " + part);
+    var probe = (GameObject)UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(kinPack + "Prefabs/Weapons/" + k.PackPrefab + ".prefab"));
+    probe.hideFlags = HideFlags.HideAndDontSave;
+    try
+    {
+        foreach (Transform node in probe.GetComponentsInChildren<Transform>(true).Where(q => q.name == part))
+        {
+            Transform nodeRef = node;
+            var refs = probe.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(r => r.sharedMesh != null && Array.IndexOf(r.bones, nodeRef) >= 0)
+                .Select(r =>
+                {
+                    int ix = Array.IndexOf(r.bones, nodeRef);
+                    return string.Format("{0}[{1}] вершин {2} readable {3}", r.name, ix, r.sharedMesh.boneWeights.Count(bw => bw.boneIndex0 == ix), r.sharedMesh.isReadable);
+                }).ToList();
+            sb.AppendLine("  Transform " + PathOf(node) + ": " + (refs.Count > 0 ? string.Join("; ", refs.ToArray()) : "не кость скина"));
+        }
+        Transform first = probe.GetComponentsInChildren<Transform>(true).FirstOrDefault(q => q.name == part);
+        var rule = KinParts(probe);
+        sb.AppendLine("  Find (прежний) -> " + (first != null ? PathOf(first) : "нет") + "; правило -> " +
+                      (rule.ContainsKey(part) ? PathOf(rule[part].Item1) + " (" + rule[part].Item2.name + ", вершин " + rule[part].Item4 + ")"
+                                              : "нет (ключи: " + string.Join(",", rule.Keys.Where(q => q.Contains(part)).ToArray()) + ")"));
+        var saved = AssetDatabase.LoadAssetAtPath<Mesh>(artRoot + "/" + wname + "/Meshes/" + wname + "_" + VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Clean(part) + ".asset");
+        sb.AppendLine("  вырезанный меш проекта: " + (saved != null ? saved.name + " вершин " + saved.vertexCount + " readable " + saved.isReadable : "нет"));
+    }
+    finally { UnityEngine.Object.DestroyImmediate(probe); }
+
+    foreach (var pair in Pairs(k, n => n.Contains("_Reload_Empty") || n.Contains("_Reload_Tac") || n.Contains("Mag_Check")))
+    {
+        AnimationClip clip = pair.Item1, wclip = pair.Item2;
+        var rig = KinRig(k);
+        try
+        {
+            Transform bodyT = KinPart(rig.Item2, k.Weapon.BodyPart).Item1;
+            Transform oldT = rig.Item2.GetComponentsInChildren<Transform>(true).First(q => q.name == part);
+            var rp = KinPart(rig.Item2, part);
+            Vector3[] oldPts = OldPoints(rig.Item2, oldT);
+            Vector3[] rulePts = KinPoints(rp.Item2, rp.Item3, rp.Item1, wname, part);
+            Animator an = rig.Item3;
+            GameObject ch = rig.Item1;
+            Action<float> sample = t => { clip.SampleAnimation(ch, t); wclip.SampleAnimation(an.gameObject, Mathf.Min(t, wclip.length)); };
+            float rate = clip.frameRate > 0 ? clip.frameRate : 30f;
+            var frOld = Scan(sample, () => Rigid(oldT.localToWorldMatrix), () => Rigid(bodyT.localToWorldMatrix), rig.Item4, oldPts, clip.length, rate, null);
+            var frRule = Scan(sample, () => Rigid(rp.Item1.localToWorldMatrix), () => Rigid(bodyT.localToWorldMatrix), rig.Item4, rulePts, clip.length, rate, null);
+            // Дрейф: смещение прежнего узла относительно кости правила от кадра 0 (сокет не идёт с магазином — большой).
+            float drift = 0f;
+            Vector3 d0 = Vector3.zero;
+            for (int i = 0; i < frOld.Count; i++)
+            {
+                sample(frOld[i][0]);
+                Vector3 dd = rp.Item1.InverseTransformPoint(oldT.position);
+                if (i == 0) d0 = dd; else drift = Mathf.Max(drift, Vector3.Distance(dd, d0) * 1000f);
+            }
+            float nOld = oldPts.Length > 0 ? NearMesh : NearOrigin, nRule = rulePts.Length > 0 ? NearMesh : NearOrigin;
+            sb.AppendLine(string.Format("  {0}: сдвиг max {1:F0}мм; прежний ({2}) ладонь L/R min {3:F0}/{4:F0}мм окна L {5} R {6}; правило ({7}) ладонь L/R min {8:F0}/{9:F0}мм окна L {10} R {11}; дрейф узла {12:F1}мм",
+                clip.name, frRule.Max(f => f[1]) * 1000f, oldPts.Length > 0 ? "меш " + oldPts.Length : "начало", MinPalm(frOld, 0, MinSeat), MinPalm(frOld, 1, MinSeat),
+                Best(Windows(frOld, 0, nOld, MinSeat), frOld), Best(Windows(frOld, 1, nOld, MinSeat), frOld),
+                rulePts.Length > 0 ? "меш " + rulePts.Length : "начало", MinPalm(frRule, 0, MinSeat), MinPalm(frRule, 1, MinSeat),
+                Best(Windows(frRule, 0, nRule, MinSeat), frRule), Best(Windows(frRule, 1, nRule, MinSeat), frRule), drift));
+        }
+        catch (Exception e) { sb.AppendLine("  " + clip.name + ": ERR " + e.Message.Split('\n')[0]); }
+        finally { Kill(rig.Item2, rig.Item1); }
+    }
+}
+
+// ── 2. Детали механики: KINEMATION ──────────────────────────────────────────
+sb.AppendLine("=== 2. Детали механики (сдвиг от покоя; окно: сдвиг >= 30% хода, ладонь <= 60 мм меша, жёстко 5 мм/5°, размах >= 20% хода)");
+foreach (var k in VrBattlegrounds.Editor.Gameplay.KinemationWeaponBuilder.All.Where(q => q.Weapon.Action != None && q.Weapon.ActionPart != null))
+{
+    var r = k.Weapon;
+    string point = r.Action == Pump ? "Pump" : "Slide";
+    string prefabPath = "Assets/Prefabs/Weapons/" + r.PrefabFolder + "/" + r.Name + ".prefab";
+    sb.AppendLine("== Kinemation " + r.Name + ": " + point + "/" + CleanH(r.ActionPart) + " (" + r.ActionPart + "); " +
+                  PrefabCheck(prefabPath, point + "/" + CleanH(r.ActionPart), r.Name + "_" + VrBattlegrounds.Editor.Gameplay.KinemationWeapon.Clean(r.ActionPart)) + "; " + BodyCheck(prefabPath, r.BodyObjectName));
+    var scans = new List<Tuple<string, List<float[]>, bool>>();
+    foreach (var pair in Pairs(k, n => true))
+    {
+        AnimationClip clip = pair.Item1, wclip = pair.Item2;
+        var rig = KinRig(k);
+        try
+        {
+            Transform bodyT = KinPart(rig.Item2, r.BodyPart).Item1;
+            var pp = KinPart(rig.Item2, r.ActionPart);
+            Vector3[] pts = KinPoints(pp.Item2, pp.Item3, pp.Item1, r.Name, r.ActionPart);
+            Vector3 rest = (Rigid(bodyT.localToWorldMatrix).inverse * Rigid(pp.Item1.localToWorldMatrix)).GetColumn(3);
+            Animator an = rig.Item3;
+            GameObject ch = rig.Item1;
+            Action<float> sample = t => { clip.SampleAnimation(ch, t); wclip.SampleAnimation(an.gameObject, Mathf.Min(t, wclip.length)); };
+            scans.Add(Tuple.Create(clip.name, Scan(sample, () => Rigid(pp.Item1.localToWorldMatrix), () => Rigid(bodyT.localToWorldMatrix), rig.Item4, pts,
+                                                   clip.length, clip.frameRate > 0 ? clip.frameRate : 30f, (Vector3?)rest), pts.Length > 0));
+        }
+        catch (Exception e) { sb.AppendLine("  " + clip.name + ": ERR " + e.Message.Split('\n')[0]); }
+        finally { Kill(rig.Item2, rig.Item1); }
+    }
+    if (scans.Count == 0) { sb.AppendLine("  клипов нет"); continue; }
+    float travel = scans.SelectMany(q => q.Item2).Max(f => f[1]);
+    sb.AppendLine(string.Format("  ход {0:F1}мм, пар клипов {1}, меш {2}", travel * 1000f, scans.Count, scans[0].Item3 ? "да" : "нет"));
+    ActionLines(scans, travel);
+}
+
+// ── 3. Детали механики: Hands (T-38 и набор 3+3; рецепты легаси закрыты — значения как в PackOrigPoses.LegacyStubs) ─
+var handsRecipes = VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.T38.ToList();
+var browning = new VrBattlegrounds.Editor.Gameplay.HandsPackWeaponRecipe();
+browning.Name = "BrowningHiPower"; browning.PrefabFolder = "BrowningHiPower"; browning.Folder = "Hands_Gun"; browning.BodyPart = "Base_mesh";
+browning.PoseClip = "Aiming_Idle"; browning.ActionClip = "Shot"; browning.ActionPart = "Gate_mesh"; browning.Action = Slide;
+var ar15 = new VrBattlegrounds.Editor.Gameplay.HandsPackWeaponRecipe();
+ar15.Name = "AR15"; ar15.PrefabFolder = "AR15"; ar15.Folder = "Hands_Automatic_Rifle03"; ar15.BodyPart = "Rifle_Body_Mesh"; ar15.BodyObjectName = "Rifle_Body_Mesh";
+ar15.PoseClip = "Aim_Idle"; ar15.ActionClip = "Shot"; ar15.ActionPart = "Rifle_Detail_01_Mesh"; ar15.Action = Slide;
+handsRecipes.Add(browning);
+handsRecipes.Add(ar15);
+handsRecipes.Add(VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.ShotgunReal);
+sb.AppendLine("=== 3. Детали механики Hands");
+foreach (var r in handsRecipes.Where(q => q.Action != None && q.ActionPart != null))
+{
+    bool pump = r.Action == Pump;
+    string point = pump ? "Pump" : "Slide";
+    string folder = handsModels + r.Folder;
+    string modelPath = AssetDatabase.FindAssets("t:Model", new[] { folder }).Select(AssetDatabase.GUIDToAssetPath).FirstOrDefault(p => !p.Contains("@"));
+    var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+    string actionPart = r.ActionPart, bodyPart = r.BodyPart;
+    SkinnedMeshRenderer partR0 = model.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(q => q.name == actionPart && q.sharedMesh != null);
+    string prefabPath = "Assets/Prefabs/Weapons/" + r.PrefabFolder + "/" + r.Name + ".prefab";
+    sb.AppendLine("== Hands " + r.Name + ": " + point + "/" + CleanH(actionPart) + " (" + actionPart + "); " +
+                  (partR0 == null ? "НЕТ рендерера детали в модели " + modelPath
+                                  : PrefabCheck(prefabPath, point + "/" + CleanH(actionPart), partR0.sharedMesh.name) + ", readable " + partR0.sharedMesh.isReadable) + "; " +
+                  BodyCheck(prefabPath, r.BodyObjectName));
+    if (partR0 == null) continue;
+    var clips = Clips(folder + "/Animations").GroupBy(c => c.name).Select(g => Prefer(g)).OrderBy(c => c.name, StringComparer.Ordinal).ToList();
+    // Модель пака на экземпляре: деталь и корпус — кость × bindpose главной кости; single — только кадр t=0.
+    Func<AnimationClip, Vector3?, bool, Tuple<List<float[]>, bool>> HandsScan = (clip, rest, single) =>
+    {
+        var inst = (GameObject)UnityEngine.Object.Instantiate(model);
+        inst.hideFlags = HideFlags.HideAndDontSave;
+        try
+        {
+            var bones = inst.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
+            var arms = sides.Select(s => (UltimateXR.Avatar.Rig.UxrAvatarArm)buildArmH.Invoke(null, new object[] { bones, s })).ToArray();
+            SkinnedMeshRenderer pr = inst.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(q => q.name == actionPart && q.sharedMesh != null);
+            SkinnedMeshRenderer br = inst.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(q => q.name == bodyPart && q.sharedMesh != null);
+            int pb = MainBone(pr), bbn = MainBone(br);
+            Vector3[] pts = pr.sharedMesh.isReadable && pr.sharedMesh.vertices.Length == pr.sharedMesh.vertexCount ? Thin(pr.sharedMesh.vertices) : new Vector3[0];
+            Func<Matrix4x4> partM = () => pr.bones[pb].localToWorldMatrix * pr.sharedMesh.bindposes[pb];
+            Func<Matrix4x4> bodyM = () => br.bones[bbn].localToWorldMatrix * br.sharedMesh.bindposes[bbn];
+            return Tuple.Create(Scan(t => clip.SampleAnimation(inst, t), partM, bodyM, arms, pts, single ? 0f : clip.length, clip.frameRate > 0 ? clip.frameRate : 30f, rest), pts.Length > 0);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(inst); }
+    };
+    if (pump)
+    {
+        AnimationClip pose = clips.FirstOrDefault(c => c.name == r.PoseClip), shot = clips.FirstOrDefault(c => c.name == r.ActionClip);
+        if (pose == null) { sb.AppendLine("  нет клипа позы " + r.PoseClip); continue; }
+        var p0 = HandsScan(pose, null, true);
+        sb.AppendLine(string.Format("  кадр позы {0} t=0: ладонь L/R до детали {1:F0}/{2:F0}мм ({3})", pose.name, p0.Item1[0][2] * 1000f, p0.Item1[0][3] * 1000f, p0.Item2 ? "меш" : "начало"));
+        if (shot != null)
+        {
+            var fs = HandsScan(shot, null, false).Item1;
+            var line = new System.Text.StringBuilder(string.Format("  {0}: ход помпы {1:F0}мм", shot.name, fs.Max(f => f[1]) * 1000f));
+            for (int h = 0; h < 2; h++)
+            {
+                Vector3 a0 = RelP(fs[0], h);
+                Quaternion q0 = RelQ(fs[0], h);
+                int hh = h;
+                line.Append(string.Format("; жёсткость {0} {1:F1}мм/{2:F1}°, ладонь max {3:F0}мм", h == 0 ? "L" : "R",
+                    fs.Max(f => Vector3.Distance(RelP(f, hh), a0)) * 1000f, fs.Max(f => Quaternion.Angle(RelQ(f, hh), q0)), fs.Max(f => f[2 + hh]) * 1000f));
+            }
+            sb.AppendLine(line.ToString());
+        }
+        continue;
+    }
+    // Покой: RestClip (как HandsPackWeapon.Measure) на отдельном экземпляре.
+    AnimationClip restClip = clips.FirstOrDefault(c => c.name == r.RestClip);
+    Vector3 restSeat;
+    var restInst = (GameObject)UnityEngine.Object.Instantiate(model);
+    restInst.hideFlags = HideFlags.HideAndDontSave;
+    try
+    {
+        if (restClip != null) restClip.SampleAnimation(restInst, 0f);
+        SkinnedMeshRenderer pr = restInst.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(q => q.name == actionPart && q.sharedMesh != null);
+        SkinnedMeshRenderer br = restInst.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(q => q.name == bodyPart && q.sharedMesh != null);
+        int pb = MainBone(pr), bbn = MainBone(br);
+        restSeat = (Rigid(br.bones[bbn].localToWorldMatrix * br.sharedMesh.bindposes[bbn]).inverse * Rigid(pr.bones[pb].localToWorldMatrix * pr.sharedMesh.bindposes[pb])).GetColumn(3);
+    }
+    finally { UnityEngine.Object.DestroyImmediate(restInst); }
+    var hs = new List<Tuple<string, List<float[]>, bool>>();
+    foreach (AnimationClip clip in clips)
+    {
+        try { var x = HandsScan(clip, restSeat, false); hs.Add(Tuple.Create(clip.name, x.Item1, x.Item2)); }
+        catch (Exception e) { sb.AppendLine("  " + clip.name + ": ERR " + e.Message.Split('\n')[0]); }
+    }
+    if (hs.Count == 0) continue;
+    float tr = hs.SelectMany(q => q.Item2).Max(f => f[1]);
+    sb.AppendLine(string.Format("  покой {0}; ход {1:F1}мм, клипов {2}, меш {3}", restClip != null ? restClip.name : "поза модели", tr * 1000f, hs.Count, hs[0].Item3 ? "да" : "нет"));
+    ActionLines(hs, tr);
+}
+return sb.ToString();

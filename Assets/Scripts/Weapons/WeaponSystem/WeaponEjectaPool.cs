@@ -40,10 +40,11 @@ namespace VrBattlegrounds.Weapons
 
         /// <summary>
         /// Выпустить экземпляр префаба. <paramref name="ignore"/> — коллайдеры ствола, с которыми вылет не сталкивается
-        /// (окно выброса внутри его коллайдеров). false — префаб негоден или графики нет.
+        /// (окно выброса внутри его коллайдеров). <paramref name="defaultImpacts"/> — звуки касания категории ствола
+        /// (<see cref="WeaponFeedbackDefaults.EjectaImpacts"/>) для префаба без своих клипов. false — префаб негоден или графики нет.
         /// </summary>
         public static bool Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angularVelocity,
-            float lifetime, List<Collider> ignore)
+            float lifetime, List<Collider> ignore, AudioClip[] defaultImpacts = null)
         {
             if (prefab == null || !Application.isPlaying || IsHeadless()) return false;
             if (_instance == null)
@@ -52,7 +53,7 @@ namespace VrBattlegrounds.Weapons
                 DontDestroyOnLoad(host);
                 _instance = host.AddComponent<WeaponEjectaPool>();
             }
-            return _instance.SpawnInternal(prefab, position, rotation, velocity, angularVelocity, lifetime, ignore);
+            return _instance.SpawnInternal(prefab, position, rotation, velocity, angularVelocity, lifetime, ignore, defaultImpacts);
         }
 
         private static bool IsHeadless()
@@ -73,7 +74,7 @@ namespace VrBattlegrounds.Weapons
         private void OnActiveSceneChanged(Scene from, Scene to) => ReleaseAll();
 
         private bool SpawnInternal(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angularVelocity,
-            float lifetime, List<Collider> ignore)
+            float lifetime, List<Collider> ignore, AudioClip[] defaultImpacts)
         {
             if (!_pools.TryGetValue(prefab, out PrefabPool pool))
             {
@@ -94,6 +95,7 @@ namespace VrBattlegrounds.Weapons
 
             item.Source = prefab;
             item.ExpiresAt = Time.time + Mathf.Max(0.1f, lifetime);
+            item.DefaultImpactClips = defaultImpacts; // экземпляр пула переходит между стволами разных категорий
             item.Rearm();
             item.transform.SetPositionAndRotation(position, rotation);
             item.gameObject.SetActive(true);

@@ -11,7 +11,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
     /// Ствол из пака KINEMATION Tactical Shooter (T-39): что взять из пака. Остальное — общий рецепт
-    /// <see cref="HandsPackWeaponRecipe" /> (доноры, теги, магазин), сборка — тем же <see cref="HandsPackWeaponBuilder" />.
+    /// <see cref="HandsPackWeaponRecipe" /> (теги, магазин, механизм), сборка — тем же <see cref="HandsPackWeaponBuilder" />;
+    /// что не выводится из пака и не баланс — общие значения <see cref="HandsPackBuildDefaults" /> (доноров нет, 2026-10-23).
     /// </summary>
     public sealed class KinemationWeaponRecipe
     {
@@ -38,7 +39,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <summary>
     /// Собирает стволы KINEMATION: геометрия и механика — <see cref="KinemationWeapon" />, звуки под Quest —
     /// <see cref="KinemationAudio" />, исходные позы рук пака <c>_orig</c> — <see cref="PackOrigPoses" />. Позы и хваты
-    /// аватаров (MEF через <see cref="HandsPackPoseImporter" />) — отдельная явная команда <see cref="ImportPoses(KinemationWeaponRecipe)" />.
+    /// аватаров сборщик не пишет — их регистрирует <see cref="AvatarGripRegistration" /> из поз <c>_orig</c>.
     /// Регистрация (WeaponInfo, реестр, сеть, стена, баланс, теги) — шаги скилла <c>/add-weapon</c>, не сборщика.
     /// </summary>
     public static class KinemationWeaponBuilder
@@ -46,11 +47,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string PoseFolder = "Assets/Art/HandPoses/Kinemation";
         private const string Sfx = KinemationWeapon.Pack + "SFX/";
 
-        /// <summary>Доноры — как у стволов пака Hands: M16 (физика и хват, снаряд, рукоятка затвора), магазин от пулемёта.</summary>
-        private static HandsPackWeaponRecipe Rifle(HandsPackWeaponRecipe r) => Kinemation(HandsPackWeaponBuilder.RifleDonor(r));
+        /// <summary>Длинноствольное с затвором: шаблон магазина первой сборки — магазин винтовки паков.</summary>
+        private static HandsPackWeaponRecipe Rifle(HandsPackWeaponRecipe r) => Kinemation(HandsPackWeaponBuilder.Rifle(r));
 
-        /// <summary>Доноры пистолета — Gun_real.</summary>
-        private static HandsPackWeaponRecipe Pistol(HandsPackWeaponRecipe r) => Kinemation(HandsPackWeaponBuilder.PistolDonor(r));
+        /// <summary>Пистолет с затвором: шаблон магазина первой сборки — магазин пистолета паков.</summary>
+        private static HandsPackWeaponRecipe Pistol(HandsPackWeaponRecipe r) => Kinemation(HandsPackWeaponBuilder.Pistol(r));
 
         private static HandsPackWeaponRecipe Kinemation(HandsPackWeaponRecipe r)
         {
@@ -79,7 +80,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     UxrTag = "BackWeapon", MagazinePart = "SRS_Magazine", MagazineExtraParts = new[] { "Bullet" },
                     MagazineTag = "MagSRM12", MagazineCapacity = 5
                 });
-                r.ShotCycle = UxrShotCycle.ManualReload;
+                r.ManualCycle = true; // болтовка: затвор после каждого выстрела (режим огня остальных — баланс)
                 return new KinemationWeaponRecipe
                 {
                     Weapon = r, PackPrefab = "W_Oryx_SRM-12", AnimFolder = "SRM-12", RestClip = "A_W_SRM-12_Idle", PoseClip = "A_FP_SRM-12_Idle_Pose",
@@ -314,7 +315,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// (<see cref="KinemationFixReview" />) → прицел, хост WeaponSystem, баланс (<see cref="WeaponRebuildFinish" />) →
         /// исходные позы пака и snap-точки <c>_orig</c> (<see cref="PackOrigPoses" />). Позы и хваты аватаров сборка не
         /// регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — отдельная команда
-        /// (<see cref="ImportPoses(KinemationWeaponRecipe)" />, Grip Extraction). <paramref name="poses" /> — только
+        /// (<see cref="AvatarGripRegistration" />, Grip Extraction). <paramref name="poses" /> — только
         /// <see cref="WeaponGripPoseMode.KeepCurrent" />.
         /// </summary>
         public static GameObject Build(KinemationWeaponRecipe k, WeaponGripPoseMode poses = WeaponGripPoseMode.KeepCurrent)
@@ -366,12 +367,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             // Хост WeaponSystem — после клипов затвора KinemationFixReview: профиль HoldOpen без них не настраивается.
             HandsPackWeaponBuilder.Build(r, model, configureHost: false);
             string[] droppedGeometry = HandsPackWeaponBuilder.MagazineBaseGeometry(r);
-            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.SdkSampleAvatars);
+            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.DroppedGripAvatars);
             // Тот же узкий установщик восьми KINEMATION: штатная сборка сохраняет исправленные bindings.
             KinemationFixReview.Apply(r.Name);
             HandsPackWeaponBuilder.ConfigureHost(path, r);
             // WeaponInteractionInstaller переставляет трансформы хвата затвора в точку контакта — вернуть перенесённые.
-            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.SdkSampleAvatars);
+            WeaponGripCarryOver.Restore(grips, poses, droppedGeometry, HandsPackWeaponBuilder.DroppedGripAvatars);
             if (r.Name == "TR15") Tr15OpticBuilder.Apply(); // ассеты окна XPS2 для SightKit_XPS2
             GameLog.Debug.Info($"[KinemationWeaponBuilder] {path}: статичные детали {string.Join(", ", r.StaticParts)}");
         }
@@ -395,6 +396,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                 r.TakeOutAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(k.ReloadSound, magOut, 0.6f, folder, $"{r.Name}_MagOut"));
                 r.LoadAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(k.ReloadSound, magIn, 0.6f, folder, $"{r.Name}_MagIn"));
             }
+            // Вставка магазина — тот же кусок, в гнездо оружия (решение пользователя 2026-10-23); у трубки (Herrington)
+            // гнездо скрыто, кусок остаётся окну приёма патронов.
+            if (!r.MagazineIsInternal) r.InsertAudio = r.LoadAudio;
 
             if (r.Action == HandsPackWeaponRecipe.ActionKind.None) return;
             if (k.BoltSound != null)
@@ -431,18 +435,5 @@ namespace VrBattlegrounds.Editor.Gameplay
                 BodyPath = "MeshContainer/Base", GrabPoint = 1, PoseFolder = PoseFolder
             };
         }
-
-        /// <summary>
-        /// Регистрация хватов MEF из поз пака (явная команда, не шаг сборки): позы <c>Kinemation_*</c>, база поз
-        /// <c>PlayerBase_NonSdkHands</c> и записи хвата MEF на оружии. Без пересборки геометрии, звуков и motion.
-        /// </summary>
-        public static void ImportPoses(KinemationWeaponRecipe k)
-        {
-            using var model = Model(k);
-            ImportPoses(k, model);
-        }
-
-        private static void ImportPoses(KinemationWeaponRecipe k, KinemationWeapon model) =>
-            HandsPackPoseImporter.Import(PoseRecipes(k).Select(p => (p, model.GripSample(p.PackSide))).ToList());
     }
 }

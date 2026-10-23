@@ -7,7 +7,6 @@ using UltimateXR.Manipulation;
 using UltimateXR.Manipulation.HandPoses;
 using UnityEditor;
 using UnityEngine;
-using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
@@ -29,17 +28,18 @@ namespace VrBattlegrounds.Editor.Avatars
     }
 
     /// <summary>
-    /// Позы хвата из пака Hands Weapons Animations: снимает кадр (<see cref="HandsPackPoseExtractor" />),
-    /// кладёт позу в <see cref="PoseFolder" />, регистрирует на <c>PlayerBase_NonSdkHands</c> — аватары с кистью не от SDK
-    /// наследуют позы по цепочке префабов — и назначает точке хвата оружия вместе с трансформами
-    /// выравнивания, которые кладут оружие в ладонь как в паке (<see cref="HandsPackGripAligner" />).
+    /// Рецепты поз хвата пака Hands Weapons Animations (<see cref="Recipes" />: клип, кадр, рука пака, точка хвата
+    /// оружия) и общие помощники записи хвата: кадр пака (<see cref="ExtractSample" />), регистрация поз в базе
+    /// (<see cref="RegisterOnPoseBase" />), трансформы выравнивания (<see cref="AlignTransform" />, <see cref="RemoveUnused" />).
     ///
     /// <para>
-    /// Трансформы выравнивания — свои для позы и аватара (<c>Grabs/HandsPack/&lt;поза&gt;/&lt;аватар&gt;/Left|Right</c>):
-    /// общие <c>Grabs/default</c> использует запись по умолчанию, то есть остальные аватары.
+    /// Рецепты читают экспорт исходных поз <c>_orig</c> (<c>PackOrigPoses</c>), источник паков Grip Extraction
+    /// (<see cref="PackClipGripSource" />) и preflight арсенала. Прежний импорт поз в префабы (записи хвата
+    /// MEF_Base_Avatar на оружии) выведен вместе с этим аватаром хвата (решение пользователя 2026-10-23): хваты
+    /// аватаров регистрирует <c>AvatarGripRegistration</c> из поз <c>_orig</c>.
     /// </para>
     ///
-    /// <para>Проверка — <c>HandsPackHandPoseTests</c>. Новая поза — рецепт в <see cref="Recipes" /> и кейс в тесте.</para>
+    /// <para>Проверка поз пака — <c>HandsPackHandPoseTests</c>. Новая поза — рецепт в <see cref="Recipes" /> и кейс в тесте.</para>
     /// </summary>
     public static class HandsPackPoseImporter
     {
@@ -48,37 +48,28 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>Папка align-трансформов поз паков под <c>Grabs</c> (общая у Hands и KINEMATION).</summary>
         internal const string AlignSource = "HandsPack";
 
-        private const string Pack       = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
-        internal const string PoseBase  = "Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab";
-
-        /// <summary>GUID <c>MEF_Base_Avatar</c> — ключ его записей хвата на оружии (<c>_avatarPrefabGuid</c>).</summary>
-        internal const string MefBaseAvatarGuid = "b6fe59db941fa944696ece5e1aabc032";
+        private const string Pack = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
 
         /// <summary>
-        /// Аватары, чьим записям хвата на оружии назначаются позы пака (профиль MEF Grip Extraction читает тот же список).
-        /// Задаются GUID: записи хвата ключуются им, а путь префаба меняется при переносах (2026-10-17 MEF_Base_Avatar
-        /// переехал в <c>Player/Unused</c>, и прежний путь давал null-аватар — NRE в <see cref="AssignToGrabPoint" />).
+        /// GUID <c>MEF_Base_Avatar</c>. Аватар хвата выведен (2026-10-23): записи хвата по нему на оружии не пишутся и
+        /// снимаются (<see cref="RetiredGripAvatarCleanup" />, сборщики — <c>HandsPackWeaponBuilder.DroppedGripAvatars</c>).
+        /// Сам префаб нужен стендам и сборщику ног. Путь ищется по GUID: 2026-10-17 префаб переехал в <c>Player/Unused</c>.
         /// </summary>
-        private static readonly string[] GripAvatarGuids = { MefBaseAvatarGuid };
+        internal const string MefBaseAvatarGuid = "b6fe59db941fa944696ece5e1aabc032";
 
-        /// <summary>Текущие пути <see cref="GripAvatarGuids" />; нет префаба — исключение до первой записи.</summary>
-        internal static string[] GripAvatars => GripAvatarGuids.Select(ResolveGripAvatar).ToArray();
-
-        /// <summary>GUID аватаров, чьи записи хвата пишет импорт (их не переносит <see cref="WeaponGripCarryOver" /> в режиме перезаписи).</summary>
-        internal static HashSet<string> GripAvatarGuidSet() => new HashSet<string>(GripAvatarGuids);
-
-        /// <summary>Путь <c>MEF_Base_Avatar</c> по GUID (общий вход хвата для сборщиков, preflight и Grip Extraction).</summary>
-        internal static string MefBaseAvatarPath => ResolveGripAvatar(MefBaseAvatarGuid);
-
-        private static string ResolveGripAvatar(string guid)
+        /// <summary>Путь <c>MEF_Base_Avatar</c> по GUID (стенды, сборщик ног, локомоция Mixamo); нет префаба — исключение.</summary>
+        internal static string MefBaseAvatarPath
         {
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrEmpty(path) || AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            get
             {
-                throw new FileNotFoundException($"Нет префаба аватара хвата с GUID {guid} — записи хвата на оружии ключуются им.");
-            }
+                string path = AssetDatabase.GUIDToAssetPath(MefBaseAvatarGuid);
+                if (string.IsNullOrEmpty(path) || AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+                {
+                    throw new FileNotFoundException($"Нет префаба MEF_Base_Avatar с GUID {MefBaseAvatarGuid}.");
+                }
 
-            return path;
+                return path;
+            }
         }
 
         public static readonly HandsPackPoseRecipe[] Recipes = new[]
@@ -124,42 +115,6 @@ namespace VrBattlegrounds.Editor.Avatars
             };
         }
 
-        public static void ImportAll() => Import(Recipes);
-
-        /// <summary>Позы одного оружия — после его пересборки <c>HandsPackWeaponBuilder</c> (сборщик кладёт калибровочный хват).</summary>
-        public static void ImportFor(string weaponPrefab) => Import(Recipes.Where(r => r.Weapon == weaponPrefab));
-
-        public static void Import(IEnumerable<HandsPackPoseRecipe> recipes) =>
-            Import(recipes.Select(r => (r, ExtractSample(r))));
-
-        /// <summary>
-        /// Позы из готовых кадров — для источников с другим ригом рук (KINEMATION, <see cref="KinemationPoseExtractor" />):
-        /// кадр в универсальных осях ладони, дальше всё как у пака Hands.
-        /// </summary>
-        public static void Import(IEnumerable<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample)> samples)
-        {
-            // Аватары хвата — до записи поз и базы поз: иначе сбой на точке хвата оставит их полузаписанными.
-            string[] gripAvatars = GripAvatars;
-            var imported = new List<(HandsPackPoseRecipe Recipe, HandsPackPoseExtractor.Sample Sample, UxrHandPoseAsset Pose)>();
-            foreach (var (recipe, sample) in samples)
-            {
-                imported.Add((recipe, sample, CreatePoseAsset(recipe, sample.Hand)));
-            }
-
-            // Только своё: позы, база поз, оружие и аватары хвата (общий SaveAssets записал бы чужие изменения).
-            string[] poses = imported.Select(i => AssetDatabase.GetAssetPath(i.Pose)).ToArray();
-            VrBattlegrounds.Editor.Gameplay.OwnAssetSave.Save(poses);
-
-            RegisterOnPoseBase(imported.Select(i => i.Pose));
-            foreach (var (recipe, sample, pose) in imported)
-            {
-                AssignToGrabPoint(recipe, sample, pose, gripAvatars);
-            }
-
-            VrBattlegrounds.Editor.Gameplay.OwnAssetSave.Save(poses.Append(PoseBase).Concat(gripAvatars).Concat(imported.Select(i => i.Recipe.Weapon)));
-            GameLog.Debug.Info($"[HandsPackPoseImporter] Поз: {imported.Count} → {string.Join(", ", imported.Select(i => i.Recipe.PoseFolder ?? PoseFolder).Distinct())}");
-        }
-
         internal static HandsPackPoseExtractor.Sample ExtractSample(HandsPackPoseRecipe recipe)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{Pack}{recipe.Folder}/Mesh/{recipe.Mesh}.FBX");
@@ -173,34 +128,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
             return HandsPackPoseExtractor.Extract(model, clip, recipe.Time, recipe.PackSide, recipe.BodyMesh, recipe.BodyBone);
         }
-
-        private static UxrHandPoseAsset CreatePoseAsset(HandsPackPoseRecipe recipe, UxrHandDescriptor packHand)
-        {
-            var asset = ScriptableObject.CreateInstance<UxrHandPoseAsset>();
-            asset.Version             = UxrHandPoseAsset.CurrentVersion;
-            asset.PoseType            = UxrHandPoseType.Fixed;
-            asset.HandDescriptorLeft  = recipe.PackSide == UxrHandSide.Left ? packHand : packHand.Mirrored();
-            asset.HandDescriptorRight = recipe.PackSide == UxrHandSide.Right ? packHand : packHand.Mirrored();
-
-            string folder = recipe.PoseFolder ?? PoseFolder;
-            Directory.CreateDirectory(folder);
-            string path     = $"{folder}/{recipe.Pose}.asset";
-            var    existing = AssetDatabase.LoadAssetAtPath<UxrHandPoseAsset>(path);
-            if (existing != null)
-            {
-                // Перезапись на месте: GUID сохраняется, ссылки из аватаров и оружия не рвутся.
-                EditorUtility.CopySerialized(asset, existing);
-                existing.name = recipe.Pose;
-                EditorUtility.SetDirty(existing);
-                Object.DestroyImmediate(asset);
-                return existing;
-            }
-
-            AssetDatabase.CreateAsset(asset, path);
-            return asset;
-        }
-
-        private static void RegisterOnPoseBase(IEnumerable<UxrHandPoseAsset> poses) => RegisterOnPoseBase(PoseBase, poses);
 
         /// <summary>Дописывает позы в <c>_handPoses</c> базы поз (по ссылке); общее с Grip Extraction.</summary>
         internal static void RegisterOnPoseBase(string poseBase, IEnumerable<UxrHandPoseAsset> poses)
@@ -221,50 +148,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
             avatar.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SavePrefabAsset(root);
-        }
-
-        private static void AssignToGrabPoint(HandsPackPoseRecipe recipe, HandsPackPoseExtractor.Sample sample, UxrHandPoseAsset pose,
-                                              string[] gripAvatars)
-        {
-            GameObject root = PrefabUtility.LoadPrefabContents(recipe.Weapon);
-            try
-            {
-                Transform body = root.transform.Find(recipe.BodyPath)
-                                 ?? throw new KeyNotFoundException($"{recipe.Weapon}: нет корпуса {recipe.BodyPath}");
-                UxrGrabPointInfo grabPoint = root.GetComponent<UxrGrabbableObject>().GetGrabPoint(recipe.GrabPoint);
-
-                foreach (string avatarPath in gripAvatars)
-                {
-                    // Граббер и размер кисти у аватаров разные — трансформы выравнивания свои у каждого.
-                    var       avatarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(avatarPath);
-                    Transform left         = AlignTransform(root.transform, recipe.Pose, avatarPrefab.name, UxrHandSide.Left);
-                    Transform right        = AlignTransform(root.transform, recipe.Pose, avatarPrefab.name, UxrHandSide.Right);
-                    HandsPackGripAligner.Place(root.transform, body, sample, recipe.PackSide, avatarPrefab, UxrHandSide.Left, left);
-                    HandsPackGripAligner.Place(root.transform, body, sample, recipe.PackSide, avatarPrefab, UxrHandSide.Right, right);
-
-                    string guid = AssetDatabase.AssetPathToGUID(avatarPath);
-                    grabPoint.CheckAddGripPoseInfo(guid);
-
-                    UxrGripPoseInfo grip = grabPoint.GetGripPoseInfo(guid);
-                    Transform oldLeft  = grip.GripAlignTransformHandLeft;
-                    Transform oldRight = grip.GripAlignTransformHandRight;
-                    grip.HandPose                    = pose;
-                    grip.PoseBlendValue              = 0f;
-                    grip.GripAlignTransformHandLeft  = left;
-                    grip.GripAlignTransformHandRight = right;
-
-                    // Точки, которые сборщик оружия поставил калибровкой, после позы пака никем не
-                    // используются — убираются, чтобы в префабе не было двух мест одного хвата.
-                    RemoveUnused(root, oldLeft, left);
-                    RemoveUnused(root, oldRight, right);
-                }
-
-                PrefabUtility.SaveAsPrefabAsset(root, recipe.Weapon);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
         }
 
         /// <summary>

@@ -40,9 +40,12 @@ namespace VrBattlegrounds.Editor.Arsenal
             var lowPoly = ArsenalEditorActions.LowPoly(weapon);
             var recipe = ArsenalEditorActions.Recipe(weapon);
             if (recipe == null) return Array.Empty<string>();
-            // Хват MEF доноров и пак донора сборка не читает: записей хвата аватаров она не пишет.
-            var paths = new List<string> { AssetDatabase.GetAssetPath(weapon), recipe.GripDonor, recipe.FirearmDonor, recipe.MagazineBase,
-                AvatarHandBases.NonSdkHands, WeaponGrabHighlight.MaterialPath, "Assets/Audio/SFX/Impacts" };
+            // Доноров нет (решение 2026-10-23): не из пака и не баланс — общие значения HandsPackBuildDefaults и шаблон магазина.
+            // Звуковые дефолты — ассеты (подстановка в рантайме); входом сборки остаётся ассет категории: из него «нет патронов»
+            // копируется в спуск SDK.
+            var paths = new List<string> { AssetDatabase.GetAssetPath(weapon), HandsPackWeaponBuilder.MagazineTemplate(recipe),
+                AvatarHandBases.NonSdkHands, WeaponGrabHighlight.MaterialPath,
+                HandsPackBuildDefaults.CategoryDefaultsPath(recipe.Name), recipe.MuzzleEffect };
             paths.AddRange(Effects.Select(n => "Assets/Prefabs/Weapons/Effects/" + n + ".prefab"));
             if (kin != null)
             {
@@ -66,6 +69,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                 // Существующий material resolver ищет подходящий renderer во всех prefab этого пака.
                 paths.Add(HandsPackWeapon.PackPrefabs);
                 paths.AddRange(RecipeSounds(recipe));
+                paths.AddRange(HandsPackAudio.Sources(recipe));
                 paths.AddRange(HandsPackPoseImporter.Recipes.Where(p => p.Weapon == AssetDatabase.GetAssetPath(weapon.WeaponPrefab))
                     .Select(p => HandsPackWeapon.PackModels + p.Folder));
             }
@@ -111,7 +115,7 @@ namespace VrBattlegrounds.Editor.Arsenal
         {
             var prefab = ArsenalEditorActions.SourcePrefab(kin);
             KinemationWeapon.RequireReadable(prefab, kin.Attachments);
-            ValidateDonors(kin.Weapon);
+            ValidateCommon(kin.Weapon);
             foreach (var path in Sounds(kin)) Required<AudioClip>(path);
             using var model = new KinemationWeapon(kin.PackPrefab, kin.AnimFolder, kin.PoseClip, kin.Weapon.Name,
                 kin.Weapon.BodyPart, kin.RestClip, kin.Attachments);
@@ -161,11 +165,16 @@ namespace VrBattlegrounds.Editor.Arsenal
 
         private static void Validate(HandsPackWeaponRecipe recipe)
         {
-            ValidateDonors(recipe);
-            foreach (var audioPath in RecipeSounds(recipe)) Required<AudioClip>(audioPath);
+            ValidateCommon(recipe);
+            foreach (var audioPath in RecipeSounds(recipe).Concat(HandsPackAudio.Sources(recipe))) Required<AudioClip>(audioPath);
             using var source = new HandsPackWeapon(recipe.Folder, recipe.BodyPart);
+            // Статичные детали «по источнику» и полный учёт деталей — как в сборке (HandsPackMechanism).
+            HandsPackMechanism.ResolveStaticParts(recipe, source);
+            HandsPackMechanism.ValidateSourceParts(recipe, source);
             foreach (var part in Parts(recipe)) RequireMesh(source.MeshOf(part), part);
             source.Clip(recipe.PoseClip); source.Clip(recipe.ActionClip);
+            if (!string.IsNullOrEmpty(recipe.EmptyActionClip)) source.Clip(recipe.EmptyActionClip);
+            if (!string.IsNullOrEmpty(recipe.PackSounds?.ReloadClip)) source.Clip(recipe.PackSounds.ReloadClip);
             source.AimAxes(recipe.PoseClip);
             var body = HandsPackWeaponBuilder.BodyPlacement(recipe, source);
             if (recipe.Action != HandsPackWeaponRecipe.ActionKind.None) HandsPackWeaponBuilder.ResolveActionTravel(recipe, source, body, out _);
@@ -182,7 +191,6 @@ namespace VrBattlegrounds.Editor.Arsenal
         private static void Validate(LowPolyWeaponRecipe lowPoly)
         {
             HandsPackWeaponRecipe recipe = lowPoly.Weapon;
-            ValidateDonors(recipe);
             foreach (var audioPath in RecipeSounds(recipe)) Required<AudioClip>(audioPath);
             using var source = LowPolyWeaponBuilder.Model(lowPoly);
             foreach (var part in Parts(recipe)) RequireMesh(source.MeshOf(part), part);
@@ -204,36 +212,23 @@ namespace VrBattlegrounds.Editor.Arsenal
             HandsPackPoseExtractor.Extract(model, clip, pose.Time, pose.PackSide, pose.BodyMesh, pose.BodyBone);
         }
 
-        private static void ValidateDonors(HandsPackWeaponRecipe r)
+        /// <summary>
+        /// Общие входы рецепта без доноров: база поз аватаров, шаблон магазина (текущий магазин ствола или, у первой сборки,
+        /// готовый магазин паков; у патрона ручного заряжания счётчика UxrFirearmMag нет — его снимает ConfigureCartridge),
+        /// эффекты выстрела, ассет звуковых дефолтов категории ствола (DryFire для спуска SDK) и материал подсветки.
+        /// </summary>
+        private static void ValidateCommon(HandsPackWeaponRecipe r)
         {
             Component<UxrAvatar>(Required<GameObject>(AvatarHandBases.NonSdkHands));
-            var grip = Required<GameObject>(r.GripDonor);
-            Component<Rigidbody>(grip);
-            var grab = Component<UxrGrabbableObject>(grip);
-            if (grip.transform.Find(r.GripDonorBodyPath)?.GetComponent<MeshFilter>()?.sharedMesh == null)
-                throw new InvalidOperationException("Нет корпуса донора хвата: " + r.GripDonor + "/" + r.GripDonorBodyPath);
-            var anchor = grip.GetComponentInChildren<UxrGrabbableObjectAnchor>(true);
-            if (anchor == null || anchor.GetComponent<AudioSource>() == null || grip.GetComponentInChildren<AnchorSound>(true) == null)
-                throw new InvalidOperationException("Нет якоря/звука донора: " + r.GripDonor);
-            if (r.Action != HandsPackWeaponRecipe.ActionKind.None && r.Action != HandsPackWeaponRecipe.ActionKind.Pump)
-            {
-                var action = grip.GetComponentsInChildren<UxrGrabbableObject>(true)
-                    .FirstOrDefault(g => g != grab && g.GetComponentsInParent<UxrGrabbableObjectAnchor>(true).Length == 0);
-                if (action == null) throw new InvalidOperationException("Нет ручной детали донора: " + r.GripDonor);
-            }
-            var fire = Required<GameObject>(r.FirearmDonor);
-            var firearm = Component<UxrFirearmWeapon>(fire);
-            var projectile = Component<UxrProjectileSource>(fire);
-            if (new SerializedObject(firearm).FindProperty("_triggers").arraySize == 0 ||
-                new SerializedObject(projectile).FindProperty("_shotTypes").arraySize < (r.PreserveDonorGameplay && (r.Pellets || r.Action == HandsPackWeaponRecipe.ActionKind.Pump) ? 2 : 1))
-                throw new InvalidOperationException("Донор не содержит спуска/типов выстрела: " + r.FirearmDonor);
-            // Шаблон магазина — текущий магазин ствола или, у первой сборки, готовый магазин паков; у патрона ручного
-            // заряжания счётчика UxrFirearmMag нет (его снимает ConfigureCartridge).
             var magazine = Required<GameObject>(HandsPackWeaponBuilder.MagazineTemplate(r));
             Component<Mirror.NetworkIdentity>(magazine); Component<Rigidbody>(magazine);
             Component<UxrGrabbableObject>(magazine);
             if (!r.ManualLoading) Component<UxrFirearmMag>(magazine);
-            if (!r.PreserveDonorGameplay) foreach (var effect in Effects) Required<GameObject>("Assets/Prefabs/Weapons/Effects/" + effect + ".prefab");
+            foreach (var effect in Effects) Required<GameObject>("Assets/Prefabs/Weapons/Effects/" + effect + ".prefab");
+            if (!string.IsNullOrEmpty(r.MuzzleEffect)) Required<GameObject>(r.MuzzleEffect);
+            var category = HandsPackBuildDefaults.CategoryDefaults(r.Name);
+            if (category.Audio.DryFire == null || category.Audio.DryFire.Clip == null)
+                throw new InvalidOperationException($"{r.Name}: в ассете категории {category.name} пуст DryFire («нет патронов» спуска SDK).");
             Required<Material>(WeaponGrabHighlight.MaterialPath);
         }
 
@@ -247,6 +242,6 @@ namespace VrBattlegrounds.Editor.Arsenal
             !string.IsNullOrEmpty(path) ? AssetDatabase.LoadAssetAtPath<T>(path) ?? throw new InvalidOperationException("Нет входного ассета: " + path) :
             throw new InvalidOperationException("Не задан обязательный входной ассет " + typeof(T).Name);
         private static T Component<T>(GameObject root) where T : UnityEngine.Component =>
-            root.GetComponent<T>() ?? throw new InvalidOperationException("Нет " + typeof(T).Name + " у донора " + root.name);
+            root.GetComponent<T>() ?? throw new InvalidOperationException("Нет " + typeof(T).Name + " у " + root.name);
     }
 }

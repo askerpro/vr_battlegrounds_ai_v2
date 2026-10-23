@@ -88,6 +88,17 @@ namespace VrBattlegrounds.Arsenal
                  "SDK выводит из неё RecoilPattern.FromCs2 — одна формула на весь арсенал.")]
         [SerializeField, Min(0f)] private float _recoilMagnitude;
 
+        // Снаряд — тоже баланс (решение 2026-10-23): один владелец скорости и дальности на весь арсенал вместо
+        // доноров и сборщиков. 0 — не задано: Apply Weapon Balance оставляет значение префаба и предупреждает
+        // (ассеты до миграции WeaponProjectileMigration.CaptureFromPrefabs).
+        [Tooltip("Скорость снаряда, м/с — уходит в ProjectileSpeed каждого выстрела (основного и дробинок). " +
+                 "0 — не задана, префаб не трогается.")]
+        [SerializeField, Min(0f)] private float _projectileSpeed;
+
+        [Tooltip("Предельная дальность снаряда, м — уходит в ProjectileMaxDistance каждого выстрела; на ней считается " +
+                 "дальний урон по спаду CS2. 0 — не задана, берётся дальность из префаба.")]
+        [SerializeField, Min(0f)] private float _projectileMaxDistance;
+
         // ── Slot Placement ─────────────────────────────────────
         [Header("Slot Placement")]
         [Tooltip("Category determines which slot type this item fits into")]
@@ -163,6 +174,18 @@ namespace VrBattlegrounds.Arsenal
         public int KillAward => _killAward;
         public VrBattlegrounds.Weapons.SpreadPattern Spread => _spread;
         public float RecoilMagnitude => _recoilMagnitude;
+
+        /// <summary>Скорость снаряда, м/с; 0 — не задана (значение остаётся за префабом).</summary>
+        public float ProjectileSpeed => _projectileSpeed;
+
+        /// <summary>Предельная дальность снаряда, м; 0 — не задана (значение остаётся за префабом).</summary>
+        public float ProjectileMaxDistance => _projectileMaxDistance;
+
+        /// <summary>Задана ли скорость снаряда балансом.</summary>
+        public bool HasProjectileSpeed => _projectileSpeed > 0f;
+
+        /// <summary>Задана ли предельная дальность снаряда балансом.</summary>
+        public bool HasProjectileMaxDistance => _projectileMaxDistance > 0f;
 
         /// <summary>Картина накопленной отдачи — выводится из CS2 <c>recoil_magnitude</c> (<see cref="VrBattlegrounds.Weapons.RecoilPattern.FromCs2"/>).</summary>
         public VrBattlegrounds.Weapons.RecoilPattern Recoil => VrBattlegrounds.Weapons.RecoilPattern.FromCs2(_recoilMagnitude, _fullAuto);

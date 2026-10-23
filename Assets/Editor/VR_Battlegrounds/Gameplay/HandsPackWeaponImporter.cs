@@ -232,6 +232,35 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>
+        /// Когда деталь впервые ушла от своего места в первом кадре клипа и когда в последний раз была вдали от него, с;
+        /// -1 — не уходила. Покой — первый кадр, не bind-pose: у пака Hands bind-pose детали и начало перезарядки не
+        /// совпадают. Порог — доля <paramref name="threshold" /> габарита корпуса (единицы меша у моделей пака разные).
+        /// По этим моментам режется звук перезарядки (<see cref="HandsPackAudio" />), как у <c>KinemationWeapon.Excursion</c>.
+        /// </summary>
+        public (float leave, float back) Excursion(string part, string clipName, float threshold = 0.01f)
+        {
+            Sample(null);
+            Vector3 size = MeshOf(_body).bounds.size;
+            float limit = threshold * Mathf.Max(size.x, size.y, size.z);
+            AnimationClip clip = Clip(clipName);
+            clip.SampleAnimation(_instance, 0f);
+            Vector3 rest = PartInBody(part).GetColumn(3);
+            float leave = -1f, back = -1f;
+            try
+            {
+                for (float t = 0f; t <= clip.length + 1e-4f; t += 1f / 120f)
+                {
+                    clip.SampleAnimation(_instance, t);
+                    if (Vector3.Distance(PartInBody(part).GetColumn(3), rest) <= limit) continue;
+                    if (leave < 0f) leave = t;
+                    back = t;
+                }
+            }
+            finally { Sample(null); }
+            return (leave, back);
+        }
+
+        /// <summary>
         /// Оси прицеливания в осях корпуса (единицы меша): куда смотрит ствол и где верх, когда
         /// руки пака держат оружие в клипе <paramref name="poseClip" /> (камера FPS смотрит по мировой +Z).
         /// Округлены до осей меша — у разных моделей пака ствол идёт по разным осям (-Y, +Y, +Z).

@@ -10,7 +10,9 @@ namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
     /// Переносит баланс из <see cref="WeaponInfo" /> в префабы оружия и магазинов (T-38): урон вблизи и на
-    /// предельной дистанции и пробитие стен (T-41) каждого выстрела (основного и дробинок), частоту спуска, число дробинок, ёмкость и
+    /// предельной дистанции, пробитие стен (T-41), скорость и предельную дальность снаряда (если заданы в балансе) каждого
+    /// выстрела (основного и дробинок), частоту спуска и режим огня (автомат/полуавтомат; ручной цикл механизма не меняется),
+    /// число дробинок, ёмкость и
     /// заряд магазина, картину накопленной отдачи (<see cref="RecoilAccumulator" />) и толчок отдачи SDK у каждого спуска
     /// (из CS2 <c>recoil_magnitude</c>, <see cref="RecoilPattern.FromCs2" />), разлёт дробин (<see cref="WeaponSpread" />, конус дроби
     /// <see cref="ShotgunPellets" />). Недостающие компоненты ставятся. Руками эти поля в префабах не правятся — расхождение ловит <c>WeaponBalanceTests</c>.
@@ -70,11 +72,23 @@ namespace VrBattlegrounds.Editor.Gameplay
             SerializedProperty triggers = weaponSo.FindProperty("_triggers");
             int frequency = WeaponInfo.ShotFrequency(info.FireRate);
             RecoilPattern recoil = info.Recoil;
+            int cycle = (int)(info.FullAuto ? UxrShotCycle.FullyAutomatic : UxrShotCycle.SemiAutomatic);
             for (int i = 0; i < triggers.arraySize; i++)
             {
                 SerializedProperty trigger = triggers.GetArrayElementAtIndex(i);
                 shotIndices.Add(trigger.FindPropertyRelative("_projectileShotIndex").intValue);
                 dirty |= SetInt(trigger.FindPropertyRelative("_maxShotFrequency"), frequency);
+                // Режим огня — баланс (решение 2026-10-23): автомат/полуавтомат по WeaponInfo.FullAuto. Ручной цикл (помпа,
+                // болт) — свойство механизма, его ставит сборщик по рецепту, баланс его не меняет; противоречие паспорта
+                // (FullAuto у ручного механизма) сборка отклоняет.
+                SerializedProperty cycleType = trigger.FindPropertyRelative("_cycleType");
+                if (cycleType.intValue == (int)UxrShotCycle.ManualReload)
+                {
+                    if (info.FullAuto)
+                        GameLog.WeaponSystem.Warning($"{info.name}: автоматический огонь в балансе, а у {prefab.name} механизм с ручным " +
+                                                     "циклом — режим огня не изменён (пересборка такой паспорт отклоняет).", info);
+                }
+                else dirty |= SetInt(cycleType, cycle);
                 // Толчок SDK — видимый и короткий: гаснет до следующего выстрела (см. RecoilPattern.SdkDuration).
                 dirty |= SetFloat(trigger.FindPropertyRelative("_recoilAngleTwoHands"), recoil.SdkAngle(oneHand: false));
                 dirty |= SetFloat(trigger.FindPropertyRelative("_recoilAngleOneHand"), recoil.SdkAngle(oneHand: true));
@@ -98,12 +112,23 @@ namespace VrBattlegrounds.Editor.Gameplay
                 GameLog.WeaponSystem.Warning($"{info.name}: {info.Pellets} дробинок по балансу, а у {prefab.name} нет ShotgunPellets.", prefab);
             }
 
+            // Скорость и дальность снаряда — из баланса (решение 2026-10-23); не заданные остаются за префабом
+            // до миграции WeaponProjectileMigration.CaptureFromPrefabs. Пока предупреждение: сборщик без доноров ставит
+            // дефолт SDK (30 м/с, 300 м), и ствол, пересобранный до миграции его WeaponInfo, остался бы с ним.
+            // Отказом это станет, когда миграция — обязательный шаг (все WeaponInfo каталога с заданными полями).
+            if (!info.HasProjectileSpeed || !info.HasProjectileMaxDistance)
+                GameLog.WeaponSystem.Warning($"{info.name}: в балансе не заданы " +
+                                             $"{(info.HasProjectileSpeed ? "" : "скорость ")}{(info.HasProjectileMaxDistance ? "" : "дальность ")}снаряда — " +
+                                             $"у {prefab.name} оставлены значения префаба.", info);
+
             var sourceSo = new SerializedObject(source);
             SerializedProperty shots = sourceSo.FindProperty("_shotTypes");
             foreach (int index in new HashSet<int>(shotIndices))
             {
                 if (index < 0 || index >= shots.arraySize) continue;
                 SerializedProperty shot = shots.GetArrayElementAtIndex(index);
+                if (info.HasProjectileSpeed) dirty |= SetFloat(shot.FindPropertyRelative("_projectileSpeed"), info.ProjectileSpeed);
+                if (info.HasProjectileMaxDistance) dirty |= SetFloat(shot.FindPropertyRelative("_projectileMaxDistance"), info.ProjectileMaxDistance);
                 float maxDistance = shot.FindPropertyRelative("_projectileMaxDistance").floatValue;
                 dirty |= SetFloat(shot.FindPropertyRelative("_projectileDamageNear"), info.Damage);
                 dirty |= SetFloat(shot.FindPropertyRelative("_projectileDamageFar"),

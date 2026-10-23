@@ -71,8 +71,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (AssetDatabase.AssetPathToGUID(path) != r.Guid)
                     throw new InvalidOperationException("Неожиданный GUID: " + path);
                 Required<GameObject>(path);
-                // Immutable baseline остаётся на старом пути; новый builder использует явную таблицу.
-                Required<GameObject>("Assets/Art/Weapons/HandsPack/LegacyBuildDonors/" + r.OldName + ".prefab");
+                // Снимки доноров (LegacyBuildDonors) сборщики больше не читают (решение 2026-10-23) — перенос имён их не требует.
             }
             var before = Renames.Select(r => Capture(r, Resolve(r.Old, r.Intermediate, r.Target))).ToArray();
             var infoAssets = AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" })

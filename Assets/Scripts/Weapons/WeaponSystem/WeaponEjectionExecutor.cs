@@ -10,7 +10,8 @@ namespace VrBattlegrounds.Weapons
     /// Единственный исполнитель вылета (этап ejection): по сигналу машины выпускает из окна выброса ствола
     /// (<see cref="WeaponEjectionPort"/>) живой патрон (<see cref="WeaponCue.ChamberEjected"/>) или стреляную гильзу
     /// (<see cref="WeaponCue.CasingEjected"/>). Префаб и импульс — запись ствола, а без неё — дефолт категории
-    /// (<see cref="WeaponEjectionSet.Resolve"/> в момент вылета). Экземпляры — в общем пуле <see cref="WeaponEjectaPool"/>.
+    /// (<see cref="WeaponEjectionSet.Resolve"/> в момент вылета). Экземпляры — в общем пуле <see cref="WeaponEjectaPool"/>;
+    /// звуки касания категории (<see cref="WeaponFeedbackDefaults.EjectaImpacts"/>) уходят с вылетом для префаба без своих клипов.
     ///
     /// <para>
     /// Сам ничего не решает: оба сигнала машина выдаёт по фиксации учёта SDK одинаково у автора и наблюдателя, поэтому вылет
@@ -73,7 +74,8 @@ namespace VrBattlegrounds.Weapons
             Vector3 spin = port * ejectile.Spin;
             // +Z корня префаба — к носику; в окне носик смотрит к дулу (+Z окна).
             _weapon.GetComponentsInChildren(false, _colliders);
-            if (WeaponEjectaPool.Spawn(ejectile.Prefab, position, port, velocity, spin, ejectile.Lifetime, _colliders)) Spawned++;
+            if (WeaponEjectaPool.Spawn(ejectile.Prefab, position, port, velocity, spin, ejectile.Lifetime, _colliders,
+                    _defaults != null ? _defaults.EjectaImpacts : null)) Spawned++;
             _colliders.Clear();
         }
     }

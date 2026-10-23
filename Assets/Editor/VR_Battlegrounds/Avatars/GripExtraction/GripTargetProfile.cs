@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// <summary>Как поза пальцев попадает в ассет цели.</summary>
     public enum GripPoseEncoding
     {
-        /// <summary>Дескриптор источника как есть (вторая рука — Mirrored): прежний импортёр, профиль MEF.</summary>
+        /// <summary>Дескриптор источника как есть (вторая рука — Mirrored), как у прежнего импортёра паков.</summary>
         AsSource,
 
         /// <summary>
@@ -31,11 +31,14 @@ namespace VrBattlegrounds.Editor.Avatars
 
     /// <summary>
     /// Профиль кисти цели: на каком риге сажать и кодировать позу, по какому GUID писать запись хвата, куда класть позы
-    /// и как называть align. Встроенные профили — <see cref="Mef" />, <see cref="MefCyborgHands" /> и <see cref="CyborgHands" />.
+    /// и как называть align. Встроенные профили — <see cref="CyborgHands" /> (по умолчанию) и <see cref="MefCyborgHands" />.
+    /// Профиль <c>MEF</c> (прежний импортёр паков: MEF_Base_Avatar, база поз PlayerBase_NonSdkHands, опора — запястье)
+    /// выведен вместе с аватаром хвата MEF (решение пользователя 2026-10-23).
     /// </summary>
     public sealed class GripTargetProfile
     {
-        public const string MefName            = "MEF";
+        /// <summary>Имя выведенного профиля MEF — только для понятного отказа в <see cref="Get" />.</summary>
+        public const string RetiredMefName     = "MEF";
         public const string MefCyborgHandsName = "MEF_cyborg_hands";
         public const string CyborgHandsName    = "CyborgHands";
 
@@ -96,26 +99,6 @@ namespace VrBattlegrounds.Editor.Avatars
             return LegacyMefCyborgBasePath;
         }
 
-        /// <summary>Прежний импортёр паков: MEF_Base_Avatar, база поз PlayerBase_NonSdkHands, опора — запястье.</summary>
-        public static GripTargetProfile Mef()
-        {
-            string avatar = HandsPackPoseImporter.GripAvatars[0];
-            return new GripTargetProfile
-            {
-                Name                 = MefName,
-                RigPrefabPath        = avatar,
-                RecordAvatarPath     = avatar,
-                PoseRegistryPath     = HandsPackPoseImporter.PoseBase,
-                PoseFolder           = null,
-                AlignAvatarName      = Path.GetFileNameWithoutExtension(avatar),
-                Anchor               = GripAnchor.Wrist,
-                Encoding             = GripPoseEncoding.AsSource,
-                RegisterPoses        = true,
-                RemoveReplacedAligns = true,
-                RequireMetacarpals   = false
-            };
-        }
-
         /// <summary>
         /// Кисть Cyborg: геометрия и грабберы — с пястными, записи — по GUID CyborgHandsBase, позы — папка HandPoses,
         /// опора — центр ладони.
@@ -166,10 +149,12 @@ namespace VrBattlegrounds.Editor.Avatars
 
         public static GripTargetProfile Get(string name)
         {
-            if (string.Equals(name, MefName, StringComparison.OrdinalIgnoreCase)) return Mef();
+            if (string.Equals(name, RetiredMefName, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"target: профиль «{RetiredMefName}» выведен 2026-10-23 (записи хвата MEF_Base_Avatar не пишутся) — " +
+                                            $"есть {CyborgHandsName}, {MefCyborgHandsName}.");
             if (string.Equals(name, MefCyborgHandsName, StringComparison.OrdinalIgnoreCase)) return MefCyborgHands();
             if (string.Equals(name, CyborgHandsName, StringComparison.OrdinalIgnoreCase)) return CyborgHands();
-            throw new ArgumentException($"target: неизвестный профиль «{name}» (есть {MefName}, {MefCyborgHandsName}, {CyborgHandsName}).");
+            throw new ArgumentException($"target: неизвестный профиль «{name}» (есть {CyborgHandsName}, {MefCyborgHandsName}).");
         }
 
         /// <summary>Копия с переопределениями запроса (null — как в профиле).</summary>

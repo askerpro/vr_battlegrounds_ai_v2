@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Editor.Avatars
     /// <summary>Ассеты поз Grip Extraction: создание (Fixed, обе руки), запись на месте, проверка регистрации в базе поз.</summary>
     public static class GripPoseAssets
     {
-        /// <summary>Поза Fixed в памяти — как <c>HandsPackPoseImporter.CreatePoseAsset</c> до записи.</summary>
+        /// <summary>Поза Fixed в памяти (обе руки) до записи ассета.</summary>
         public static UxrHandPoseAsset CreateFixed(string name, UxrHandDescriptor left, UxrHandDescriptor right)
         {
             var asset = ScriptableObject.CreateInstance<UxrHandPoseAsset>();

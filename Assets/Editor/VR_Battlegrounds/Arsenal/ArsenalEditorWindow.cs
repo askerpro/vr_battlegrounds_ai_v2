@@ -360,7 +360,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                 EditorGUILayout.LabelField("Рецепт: " + hands.Name + " · исходная папка: " + hands.Folder);
                 if (GUILayout.Button("Проверить источник Hands")) Try(() => ArsenalEditorActions.Run("Проверка источника Hands", Array.Empty<string>(), () => { using var source = new HandsPackWeapon(hands.Folder, hands.BodyPart); return source.Report(hands.RestClip); }, false));
                 var selected = weapon;
-                Command("Пересобрать выбранное оружие Hands T-38 из источника", BuildPaths(selected), "BuildFull: geometry/magazine, recoil и regions по ладоням пака → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс и экспорт _orig (позы + snap Orig); аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); HandsPackWeaponBuilder.BuildFull(hands); return "Source rebuild " + hands.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
+                Command("Пересобрать выбранное оружие Hands из источника", BuildPaths(selected), "BuildFull: звуки из пака → geometry/magazine, recoil и regions по ладоням пака → motion механизма (AR15, FabarmSDASS) → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс и экспорт _orig (позы + snap Orig); аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); HandsPackWeaponBuilder.BuildFull(hands); return "Source rebuild " + hands.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
             }
             else if (lowPoly != null)
             {
@@ -369,15 +369,12 @@ namespace VrBattlegrounds.Editor.Arsenal
                 var selected = weapon;
                 Command("Пересобрать выбранное оружие Low Poly из источника", BuildPaths(selected), "Геометрия и магазин из префаба пака, механика (ход затвора, угол спуска, оси, ладони) — числа рецепта; recoil и regions по ладоням рецепта → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс; поз _orig у пака нет; аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); LowPolyWeaponBuilder.Build(lowPoly); return "Source rebuild " + lowPoly.Weapon.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
             }
-            else EditorGUILayout.HelpBox("Для этого предмета нет одиночного полного рецепта. SDK-варианты не пересобираются этим окном; три прежних Hands-импорта доступны отдельным набором ниже.", MessageType.Info);
+            else EditorGUILayout.HelpBox("Для этого предмета нет одиночного полного рецепта. SDK-варианты не пересобираются этим окном; BrowningHiPower — легаси-сборкой ниже.", MessageType.Info);
             // Позы рук _orig — последний шаг сборки; отдельно — без пересборки (решение пользователя 2026-10-22).
             string weaponPath = weapon != null && weapon.WeaponPrefab != null ? AssetDatabase.GetAssetPath(weapon.WeaponPrefab) : null;
             if (weaponPath != null && PackOrigPoses.HasSources(weaponPath))
                 Command("Экспортировать позы рук", PackOrigPoses.OutputPaths(weaponPath), "Без пересборки: позы _orig предмета выбранного оружия в " + PackOrigPoses.Root + " и snap-точки Orig (пустые Transform) в префабы оружия и магазина; магазин — эксперимент по клипам перезарядки. Неизменённый источник не перезаписывается. Позы и хваты аватаров не меняются.", () => PackOrigPoses.ExportWeapon(weaponPath), PackOrigPoses.InputPaths(), savesAllAssets: false);
             Command("Экспортировать позы рук (все стволы)", PackOrigPoses.OutputPaths(), "Без пересборки оружия: позы _orig всех рецептов обоих паков в " + PackOrigPoses.Root + " и snap-точки Orig в префабы оружия и магазинов. Неизменённый источник не перезаписывается. Позы и хваты аватаров не меняются.", PackOrigPoses.ExportAll, PackOrigPoses.InputPaths(), savesAllAssets: false);
-            if (weapon != null && AssetDatabase.GetAssetPath(weapon.WeaponPrefab) == Ar15ScaleCalibration.WeaponPath)
-                Command("Обновить размер AR-15 и его внешнего магазина", Ar15ScaleCalibration.OutputPaths(), "Только масштаб двух корней .70; локальные дочерние frames и вложенный магазин сохраняются.",
-                    () => { string report = Ar15ScaleCalibration.Preflight(); Ar15ScaleCalibration.Apply(); return report; }, Ar15ScaleCalibration.InputPaths(), savesAllAssets: false);
             if (kin != null && kin.Weapon.Name == "TR15")
                 Command("Обновить линзу прицела TR15", Tr15OpticBuilder.OutputPaths(), "Выбранный TR15 и три generated game-owned optic assets; source TGA читаются без изменения импортера.",
                     () => { string report = Tr15OpticBuilder.Preflight(); Tr15OpticBuilder.Apply(); return report; }, Tr15OpticBuilder.InputPaths(), savesAllAssets: false);
@@ -408,12 +405,12 @@ namespace VrBattlegrounds.Editor.Arsenal
                         return "Пересобрано из источников оружий: " + selectedSet.Length + "; игровая проверка отдельно.";
                     }, selectedSet.SelectMany(ArsenalBuildPreflight.Inputs).Distinct().ToArray(), savesAllAssets: false);
             }
-            EditorGUILayout.LabelField("Поддержанный набор Hands: Browning Hi-Power · AR-15 · FABARM SDASS", EditorStyles.boldLabel);
-            Command("Пересобрать набор Hands: 3 оружия + 3 магазина", new[] { "Assets/Prefabs/Weapons/BrowningHiPower", "Assets/Prefabs/Weapons/AR15", "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Art/Weapons/HandsPack", PackOrigPoses.Root }, "Фиксированный source bundle из immutable baseline: preflight, geometry/magazine, motion и проверка идентичности. Не одиночный рецепт; дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и экспорт _orig; аватары не меняются.", () => { HandsPackLegacyRebuild.RebuildAll(); return "Source набор 3+3 пересобран; игровая проверка отдельно."; }, savesAllAssets: false);
+            EditorGUILayout.LabelField("Легаси-сборка Hands: Browning Hi-Power", EditorStyles.boldLabel);
+            var browning = HandsPackLegacyRebuild.Browning;
+            Command("Пересобрать BrowningHiPower (легаси Hands)", new[] { "Assets/Prefabs/Weapons/BrowningHiPower", HandsPackMechanism.Folder(browning), HandsPackAudio.Folder(browning.Name), "Assets/Art/Weapons/Interaction/" + browning.Name, PackOrigPoses.Root }, "Рецепт без доноров: preflight и motion (Shot, Shot_end), звуки из пака, geometry/magazine, расширение хода до задержки и проверка идентичности. Дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и экспорт _orig; аватары не меняются.", () => { HandsPackLegacyRebuild.RebuildAll(); return "BrowningHiPower пересобран; игровая проверка отдельно."; }, savesAllAssets: false);
             maintenance = EditorGUILayout.Foldout(maintenance, "Обслуживание источников и восстановление", true);
             if (!maintenance) return;
             Command("Обновить звук револьвера из R08", new[] { "Assets/Prefabs/Weapons/Revolver/Revolver.prefab", KinemationWeaponBuilder.RevolverShotPath }, "Нарезка WAV выстрела из пакета KINEMATION и ссылка _shotAudio выбранного исторического Revolver. Не полная сборка.", () => { KinemationWeaponBuilder.MakeRevolverShot(); return "Звук револьвера обновлён."; }, new[] { KinemationWeaponBuilder.R08.ShotSound });
-            Command("Подготовить шаблоны трёх Hands-импортов", new[] { "Assets/Art/Weapons/HandsPack" }, "Создаёт Art snapshots и motion assets; не является чистой проверкой.", HandsPackLegacyRebuild.PrepareBaseline);
         }
         private static string[] BuildPaths(WeaponInfo selected)
         {
@@ -421,7 +418,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             string name = selected != null && selected.WeaponPrefab != null ? selected.WeaponPrefab.name : "";
             var recipe = ArsenalEditorActions.Recipe(selected);
             var paths = ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons/Interaction/" + name, ArsenalBuildPreflight.InsertionMaterial, PackOrigPoses.Root });
-            if (recipe != null) paths = paths.Concat(new[] { $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab", $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName ?? recipe.Name + "_mag"}.prefab" });
+            if (recipe != null) paths = paths.Concat(new[] { HandsPackWeaponBuilder.WeaponPath(recipe), HandsPackWeaponBuilder.MagazinePath(recipe) });
+            if (kin == null && recipe != null) paths = paths.Concat(HandsPackWeaponBuilder.RebuildOutputs(recipe));
             if (kin != null) paths = paths.Concat(new[] { KinemationWeapon.ArtRoot + "/" + name, KinemationWeapon.ArtRoot + "/Materials", KinemationAudio.Root + "/" + name }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).Concat(ArsenalBuildPreflight.MaterialSettingsPaths(kin));
             if (kin != null && kin.Weapon.Name == "TR15") paths = paths.Concat(Tr15OpticBuilder.OutputPaths());
             return paths.Distinct().ToArray();
@@ -435,9 +433,8 @@ namespace VrBattlegrounds.Editor.Arsenal
             EditorGUILayout.HelpBox("Хват, ручной цикл и смещения редактируются в существующем Inspector префаба. Подгонка кисти по геометрии пока исследование; успешного отчёта о прилегании здесь нет.", MessageType.Info);
             if (GUILayout.Button("Проверить области хвата выбранного оружия")) Try(() => ArsenalEditorActions.Run("Проверка областей выбранного оружия", Array.Empty<string>(), () => WeaponInteractionReview.Preflight(new[] { path }), false));
             Command("Обновить подсветку и напоминание выбранного оружия", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons" }).ToArray(), "Выбранное оружие и его магазин; existing installer. Корпус, баланс и позы кистей не пересобираются.", () => WeaponInteractionReview.Apply(new[] { path }, selected.MagazinePrefab == null ? Array.Empty<string>() : new[] { AssetDatabase.GetAssetPath(selected.MagazinePrefab) }), savesAllAssets: false);
-            var kin = ArsenalEditorActions.Kinemation(selected);
-            if (kin != null) Command("Обновить механические анимации KINEMATION", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { KinemationWeapon.ArtRoot + "/" + kin.Weapon.Name, ArsenalBuildPreflight.InsertionMaterial }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).ToArray(), "Motion + bindings/контакты и Empty range; KinemationFixReview.Apply. Исходные ModelImporter могут получить Read/Write.", () => { KinemationFixReview.Apply(kin.Weapon.Name); return "Механика обновлена."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
-            Command("Обновить внутренний патрон двух дробовиков", new[] { "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Prefabs/Weapons/Herrington" }, "Фиксированный набор двух дробовиков: ammo alignment/ejection, не баланс/ёмкость.", WeaponInternalAmmoAlignment.ApplyCurrentShotguns);
+            // Механику KINEMATION и внутренний патрон дробовиков ставит полная пересборка (вкладка «Сборка»); узкие
+            // команды на готовом префабе снимали хост, хваты и канон _assetId (решение пользователя 2026-10-23: убрать).
         }
         /// <summary>
         /// Блок «Позы рук из паков»: регистрация для выбранного аватара из готовых _orig (AvatarGripRegistration) — точки

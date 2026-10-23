@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Core;
 using UltimateXR.Core.Math;
+using UltimateXR.Manipulation;
 using UltimateXR.Manipulation.HandPoses;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -53,6 +54,18 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// </para>
     ///
     /// <para>
+    /// <b>Деталь механики (эксперимент, решение 2026-10-23).</b> Все стволы с затвором или помпой (<c>Action != None</c>
+    /// рецептов Hands и KINEMATION). Вид точки — имя граббабла детали: <c>Slide</c> или <c>Pump</c>. Поза
+    /// <c>&lt;Пак&gt;_&lt;Предмет&gt;_&lt;Slide|Pump&gt;_orig</c>, snap — <c>&lt;оружие&gt;/&lt;Slide|Pump&gt;/Orig/&lt;поза&gt;/Left|Right</c>
+    /// внутри граббабла, в осях детали <c>&lt;Slide|Pump&gt;/&lt;деталь&gt;</c>; вторая рука — зеркало по боковой оси корпуса
+    /// <c>MeshContainer/&lt;корпус&gt;</c> (то же правило, что у хвата оружия). Затвор: кадр, где рука ведёт деталь, — середина
+    /// самого длинного окна по всем клипам пака, где деталь сдвинута от покоя не меньше доли хода, ладонь у меша, рука
+    /// жёстко идёт с деталью и деталь внутри окна движется (<see cref="SlidePoint" />). Помпа: кадр позы оружия t=0, левая
+    /// рука; клип хода — только проверка жёсткости (<see cref="PumpPoint" />). Сбой — предупреждение, не отказ сборки.
+    /// Отчёт поиска — <c>&lt;поза&gt;_sources.json</c> рядом с позой.
+    /// </para>
+    ///
+    /// <para>
     /// Источники и окна — <c>&lt;Пак&gt;_&lt;Предмет&gt;_orig_sources.json</c> рядом с позами. Массовый экспорт —
     /// <see cref="ExportAll" /> (меню и окно арсенала), при сборке — <see cref="ExportForWeapon" />.
     /// </para>
@@ -74,6 +87,24 @@ namespace VrBattlegrounds.Editor.Gameplay
         private const int MinFrames = 3;
         private const int MaxPoints = 400;
 
+        // Деталь механики: доли наибольшего сдвига детали от покоя по всем клипам пака (ход).
+        private const float ActionSeatShare = 0.30f;  // деталь сдвинута: не меньше этой доли хода
+        private const float ActionRangeShare = 0.20f; // деталь движется внутри окна (иначе — затворная задержка, рука рядом)
+        private const float MinActionTravel = 0.005f; // меньше — деталь в клипах пака не ходит
+
+        /// <summary>
+        /// Помпа: ладонь дальше <see cref="NearMesh" />, но не дальше этого, — кадр годен, если рука жёстко идёт с помпой весь
+        /// её ход (<see cref="PumpPointRule" />). Обоснование: единицы — мир клипа пака Hands, где руки ~×1.4 реальных, и
+        /// центр ладони SDK лежит внутри кисти, а цевьё толстое — у FabarmSDASS в Aming_Idle 86 мм до ближайшей вершины при
+        /// жёсткости 0,2 мм / 0,2° за 131 мм хода в Shot (правая рука на том же ходу смещается на 131 мм). Порог 100 мм — тот же,
+        /// что <see cref="NearOrigin" /> (меш недоступен), ≈70 мм реальной руки: дальше кисть уже не обхватывает деталь.
+        /// </summary>
+        private const float PumpNear = 0.10f;
+        private const string PumpPointRule = "помпа: ладонь <= 60 мм меша или <= 100 мм при жёстком ходе руки с помпой";
+
+        private const string SlidePointName = "Slide";
+        private const string PumpPointName = "Pump";
+
         private static readonly UxrHandSide[] Sides = { UxrHandSide.Left, UxrHandSide.Right };
 
         public static string OrigName(string pack, string item, string point) => $"{pack}_{item}_{point}{Suffix}";
@@ -83,7 +114,8 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>
         /// Snap-точка руки <paramref name="side" /> точки <paramref name="point" /> (<c>Grip</c>, <c>Support</c>) в префабе
         /// предмета: <c>&lt;Grabs&gt;/Orig/*_&lt;point&gt;_orig/&lt;side&gt;</c>; нет — null. Нейтральная точка хвата для областей
-        /// подсветки (<see cref="WeaponInteractionRecipes" />).
+        /// подсветки (<see cref="WeaponInteractionRecipes" />). Деталь механики (<c>Slide</c>, <c>Pump</c>): <paramref name="root" /> —
+        /// её граббабл, <c>Orig</c> лежит прямо в нём.
         /// </summary>
         public static Transform FindSnap(Transform root, string point, UxrHandSide side)
         {
@@ -107,14 +139,23 @@ namespace VrBattlegrounds.Editor.Gameplay
             public string Pack, Item, Point, Prefab, BodyPath, Clip, WeaponClip, SourceKind;
             public float Time, FrameRate;
             public UxrHandSide SourceSide;
-            public bool MirrorSnaps;                      // хват оружия: вторая рука — зеркало по боковой оси корпуса
+            public bool MirrorSnaps;                      // вторая рука — зеркало по боковой оси корпуса
+            public string MirrorFramePath;                // корпус зеркала (деталь механики); null — сама деталь BodyPath (хват оружия)
+            public string SnapRoot;                       // узел контейнера Orig (граббабл детали механики); null — GrabsOf корня
+            public bool Experimental;                     // кадр выбран автоматически: сбой — предупреждение, не ошибка
             public Func<Transform, string> CheckBody;     // деталь префаба — та же, что в кадре пака; null — без проверки
             public readonly Dictionary<UxrHandSide, HandsPackPoseExtractor.Sample> Samples = new Dictionary<UxrHandSide, HandsPackPoseExtractor.Sample>();
+
+            // Расчётная точка (деталь механики без источника в паке): рамка ладони руки SourceSide в мире префаба по
+            // геометрии детали (Problem — почему не посчитана) и поза пальцев шаблона; вторая рука — зеркало по корпусу.
+            public Func<Transform, (Vector3 Position, Quaternion Rotation, string Problem)> Computed;
+            public UxrHandDescriptor ComputedLeft, ComputedRight;
 
             public string Name => OrigName(Pack, Item, Point);
 
             public UxrHandDescriptor Descriptor(UxrHandSide side) =>
-                Samples.TryGetValue(side, out HandsPackPoseExtractor.Sample own) ? own.Hand : Samples[SourceSide].Hand.Mirrored();
+                Computed != null ? side == UxrHandSide.Left ? ComputedLeft : ComputedRight
+                : Samples.TryGetValue(side, out HandsPackPoseExtractor.Sample own) ? own.Hand : Samples[SourceSide].Hand.Mirrored();
 
             public IEnumerable<(UxrHandSide Side, bool Mirrored, GripSample Sample)> SnapSides()
             {
@@ -124,15 +165,35 @@ namespace VrBattlegrounds.Editor.Gameplay
                     else if (MirrorSnaps) yield return (side, true, GripSample.FromPack(Samples[SourceSide], SourceSide, SourceKind));
                 }
             }
+
+            /// <summary>Подписи snap-точек для отчёта: рука и зеркало.</summary>
+            public IEnumerable<(UxrHandSide Side, bool Mirrored)> SnapLabels() =>
+                Computed != null ? Sides.Select(s => (s, s != SourceSide)) : SnapSides().Select(s => (s.Side, s.Mirrored));
         }
 
-        /// <summary>Предмет пака: позы хвата оружия (рецепты импортёров) и магазин.</summary>
+        /// <summary>Предмет пака: позы хвата оружия (рецепты импортёров или рецепт оружия), магазин и деталь механики.</summary>
         private sealed class Item
         {
             public string Pack, Name, WeaponPath;
             public KinemationWeaponRecipe Kin;
+            public HandsPackWeaponRecipe Hands;      // рецепт оружия пака Hands: источник выведенных Grip/Support
             public MagazineSource Magazine;
+            public ActionSource Action;
             public readonly List<HandsPackPoseRecipe> Grips = new List<HandsPackPoseRecipe>();
+        }
+
+        /// <summary>
+        /// Деталь механики: затвор (<c>Slide</c>) или помпа (<c>Pump</c>). Деталь пака — рендерер Hands или кость KINEMATION
+        /// (<see cref="HandsPackWeaponRecipe.ActionPart" />); в префабе — <c>&lt;Slide|Pump&gt;/&lt;Clean(деталь)&gt;</c>
+        /// (<see cref="HandsPackWeaponBuilder" />, BuildAction).
+        /// </summary>
+        private sealed class ActionSource
+        {
+            public string Point, Part, PrefabPart, MirrorFrame;
+            public string GripPrefabPart; // видимая ручка (ActionGripPart, иначе сама деталь) — опора расчётной точки
+            public bool Pump;
+            public HandsPackWeaponRecipe Recipe;
+            public KinemationWeaponRecipe Kin;
         }
 
         /// <summary>Магазин (патрон) предмета: деталь пака и префаб магазина, где её меш — дочерний <c>Mesh</c>.</summary>
@@ -155,7 +216,19 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             foreach (HandsPackPoseRecipe recipe in HandsPackPoseImporter.Recipes) Get(HandsPack, recipe.Weapon).Grips.Add(recipe);
-            foreach (MagazineSource magazine in HandsMagazines()) Get(HandsPack, magazine.WeaponPath).Magazine = magazine;
+            var imported = new HashSet<string>(HandsPackPoseImporter.Recipes.Select(r => r.Weapon), StringComparer.Ordinal);
+            foreach (HandsPackWeaponRecipe r in HandsRecipes())
+            {
+                Item item = Get(HandsPack, HandsWeaponPath(r));
+                item.Hands = r;
+                // В Recharge рука держит дубликат патрона Shogun_Patron_mesh001 (исследование hand-rig-quality, shell-phase).
+                item.Magazine = HandsMagazine(r, r.Name == FabarmName ? new[] { "Shogun_Patron_mesh001" } : null);
+                // Grip/Support из рецепта оружия — только тем, у кого нет поз HandsPackPoseImporter.Recipes (AR15, FabarmSDASS):
+                // принятые позы остальных стволов не трогаются, MEF-импорт (Recipes) этот источник не видит.
+                if (!imported.Contains(item.WeaponPath)) item.Grips.AddRange(RecipeGrips(r));
+                item.Action = ActionOf(r, null);
+            }
+
             foreach (KinemationWeaponRecipe k in KinemationWeaponBuilder.All)
             {
                 Item item = Get(Kinemation, KinemationWeaponBuilder.PrefabPath(k));
@@ -166,37 +239,85 @@ namespace VrBattlegrounds.Editor.Gameplay
                     Item = item.Name, WeaponPath = item.WeaponPath, MagazinePath = KinemationWeaponBuilder.MagazinePath(k), Part = k.Weapon.MagazinePart,
                     Body = k.Weapon.BodyPart, Point = k.Weapon.MagazineIsInternal ? "Shell" : "Magazine", Kin = k
                 };
+                item.Action = ActionOf(k.Weapon, k);
             }
 
             return items.Values.OrderBy(i => i.Pack, StringComparer.Ordinal).ThenBy(i => i.Name, StringComparer.Ordinal).ToList();
         }
 
-        private static IEnumerable<MagazineSource> HandsMagazines()
-        {
-            foreach (HandsPackWeaponRecipe r in HandsPackWeaponBuilder.T38) yield return HandsMagazine(r, null);
-            // Набор 3+3 HandsPackLegacyRebuild: те же папка, корпус и магазин, что в его рецептах (они закрыты и читают baseline).
-            yield return HandsMagazine(new HandsPackWeaponRecipe
-            {
-                Name = "BrowningHiPower", PrefabFolder = "BrowningHiPower", MagazineName = "BrowningHiPower_Magazine", Folder = "Hands_Gun",
-                BodyPart = "Base_mesh", MagazinePart = "Magazine_mesh"
-            }, null);
-            yield return HandsMagazine(new HandsPackWeaponRecipe
-            {
-                Name = "AR15", PrefabFolder = "AR15", MagazineName = "AR15_Magazine", Folder = "Hands_Automatic_Rifle03",
-                BodyPart = "Rifle_Body_Mesh", MagazinePart = "Rifle_Magazine_Mesh"
-            }, null);
-            // В Recharge рука держит дубликат патрона Shogun_Patron_mesh001 (исследование hand-rig-quality, shell-phase).
-            yield return HandsMagazine(HandsPackWeaponBuilder.ShotgunReal, new[] { "Shogun_Patron_mesh001" });
-        }
+        private const string FabarmName = "FabarmSDASS";
+
+        private static string HandsWeaponPath(HandsPackWeaponRecipe r) => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab";
+
+        /// <summary>
+        /// Рецепты пака Hands для экспорта: T-38 и набор 3+3. Источник магазинов, деталей механики и выведенных Grip/Support.
+        /// </summary>
+        private static IEnumerable<HandsPackWeaponRecipe> HandsRecipes() => WithStubs(HandsPackWeaponBuilder.T38.Concat(FullSetRecipes()));
+
+        /// <summary>
+        /// Полные рецепты набора 3+3 из <see cref="HandsPackWeaponBuilder" /> (решение 2026-10-23: AR15 и FabarmSDASS — на
+        /// полный рецепт без доноров). Публичный рецепт вытесняет рецепт легаси того же префаба (<see cref="WithStubs" />).
+        /// </summary>
+        private static IEnumerable<HandsPackWeaponRecipe> FullSetRecipes() => new[] { HandsPackWeaponBuilder.AR15, HandsPackWeaponBuilder.ShotgunReal };
+
+        /// <summary>
+        /// Переданные рецепты и легаси-рецепты <see cref="LegacyStubs" /> для префабов, которых среди них нет; одноимённые
+        /// префабы — первый рецепт.
+        /// </summary>
+        private static IEnumerable<HandsPackWeaponRecipe> WithStubs(IEnumerable<HandsPackWeaponRecipe> recipes) =>
+            recipes.Concat(LegacyStubs()).GroupBy(HandsWeaponPath, StringComparer.Ordinal).Select(g => g.First());
+
+        /// <summary>
+        /// Набор 3+3 вне полного рецепта: только BrowningHiPower — его публичный рецепт легаси-сборки
+        /// (<see cref="HandsPackLegacyRebuild.Browning" />, без снимков доноров); копия рецепта здесь больше не нужна.
+        /// </summary>
+        private static IEnumerable<HandsPackWeaponRecipe> LegacyStubs() => new[] { HandsPackLegacyRebuild.Browning };
 
         private static MagazineSource HandsMagazine(HandsPackWeaponRecipe r, string[] alternates) =>
             new MagazineSource
             {
-                Item = r.Name, WeaponPath = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab",
+                Item = r.Name, WeaponPath = HandsWeaponPath(r),
                 MagazinePath = $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.MagazineName ?? r.Name + "_mag"}.prefab",
                 Part = r.MagazinePart, Body = r.BodyPart, Folder = r.Folder, Point = r.MagazineIsInternal ? "Shell" : "Magazine",
                 AlternateParts = alternates ?? Array.Empty<string>()
             };
+
+        /// <summary>
+        /// Grip/Support из рецепта оружия по образцу <see cref="KinemationWeaponBuilder.PoseRecipes" />: правая рука пака на
+        /// рукояти (точка 0) и левая — вторая рука (точка 1) при <see cref="HandsPackWeaponRecipe.SupportGrip" />, кадр клипа
+        /// позы t=0, корпус — <c>MeshContainer/&lt;BodyObjectName&gt;</c>. Меш рук и кость корпуса не названы: их берёт
+        /// <see cref="RecipeGripSample" /> из модели пака.
+        /// </summary>
+        private static IEnumerable<HandsPackPoseRecipe> RecipeGrips(HandsPackWeaponRecipe r)
+        {
+            string weapon = HandsWeaponPath(r);
+            string body = $"MeshContainer/{r.BodyObjectName}";
+            yield return new HandsPackPoseRecipe
+            {
+                Pose = $"{HandsPack}_{r.Name}_Grip", Folder = r.Folder, Clip = r.PoseClip, Time = 0f, PackSide = UxrHandSide.Right,
+                Weapon = weapon, BodyPath = body, GrabPoint = 0
+            };
+            if (!r.SupportGrip) yield break;
+            yield return new HandsPackPoseRecipe
+            {
+                Pose = $"{HandsPack}_{r.Name}_Support", Folder = r.Folder, Clip = r.PoseClip, Time = 0f, PackSide = UxrHandSide.Left,
+                Weapon = weapon, BodyPath = body, GrabPoint = 1
+            };
+        }
+
+        /// <summary>Деталь механики рецепта; без затвора и помпы — null.</summary>
+        private static ActionSource ActionOf(HandsPackWeaponRecipe r, KinemationWeaponRecipe k)
+        {
+            if (r.Action == HandsPackWeaponRecipe.ActionKind.None || string.IsNullOrEmpty(r.ActionPart)) return null;
+            bool pump = r.Action == HandsPackWeaponRecipe.ActionKind.Pump;
+            string point = pump ? PumpPointName : SlidePointName;
+            return new ActionSource
+            {
+                Point = point, Part = r.ActionPart, PrefabPart = $"{point}/{HandsPackWeaponBuilder.Clean(r.ActionPart)}",
+                GripPrefabPart = $"{point}/{HandsPackWeaponBuilder.Clean(r.ActionGripPart ?? r.ActionPart)}",
+                MirrorFrame = $"MeshContainer/{r.BodyObjectName}", Pump = pump, Recipe = r, Kin = k
+            };
+        }
 
         // ── Вход ────────────────────────────────────────────────────────────
         // Экспорт — шаг сборщиков оружия и команды окна арсенала («Сборка» → «Экспортировать позы рук»), без меню.
@@ -218,7 +339,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>Область записи экспорта выбранного оружия: папка поз, префабы оружия и магазина.</summary>
         public static string[] OutputPaths(string weaponPrefab) =>
             new[] { Root }.Concat(Items().Where(i => i.WeaponPath == weaponPrefab)
-                                         .SelectMany(i => new[] { i.Grips.Count > 0 ? i.WeaponPath : null, i.Magazine?.MagazinePath }))
+                                         .SelectMany(i => new[] { i.Grips.Count > 0 || i.Action != null ? i.WeaponPath : null, i.Magazine?.MagazinePath }))
                           .Where(p => p != null).Distinct().ToArray();
 
         /// <summary>Есть ли у префаба оружия рецепты паков для экспорта поз рук.</summary>
@@ -238,19 +359,24 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>Область записи массового экспорта: папка поз и префабы оружия и магазинов.</summary>
         public static string[] OutputPaths() =>
-            new[] { Root }.Concat(Items().SelectMany(i => new[] { i.Grips.Count > 0 ? i.WeaponPath : null, i.Magazine?.MagazinePath }))
+            new[] { Root }.Concat(Items().SelectMany(i => new[] { i.Grips.Count > 0 || i.Action != null ? i.WeaponPath : null, i.Magazine?.MagazinePath }))
                           .Where(p => p != null).Distinct().ToArray();
 
         /// <summary>Читаемые источники: папки паков.</summary>
         public static string[] InputPaths() =>
-            new[] { HandsPackWeapon.PackModels, KinemationWeapon.Pack + "Animations", KinemationWeapon.Pack + "Prefabs/Weapons", KinemationPoseExtractor.Character };
+            new[]
+            {
+                HandsPackWeapon.PackModels, KinemationWeapon.Pack + "Animations", KinemationWeapon.Pack + "Prefabs/Weapons", KinemationPoseExtractor.Character,
+                KinemationWeapon.ArtRoot, // вырезанные меши деталей KINEMATION: точки меша, если у меша пака нет данных на CPU
+                ComputedSlideTemplate, ComputedPumpTemplate // позы-шаблоны расчётных точек деталей механики
+            };
 
         private static string Export(List<Item> items, bool canonicalize)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Экспорт _orig запрещён в Play Mode.");
             var log = new ExportLog();
             var errors = new List<string>();
-            var warnings = new List<string>(); // магазин — эксперимент: его сбой не останавливает сборку оружия
+            var warnings = new List<string>(); // магазин и деталь механики — эксперимент: их сбой не останавливает сборку оружия
             foreach (Item item in items)
             {
                 try
@@ -263,9 +389,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
-            string report = $"[PackOrigPoses] Экспорт поз рук: предметов {items.Count}, ошибок {errors.Count}, предупреждений магазина {warnings.Count}\n" +
+            string report = $"[PackOrigPoses] Экспорт поз рук: предметов {items.Count}, ошибок {errors.Count}, предупреждений эксперимента {warnings.Count}\n" +
                             log.Format() + (errors.Count > 0 ? "\nОшибки:\n" + string.Join("\n", errors) : "") +
-                            (warnings.Count > 0 ? "\nМагазин (эксперимент):\n" + string.Join("\n", warnings) : "");
+                            (warnings.Count > 0 ? "\nЭксперимент (магазин, деталь механики):\n" + string.Join("\n", warnings) : "");
             if (errors.Count > 0)
             {
                 GameLog.Debug.Error(report);
@@ -347,23 +473,68 @@ namespace VrBattlegrounds.Editor.Gameplay
                 }
             }
 
+            ActionReport actionReport = null;
+            if (item.Action != null)
+            {
+                // Эксперимент, как магазин: сбой не мешает позам хвата оружия и сборке.
+                actionReport = new ActionReport
+                {
+                    pack = item.Pack, item = item.Name, weapon = item.WeaponPath, point = item.Action.Point, part = item.Action.Part,
+                    prefabPart = item.Action.PrefabPart, mirrorFrame = item.Action.MirrorFrame
+                };
+                OrigPoint action = null;
+                try
+                {
+                    action = item.Action.Pump ? PumpPoint(item, actionReport) : SlidePoint(item, actionReport);
+                    if (action != null) actionReport.source = ActionSourcePack;
+                    if (actionReport.warning != null) warnings.Add($"{item.Pack}/{item.Name}: {item.Action.Point} — {actionReport.warning}");
+                }
+                catch (Exception e)
+                {
+                    actionReport.note = "ошибка: " + e.Message;
+                    warnings.Add($"{item.Pack}/{item.Name}: {item.Action.Point} — {e.Message}");
+                }
+
+                // Нет источника в паке (затвор ходит сам от отдачи, рука на детали не видна) — расчётная точка по геометрии
+                // детали и поза-шаблон (решение пользователя 2026-10-23: хват пользователь доводит в редакторе).
+                if (action == null)
+                {
+                    try
+                    {
+                        action = ComputedActionPoint(item, actionReport);
+                        log.Notes.Add($"{item.Pack}/{item.Name}: {item.Action.Point} — {actionReport.note}");
+                    }
+                    catch (Exception e)
+                    {
+                        actionReport.computedNote = "ошибка: " + e.Message;
+                        warnings.Add($"{item.Pack}/{item.Name}: {item.Action.Point} (расчётная точка) — {e.Message}");
+                    }
+                }
+
+                if (action != null) points.Add(action);
+            }
+
             foreach (OrigPoint point in points)
             {
                 log.Pose(PoseAssetPath(point.Pack, point.Name), WritePose(point));
             }
 
+            // Отдельная запись на префаб и вид точек: сбой экспериментальных snap-точек (деталь механики в префабе оружия)
+            // откатывает только их запись, snap-точки хвата оружия остаются.
             var snapProblems = new Dictionary<string, string>();
-            foreach (IGrouping<string, OrigPoint> prefab in points.GroupBy(p => p.Prefab))
+            foreach (IGrouping<(string Prefab, bool Experimental), OrigPoint> prefab in points.GroupBy(p => (p.Prefab, p.Experimental))
+                                                                                             .OrderBy(g => g.Key.Experimental))
             {
+                string path = prefab.Key.Prefab;
                 try
                 {
-                    string status = WriteSnaps(prefab.Key, prefab.ToList(), canonicalize, snapProblems);
-                    if (status.StartsWith(SnapsUnchangedPrefix, StringComparison.Ordinal)) log.SnapsUnchanged.Add($"{prefab.Key} ({status})");
-                    else log.SnapsChanged.Add($"{prefab.Key} ({status})");
+                    string status = WriteSnaps(path, prefab.ToList(), canonicalize, snapProblems);
+                    if (status.StartsWith(SnapsUnchangedPrefix, StringComparison.Ordinal)) log.SnapsUnchanged.Add($"{path} ({status})");
+                    else log.SnapsChanged.Add($"{path} ({status})");
                 }
                 catch (Exception e)
                 {
-                    (prefab.All(p => !p.MirrorSnaps) ? warnings : errors).Add($"{prefab.Key}: snap-точки не записаны — {e.Message}");
+                    (prefab.Key.Experimental ? warnings : errors).Add($"{path}: snap-точки не записаны — {e.Message}");
                 }
             }
 
@@ -375,13 +546,16 @@ namespace VrBattlegrounds.Editor.Gameplay
                     clip = point.Clip, weaponClip = point.WeaponClip, sourceKind = point.SourceKind, sourceSide = point.SourceSide.ToString(),
                     time = Round(point.Time), frame = Round(point.Time * point.FrameRate),
                     heldBy = Sides.Where(point.Samples.ContainsKey).Select(s => s.ToString()).ToArray(),
-                    snaps = point.SnapSides().Select(s => $"{SnapFolder}/{point.Name}/{s.Side}{(s.Mirrored ? " (зеркало)" : "")}").ToArray(),
-                    check = point.Point == "Grip" || point.Point == "Support" ? null : "Эксперимент: кадр выбран автоматически — проверить глазами."
+                    snaps = point.SnapLabels().Select(s => $"{(point.SnapRoot != null ? point.SnapRoot + "/" : "")}{SnapFolder}/{point.Name}/{s.Side}" +
+                                                           $"{(s.Mirrored ? " (зеркало)" : "")}").ToArray(),
+                    check = point.Computed != null ? ComputedCheck
+                          : point.Point == "Grip" || point.Point == "Support" ? null : "Эксперимент: кадр выбран автоматически — проверить глазами."
                 });
-                if (snapProblems.TryGetValue(point.Name, out string problem)) (point.MirrorSnaps ? errors : warnings).Add($"{point.Prefab}/{point.Name}: {problem}");
+                if (snapProblems.TryGetValue(point.Name, out string problem)) (point.Experimental ? warnings : errors).Add($"{point.Prefab}/{point.Name}: {problem}");
             }
 
             log.Reports.Add(WriteReport(item, report));
+            if (actionReport != null) log.Reports.Add(WriteActionReport(actionReport));
         }
 
         private static OrigPoint GripPoint(Item item, HandsPackPoseRecipe recipe)
@@ -396,7 +570,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 point.SourceKind = PackClipGripSource.Hands;
                 point.Clip = recipe.Clip;
                 point.Time = recipe.Time;
-                point.Samples[recipe.PackSide] = HandsPackPoseImporter.ExtractSample(recipe);
+                // Рецепт MEF-импорта называет меш рук и кость корпуса; выведенный из рецепта оружия (RecipeGrips) — нет.
+                point.Samples[recipe.PackSide] = recipe.Mesh != null ? HandsPackPoseImporter.ExtractSample(recipe) : RecipeGripSample(item.Hands, recipe);
             }
             else
             {
@@ -411,6 +586,20 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             return point;
+        }
+
+        /// <summary>
+        /// Кадр Grip/Support по рецепту оружия: модель пака папки (как <see cref="HandsPackWeapon" />), корпус — рендерер
+        /// <see cref="HandsPackWeaponRecipe.BodyPart" /> и его главная кость (как <c>HandsPackPoseImporter.ExtractSample</c> с
+        /// явными именами).
+        /// </summary>
+        private static HandsPackPoseExtractor.Sample RecipeGripSample(HandsPackWeaponRecipe r, HandsPackPoseRecipe recipe)
+        {
+            if (r == null) throw new InvalidOperationException($"{recipe.Pose}: нет рецепта оружия для кадра без меша рук");
+            GameObject model = HandsModel(r.Folder);
+            SkinnedMeshRenderer body = SkinOf(model, r.BodyPart);
+            return HandsPackPoseExtractor.Extract(model, HandsClip(r.Folder, recipe.Clip), recipe.Time, recipe.PackSide, body.sharedMesh.name,
+                                                  body.bones[MainBone(body)].name);
         }
 
         // ── Поза ────────────────────────────────────────────────────────────
@@ -491,17 +680,22 @@ namespace VrBattlegrounds.Editor.Gameplay
                 finally { PrefabUtility.UnloadPrefabContents(root); }
                 Canonicalize(prefabPath);
 
-                Transform grabs = GrabsOf(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath).transform);
-                Transform orig = grabs.Find(SnapFolder);
+                // Допустимая разница — объекты Orig каждого контейнера точек и дописанные m_Children самих контейнеров.
+                Transform saved = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath).transform;
                 var free = new HashSet<long>();
-                foreach (Transform t in orig.GetComponentsInChildren<Transform>(true))
-                {
-                    AddFileId(free, t);
-                    AddFileId(free, t.gameObject);
-                }
-
                 var additive = new HashSet<long>();
-                AddFileId(additive, grabs);
+                foreach (Transform container in points.Select(p => ContainerOf(saved, p)).Where(c => c != null).Distinct())
+                {
+                    Transform orig = container.Find(SnapFolder);
+                    if (orig == null) continue;
+                    foreach (Transform t in orig.GetComponentsInChildren<Transform>(true))
+                    {
+                        AddFileId(free, t);
+                        AddFileId(free, t.gameObject);
+                    }
+
+                    AddFileId(additive, container);
+                }
 
                 string written = File.ReadAllText(prefabPath);
                 if (written == baseline) throw new InvalidOperationException("применение не дошло до файла префаба");
@@ -537,32 +731,54 @@ namespace VrBattlegrounds.Editor.Gameplay
             return root.Find("MeshContainer/Grabs") ?? root.Find("Grabs") ?? root;
         }
 
+        /// <summary>
+        /// Контейнер <c>Orig</c> точки: узел <see cref="OrigPoint.SnapRoot" /> (граббабл детали механики), иначе
+        /// <see cref="GrabsOf" /> корня; нет узла — null.
+        /// </summary>
+        private static Transform ContainerOf(Transform root, OrigPoint point) => point.SnapRoot == null ? GrabsOf(root) : root.Find(point.SnapRoot);
+
         /// <summary>Snap-точки предмета в загруженном содержимом префаба: создать недостающие, сдвинуть отличающиеся.</summary>
         private static void PlaceSnaps(GameObject root, List<OrigPoint> points, Dictionary<string, string> problems,
             out int createdCount, out int changedCount, out int same)
         {
-            Transform grabs = GrabsOf(root.transform);
-            Transform orig = grabs.Find(SnapFolder);
             var created = new HashSet<GameObject>();
             changedCount = 0;
             same = 0;
             foreach (OrigPoint point in points)
             {
+                Transform container = ContainerOf(root.transform, point);
                 Transform body = root.transform.Find(point.BodyPath);
-                string bodyProblem = body == null ? $"нет детали {point.BodyPath}" : point.CheckBody?.Invoke(body);
+                Transform mirror = point.MirrorFramePath != null ? root.transform.Find(point.MirrorFramePath) : null;
+                string bodyProblem = container == null ? $"нет узла {point.SnapRoot}"
+                    : body == null ? $"нет детали {point.BodyPath}"
+                    : point.MirrorFramePath != null && mirror == null ? $"нет корпуса {point.MirrorFramePath} для зеркала второй руки"
+                    : point.CheckBody?.Invoke(body);
+                (Vector3 Position, Quaternion Rotation, string Problem) computed = default;
+                if (bodyProblem == null && point.Computed != null)
+                {
+                    computed = point.Computed(root.transform);
+                    bodyProblem = computed.Problem;
+                }
+
                 if (bodyProblem != null)
                 {
                     problems[point.Name] = bodyProblem;
                     continue;
                 }
 
-                foreach (var (side, _, sample) in point.SnapSides())
-                {
-                    sample.PalmInBody(side, body.lossyScale.x / sample.BodyScale, out Vector3 position, out Quaternion rotation);
-                    Vector3 worldPosition = body.position + body.rotation * position;
-                    Quaternion worldRotation = body.rotation * rotation;
+                // Расчётная точка: рамка ладони SourceSide из геометрии детали, вторая рука — зеркало по корпусу.
+                IEnumerable<(UxrHandSide Side, Vector3 Position, Quaternion Rotation)> poses = point.Computed != null
+                    ? Sides.Select(side =>
+                    {
+                        if (side == point.SourceSide) return (side, computed.Position, computed.Rotation);
+                        MirrorAcross(mirror, computed.Position, computed.Rotation, out Vector3 p, out Quaternion r);
+                        return (side, p, r);
+                    }).ToList()
+                    : point.SnapSides().Select(s => SampleSnap(s.Side, s.Mirrored, s.Sample, body, mirror)).ToList();
 
-                    orig = orig != null ? orig : Child(grabs, SnapFolder, created);
+                foreach (var (side, worldPosition, worldRotation) in poses)
+                {
+                    Transform orig = Child(container, SnapFolder, created);
                     Transform node = Child(Child(orig, point.Name, created), side.ToString(), created);
                     if (created.Contains(node.gameObject))
                     {
@@ -581,6 +797,23 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             createdCount = created.Count;
+        }
+
+        /// <summary>Рамка ладони руки по кадру пака в мире префаба: снятая рука — от детали, зеркальная — от детали или корпуса.</summary>
+        private static (UxrHandSide Side, Vector3 Position, Quaternion Rotation) SampleSnap(UxrHandSide side, bool mirrored, GripSample sample, Transform body,
+                                                                                         Transform mirror)
+        {
+            float k = body.lossyScale.x / sample.BodyScale;
+            if (mirrored && mirror != null)
+            {
+                // Деталь механики: рамка ладони снятой руки на детали — в мир, затем зеркало по боковой оси корпуса.
+                sample.PalmInBody(sample.Side, k, out Vector3 own, out Quaternion ownRotation);
+                MirrorAcross(mirror, body.position + body.rotation * own, body.rotation * ownRotation, out Vector3 worldPosition, out Quaternion worldRotation);
+                return (side, worldPosition, worldRotation);
+            }
+
+            sample.PalmInBody(side, k, out Vector3 position, out Quaternion rotation);
+            return (side, body.position + body.rotation * position, body.rotation * rotation);
         }
 
         /// <summary>Пересохранить префаб до устойчивых байтов (с каноном после каждого сохранения).</summary>
@@ -621,6 +854,22 @@ namespace VrBattlegrounds.Editor.Gameplay
             Vector3 position = root.InverseTransformPoint(worldPosition);
             Quaternion rotation = Quaternion.Inverse(root.rotation) * worldRotation;
             return Vector3.Distance(current.Position, position) <= 1e-5f && Quaternion.Angle(current.Rotation, rotation) <= 1e-3f;
+        }
+
+        /// <summary>
+        /// Зеркало рамки ладони по боковой оси (x) корпуса <paramref name="frame" />: то же правило, что
+        /// <see cref="GripSample.ForSide" /> для хвата оружия (x позиции — с обратным знаком, поворот — (x, −y, −z, w)), но в осях
+        /// корпуса, а не детали: у детали механики своё начало и оси, её «боковая ось» — не плоскость симметрии оружия.
+        /// </summary>
+        private static void MirrorAcross(Transform frame, Vector3 worldPosition, Quaternion worldRotation, out Vector3 position, out Quaternion rotation)
+        {
+            Quaternion inverse = Quaternion.Inverse(frame.rotation);
+            Vector3 local = inverse * (worldPosition - frame.position);
+            Quaternion localRotation = inverse * worldRotation;
+            local.x = -local.x;
+            localRotation = new Quaternion(localRotation.x, -localRotation.y, -localRotation.z, localRotation.w);
+            position = frame.position + frame.rotation * local;
+            rotation = frame.rotation * localRotation;
         }
 
         private static void AddFileId(HashSet<long> ids, Object assetObject)
@@ -730,51 +979,63 @@ namespace VrBattlegrounds.Editor.Gameplay
             MagazineSource m = item.Magazine;
             Window best = null;
             List<Window> bestClip = null;
-            foreach (string part in new[] { m.Part }.Concat(m.AlternateParts))
+            void Scan(IEnumerable<(AnimationClip Clip, AnimationClip WeaponClip)> clips)
             {
-                foreach ((AnimationClip clip, AnimationClip weaponClip) in ReloadClips(m))
+                foreach (string part in new[] { m.Part }.Concat(m.AlternateParts))
                 {
-                    List<Window>[] windows;
-                    float rate = clip.frameRate > 0f ? clip.frameRate : 30f;
-                    try
+                    foreach ((AnimationClip clip, AnimationClip weaponClip) in clips)
                     {
-                        using ClipRig rig = m.Kin != null ? (ClipRig)new KinemationRig(m.Kin, clip, weaponClip, part) : new HandsRig(m, clip, part);
-                        List<Frame> frames = ScanFrames(rig, clip.length, rate);
-                        windows = Sides.Select(s => Windows(frames, s, rig.Points.Length > 0 ? NearMesh : NearOrigin)).ToArray();
-                        for (int s = 0; s < Sides.Length; s++)
+                        List<Window>[] windows;
+                        float rate = clip.frameRate > 0f ? clip.frameRate : 30f;
+                        try
                         {
-                            Window top = windows[s].OrderByDescending(w => w.Frames).ThenBy(w => w.RigidMm).FirstOrDefault();
-                            report.magazineScan.Add(top != null
-                                ? top.Report(clip, weaponClip, part, rig.Points.Length > 0)
-                                : new ScanReport
-                                {
-                                    clip = clip.name, weaponClip = weaponClip?.name, part = part, side = Sides[s].ToString(), distance = rig.Points.Length > 0 ? "меш" : "начало детали",
-                                    result = "нет окна", minPalmMm = Round(frames.Where(f => f.Seat >= MinSeat).Select(f => f.Palm[s] * 1000f).DefaultIfEmpty(-1f).Min()),
-                                    seatMm = Round(frames.Max(f => f.Seat) * 1000f)
-                                });
-                            foreach (Window w in windows[s])
+                            using ClipRig rig = m.Kin != null ? (ClipRig)new KinemationRig(m.Kin, clip, weaponClip, part) : new HandsRig(HandsModel(m.Folder), clip, part, m.Body);
+                            List<Frame> frames = ScanFrames(rig, clip.length, rate);
+                            windows = Sides.Select(s => Windows(frames, s, rig.Points.Length > 0 ? NearMesh : NearOrigin)).ToArray();
+                            for (int s = 0; s < Sides.Length; s++)
                             {
-                                w.Clip = clip;
-                                w.WeaponClip = weaponClip;
-                                w.Part = part;
-                                w.Rate = rate;
+                                Window top = windows[s].OrderByDescending(w => w.Frames).ThenBy(w => w.RigidMm).FirstOrDefault();
+                                report.magazineScan.Add(top != null
+                                    ? top.Report(clip, weaponClip, part, rig.Points.Length > 0)
+                                    : new ScanReport
+                                    {
+                                        clip = clip.name, weaponClip = weaponClip?.name, part = part, side = Sides[s].ToString(), distance = rig.Points.Length > 0 ? "меш" : "начало детали",
+                                        result = "нет окна", minPalmMm = Round(frames.Where(f => f.Seat >= MinSeat).Select(f => f.Palm[s] * 1000f).DefaultIfEmpty(-1f).Min()),
+                                        seatMm = Round(frames.Max(f => f.Seat) * 1000f)
+                                    });
+                                foreach (Window w in windows[s])
+                                {
+                                    w.Clip = clip;
+                                    w.WeaponClip = weaponClip;
+                                    w.Part = part;
+                                    w.Rate = rate;
+                                }
                             }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        report.magazineScan.Add(new ScanReport { clip = clip.name, weaponClip = weaponClip?.name, part = part, result = "ошибка: " + e.Message });
-                        continue;
-                    }
+                        catch (Exception e)
+                        {
+                            report.magazineScan.Add(new ScanReport { clip = clip.name, weaponClip = weaponClip?.name, part = part, result = "ошибка: " + e.Message });
+                            continue;
+                        }
 
-                    Window candidate = windows.SelectMany(w => w).OrderByDescending(w => w.EndTime - w.StartTime).ThenBy(w => w.RigidMm).FirstOrDefault();
-                    if (candidate != null && (best == null || candidate.EndTime - candidate.StartTime > best.EndTime - best.StartTime + 1e-4f ||
-                                              Mathf.Abs(candidate.EndTime - candidate.StartTime - (best.EndTime - best.StartTime)) <= 1e-4f && candidate.RigidMm < best.RigidMm))
-                    {
-                        best = candidate;
-                        bestClip = windows.SelectMany(w => w).ToList();
+                        Window candidate = windows.SelectMany(w => w).OrderByDescending(w => w.EndTime - w.StartTime).ThenBy(w => w.RigidMm).FirstOrDefault();
+                        if (candidate != null && (best == null || candidate.EndTime - candidate.StartTime > best.EndTime - best.StartTime + 1e-4f ||
+                                                  Mathf.Abs(candidate.EndTime - candidate.StartTime - (best.EndTime - best.StartTime)) <= 1e-4f && candidate.RigidMm < best.RigidMm))
+                        {
+                            best = candidate;
+                            bestClip = windows.SelectMany(w => w).ToList();
+                        }
                     }
                 }
+            }
+
+            Scan(ReloadClips(m));
+            // Запасной клип KINEMATION — проверка магазина Mag_Check, только если в клипах перезарядки окна нет (TR15, решение 2026-10-23).
+            bool magCheck = false;
+            if (best == null && m.Kin != null)
+            {
+                Scan(KinemationPairs(m.Kin, name => name.Contains("Mag_Check")));
+                magCheck = best != null;
             }
 
             if (best == null)
@@ -791,13 +1052,14 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 Pack = item.Pack, Item = item.Name, Point = m.Point, Prefab = m.MagazinePath, BodyPath = "Mesh", Clip = best.Clip.name,
                 WeaponClip = best.WeaponClip?.name, Time = best.MidTime, FrameRate = best.Rate, SourceSide = best.Side, MirrorSnaps = false,
-                SourceKind = m.Kin != null ? PackClipGripSource.Kinemation : PackClipGripSource.Hands
+                Experimental = true, SourceKind = m.Kin != null ? PackClipGripSource.Kinemation : PackClipGripSource.Hands
             };
             foreach (UxrHandSide side in holding) point.Samples[side] = MagazineSample(m, best, side);
             point.CheckBody = MagazineBodyCheck(m);
             report.magazineNote = $"выбран {best.Clip.name}{(best.WeaponClip != null ? " + " + best.WeaponClip.name : "")}, деталь {best.Part}, " +
                                   $"кадры {best.Start}–{best.End} ({best.StartTime:F3}–{best.EndTime:F3} с), середина {best.MidTime:F3} с; " +
-                                  $"держит: {string.Join(", ", holding)}. Эксперимент — проверить глазами.";
+                                  $"держит: {string.Join(", ", holding)}." +
+                                  (magCheck ? " Запасной клип Mag_Check: в клипах перезарядки окна нет." : "") + " Эксперимент — проверить глазами.";
             return point;
         }
 
@@ -810,7 +1072,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                                                        m.Kin.RestClip != null ? WeaponClip(m.Kin, m.Kin.RestClip) : null, w.WeaponClip);
             }
 
-            GameObject model = HandsModel(m);
+            GameObject model = HandsModel(m.Folder);
             SkinnedMeshRenderer part = SkinOf(model, w.Part);
             HandsPackPoseExtractor.Sample sample = HandsPackPoseExtractor.Extract(model, w.Clip, w.MidTime, side, part.sharedMesh.name,
                                                                                   part.bones[MainBone(part)].name);
@@ -826,13 +1088,19 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Деталь <c>Mesh</c> префаба магазина — меш той же детали пака (иначе оси snap не те).</summary>
-        private static Func<Transform, string> MagazineBodyCheck(MagazineSource m)
+        private static Func<Transform, string> MagazineBodyCheck(MagazineSource m) => PartBodyCheck(m.Kin, m.Folder, m.Part);
+
+        /// <summary>
+        /// Деталь префаба — меш той же детали пака: у KINEMATION вырезанный меш <c>&lt;ствол&gt;_&lt;Clean(деталь)&gt;</c>
+        /// (<see cref="KinemationWeapon.MeshOf" />), у Hands — меш рендерера детали модели пака.
+        /// </summary>
+        private static Func<Transform, string> PartBodyCheck(KinemationWeaponRecipe kin, string folder, string part)
         {
-            string expected = m.Kin != null ? $"{m.Kin.Weapon.Name}_{KinemationWeapon.Clean(m.Part)}" : SkinOf(HandsModel(m), m.Part).sharedMesh.name;
+            string expected = kin != null ? $"{kin.Weapon.Name}_{KinemationWeapon.Clean(part)}" : SkinOf(HandsModel(folder), part).sharedMesh.name;
             return body =>
             {
                 Mesh mesh = body.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null;
-                return mesh != null && mesh.name == expected ? null : $"деталь Mesh префаба — не меш {expected} ({(mesh != null ? mesh.name : "нет меша")})";
+                return mesh != null && mesh.name == expected ? null : $"деталь {body.name} префаба — не меш {expected} ({(mesh != null ? mesh.name : "нет меша")})";
             };
         }
 
@@ -848,9 +1116,18 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
 
             // Клип рук A_FP_<ствол>_Reload_* и синхронный клип оружия A_W_<ствол>_Reload_* (Tactical = Tac).
-            string folder = $"{KinemationWeapon.Pack}Animations/{m.Kin.AnimFolder}/";
-            List<IGrouping<string, AnimationClip>> weapon = Clips(folder + "Weapon").Where(c => c.name.Contains("_Reload")).GroupBy(c => ReloadKey(c.name, "A_W_")).ToList();
-            foreach (IGrouping<string, AnimationClip> character in Clips(folder + "Character").Where(c => c.name.Contains("_Reload")).GroupBy(c => c.name)
+            foreach ((AnimationClip Clip, AnimationClip WeaponClip) pair in KinemationPairs(m.Kin, name => name.Contains("_Reload"))) yield return pair;
+        }
+
+        /// <summary>
+        /// Пары клипов KINEMATION: клип рук <c>A_FP_&lt;ствол&gt;_*</c> и синхронный клип оружия <c>A_W_&lt;ствол&gt;_*</c>
+        /// (Tactical = Tac), оба с именем по <paramref name="filter" />; клип рук без пары не берётся.
+        /// </summary>
+        private static IEnumerable<(AnimationClip Clip, AnimationClip WeaponClip)> KinemationPairs(KinemationWeaponRecipe k, Func<string, bool> filter)
+        {
+            string folder = $"{KinemationWeapon.Pack}Animations/{k.AnimFolder}/";
+            List<IGrouping<string, AnimationClip>> weapon = Clips(folder + "Weapon").Where(c => filter(c.name)).GroupBy(c => ReloadKey(c.name, "A_W_")).ToList();
+            foreach (IGrouping<string, AnimationClip> character in Clips(folder + "Character").Where(c => filter(c.name)).GroupBy(c => c.name)
                                                                                           .OrderBy(g => g.Key, StringComparer.Ordinal))
             {
                 AnimationClip clip = PreferModel(character);
@@ -860,6 +1137,419 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         private static string ReloadKey(string name, string prefix) => (name.StartsWith(prefix) ? name.Substring(prefix.Length) : name).Replace("Tactical", "Tac");
+
+        // ── Деталь механики ─────────────────────────────────────────────────
+
+        /// <summary>Кадры одного клипа детали механики.</summary>
+        private sealed class ClipScan
+        {
+            public AnimationClip Clip, WeaponClip;
+            public float Rate;
+            public bool Mesh;
+            public List<Frame> Frames;
+        }
+
+        /// <summary>
+        /// Затвор: кадр, где рука ведёт деталь, по всем клипам пака (у KINEMATION — пары клипов рук и оружия). Сдвиг детали —
+        /// от покоя (клип покоя оружия), ход — наибольший сдвиг по всем клипам. Окно руки — подряд кадры, где деталь сдвинута
+        /// не меньше <see cref="ActionSeatShare" /> хода, ладонь у меша детали и рука жёстко идёт с ней; окно, в котором деталь
+        /// почти не движется (размах меньше <see cref="ActionRangeShare" /> хода — затворная задержка, рука просто рядом), не
+        /// берётся. Выбор — середина самого длинного окна, как у магазина.
+        /// </summary>
+        private static OrigPoint SlidePoint(Item item, ActionReport report)
+        {
+            ActionSource a = item.Action;
+            var scans = new List<ClipScan>();
+            foreach ((AnimationClip clip, AnimationClip weaponClip) in ActionClips(a))
+            {
+                float rate = clip.frameRate > 0f ? clip.frameRate : 30f;
+                try
+                {
+                    using ClipRig rig = ActionRig(a, clip, weaponClip);
+                    scans.Add(new ClipScan
+                    {
+                        Clip = clip, WeaponClip = weaponClip, Rate = rate, Mesh = rig.Points.Length > 0, Frames = ScanFrames(rig, clip.length, rate, rig.RestSeat)
+                    });
+                }
+                catch (Exception e)
+                {
+                    report.scan.Add(new ActionScanReport { clip = clip.name, weaponClip = weaponClip?.name, result = "ошибка: " + e.Message });
+                }
+            }
+
+            if (scans.Count == 0)
+            {
+                report.note = report.scan.Count == 0 ? "в паке нет клипов для этой детали" : "клипы детали не прочитаны (см. scan)";
+                return null;
+            }
+
+            float travel = scans.SelectMany(s => s.Frames).Max(f => f.Seat);
+            report.travelMm = Round(travel * 1000f);
+            if (travel < MinActionTravel)
+            {
+                report.note = $"деталь в клипах пака не ходит: наибольший сдвиг от покоя {travel * 1000f:F1} мм";
+                return null;
+            }
+
+            float minSeat = travel * ActionSeatShare, minRange = travel * ActionRangeShare;
+            report.minSeatMm = Round(minSeat * 1000f);
+            report.minRangeMm = Round(minRange * 1000f);
+            // Два яруса: окна, где деталь движется (рука её ведёт), и запасные — рука на сдвинутой детали жёстко с ней, но
+            // деталь в окне стоит (AK105: рукоятка взвода удержана в заднем положении). Запасные — только если первых нет:
+            // на затворной задержке такое окно бывает ложным (рука рядом), поэтому кадр помечается в отчёте.
+            Window best = null, bestStill = null;
+            List<Window> bestClip = null, bestStillClip = null;
+            foreach (ClipScan scan in scans)
+            {
+                var windows = new List<Window>();
+                var still = new List<Window>();
+                for (int s = 0; s < Sides.Length; s++)
+                {
+                    List<Window> all = Windows(scan.Frames, Sides[s], scan.Mesh ? NearMesh : NearOrigin, minSeat);
+                    foreach (Window w in all)
+                    {
+                        w.Clip = scan.Clip;
+                        w.WeaponClip = scan.WeaponClip;
+                        w.Part = a.Part;
+                        w.Rate = scan.Rate;
+                    }
+
+                    List<Window> moving = all.Where(w => w.SeatRangeMm >= minRange * 1000f).ToList();
+                    List<Window> standing = all.Except(moving).ToList();
+                    int index = s;
+                    Window top = moving.OrderByDescending(w => w.Frames).ThenBy(w => w.RigidMm).FirstOrDefault();
+                    Window topStill = standing.OrderByDescending(w => w.Frames).ThenBy(w => w.RigidMm).FirstOrDefault();
+                    ActionScanReport row = top != null ? ActionScanReport.Of(top, "окно")
+                        : topStill != null ? ActionScanReport.Of(topStill, "окно без движения детали (запасное)")
+                        : new ActionScanReport { clip = scan.Clip.name, weaponClip = scan.WeaponClip?.name, side = Sides[s].ToString(), result = "нет окна" };
+                    row.distance = scan.Mesh ? "меш" : "начало детали";
+                    row.minPalmMm = Round(scan.Frames.Where(f => f.Seat >= minSeat).Select(f => f.Palm[index] * 1000f).DefaultIfEmpty(-1f).Min());
+                    row.maxSeatMm = Round(scan.Frames.Max(f => f.Seat) * 1000f);
+                    report.scan.Add(row);
+                    windows.AddRange(moving);
+                    still.AddRange(standing);
+                }
+
+                Window candidate = windows.OrderByDescending(w => w.EndTime - w.StartTime).ThenBy(w => w.RigidMm).FirstOrDefault();
+                if (Longer(candidate, best))
+                {
+                    best = candidate;
+                    bestClip = windows;
+                }
+
+                Window candidateStill = still.OrderByDescending(w => w.EndTime - w.StartTime).ThenBy(w => w.RigidMm).FirstOrDefault();
+                if (Longer(candidateStill, bestStill))
+                {
+                    bestStill = candidateStill;
+                    bestStillClip = still;
+                }
+            }
+
+            bool standby = false;
+            if (best == null && bestStill != null)
+            {
+                best = bestStill;
+                bestClip = bestStillClip;
+                standby = true;
+            }
+
+            if (best == null)
+            {
+                report.note = "ни в одном клипе рука не держит деталь жёстко (см. scan)";
+                return null;
+            }
+
+            // Вторая рука — снятая с клипа, только если в том же клипе и кадре тоже ведёт деталь; иначе — зеркало.
+            UxrHandSide[] holding = Sides.Where(s => s == best.Side || bestClip.Any(w => w.Side == s && w.Start <= best.Mid && best.Mid <= w.End)).ToArray();
+            OrigPoint point = ActionOrigPoint(item, best.Clip, best.WeaponClip, best.MidTime, best.Rate, best.Side);
+            foreach (UxrHandSide side in holding) point.Samples[side] = ActionSample(a, best.Clip, best.WeaponClip, best.MidTime, side);
+            report.note = $"выбран {best.Clip.name}{(best.WeaponClip != null ? " + " + best.WeaponClip.name : "")}, " +
+                          $"кадры {best.Start}–{best.End} ({best.StartTime:F3}–{best.EndTime:F3} с), середина {best.MidTime:F3} с, сдвиг {best.SeatMm:F0} мм " +
+                          $"из хода {travel * 1000f:F0} мм; держит: {string.Join(", ", holding)}." +
+                          (standby ? " Запасное окно: рука жёстко на сдвинутой детали, но деталь в окне не движется." : "") +
+                          " Эксперимент — проверить глазами.";
+            return point;
+        }
+
+        /// <summary>
+        /// Помпа: кадр позы оружия t=0 (<see cref="HandsPackWeaponRecipe.PoseClip" />), левая рука — вторая рука пака держит
+        /// цевьё в прицеливании (решение 2026-10-23). Клип хода (<see cref="HandsPackWeaponRecipe.ActionClip" />) проверяет,
+        /// что рука идёт с помпой жёстко. Ладонь у меша (<see cref="NearMesh" />) — кадр берётся; дальше, до
+        /// <see cref="PumpNear" />, — только если рука жёстко идёт с помпой весь её ход (<see cref="PumpPointRule" />).
+        /// Ладонь у меша, но не жёстко — кадр записывается с предупреждением.
+        /// </summary>
+        private static OrigPoint PumpPoint(Item item, ActionReport report)
+        {
+            ActionSource a = item.Action;
+            if (a.Kin != null)
+            {
+                report.note = "помпа KINEMATION: правило кадра не задано";
+                return null;
+            }
+
+            const UxrHandSide side = UxrHandSide.Left;
+            const int s = 0;
+            HandsPackWeaponRecipe r = a.Recipe;
+            GameObject model = HandsModel(r.Folder);
+            AnimationClip pose = HandsClip(r.Folder, r.PoseClip);
+            float palm;
+            bool mesh;
+            using (var poseRig = new HandsRig(model, pose, a.Part, r.BodyPart))
+            {
+                palm = ScanFrames(poseRig, 0f, 30f)[0].Palm[s];
+                mesh = poseRig.Points.Length > 0;
+            }
+
+            string distance = mesh ? "меш" : "начало детали";
+            bool near = palm <= (mesh ? NearMesh : NearOrigin);
+            bool rigid = false, drives = false;
+            string rigidity = "клипа хода нет — жёсткость не проверена";
+            if (!string.IsNullOrEmpty(r.ActionClip))
+            {
+                AnimationClip shot = HandsClip(r.Folder, r.ActionClip);
+                float rate = shot.frameRate > 0f ? shot.frameRate : 30f;
+                using var shotRig = new HandsRig(model, shot, a.Part, r.BodyPart);
+                List<Frame> frames = ScanFrames(shotRig, shot.length, rate);
+                float mm = frames.Max(f => Vector3.Distance(f.RelativePosition[s], frames[0].RelativePosition[s])) * 1000f;
+                float deg = frames.Max(f => Quaternion.Angle(f.RelativeRotation[s], frames[0].RelativeRotation[s]));
+                float stroke = frames.Max(f => f.Seat) * 1000f;
+                float palmMax = frames.Max(f => f.Palm[s]);
+                rigid = mm <= RigidMeters * 1000f && deg <= RigidDegrees;
+                drives = rigid && stroke >= MinActionTravel * 1000f && palmMax <= PumpNear;
+                report.scan.Add(new ActionScanReport
+                {
+                    clip = shot.name, side = side.ToString(), distance = distance, result = rigid ? "жёстко" : "не жёстко", frames = frames.Count,
+                    rigidMm = Round(mm), rigidDeg = Round(deg), seatRangeMm = Round(stroke), palmMm = Round(palmMax * 1000f)
+                });
+                rigidity = $"в {shot.name} рука {(rigid ? "идёт с помпой жёстко" : "не идёт с помпой жёстко")}: {mm:F1} мм / {deg:F1}° за ход {stroke:F0} мм";
+            }
+
+            bool accepted = near || palm <= PumpNear && drives;
+            report.scan.Insert(0, new ActionScanReport
+            {
+                clip = pose.name, side = side.ToString(), distance = distance, frames = 1, palmMm = Round(palm * 1000f),
+                result = near ? "кадр позы" : accepted ? $"кадр позы: ладонь дальше {NearMesh * 1000f:F0} мм, но рука ведёт помпу весь ход" : "ладонь не у детали"
+            });
+            if (!accepted)
+            {
+                report.note = $"в кадре позы {pose.name} t=0 левая ладонь в {palm * 1000f:F0} мм от детали и не ведёт помпу жёстко ({rigidity}) — не на помпе";
+                return null;
+            }
+
+            if (near && !rigid && !string.IsNullOrEmpty(r.ActionClip)) report.warning = $"{rigidity} — кадр позы записан, проверить глазами";
+            OrigPoint point = ActionOrigPoint(item, pose, null, 0f, pose.frameRate, side);
+            point.Samples[side] = ActionSample(a, pose, null, 0f, side);
+            report.note = $"кадр позы {pose.name} t=0, левая рука, ладонь в {palm * 1000f:F0} мм от детали; {rigidity}. Эксперимент — проверить глазами.";
+            return point;
+        }
+
+        /// <summary>Точка детали механики: snap — в граббабле детали, в осях детали; вторая рука — зеркало по корпусу.</summary>
+        private static OrigPoint ActionOrigPoint(Item item, AnimationClip clip, AnimationClip weaponClip, float time, float rate, UxrHandSide source)
+        {
+            ActionSource a = item.Action;
+            return new OrigPoint
+            {
+                Pack = item.Pack, Item = item.Name, Point = a.Point, Prefab = item.WeaponPath, BodyPath = a.PrefabPart, SnapRoot = a.Point,
+                MirrorFramePath = a.MirrorFrame, MirrorSnaps = true, Experimental = true, Clip = clip.name, WeaponClip = weaponClip?.name, Time = time,
+                FrameRate = rate, SourceSide = source, SourceKind = a.Kin != null ? PackClipGripSource.Kinemation : PackClipGripSource.Hands,
+                CheckBody = PartBodyCheck(a.Kin, a.Recipe.Folder, a.Part)
+            };
+        }
+
+        // ── Расчётная точка детали механики ─────────────────────────────────
+
+        public const string ActionSourcePack = "pack";
+        public const string ActionSourceComputed = "computed";
+        private const string ComputedCheck = "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.";
+
+        /// <summary>Поза-шаблон расчётной точки затвора — SDK Cyborg <c>Grab</c> (её сейчас временно носят записи Cyborg на затворах).</summary>
+        public const string ComputedSlideTemplate = "Assets/ThirdParty/UltimateXR/Runtime/Art/Avatars/Cyborg/HandPoses/Grab.asset";
+
+        /// <summary>Поза-шаблон расчётной точки помпы — SDK Cyborg <c>GrabClaw</c> (её носят временные записи Cyborg на помпе FabarmSDASS и затворе AR15).</summary>
+        public const string ComputedPumpTemplate = "Assets/ThirdParty/UltimateXR/Runtime/Art/Avatars/Cyborg/HandPoses/GrabClaw.asset";
+
+        private const float PalmOffset = 0.02f; // центр ладони SDK над поверхностью хвата (толщина ладони), м мира префаба
+        private const float RearInset = 0.02f;  // от заднего торца детали вдоль хода, м; не больше 30 % длины детали
+
+        /// <summary>
+        /// Расчётная точка детали механики без источника в паке (решение пользователя 2026-10-23: snap ставится расчётно, хват
+        /// доводится в редакторе). Рука — левая (вторая рука держит деталь), правая — зеркало по боковой оси корпуса.
+        /// Поза пальцев — шаблон SDK (<see cref="ComputedSlideTemplate" />, <see cref="ComputedPumpTemplate" />); у позы Blend —
+        /// смесь открытой и закрытой с <see cref="AvatarGripRegistration.PoseBlend" />, как её показывает запись хвата.
+        /// Геометрия — <see cref="ComputeActionPalm" />.
+        /// </summary>
+        private static OrigPoint ComputedActionPoint(Item item, ActionReport report)
+        {
+            ActionSource a = item.Action;
+            string templatePath = a.Pump ? ComputedPumpTemplate : ComputedSlideTemplate;
+            var template = AssetDatabase.LoadAssetAtPath<UxrHandPoseAsset>(templatePath) ?? throw new FileNotFoundException($"нет позы-шаблона {templatePath}");
+            UxrHandDescriptor Hand(UxrHandSide side)
+            {
+                if (template.PoseType == UxrHandPoseType.Fixed) return template.GetHandDescriptor(side);
+                var hand = new UxrHandDescriptor();
+                hand.CopyFrom(template.GetHandDescriptor(side, UxrBlendPoseType.OpenGrip));
+                hand.InterpolateTo(template.GetHandDescriptor(side, UxrBlendPoseType.ClosedGrip), AvatarGripRegistration.PoseBlend);
+                return hand;
+            }
+
+            report.source = ActionSourceComputed;
+            report.check = ComputedCheck;
+            report.computedTemplate = templatePath + (template.PoseType == UxrHandPoseType.Fixed ? "" : $" (Blend, смесь {AvatarGripRegistration.PoseBlend})");
+            report.note = $"расчётная точка: {(report.note != null ? "в паке — " + report.note + "; " : "")}snap по геометрии {a.GripPrefabPart}, поза — шаблон " +
+                          $"{Path.GetFileNameWithoutExtension(templatePath)}. Проверить глазами.";
+            return new OrigPoint
+            {
+                Pack = item.Pack, Item = item.Name, Point = a.Point, Prefab = item.WeaponPath, BodyPath = a.PrefabPart, SnapRoot = a.Point,
+                MirrorFramePath = a.MirrorFrame, MirrorSnaps = false, Experimental = true, SourceSide = UxrHandSide.Left, SourceKind = ActionSourceComputed,
+                ComputedLeft = Hand(UxrHandSide.Left), ComputedRight = Hand(UxrHandSide.Right),
+                Computed = root =>
+                {
+                    var palm = ComputeActionPalm(root, a, out string rule);
+                    report.computedRule = rule;
+                    return palm;
+                }
+            };
+        }
+
+        /// <summary>
+        /// Рамка ладони левой руки на детали механики по геометрии префаба (мир содержимого префаба).
+        /// <list type="bullet">
+        /// <item>Ось хода <c>pull</c> (от покоя к оттянутой детали): ограничения перемещения граббабла детали
+        /// (<c>TranslationLimitsMin + Max</c> в осях его родителя — тот ход, что поставила сборка), иначе
+        /// <see cref="HandsPackWeaponRecipe.ActionTravelAxis" />, иначе назад по стволу (−Z корня).</item>
+        /// <item>Оси оружия вокруг хода: верх <c>U</c> — Y корня без составляющей хода, бок <c>L</c> = pull × U (≈ +X корня).</item>
+        /// <item>Опора — габарит меша ручки (<c>ActionGripPart</c>, иначе детали; нет меша — все меши граббабла) по осям pull/U/L.
+        /// Затвор: задний торец (на <see cref="RearInset" /> внутрь, не больше 30 % длины) по ходу, верх, середина по боку; ладонь
+        /// смотрит вниз. Помпа: середина по ходу, низ, середина по боку; ладонь смотрит вверх. Явный контакт ручки
+        /// <see cref="HandsPackWeaponRecipe.ActionGripContact" /> (в осях меша ручки) заменяет опору, наружу — ближайшая из ±U, ±L
+        /// к направлению от центра габарита к контакту.</item>
+        /// <item>Центр ладони — опора + наружу × <see cref="PalmOffset" />; универсальные оси кисти: вверх (тыл) — наружу, вперёд
+        /// (пальцы) — поперёк хода: ±(pull × наружу), к +L, а у бокового хвата — вниз.</item>
+        /// </list>
+        /// </summary>
+        private static (Vector3 Position, Quaternion Rotation, string Problem) ComputeActionPalm(Transform root, ActionSource a, out string rule)
+        {
+            rule = null;
+            Transform grabbable = root.Find(a.Point);
+            if (grabbable == null) return (default, default, $"нет граббабла {a.Point}");
+
+            Vector3 pull = Vector3.zero;
+            string axis = null;
+            if (grabbable.TryGetComponent(out UxrGrabbableObject g))
+            {
+                Vector3 travel = g.TranslationLimitsMin + g.TranslationLimitsMax;
+                if (travel.sqrMagnitude > 1e-10f)
+                {
+                    pull = (grabbable.parent != null ? grabbable.parent : root).TransformDirection(travel);
+                    axis = $"ход граббабла {travel.ToString("F3")}";
+                }
+            }
+
+            if (pull.sqrMagnitude < 1e-10f && a.Recipe.ActionTravelAxis.HasValue)
+            {
+                pull = root.TransformDirection(a.Recipe.ActionTravelAxis.Value);
+                axis = "ось хода рецепта";
+            }
+
+            if (pull.sqrMagnitude < 1e-10f)
+            {
+                pull = -root.forward;
+                axis = "назад по стволу (хода нет)";
+            }
+
+            pull.Normalize();
+            Vector3 up = Vector3.ProjectOnPlane(root.up, pull);
+            up = up.sqrMagnitude > 1e-8f ? up.normalized : Vector3.ProjectOnPlane(root.forward, pull).normalized;
+            Vector3 side = Vector3.Cross(pull, up).normalized;
+
+            Transform grip = root.Find(a.GripPrefabPart) ?? root.Find(a.PrefabPart);
+            MeshFilter[] filters = grip != null && grip.TryGetComponent(out MeshFilter own) && own.sharedMesh != null
+                ? new[] { own }
+                : grabbable.GetComponentsInChildren<MeshFilter>(true)
+                           .Where(f => f.sharedMesh != null && !f.GetComponentsInParent<Transform>(true).Any(t => t.name == SnapFolder || t.name == "Grabs")).ToArray();
+            if (filters.Length == 0) return (default, default, $"у {a.GripPrefabPart} и граббабла {a.Point} нет меша");
+
+            var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            var max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            foreach (MeshFilter filter in filters)
+            {
+                Bounds b = filter.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = filter.transform.TransformPoint(new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y,
+                                                                                  (i & 4) == 0 ? b.min.z : b.max.z));
+                    var c = new Vector3(Vector3.Dot(corner, pull), Vector3.Dot(corner, up), Vector3.Dot(corner, side));
+                    min = Vector3.Min(min, c);
+                    max = Vector3.Max(max, c);
+                }
+            }
+
+            Vector3 center = (min + max) * 0.5f;
+            Vector3 World(Vector3 c) => pull * c.x + up * c.y + side * c.z;
+            Vector3 contact, outward;
+            string anchor;
+            if (a.Recipe.ActionGripContact.HasValue && grip != null)
+            {
+                contact = grip.TransformPoint(a.Recipe.ActionGripContact.Value);
+                Vector3 d = contact - World(center);
+                float du = Vector3.Dot(d, up), ds = Vector3.Dot(d, side);
+                outward = Mathf.Abs(du) < 1e-4f && Mathf.Abs(ds) < 1e-4f ? up : Mathf.Abs(du) >= Mathf.Abs(ds) ? up * Mathf.Sign(du) : side * Mathf.Sign(ds);
+                anchor = $"контакт ручки рецепта {a.Recipe.ActionGripContact.Value.ToString("F3")}";
+            }
+            else if (a.Pump)
+            {
+                contact = World(new Vector3(center.x, min.y, center.z));
+                outward = -up;
+                anchor = "низ детали, середина по ходу";
+            }
+            else
+            {
+                float length = max.x - min.x;
+                contact = World(new Vector3(max.x - Mathf.Min(RearInset, 0.3f * length), max.y, center.z));
+                outward = up;
+                anchor = "верх у заднего торца детали";
+            }
+
+            Vector3 fingers = Vector3.Cross(pull, outward).normalized;
+            if (Mathf.Abs(Vector3.Dot(fingers, side)) > 0.5f ? Vector3.Dot(fingers, side) < 0f : Vector3.Dot(fingers, up) > 0f) fingers = -fingers;
+            string support = grip != null && filters.Length == 1 ? GripExtractor.PathOf(filters[0].transform, root) : "меши граббабла";
+            rule = $"ось хода — {axis}; опора — {anchor} ({support}, габарит по ходу/верху/боку {((max - min) * 1000f).ToString("F0")} мм); " +
+                   $"ладонь в {PalmOffset * 1000f:F0} мм наружу, пальцы поперёк хода";
+            return (contact + outward * PalmOffset, Quaternion.LookRotation(fingers, outward), null);
+        }
+
+        /// <summary>Окно длиннее (при равной длине — жёстче) прежнего лучшего — то же правило, что у магазина.</summary>
+        private static bool Longer(Window candidate, Window best) =>
+            candidate != null && (best == null || candidate.EndTime - candidate.StartTime > best.EndTime - best.StartTime + 1e-4f ||
+                                  Mathf.Abs(candidate.EndTime - candidate.StartTime - (best.EndTime - best.StartTime)) <= 1e-4f && candidate.RigidMm < best.RigidMm);
+
+        /// <summary>Клипы детали: у Hands — все клипы папки пака, у KINEMATION — все пары клипов рук и оружия.</summary>
+        private static IEnumerable<(AnimationClip Clip, AnimationClip WeaponClip)> ActionClips(ActionSource a) =>
+            a.Kin != null
+                ? KinemationPairs(a.Kin, _ => true)
+                : Clips(HandsPackWeapon.PackModels + a.Recipe.Folder + "/Animations").GroupBy(c => c.name).Select(PreferModel)
+                                                                                      .OrderBy(c => c.name, StringComparer.Ordinal)
+                                                                                      .Select(c => (Clip: c, WeaponClip: (AnimationClip)null));
+
+        /// <summary>Риг детали: покой — клип покоя оружия (у Hands — <see cref="HandsPackWeaponRecipe.RestClip" />, если он есть в паке).</summary>
+        private static ClipRig ActionRig(ActionSource a, AnimationClip clip, AnimationClip weaponClip) =>
+            a.Kin != null
+                ? new KinemationRig(a.Kin, clip, weaponClip, a.Part)
+                : new HandsRig(HandsModel(a.Recipe.Folder), clip, a.Part, a.Recipe.BodyPart, HandsClipOrNull(a.Recipe.Folder, a.Recipe.RestClip));
+
+        /// <summary>Кадр руки с деталью механики теми же экстракторами, что хват оружия: деталь — «корпус» кадра.</summary>
+        private static HandsPackPoseExtractor.Sample ActionSample(ActionSource a, AnimationClip clip, AnimationClip weaponClip, float time, UxrHandSide side)
+        {
+            if (a.Kin != null)
+            {
+                return KinemationPoseExtractor.Extract(clip, time, side, PackPrefab(a.Kin), a.Part,
+                                                       a.Kin.RestClip != null ? WeaponClip(a.Kin, a.Kin.RestClip) : null, weaponClip);
+            }
+
+            GameObject model = HandsModel(a.Recipe.Folder);
+            SkinnedMeshRenderer part = SkinOf(model, a.Part);
+            return HandsPackPoseExtractor.Extract(model, clip, time, side, part.sharedMesh.name, part.bones[MainBone(part)].name);
+        }
 
         // ── Поиск кадра ─────────────────────────────────────────────────────
 
@@ -876,6 +1566,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             public UxrHandSide Side;
             public int Start, End, Mid;
             public float StartTime, EndTime, MidTime, Rate, RigidMm, RigidDeg, PalmMm, SeatMm;
+            public float SeatRangeMm; // размах сдвига детали внутри окна (деталь механики: рука её ведёт, а не лежит рядом)
             public AnimationClip Clip, WeaponClip;
             public string Part;
             public int Frames => End - Start + 1;
@@ -891,9 +1582,10 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Кадры клипа с шагом кадра: деталь в рамке ладони каждой руки (центр ладони SDK, универсальные оси кисти), расстояние
-        /// от центра ладони до детали и сдвиг детали от её места на корпусе в первом кадре.
+        /// от центра ладони до детали и сдвиг детали от её места на корпусе в первом кадре (<paramref name="rest" /> — от места
+        /// покоя: деталь механики).
         /// </summary>
-        private static List<Frame> ScanFrames(ClipRig rig, float length, float rate)
+        private static List<Frame> ScanFrames(ClipRig rig, float length, float rate, Vector3? rest = null)
         {
             int count = Mathf.FloorToInt(length * rate + 1e-3f) + 1;
             var frames = new List<Frame>(count);
@@ -905,7 +1597,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Matrix4x4 part = rig.Part();
                 Matrix4x4 rigid = Rigid(part);
                 Vector3 seat = (Rigid(rig.Body()).inverse * rigid).GetColumn(3);
-                if (i == 0) seat0 = seat;
+                if (i == 0) seat0 = rest ?? seat;
                 var frame = new Frame { Time = time, Seat = Vector3.Distance(seat, seat0) };
                 for (int s = 0; s < 2; s++)
                 {
@@ -925,10 +1617,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Окна руки: подряд кадры, где деталь вынута, близка к ладони и не сдвигается в рамке ладони.</summary>
-        private static List<Window> Windows(List<Frame> frames, UxrHandSide side, float near)
+        private static List<Window> Windows(List<Frame> frames, UxrHandSide side, float near, float minSeat = MinSeat)
         {
             int s = side == UxrHandSide.Left ? 0 : 1;
-            bool Holding(Frame f) => f.Palm[s] <= near && f.Seat >= MinSeat;
+            bool Holding(Frame f) => f.Palm[s] <= near && f.Seat >= minSeat;
             bool Steady(Frame a, Frame b) => Vector3.Distance(a.RelativePosition[s], b.RelativePosition[s]) <= RigidMeters &&
                                             Quaternion.Angle(a.RelativeRotation[s], b.RelativeRotation[s]) <= RigidDegrees;
 
@@ -953,11 +1645,16 @@ namespace VrBattlegrounds.Editor.Gameplay
                         Side = side, Start = i, End = end, Mid = mid, StartTime = frames[i].Time, EndTime = frames[end].Time, MidTime = m.Time,
                         PalmMm = m.Palm[s] * 1000f, SeatMm = m.Seat * 1000f
                     };
+                    float seatMin = float.MaxValue, seatMax = float.MinValue;
                     for (int k = i; k <= end; k++)
                     {
                         window.RigidMm = Mathf.Max(window.RigidMm, Vector3.Distance(frames[k].RelativePosition[s], m.RelativePosition[s]) * 1000f);
                         window.RigidDeg = Mathf.Max(window.RigidDeg, Quaternion.Angle(frames[k].RelativeRotation[s], m.RelativeRotation[s]));
+                        seatMin = Mathf.Min(seatMin, frames[k].Seat);
+                        seatMax = Mathf.Max(seatMax, frames[k].Seat);
                     }
+
+                    window.SeatRangeMm = (seatMax - seatMin) * 1000f;
 
                     windows.Add(window);
                 }
@@ -974,11 +1671,15 @@ namespace VrBattlegrounds.Editor.Gameplay
             public readonly UxrAvatarArm[] Arms = new UxrAvatarArm[2];
             public readonly UxrUniversalLocalAxes[] HandAxes = new UxrUniversalLocalAxes[2];
             public Vector3[] Points = Array.Empty<Vector3>(); // точки меша детали в осях Part(); пусто — меш недоступен на CPU
+            public Vector3 RestSeat;                          // место детали на корпусе в покое (как сдвиг в ScanFrames)
 
             public abstract void Sample(float time);
             public abstract Matrix4x4 Part();
             public abstract Matrix4x4 Body();
             public abstract void Dispose();
+
+            /// <summary>Место детали на корпусе сейчас: начало детали в жёсткой рамке корпуса (та же величина, что в ScanFrames).</summary>
+            protected Vector3 SeatNow() => (Rigid(Body()).inverse * Rigid(Part())).GetColumn(3);
 
             protected void SetupArms(Func<UxrHandSide, UxrAvatarArm> build)
             {
@@ -998,27 +1699,41 @@ namespace VrBattlegrounds.Editor.Gameplay
             private readonly Transform _part, _body;
             private readonly Matrix4x4 _partBind, _bodyBind;
 
-            public HandsRig(MagazineSource m, AnimationClip clip, string part)
+            /// <param name="model">Модель рук с оружием папки пака (<see cref="HandsModel" />)</param>
+            /// <param name="body">Рендерер корпуса</param>
+            /// <param name="rest">
+            /// Клип покоя для <see cref="ClipRig.RestSeat" /> (деталь механики; как <see cref="HandsPackWeapon.Measure" />) — на
+            /// отдельном экземпляре: кадры клипа снимаются от позы модели, как в экстракторе. null — поза модели.
+            /// </param>
+            public HandsRig(GameObject model, AnimationClip clip, string part, string body, AnimationClip rest = null)
             {
                 _clip = clip;
-                _instance = Object.Instantiate(HandsModel(m));
+                _instance = Object.Instantiate(model);
                 _instance.hideFlags = HideFlags.HideAndDontSave;
                 try
                 {
                     Dictionary<string, Transform> bones = Bones(_instance);
                     SetupArms(s => HandsPackPoseExtractor.BuildArm(bones, s));
                     SkinnedMeshRenderer partRenderer = SkinOf(_instance, part);
-                    SkinnedMeshRenderer bodyRenderer = SkinOf(_instance, m.Body);
+                    SkinnedMeshRenderer bodyRenderer = SkinOf(_instance, body);
                     int partBone = MainBone(partRenderer), bodyBone = MainBone(bodyRenderer);
                     (_part, _partBind) = (partRenderer.bones[partBone], partRenderer.sharedMesh.bindposes[partBone]);
                     (_body, _bodyBind) = (bodyRenderer.bones[bodyBone], bodyRenderer.sharedMesh.bindposes[bodyBone]);
                     Points = MeshPoints(partRenderer.sharedMesh, -1, Matrix4x4.identity);
+                    RestSeat = rest != null ? RestSeatOf(model, rest, part, body) : SeatNow();
                 }
                 catch
                 {
                     Object.DestroyImmediate(_instance);
                     throw;
                 }
+            }
+
+            private static Vector3 RestSeatOf(GameObject model, AnimationClip rest, string part, string body)
+            {
+                using var restRig = new HandsRig(model, rest, part, body);
+                restRig.Sample(0f);
+                return restRig.SeatNow();
             }
 
             public override void Sample(float time) => _clip.SampleAnimation(_instance, time);
@@ -1063,6 +1778,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                     _part = Find(_weapon, part);
                     _body = Find(_weapon, k.Weapon.BodyPart);
                     Points = BonePoints(_weapon, _part);
+                    // Меш пака без данных на CPU — вырезанный меш детали проекта: он в тех же осях кости без масштаба
+                    // (KinemationWeapon.MeshOf), что Part().
+                    if (Points.Length == 0) Points = SavedMeshPoints(k, part);
+                    RestSeat = SeatNow();
                 }
                 catch
                 {
@@ -1086,8 +1805,13 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (_character != null) Object.DestroyImmediate(_character);
             }
 
+            /// <summary>Кость детали — по правилу KinemationWeapon (<see cref="KinemationPoseExtractor.PartBone" />), не первый Transform с именем.</summary>
             private static Transform Find(GameObject root, string name) =>
-                root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name) ?? throw new KeyNotFoundException($"{root.name}: нет кости {name}");
+                KinemationPoseExtractor.PartBone(root, name) ?? throw new KeyNotFoundException($"{root.name}: нет кости {name}");
+
+            private static Vector3[] SavedMeshPoints(KinemationWeaponRecipe k, string part) =>
+                MeshPoints(AssetDatabase.LoadAssetAtPath<Mesh>($"{KinemationWeapon.ArtRoot}/{k.Weapon.Name}/Meshes/{k.Weapon.Name}_{KinemationWeapon.Clean(part)}.asset"),
+                           -1, Matrix4x4.identity);
 
             /// <summary>Вершины скина, у которых кость детали главная, в её осях без масштаба (как <c>KinemationWeapon.MeshOf</c>).</summary>
             private static Vector3[] BonePoints(GameObject weapon, Transform bone)
@@ -1126,11 +1850,30 @@ namespace VrBattlegrounds.Editor.Gameplay
             root.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
 
         /// <summary>Модель рук с оружием пака Hands — как у <see cref="HandsPackWeapon" />: модель папки без '@'.</summary>
-        private static GameObject HandsModel(MagazineSource m)
+        private static GameObject HandsModel(string packFolder)
         {
-            string folder = HandsPackWeapon.PackModels + m.Folder;
+            string folder = HandsPackWeapon.PackModels + packFolder;
             string path = AssetDatabase.FindAssets("t:Model", new[] { folder }).Select(AssetDatabase.GUIDToAssetPath).FirstOrDefault(p => !p.Contains("@"));
             return path != null ? AssetDatabase.LoadAssetAtPath<GameObject>(path) : throw new FileNotFoundException($"В {folder} нет модели без '@'");
+        }
+
+        /// <summary>
+        /// Клип папки пака Hands по имени: <c>Modelas/&lt;папка&gt;/Animations</c>, иначе вся папка (как
+        /// <see cref="HandsPackWeapon.Clip" />); одноимённые — take FBX.
+        /// </summary>
+        private static AnimationClip HandsClip(string packFolder, string name) =>
+            HandsClipOrNull(packFolder, name) ?? throw new ArgumentException($"В {packFolder} нет клипа '{name}'");
+
+        private static AnimationClip HandsClipOrNull(string packFolder, string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            foreach (string folder in new[] { HandsPackWeapon.PackModels + packFolder + "/Animations", HandsPackWeapon.PackModels + packFolder })
+            {
+                AnimationClip[] clips = AssetDatabase.IsValidFolder(folder) ? Clips(folder).Where(c => c.name == name).ToArray() : Array.Empty<AnimationClip>();
+                if (clips.Length > 0) return PreferModel(clips);
+            }
+
+            return null;
         }
 
         private static SkinnedMeshRenderer SkinOf(GameObject root, string name) =>
@@ -1210,11 +1953,45 @@ namespace VrBattlegrounds.Editor.Gameplay
             public float startTime, endTime, midTime, rigidMm, rigidDeg, palmMm, seatMm, minPalmMm;
         }
 
-        /// <summary>Отчёт без времени и статусов записи: меняется только вместе с источником.</summary>
-        private static string WriteReport(Item item, SourceReport report)
+        [Serializable]
+        private sealed class ActionReport
         {
-            string path = $"{Root}/{item.Pack}/{item.Pack}_{item.Name}{Suffix}_sources.json";
-            KinemationWeapon.EnsureFolder($"{Root}/{item.Pack}");
+            public string pack, item, weapon, point, part, prefabPart, mirrorFrame, source, check, note, warning;
+            public string computedTemplate, computedRule, computedNote; // расчётная точка: шаблон позы, правило геометрии, сбой
+            public float travelMm, minSeatMm, minRangeMm;
+            public List<ActionScanReport> scan = new List<ActionScanReport>();
+        }
+
+        [Serializable]
+        private sealed class ActionScanReport
+        {
+            public string clip, weaponClip, side, result, distance;
+            public int frames, startFrame, endFrame;
+            public float startTime, endTime, midTime, rigidMm, rigidDeg, palmMm, seatMm, seatRangeMm, minPalmMm, maxSeatMm;
+
+            public static ActionScanReport Of(Window w, string result) =>
+                new ActionScanReport
+                {
+                    clip = w.Clip.name, weaponClip = w.WeaponClip?.name, side = w.Side.ToString(), result = result, frames = w.Frames, startFrame = w.Start,
+                    endFrame = w.End, startTime = Round(w.StartTime), endTime = Round(w.EndTime), midTime = Round(w.MidTime), rigidMm = Round(w.RigidMm),
+                    rigidDeg = Round(w.RigidDeg), palmMm = Round(w.PalmMm), seatMm = Round(w.SeatMm), seatRangeMm = Round(w.SeatRangeMm)
+                };
+        }
+
+        /// <summary>Отчёт без времени и статусов записи: меняется только вместе с источником.</summary>
+        private static string WriteReport(Item item, SourceReport report) =>
+            WriteJson($"{Root}/{item.Pack}/{item.Pack}_{item.Name}{Suffix}_sources.json", item.Pack, report);
+
+        /// <summary>
+        /// Отчёт поиска кадра детали механики — свой файл рядом с позой (<c>&lt;поза&gt;_sources.json</c>): схема отчётов
+        /// предметов без деталей механики не меняется.
+        /// </summary>
+        private static string WriteActionReport(ActionReport report) =>
+            WriteJson($"{Root}/{report.pack}/{OrigName(report.pack, report.item, report.point)}_sources.json", report.pack, report);
+
+        private static string WriteJson(string path, string pack, object report)
+        {
+            KinemationWeapon.EnsureFolder($"{Root}/{pack}");
             string json = JsonUtility.ToJson(report, true).Replace("\r\n", "\n") + "\n";
             if (File.Exists(path) && File.ReadAllText(path).Replace("\r\n", "\n") == json) return $"{path}: без изменений";
             File.WriteAllText(path, json, new UTF8Encoding(false));

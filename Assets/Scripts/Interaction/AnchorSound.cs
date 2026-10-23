@@ -2,12 +2,13 @@ using UltimateXR.Manipulation;
 using UnityEngine;
 using UnityEngine.Serialization;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Interaction
 {
     /// <summary>
-    /// Звуки якоря: вставка предмета (магазин в оружие, оружие в карман) и, если задан
-    /// <see cref="_takeOutClip" />, доставание. У карманов это подтверждение «карман принял /
+    /// Звуки якоря: вставка предмета (магазин в оружие, оружие в карман) и, если нашёлся клип
+    /// (<see cref="TakeOutClip" />), доставание. У карманов это подтверждение «карман принял /
     /// отдал» — в игре карманов не видно. У гнезда магазина в оружии — щелчок вставки и звук
     /// выпадения магазина (рукой или кнопкой выброса).
     ///
@@ -27,6 +28,27 @@ namespace VrBattlegrounds.Interaction
     /// </para>
     ///
     /// <para>
+    /// Выбор клипа (вставка и доставание одинаково): переопределение на предмете (<see cref="AnchorSoundOverride" />)
+    /// → свой клип якоря (clip источника / <see cref="_takeOutClip" />) → у приёмника боеприпасов ствола — запасной звук
+    /// гнезда категории ствола (<see cref="WeaponFeedbackDefaults.MagazineInsert" />/<see cref="WeaponFeedbackDefaults.MagazineTakeOut" />,
+    /// ассет — по ссылке хоста <see cref="WeaponSystem" />) → дефолт роли якоря (<see cref="MagazineAnchorSoundDefaults" />,
+    /// роль — <see cref="AnchorRole.Get" />) → общий звук вставки (у доставания общего нет — тишина). Играет только этот
+    /// компонент приёмника; предмет сам не звучит.
+    /// </para>
+    ///
+    /// <para>
+    /// Приёмник боеприпасов ствола — гнездо магазина (роль <see cref="AnchorRoleKind.WeaponMagazine" />) и окно приёма патрона
+    /// ручного заряжания (<see cref="CartridgeIntake.Intake" />): окно звучит по той же цепочке, что гнездо (дефолт роли —
+    /// гнезда магазина), так что пустой клип гнезда не оставляет окно беззвучным. Ствол без хоста или без ссылки на
+    /// дефолты категории — сразу дефолт роли.
+    /// </para>
+    ///
+    /// <para>
+    /// Звук локальный: Placed/Removed SDK приходят на каждой машине, клипы и роль одинаковы у всех (префаб,
+    /// иерархия), поэтому синхронизировать нечего.
+    /// </para>
+    ///
+    /// <para>
     /// Карман магазинов (<see cref="UxrMagazinePocket" />) хранит магазины вне якоря: события
     /// <c>Removed</c> при доставании нет, доставание приходит его событием
     /// <see cref="UxrMagazinePocket.ItemExtracted" />.
@@ -35,10 +57,10 @@ namespace VrBattlegrounds.Interaction
     [RequireComponent(typeof(UxrGrabbableObjectAnchor))]
     public sealed class AnchorSound : MonoBehaviour
     {
-        [Tooltip("Источник звука. Его clip — звук вставки; пусто — общий звук MagazineAnchorSoundDefaults. Play On Awake выключен. Для доставания — не на объекте Activate On Placed: SDK выключит его при хвате.")]
+        [Tooltip("Источник звука. Его clip — свой звук вставки; пусто — у гнезда магазина и окна приёма патрона запасной звук категории ствола (WeaponFeedbackDefaults), затем дефолт роли или общий звук MagazineAnchorSoundDefaults. Play On Awake выключен. Для доставания — не на объекте Activate On Placed: SDK выключит его при хвате.")]
         [SerializeField] private AudioSource _source;
 
-        [Tooltip("Звук доставания рукой. Пусто — доставание без звука (так у гнёзд магазина в оружии).")]
+        [Tooltip("Свой звук доставания. Пусто — у гнезда магазина и окна приёма патрона запасной звук категории ствола (WeaponFeedbackDefaults), затем дефолт роли из MagazineAnchorSoundDefaults; нет и его — доставание без звука.")]
         [SerializeField] private AudioClip _takeOutClip;
 
         [Tooltip("Вставка звучит только от руки игрока. Программная установка (спавн, раскладка лоадаута) — молча.")]
@@ -50,12 +72,107 @@ namespace VrBattlegrounds.Interaction
         [SerializeField] private bool _takeOutOnlyByHand = true;
 
         public AudioSource Source             => _source;
-        public AudioClip   TakeOutClip        => _takeOutClip;
         public bool        TakeOutOnlyByHand  => _takeOutOnlyByHand;
 
-        /// <summary>Звук вставки: свой клип источника или общий из <see cref="MagazineAnchorSoundDefaults" />.</summary>
-        public AudioClip   InsertClip => _source != null && _source.clip != null ? _source.clip
-                                         : MagazineAnchorSoundDefaults.Instance != null ? MagazineAnchorSoundDefaults.Instance.InsertClip : null;
+        /// <summary>
+        /// Звук вставки без учёта предмета: свой клип источника → запасной звук гнезда категории ствола (приёмник
+        /// боеприпасов) → дефолт роли → общий из <see cref="MagazineAnchorSoundDefaults" />.
+        /// </summary>
+        public AudioClip InsertClip => OwnInsertClip != null ? OwnInsertClip : DefaultInsertClip;
+
+        /// <summary>
+        /// Звук доставания без учёта предмета: свой клип → запасной звук гнезда категории ствола (приёмник боеприпасов) →
+        /// дефолт роли → нет звука.
+        /// </summary>
+        public AudioClip TakeOutClip => _takeOutClip != null ? _takeOutClip : DefaultTakeOutClip;
+
+        /// <summary>Свой звук вставки якоря (clip источника) без дефолтов; null — нет своего.</summary>
+        public AudioClip OwnInsertClip => _source != null ? _source.clip : null;
+
+        /// <summary>Свой звук доставания якоря без дефолтов; null — нет своего.</summary>
+        public AudioClip OwnTakeOutClip => _takeOutClip;
+
+        /// <summary>
+        /// Звук вставки по умолчанию, без своего клипа: запасной звук категории ствола (приёмник боеприпасов) → дефолт роли →
+        /// общий. Редакторская очистка сравнивает с ним свой клип: совпадение — копия дефолта, её можно снять.
+        /// </summary>
+        public AudioClip DefaultInsertClip
+        {
+            get
+            {
+                AnchorRoleKind role = DefaultsRole(out WeaponFeedbackDefaults category);
+                if (category != null && category.MagazineInsert != null) return category.MagazineInsert;
+                MagazineAnchorSoundDefaults defaults = MagazineAnchorSoundDefaults.Instance;
+                if (defaults == null) return null;
+                AudioClip roleClip = defaults.RolePlaceClip(role);
+                return roleClip != null ? roleClip : defaults.InsertClip;
+            }
+        }
+
+        /// <summary>Звук доставания по умолчанию, без своего клипа: категория ствола (приёмник боеприпасов) → дефолт роли → нет.</summary>
+        public AudioClip DefaultTakeOutClip
+        {
+            get
+            {
+                AnchorRoleKind role = DefaultsRole(out WeaponFeedbackDefaults category);
+                if (category != null && category.MagazineTakeOut != null) return category.MagazineTakeOut;
+                MagazineAnchorSoundDefaults defaults = MagazineAnchorSoundDefaults.Instance;
+                return defaults != null ? defaults.RoleTakeOutClip(role) : null;
+            }
+        }
+
+        /// <summary>Якорь — приёмник боеприпасов ствола (гнездо магазина или окно приёма патрона) с дефолтами категории.</summary>
+        public bool IsWeaponAmmoReceiver
+        {
+            get
+            {
+                DefaultsRole(out _, out bool receiver);
+                return receiver;
+            }
+        }
+
+        /// <summary>Звук вставки предмета: его переопределение или <see cref="InsertClip" />.</summary>
+        public AudioClip GetInsertClip(UxrGrabbableObject item)
+        {
+            AnchorSoundOverride own = item != null ? item.GetComponent<AnchorSoundOverride>() : null;
+            return own != null && own.PlaceClip != null ? own.PlaceClip : InsertClip;
+        }
+
+        /// <summary>Звук доставания предмета: его переопределение или <see cref="TakeOutClip" />.</summary>
+        public AudioClip GetTakeOutClip(UxrGrabbableObject item)
+        {
+            AnchorSoundOverride own = item != null ? item.GetComponent<AnchorSoundOverride>() : null;
+            return own != null && own.TakeOutClip != null ? own.TakeOutClip : TakeOutClip;
+        }
+
+        // Роль и категория считаются по иерархии при каждом событии (редко): у префаба в редакторе Awake не было, якорь
+        // может сменить ствол-родителя (оружие в кармане — тоже родитель), а кэш — вторая копия того, чем владеют AnchorRole
+        // и хост WeaponSystem.
+        private UxrGrabbableObjectAnchor Anchor => _anchor != null ? _anchor : GetComponent<UxrGrabbableObjectAnchor>();
+
+        /// <summary>
+        /// Роль, по которой берётся дефолт <see cref="MagazineAnchorSoundDefaults" />, и дефолты категории ствола, если якорь —
+        /// приёмник боеприпасов ствола (гнездо магазина или окно приёма патрона; окно звучит дефолтом роли гнезда).
+        /// </summary>
+        private AnchorRoleKind DefaultsRole(out WeaponFeedbackDefaults category) => DefaultsRole(out category, out _);
+
+        private AnchorRoleKind DefaultsRole(out WeaponFeedbackDefaults category, out bool receiver)
+        {
+            category = null;
+            receiver = false;
+            UxrGrabbableObjectAnchor anchor = Anchor;
+            AnchorRoleKind role = AnchorRole.Get(anchor);
+            if (role != AnchorRoleKind.WeaponMagazine)
+            {
+                CartridgeIntake intake = anchor.GetComponentInParent<CartridgeIntake>(true);
+                if (intake == null || intake.Intake != anchor) return role;
+                role = AnchorRoleKind.WeaponMagazine;
+            }
+            receiver = true;
+            WeaponSystem host = anchor.GetComponentInParent<WeaponSystem>(true);
+            if (host != null) category = host.FeedbackDefaults;
+            return role;
+        }
 
         private UxrGrabbableObjectAnchor _anchor;
         private UxrMagazinePocket        _magazinePocket;
@@ -83,19 +200,19 @@ namespace VrBattlegrounds.Interaction
         private void OnPlaced(object sender, UxrManipulationEventArgs e)
         {
             if (_onlyByHand && e.Grabber == null) return;
-            Play(InsertClip, e.GrabbableObject, "вставлен в");
+            Play(GetInsertClip(e.GrabbableObject), e.GrabbableObject, "вставлен в");
         }
 
         private void OnRemoved(object sender, UxrManipulationEventArgs e)
         {
             if (_takeOutOnlyByHand && e.Grabber == null) return;
-            Play(_takeOutClip, e.GrabbableObject, "достан из");
+            Play(GetTakeOutClip(e.GrabbableObject), e.GrabbableObject, "достан из");
         }
 
         private void OnMagazineExtracted(UxrGrabber grabber, UxrGrabbableObject magazine)
         {
             if (_takeOutOnlyByHand && grabber == null) return;
-            Play(_takeOutClip, magazine, "достан из");
+            Play(GetTakeOutClip(magazine), magazine, "достан из");
         }
 
         private void Play(AudioClip clip, UxrGrabbableObject item, string action)

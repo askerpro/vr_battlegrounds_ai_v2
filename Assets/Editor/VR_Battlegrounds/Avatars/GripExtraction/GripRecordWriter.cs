@@ -9,7 +9,7 @@ using UnityEngine;
 namespace VrBattlegrounds.Editor.Avatars
 {
     /// <summary>
-    /// Запись хвата на предмет тем же механизмом, что <c>HandsPackPoseImporter.AssignToGrabPoint</c>: align
+    /// Запись хвата на предмет тем же механизмом, что прежний импорт поз паков: align
     /// <c>Grabs/&lt;источник&gt;/&lt;поза&gt;/&lt;аватар&gt;/Left|Right</c> (<see cref="HandsPackPoseImporter.AlignTransform" />), запись
     /// <c>UxrGripPoseInfo</c> по GUID цели (поза, blend 0, align L/R), прежние align — <see cref="HandsPackPoseImporter.RemoveUnused" />
     /// по флагу профиля. Сохранение — <c>SaveAsPrefabAsset</c> под <see cref="GripPrefabIdentityGuard" />.

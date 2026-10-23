@@ -1,10 +1,14 @@
 using UltimateXR.Avatar;
 using UltimateXR.Manipulation;
+using UltimateXR.Mechanics.Weapons;
 using UnityEngine;
 
 namespace VrBattlegrounds.Interaction
 {
-    /// <summary>Роль якоря для отладочной отрисовки.</summary>
+    /// <summary>
+    /// Роль якоря: отладочная отрисовка, отклик готовности (<c>InteractionFeedbackConfig</c>) и звуки по умолчанию
+    /// (<see cref="MagazineAnchorSoundDefaults" />). Не сериализуется: вычисляется по иерархии в <see cref="AnchorRole.Get" />.
+    /// </summary>
     public enum AnchorRoleKind
     {
         /// <summary>Карман магазинов (<see cref="UxrMagazinePocket" />).</summary>
@@ -15,8 +19,12 @@ namespace VrBattlegrounds.Interaction
         Secondary,
         /// <summary>Прочий якорь на аватаре.</summary>
         AvatarOther,
-        /// <summary>Якорь вне аватара: слоты оружия, стены арсенала.</summary>
-        World
+        /// <summary>Якорь вне аватара и вне предмета: слоты оружия, стены арсенала.</summary>
+        World,
+        /// <summary>Гнездо магазина оружия — якорь магазина спуска <see cref="UxrFirearmWeapon" />.</summary>
+        WeaponMagazine,
+        /// <summary>Прочий якорь внутри хватаемого предмета: окно приёма патрона и т. п.</summary>
+        ItemOther
     }
 
     /// <summary>
@@ -37,13 +45,31 @@ namespace VrBattlegrounds.Interaction
                    anchor.GetComponentInParent<UxrGrabbableObject>(true) == null;
         }
 
+        /// <summary>
+        /// Роль якоря. Карманы <c>Anchor_Back</c> / <c>Anchor_Hip</c> узнаются по имени и вне аватара — в своём
+        /// префабе (<c>Pockets/Anchor_Back.prefab</c>), чтобы редактор и проверки видели ту же роль, что и игра.
+        /// Якорь внутри предмета — не карман и не стена: гнездо магазина или прочий якорь предмета.
+        /// </summary>
         public static AnchorRoleKind Get(UxrGrabbableObjectAnchor anchor)
         {
             if (anchor.GetComponent<UxrMagazinePocket>() != null) return AnchorRoleKind.Magazine;
-            if (!IsAvatarPocket(anchor)) return AnchorRoleKind.World;
+            if (IsWeaponMagazineSocket(anchor)) return AnchorRoleKind.WeaponMagazine;
+            if (anchor.GetComponentInParent<UxrGrabbableObject>(true) != null) return AnchorRoleKind.ItemOther;
             if (anchor.name.Contains("Anchor_Back")) return AnchorRoleKind.Primary;
             if (anchor.name.Contains("Anchor_Hip")) return AnchorRoleKind.Secondary;
-            return AnchorRoleKind.AvatarOther;
+            return anchor.GetComponentInParent<UxrAvatar>(true) != null ? AnchorRoleKind.AvatarOther : AnchorRoleKind.World;
+        }
+
+        /// <summary>Якорь — гнездо магазина одного из спусков ближайшего оружия-родителя.</summary>
+        private static bool IsWeaponMagazineSocket(UxrGrabbableObjectAnchor anchor)
+        {
+            UxrFirearmWeapon weapon = anchor.GetComponentInParent<UxrFirearmWeapon>(true);
+            if (weapon == null) return false;
+            for (int i = 0; i < weapon.TriggerCount; i++)
+            {
+                if (weapon.TryGetTriggerMagazineAnchor(i, out UxrGrabbableObjectAnchor socket) && socket == anchor) return true;
+            }
+            return false;
         }
 
         public static Color GetColor(AnchorRoleKind role)

@@ -24,7 +24,8 @@ namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
     /// Регистрация поз рук из паков для аватара (окно арсенала, вкладка «Взаимодействие», блок «Позы рук из паков»):
-    /// по всему каталогу — точки Grip и Support оружия и точка магазина. Только из уже экспортированных поз <c>_orig</c>
+    /// по всему каталогу — точки Grip и Support оружия, точка магазина и точка 0 детали механики (затвор <c>Slide</c>, помпа
+    /// <c>Pump</c>). Только из уже экспортированных поз <c>_orig</c>
     /// и snap-точек <c>Orig</c> (<see cref="PackOrigPoses" />, экспорт — шаг сборки оружия); клипы и модели паков не читаются.
     ///
     /// <para>
@@ -38,8 +39,10 @@ namespace VrBattlegrounds.Editor.Gameplay
     ///
     /// <para>
     /// <b>Точки.</b> Оружие: Grip — точка хвата 0 (snap <c>*_Grip_orig</c>), Support — точка 1 (<c>*_Support_orig</c>);
-    /// магазин: точка 0 (<c>*_Magazine_orig</c>, у дробовиков <c>*_Shell_orig</c>). Нет точки хвата у префаба —
-    /// «нет точки хвата»; нет snap-точек или позы <c>_orig</c> — «нет источника».
+    /// магазин: точка 0 (<c>*_Magazine_orig</c>, у дробовиков <c>*_Shell_orig</c>); деталь механики — точка 0 своего
+    /// граббабла <c>Slide</c>/<c>Pump</c> (дочерний корня оружия, snap <c>&lt;Slide|Pump&gt;/Orig/*_Slide_orig|*_Pump_orig</c>, из
+    /// кадра пака или расчётный — <see cref="PackOrigPoses" />). Нет точки хвата у префаба — «нет точки хвата»; нет
+    /// snap-точек или позы <c>_orig</c> — «нет источника».
     /// </para>
     ///
     /// <para>
@@ -62,7 +65,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     ///
     /// <para>
     /// <b>Поза.</b> Копия ассета <c>_orig</c> (оба дескриптора как есть, Fixed) с именем
-    /// <c>&lt;Пак&gt;_&lt;Предмет&gt;_Grip|_Support|_Mag_Grip|_Shell_Grip</c> (<see cref="GripPoseName" />) в папке поз
+    /// <c>&lt;Пак&gt;_&lt;Предмет&gt;_Grip|_Support|_Mag_Grip|_Shell_Grip|_Slide_Grip|_Pump_Grip</c> (<see cref="GripPoseName" />) в папке поз
     /// цели; существующий ассет с таким именем не перезаписывается, а используется. Дескрипторы проверяются на
     /// вырожденные оси (правило патча 93 <c>UxrHandPoseEditorWindow.TryValidateHandDescriptor</c>, локальная копия).
     /// Регистрация в <c>_handPoses</c> базы цели — <see cref="HandsPackPoseImporter.RegisterOnPoseBase" />, без дублей.
@@ -71,7 +74,8 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <para>
     /// <b>Запись хвата.</b> <c>UxrGripPoseInfo</c> под GUID цели (поза, blend <see cref="PoseBlend" />, align L/R) и
     /// snap-узлы <c>Grabs/&lt;аватар цели&gt;/&lt;точка&gt;/Left Grab|Right Grab</c> с <see cref="UxrGrabbableObjectSnapTransform" /> —
-    /// как кнопки Create Snap инспектора UXR. Align руки с snap <c>Orig</c> = snap · (рамка ладони → граббер) рига цели
+    /// как кнопки Create Snap инспектора UXR; у детали механики — внутри её граббабла (<c>Slide/Grabs/…</c>), чтобы узлы
+    /// шли с деталью. Align руки с snap <c>Orig</c> = snap · (рамка ладони → граббер) рига цели
     /// в этой позе: центр ладони SDK и универсальные оси кисти цели совпадают с рамкой snap (опора
     /// <see cref="GripAnchor.PalmCenter" /> Grip Extraction). Рука без snap <c>Orig</c> (у магазина — обычно правая) —
     /// зеркало align другой руки правилом патча 91 (<see cref="UxrGrabbableObjectSnapTransformEditor.MirrorSnapLocal" />,
@@ -98,6 +102,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string SupportPoint = "Support";
         public const string MagazinePoint = "Magazine";
         public const string ShellPoint = "Shell";
+        public const string SlidePoint = "Slide";
+        public const string PumpPoint = "Pump";
+
+        /// <summary>Граббаблы деталей механики — дочерние корня оружия (имена узлов сборщиков, вид точки <c>_orig</c>).</summary>
+        private static readonly string[] ActionGrabbables = { SlidePoint, PumpPoint };
 
         /// <summary>Позы SDK: запись цели с такой позой — временная заглушка (GrabClaw, Grab, GrabStandard, Demo*…).</summary>
         public const string SdkPoseRoot = "Assets/ThirdParty/UltimateXR/";
@@ -152,7 +161,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Имя позы цели по точке <c>_orig</c>: <c>&lt;Пак&gt;_&lt;Предмет&gt;_Grip</c>, <c>…_Support</c>, у магазина
-        /// <c>…_Mag_Grip</c>, у патрона дробовика <c>…_Shell_Grip</c>.
+        /// <c>…_Mag_Grip</c>, у патрона дробовика <c>…_Shell_Grip</c>, у затвора и помпы <c>…_Slide_Grip</c>, <c>…_Pump_Grip</c>.
         /// </summary>
         public static string GripPoseName(string pack, string item, string point)
         {
@@ -160,6 +169,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 case MagazinePoint: return $"{pack}_{item}_Mag_Grip";
                 case ShellPoint:    return $"{pack}_{item}_Shell_Grip";
+                case SlidePoint:    return $"{pack}_{item}_Slide_Grip";
+                case PumpPoint:     return $"{pack}_{item}_Pump_Grip";
                 default:            return $"{pack}_{item}_{point}";
             }
         }
@@ -291,9 +302,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             public bool Magazine;
             public int GrabPoint;
             public string[] OrigPoints;                        // виды snap Orig, из которых берётся точка
+            public string Grabbable;                           // дочерний граббабл детали механики (Slide, Pump); null — корень
             public readonly List<WeaponInfo> Weapons = new List<WeaponInfo>();
 
-            public string Kind => Magazine ? "магазин" : "оружие";
+            public string Kind => Magazine ? "магазин" : Grabbable != null ? "деталь механики" : "оружие";
             public string Names => string.Join(", ", Weapons.Select(w => w.DisplayName).Distinct());
 
             /// <summary>Оружие, в которое вложен магазин.</summary>
@@ -305,12 +317,12 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static List<Job> Jobs(IEnumerable<WeaponInfo> weapons, List<string> notes)
         {
             var map = new Dictionary<string, Job>(StringComparer.Ordinal);
-            void Add(WeaponInfo weapon, GameObject prefab, bool magazine, int grabPoint, string[] origPoints)
+            void Add(WeaponInfo weapon, GameObject prefab, bool magazine, int grabPoint, string[] origPoints, string grabbable = null)
             {
                 string path = AssetDatabase.GetAssetPath(prefab);
-                string key = path + "#" + grabPoint;
+                string key = path + (grabbable != null ? "/" + grabbable : "") + "#" + grabPoint;
                 if (!map.TryGetValue(key, out Job job))
-                    map[key] = job = new Job { Path = path, Magazine = magazine, GrabPoint = grabPoint, OrigPoints = origPoints };
+                    map[key] = job = new Job { Path = path, Magazine = magazine, GrabPoint = grabPoint, OrigPoints = origPoints, Grabbable = grabbable };
                 job.Weapons.Add(weapon);
             }
 
@@ -321,13 +333,38 @@ namespace VrBattlegrounds.Editor.Gameplay
                 {
                     Add(weapon, weapon.WeaponPrefab, false, 0, new[] { GripPoint });
                     Add(weapon, weapon.WeaponPrefab, false, 1, new[] { SupportPoint });
+                    // Деталь механики: точка 0 её граббабла (затвор, помпа) — вид точки _orig совпадает с именем узла.
+                    foreach (string action in ActionGrabbables)
+                    {
+                        Transform node = weapon.WeaponPrefab.transform.Find(action);
+                        if (node != null && node.GetComponent<UxrGrabbableObject>() != null) Add(weapon, weapon.WeaponPrefab, false, 0, new[] { action }, action);
+                    }
                 }
 
                 if (weapon.MagazinePrefab == null) notes?.Add($"{weapon.DisplayName}: нет префаба магазина в WeaponInfo");
                 else Add(weapon, weapon.MagazinePrefab, true, 0, new[] { MagazinePoint, ShellPoint });
             }
 
-            return map.Values.OrderBy(j => j.Magazine).ThenBy(j => j.Path, StringComparer.Ordinal).ThenBy(j => j.GrabPoint).ToList();
+            return map.Values.OrderBy(j => j.Magazine).ThenBy(j => j.Path, StringComparer.Ordinal).ThenBy(j => j.Grabbable != null)
+                      .ThenBy(j => j.Grabbable, StringComparer.Ordinal).ThenBy(j => j.GrabPoint).ToList();
+        }
+
+        /// <summary>Граббабл точки в префабе (ассете или загруженном содержимом): корень или дочерний граббабл детали механики.</summary>
+        private static UxrGrabbableObject GrabbableOf(Transform root, Job job)
+        {
+            Transform node = job.Grabbable == null ? root : root.Find(job.Grabbable);
+            return node != null ? node.GetComponent<UxrGrabbableObject>() : null;
+        }
+
+        /// <summary>Ближайший предок-папка <c>Grabs</c> узла (граница удаления опустевших папок); нет — null.</summary>
+        private static Transform GrabsAncestor(Transform node, Transform root)
+        {
+            for (Transform t = node.parent; t != null && t != root; t = t.parent)
+            {
+                if (t.name == GrabsName) return t;
+            }
+
+            return null;
         }
 
         /// <summary>Область записи: папка поз, база регистрации, префабы оружия и магазинов каталога.</summary>
@@ -439,7 +476,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             foreach (Job job in Jobs(weapons, null).Where(j => options.Rebuild(PointKey(j))))
             {
                 var asset = AssetDatabase.LoadAssetAtPath<GameObject>(job.Path);
-                if (asset == null || !asset.TryGetComponent(out UxrGrabbableObject grabbable) || grabbable.GrabPointCount <= job.GrabPoint) continue;
+                UxrGrabbableObject grabbable = asset != null ? GrabbableOf(asset.transform, job) : null;
+                if (grabbable == null || grabbable.GrabPointCount <= job.GrabPoint) continue;
                 UxrHandPoseAsset pose = grabbable.GetGrabPoint(job.GrabPoint).GetGripPoseInfo(target.RecordGuid)?.HandPose;
                 string path = pose != null ? AssetDatabase.GetAssetPath(pose) : null;
                 if (!string.IsNullOrEmpty(path) && !IsSdkPose(path)) paths.Add(path);
@@ -485,7 +523,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             try
             {
                 var asset = AssetDatabase.LoadAssetAtPath<GameObject>(job.Path) ?? throw new FileNotFoundException("нет префаба");
-                if (!asset.TryGetComponent(out UxrGrabbableObject grabbable)) throw new InvalidOperationException("нет UxrGrabbableObject на корне");
+                UxrGrabbableObject grabbable = GrabbableOf(asset.transform, job)
+                                               ?? throw new InvalidOperationException(job.Grabbable == null ? "нет UxrGrabbableObject на корне" : $"нет UxrGrabbableObject на {job.Grabbable}");
                 if (grabbable.GrabPointCount <= job.GrabPoint)
                 {
                     row.Status = StatusNoGrabPoint;
@@ -515,7 +554,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 string sourcePath, poseName;
                 AlignSource align;
                 bool template = false;
-                if (OrigSource(asset.transform, job.OrigPoints, out string origName, out string pointKind, out List<UxrHandSide> sides, out string sourceProblem))
+                if (OrigSource(grabbable.transform, job.OrigPoints, out string origName, out string pointKind, out List<UxrHandSide> sides, out string sourceProblem))
                 {
                     TryParseOrigName(origName, out string pack, out string item, out _);
                     sourcePath = PackOrigPoses.PoseAssetPath(pack, origName);
@@ -833,7 +872,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
                 try
                 {
-                    var grabbable = root.GetComponent<UxrGrabbableObject>();
+                    UxrGrabbableObject grabbable = GrabbableOf(root.transform, job) ?? throw new InvalidOperationException("нет граббабла точки после загрузки префаба");
                     UxrGrabPointInfo point = grabbable.GetGrabPoint(grabPointIndex);
                     UxrGripPoseInfo grip = point.GetGripPoseInfo(target.RecordGuid);
                     string gripPose = grip?.HandPose != null ? AssetDatabase.GetAssetPath(grip.HandPose) : null;
@@ -846,14 +885,15 @@ namespace VrBattlegrounds.Editor.Gameplay
                     // Snap Orig — до создания Grabs: контейнер Orig ищется среди MeshContainer/Grabs, Grabs и корня.
                     Dictionary<UxrHandSide, Transform> origSnaps = source.Template != null
                         ? new Dictionary<UxrHandSide, Transform>()
-                        : source.Sides.ToDictionary(s => s, s => PackOrigPoses.FindSnap(root.transform, source.PointKind, s)
+                        : source.Sides.ToDictionary(s => s, s => PackOrigPoses.FindSnap(grabbable.transform, source.PointKind, s)
                                                                  ?? throw new InvalidOperationException($"нет snap Orig {source.PointKind} {s}"));
 
                     pointName = UxrGrabPointIndex.GetIndexDisplayName(grabbable, grabPointIndex);
                     Transform grabs = null, pointRoot = null;
                     Transform PointRoot()
                     {
-                        grabs = grabs != null ? grabs : Node(root.transform, GrabsName, root.transform, createdPaths);
+                        // Узлы — в граббабле точки: у детали механики они идут вместе с ней (Slide/Grabs/…).
+                        grabs = grabs != null ? grabs : Node(grabbable.transform, GrabsName, root.transform, createdPaths);
                         return pointRoot = pointRoot != null ? pointRoot : Node(Node(grabs, target.RecordName, root.transform, createdPaths), pointName, root.transform, createdPaths);
                     }
 
@@ -945,7 +985,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                             continue;
                         }
 
-                        RemoveWithEmptyParents(old, root.transform, root.transform.Find(GrabsName), removedPaths);
+                        RemoveWithEmptyParents(old, root.transform, job.Grabbable == null ? root.transform.Find(GrabsName) : GrabsAncestor(old, root.transform),
+                                               removedPaths);
                     }
 
                     PrefabUtility.SaveAsPrefabAsset(root, prefabPath, out bool saved);
@@ -958,7 +999,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
                 PackOrigPoses.Canonicalize(prefabPath);
                 var removedIds = new HashSet<long>(removedPaths.Where(oldIds.ContainsKey).SelectMany(p => oldIds[p]));
-                VerifyYaml(prefabPath, baseline, target, grabPointIndex, nodePaths, createdPaths, removedPaths, removedIds, pose, action);
+                VerifyYaml(prefabPath, job, baseline, target, grabPointIndex, nodePaths, createdPaths, removedPaths, removedIds, pose, action);
 
                 string snaps = source.Template != null ? "обе руки по шаблону" : string.Join(", ", Sides.Select(s => s + (source.Sides.Contains(s) ? " из Orig" : " зеркало")));
                 string verb = rebuild ? "пересоздана запись" : replace ? "заменена запись" : "запись";
@@ -988,7 +1029,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static void CollectOldAligns(Job job, Target target, Dictionary<string, HashSet<long>> ids, Dictionary<string, string> hostReferenced)
         {
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(job.Path);
-            UxrGripPoseInfo entry = asset.GetComponent<UxrGrabbableObject>().GetGrabPoint(job.GrabPoint).GetGripPoseInfo(target.RecordGuid);
+            UxrGripPoseInfo entry = GrabbableOf(asset.transform, job).GetGrabPoint(job.GrabPoint).GetGripPoseInfo(target.RecordGuid);
             string guid = AssetDatabase.AssetPathToGUID(job.Path);
             var hostTexts = job.Hosts.Where(File.Exists).ToDictionary(h => h, File.ReadAllText);
             foreach (Transform old in new[] { entry?.GripAlignTransformHandLeft, entry?.GripAlignTransformHandRight }.Where(t => t != null))
@@ -1075,7 +1116,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <see cref="UxrGrabbableObject" /> — точно «прежний + блок новой записи» или (замена, пересоздание) «прежний с
         /// новыми значениями блока записи цели» (<see cref="AvatarGripYaml" />). Иначе — исключение со всеми отличиями (файл возвращает вызывающий).
         /// </summary>
-        private static void VerifyYaml(string prefabPath, string baseline, Target target, int grabPointIndex, List<string> nodePaths, List<string> createdPaths,
+        private static void VerifyYaml(string prefabPath, Job job, string baseline, Target target, int grabPointIndex, List<string> nodePaths, List<string> createdPaths,
                                        List<string> removedPaths, HashSet<long> removedIds, UxrHandPoseAsset pose, EntryAction action)
         {
             string written = File.ReadAllText(prefabPath);
@@ -1098,7 +1139,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             foreach (string path in removedPaths.Where(p => Parent(p) == null || !removedPaths.Contains(Parent(p))))
                 AddFileId(subtractive, Parent(path) == null ? asset.transform : asset.transform.Find(Parent(path)));
 
-            long grabbableId = FileId(asset.GetComponent<UxrGrabbableObject>(), "UxrGrabbableObject корня");
+            long grabbableId = FileId(GrabbableOf(asset.transform, job), job.Grabbable == null ? "UxrGrabbableObject корня" : "UxrGrabbableObject " + job.Grabbable);
             long leftId = FileId(asset.transform.Find(nodePaths[0]), nodePaths[0]);
             long rightId = FileId(asset.transform.Find(nodePaths[1]), nodePaths[1]);
             string poseGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(pose));

@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Editor.Avatars
 
     /// <summary>
     /// Запрос <see cref="GripExtraction.RunJson" /> (JSON, имена полей в camelCase, регистр не важен).
-    /// Пример: <c>{"source":"pack","recipes":["all"],"target":"MEF","anchor":"wrist","mode":"measure","outDir":"F:/…/reports/…"}</c>.
+    /// Пример: <c>{"source":"pack","recipes":["all"],"target":"CyborgHands","mode":"measure","outDir":"F:/…/reports/…"}</c>.
     /// </summary>
     public sealed class GripExtractionRequest
     {
@@ -28,8 +28,11 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>all | hands | kinemation | имя позы | имя префаба оружия.</summary>
         public string[] Recipes = { "all" };
 
-        /// <summary>MEF | MEF_cyborg_hands.</summary>
-        public string Target = GripTargetProfile.MefName;
+        /// <summary>
+        /// CyborgHands | MEF_cyborg_hands. По умолчанию — CyborgHands: общая база CyborgHandsBase, на неё рассчитаны
+        /// регистрация хватов (<c>AvatarGripRegistration</c>) и правило владения записями Cyborg; профиль MEF выведен 2026-10-23.
+        /// </summary>
+        public string Target = GripTargetProfile.CyborgHandsName;
 
         /// <summary>wrist | palm; null — как в профиле.</summary>
         public string Anchor;
@@ -60,10 +63,6 @@ namespace VrBattlegrounds.Editor.Avatars
 
         /// <summary>После Apply прогнать Hand Pose Fit по каждой руке (лист ревью, подсказки сдвига и curl).</summary>
         public bool Analyze;
-
-        /// <summary>Пороги R0.</summary>
-        public float ToleranceMm  = 0.5f;
-        public float ToleranceDeg = 0.5f;
 
         /// <summary>true — RunJson возвращает полный отчёт, иначе краткую сводку (полный всегда в outDir).</summary>
         public bool ReturnFull;

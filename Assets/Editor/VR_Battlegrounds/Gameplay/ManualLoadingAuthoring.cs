@@ -52,14 +52,14 @@ namespace VrBattlegrounds.Editor.Gameplay
             var counter = counters.FirstOrDefault(candidate => candidate.GetComponent<UxrGrabbableObject>()?.StartAnchor == internalAnchor);
             if (counter == null)
             {
-                // Rebuild из cartridge source: clone вложенного item превращается в независимый counter до сохранения.
+                // Rebuild из cartridge source: вложенный экземпляр патрона становится встроенным запасом трубки через
+                // overrides (решение пользователя 2026-10-23): он остаётся экземпляром префаба патрона и наследует его
+                // записи хвата, вместо развёрнутой копии.
                 var old = root.GetComponentsInChildren<UxrGrabbableObject>(true).FirstOrDefault(candidate => candidate.StartAnchor == internalAnchor);
                 if (old == null) throw new InvalidOperationException("No authored initial tube item.");
                 counter = old.gameObject.AddComponent<UxrFirearmMag>();
             }
             var counterObject = counter.gameObject;
-            if (PrefabUtility.IsPartOfPrefabInstance(counterObject))
-                PrefabUtility.UnpackPrefabInstance(counterObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             foreach (var cartridge in counterObject.GetComponents<Cartridge>()) Object.DestroyImmediate(cartridge);
             foreach (var unit in counterObject.GetComponents<UxrFirearmAmmoUnit>()) Object.DestroyImmediate(unit);
             var counterSettings = new SerializedObject(counter);
@@ -78,10 +78,29 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (counterObject.GetComponent<OutOfWorldGuard>() != null) Object.DestroyImmediate(counterObject.GetComponent<OutOfWorldGuard>());
             if (counterObject.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>() != null)
                 Object.DestroyImmediate(counterObject.GetComponent<VrBattlegrounds.Arsenal.MagazineManipulationHistory>());
-            foreach (var renderer in counterObject.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
-            foreach (var collider in counterObject.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
+            // Прямые присваивания на вложенном экземпляре записываются как overrides явно.
+            foreach (var renderer in counterObject.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = false;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+            }
+            foreach (var collider in counterObject.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(collider);
+            }
             if (counterObject.GetComponent<NetworkIdentity>() != null) Object.DestroyImmediate(counterObject.GetComponent<NetworkIdentity>());
-            if (counterObject.GetComponent<Rigidbody>() != null) counterObject.GetComponent<Rigidbody>().isKinematic = true;
+            var counterBody = counterObject.GetComponent<Rigidbody>();
+            if (counterBody != null)
+            {
+                counterBody.isKinematic = true;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(counterBody);
+            }
+            PrefabUtility.RecordPrefabInstancePropertyModifications(counterGrab);
+            // Скрытый запас — не выдаваемая единица: сетевых и физических guard-компонентов патрона на нём быть не должно.
+            if (counterObject.GetComponent<NetworkIdentity>() != null || counterObject.GetComponent<Cartridge>() != null ||
+                counterObject.GetComponent<OutOfWorldGuard>() != null)
+                throw new InvalidOperationException($"{counterObject.name}: на встроенном запасе остались NetworkIdentity/Cartridge/OutOfWorldGuard");
             SetAnchorTag(internalAnchor, "Tube:" + ammoType);
 
             Transform intakeTransform = root.transform.Find("CartridgeIntake");
@@ -116,14 +135,18 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>
-        /// Звук окна приёма: настройки источника и звук выпадения — от гнезда магазина того же оружия,
-        /// звук вставки — свой у оружия (insertClip), пусто — общий MagazineAnchorSoundDefaults (AnchorActivationAudioTests).
+        /// Звук окна приёма: настройки источника и свой звук выпадения — от гнезда магазина того же оружия,
+        /// звук вставки — свой у оружия (insertClip). Пустые поля — не тишина: окно — приёмник боеприпасов ствола, и
+        /// AnchorSound в момент события берёт для него ту же цепочку, что для гнезда (запасная пара категории ствола →
+        /// дефолт роли гнезда → общий звук вставки MagazineAnchorSoundDefaults; AnchorActivationAudioTests).
         /// Источник — на самом окне, не под ActivateOnPlaced, иначе звук выпадения оборвётся.
         /// </summary>
         private static void ConfigureIntakeSound(UxrGrabbableObjectAnchor from, UxrGrabbableObjectAnchor to, AudioClip insertClip)
         {
             var donor = from.GetComponent<AnchorSound>();
-            if (donor == null || donor.Source == null || donor.TakeOutClip == null)
+            // Свой клип выпадения у гнезда необязателен (дефолт категории подставляется в рантайме; хост с его ссылкой
+            // ставится ниже, WeaponSystemAuthoring.Configure) — нужен сам компонент с источником.
+            if (donor == null || donor.Source == null)
                 throw new InvalidOperationException("Гнездо магазина без AnchorSound — нечего перенести на окно приёма.");
             var source = GetOrAdd<AudioSource>(to.gameObject);
             EditorUtility.CopySerialized(donor.Source, source);

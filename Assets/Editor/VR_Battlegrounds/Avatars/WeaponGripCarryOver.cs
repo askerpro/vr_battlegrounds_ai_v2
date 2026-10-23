@@ -11,21 +11,18 @@ using Object = UnityEngine.Object;
 
 namespace VrBattlegrounds.Editor.Avatars
 {
-    /// <summary>Откуда пересборка ствола берёт позы и записи хвата.</summary>
+    /// <summary>
+    /// Откуда пересборка ствола берёт позы и записи хвата. Единственный режим — <see cref="KeepCurrent" />: прежний
+    /// «Перезаписать из пака» (импорт поз MEF) выведен вместе с аватаром хвата MEF_Base_Avatar (решение пользователя
+    /// 2026-10-23); регистрация хватов аватаров — <c>AvatarGripRegistration</c> из поз <c>_orig</c>.
+    /// </summary>
     public enum WeaponGripPoseMode
     {
         /// <summary>
-        /// По умолчанию. Импорт поз из клипов не вызывается: записи хвата всех аватаров (точки оружия, затвор,
-        /// магазин) и их трансформы выравнивания переносятся из текущего префаба как есть.
+        /// Импорт поз из клипов не вызывается: записи хвата всех аватаров (точки оружия, затвор, магазин) и их
+        /// трансформы выравнивания переносятся из текущего префаба как есть.
         /// </summary>
-        KeepCurrent,
-
-        /// <summary>
-        /// Позы MEF заново снимаются с клипа пака (<see cref="HandsPackPoseImporter" />). Записи остальных аватаров
-        /// (Cyborg доводится руками) переносятся из текущего префаба. Сборщики оружия этот режим больше не принимают
-        /// (<see cref="WeaponGripCarryOver.RequireBuilderMode" />): регистрация поз и хватов аватаров — отдельная команда.
-        /// </summary>
-        ReimportFromPack
+        KeepCurrent
     }
 
     /// <summary>
@@ -82,13 +79,13 @@ namespace VrBattlegrounds.Editor.Avatars
         /// <summary>
         /// Сборщик оружия из паков не добавляет и не регистрирует позы и хваты аватаров (решение пользователя 2026-10-22):
         /// записи хвата переносятся как есть, сборка готовит только исходные позы <c>_orig</c> (<see cref="VrBattlegrounds.Editor.Gameplay.PackOrigPoses" />).
-        /// Перезапись поз MEF из пака — явная команда (<see cref="HandsPackPoseImporter" />, Grip Extraction).
+        /// Регистрация хватов аватара — <c>AvatarGripRegistration</c> (окно арсенала, «Позы рук из паков»).
         /// </summary>
         public static void RequireBuilderMode(WeaponGripPoseMode mode, string builder)
         {
             if (mode != WeaponGripPoseMode.KeepCurrent)
                 throw new InvalidOperationException($"{builder}: сборка не регистрирует позы аватаров (режим {mode}). " +
-                                                    "Хваты MEF из поз пака — отдельная команда «Зарегистрировать хваты для аватара MEF».");
+                                                    "Хваты аватара — регистрация из поз _orig (окно арсенала, «Позы рук из паков»).");
         }
 
         /// <summary>
@@ -132,22 +129,23 @@ namespace VrBattlegrounds.Editor.Avatars
         }
 
         /// <summary>
-        /// Возвращает хваты в пересобранные префабы. <see cref="WeaponGripPoseMode.KeepCurrent" /> переносит записи
-        /// всех аватаров. <see cref="WeaponGripPoseMode.ReimportFromPack" /> переносит все, кроме аватаров импортёра поз:
-        /// их записи остаются от сборки и импорта.
+        /// Возвращает хваты в пересобранные префабы: записи всех аватаров, кроме <paramref name="droppedAvatars" />,
+        /// переносятся из прежнего префаба (<see cref="WeaponGripPoseMode.KeepCurrent" />).
         /// </summary>
         /// <param name="droppedNodes">
         /// Имена объектов, которые сборка удалила намеренно (геометрия базы магазина SDK). Записи, чьи трансформы
         /// выравнивания лежали внутри них, не переносятся, и сами узлы не воссоздаются (решение пользователя 2026-10-22:
         /// хват магазина Cyborg не переносится, поза магазина — snap-точка <c>_orig</c>).
         /// </param>
-        /// <param name="droppedAvatars">GUID аватаров, чьи записи сборка убрала намеренно (сэмплы SDK у магазинов паков) — не переносятся.</param>
+        /// <param name="droppedAvatars">
+        /// GUID аватаров, чьи записи сборка убрала намеренно (сэмплы SDK у магазинов паков, выведенный MEF_Base_Avatar) —
+        /// не переносятся; их записи «от сборки» (донор) тоже не добавляются, а их трансформы удаляются как ненужные.
+        /// </param>
         public static void Restore(Snapshot snapshot, WeaponGripPoseMode mode, IEnumerable<string> droppedNodes = null,
             IEnumerable<string> droppedAvatars = null)
         {
             var dropped = new HashSet<string>(droppedNodes ?? Enumerable.Empty<string>());
             var droppedGuids = new HashSet<string>(droppedAvatars ?? Enumerable.Empty<string>());
-            HashSet<string> rewritten = mode == WeaponGripPoseMode.ReimportFromPack ? HandsPackPoseImporter.GripAvatarGuidSet() : new HashSet<string>();
             foreach (PrefabGrips prefab in snapshot.Prefabs)
             {
                 GameObject root = PrefabUtility.LoadPrefabContents(prefab.Path);
@@ -181,13 +179,6 @@ namespace VrBattlegrounds.Editor.Avatars
                                     continue;
                                 }
 
-                                Entry fresh = current.FirstOrDefault(e => e.AvatarGuid == old.AvatarGuid);
-                                if (rewritten.Contains(old.AvatarGuid) && fresh != null)
-                                {
-                                    result.Add(fresh);
-                                    continue;
-                                }
-
                                 result.Add(new Entry
                                 {
                                     AvatarGuid = old.AvatarGuid, Pose = old.Pose, Blend = old.Blend,
@@ -196,8 +187,9 @@ namespace VrBattlegrounds.Editor.Avatars
                                 carried++;
                             }
 
-                            // Аватары, которых в прежнем префабе не было, — от сборки, в конце списка.
-                            result.AddRange(current.Where(e => grips.Points[i].All(o => o.AvatarGuid != e.AvatarGuid)));
+                            // Аватары, которых в прежнем префабе не было, — от сборки, в конце списка. Убранные намеренно
+                            // (droppedAvatars) не добавляются: их записи уходят в replaced, а трансформы удаляются ниже.
+                            result.AddRange(current.Where(e => grips.Points[i].All(o => o.AvatarGuid != e.AvatarGuid) && !droppedGuids.Contains(e.AvatarGuid)));
                             replaced.AddRange(current.Where(e => !result.Contains(e)).SelectMany(e => new[] { e.Left, e.Right }));
                             Write(so.FindProperty(i == 0 ? "_grabPoint._avatarGripPoseEntries" : $"_additionalGrabPoints.Array.data[{i - 1}]._avatarGripPoseEntries"), result);
                         }

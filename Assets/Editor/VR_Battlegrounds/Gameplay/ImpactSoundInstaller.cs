@@ -8,25 +8,15 @@ using VrBattlegrounds.Interaction;
 namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
-    /// Звук падения оружию и магазинам реестра (<see cref="ImpactSound"/>): ствол — тяжёлый металлический удар,
-    /// магазин — лёгкий. Зовётся командой меню и сборщиком пака (<c>HandsPackWeaponBuilder</c>) — пересборка
-    /// перезаписывает префаб. Проверка — <c>ImpactSoundTests</c>.
+    /// Звук падения оружию и магазинам реестра (<see cref="ImpactSound"/>): вид предмета (ствол — тяжёлый удар, магазин —
+    /// лёгкий), объёмный источник и громкость. Клипы по умолчанию в префаб не пишутся (решение пользователя 2026-10-23:
+    /// звуковые дефолты — данные в ассете): без своих клипов предмет звучит набором своего вида из
+    /// <see cref="ImpactSoundDefaults"/> (<c>Resources/ImpactSoundDefaults.asset</c>) в момент удара. Свои клипы предмета —
+    /// оверрайд, установщик их не трогает; копию набора по умолчанию (прежняя запись установщика) снимает.
+    /// Зовётся командой меню и сборщиком пака (<c>HandsPackWeaponBuilder</c>). Проверка — <c>ImpactSoundTests</c>.
     /// </summary>
     public static class ImpactSoundInstaller
     {
-        private const string Folder = "Assets/Audio/SFX/Impacts/";
-        private static readonly string[] WeaponClips =
-        {
-            "IMPACT_Metal_Tool_Drop_Hard_Surface_mono.wav",
-            "IMPACT_Metal_Rod_Drop_Hard_Surface_mono.wav",
-            "IMPACT_Metal_Objects_Drop_Hard_Surface_01_mono.wav",
-        };
-        private static readonly string[] MagazineClips =
-        {
-            "IMPACT_Metal_Soft_Plate_01_mono.wav",
-            "IMPACT_Metal_Soft_Plate_02_mono.wav",
-        };
-
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Apply Impact Sounds")]
         public static void ApplyRegistry()
         {
@@ -56,7 +46,10 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
         }
 
-        /// <summary>Ставит или обновляет <see cref="ImpactSound"/> и его источник на корне предмета.</summary>
+        /// <summary>
+        /// Ставит или обновляет <see cref="ImpactSound"/> и его источник на корне предмета: вид, источник, громкость. Свои
+        /// клипы, совпадающие с набором вида в <see cref="ImpactSoundDefaults"/>, снимаются (звучит тот же набор из ассета).
+        /// </summary>
         public static void Apply(GameObject root, bool magazine)
         {
             // Не «??»: в редакторе GetComponent отсутствующего компонента — «поддельный null».
@@ -79,13 +72,33 @@ namespace VrBattlegrounds.Editor.Gameplay
             source.rolloffMode = AudioRolloffMode.Linear;
             so.FindProperty("_source").objectReferenceValue = source;
 
-            AudioClip[] clips = (magazine ? MagazineClips : WeaponClips).Select(n => AssetDatabase.LoadAssetAtPath<AudioClip>(Folder + n)).ToArray();
-            if (clips.Any(c => c == null)) GameLog.Error("[ImpactSoundInstaller] Нет клипа в " + Folder);
-            SerializedProperty list = so.FindProperty("_clips");
-            list.arraySize = clips.Length;
-            for (int i = 0; i < clips.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = clips[i];
+            ImpactSoundKind kind = magazine ? ImpactSoundKind.Magazine : ImpactSoundKind.Weapon;
+            so.FindProperty("_kind").intValue = (int)kind;
+            SerializedProperty own = so.FindProperty("_clips");
+            ImpactSoundDefaults defaults = ImpactSoundDefaults.Instance;
+            AudioClip[] common = defaults != null ? defaults.For(kind) : System.Array.Empty<AudioClip>();
+            if (own.arraySize > 0 && SameSet(own, common)) own.arraySize = 0;
+            if (own.arraySize == 0 && common.Length == 0)
+                GameLog.Error($"[ImpactSoundInstaller] {root.name}: нет своих клипов удара и набора «{kind}» в Resources/ImpactSoundDefaults.asset — падает молча.");
             so.FindProperty("_maxVolume").floatValue = magazine ? 0.6f : 0.9f;
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Свои клипы — тот же набор, что дефолт (порядок не важен: вариант выбирается случайно).</summary>
+        internal static bool SameSet(SerializedProperty own, AudioClip[] common)
+        {
+            if (common == null || common.Length == 0) return false;
+            var mine = new AudioClip[own.arraySize];
+            for (int i = 0; i < mine.Length; i++) mine[i] = own.GetArrayElementAtIndex(i).objectReferenceValue as AudioClip;
+            return SameSet(mine, common);
+        }
+
+        /// <summary>Два набора клипов совпадают как множества (без пустых элементов).</summary>
+        internal static bool SameSet(AudioClip[] a, AudioClip[] b)
+        {
+            if (a == null || b == null || a.Length == 0 || b.Length == 0) return false;
+            if (a.Any(c => c == null) || b.Any(c => c == null)) return false;
+            return a.Distinct().OrderBy(c => c.GetInstanceID()).SequenceEqual(b.Distinct().OrderBy(c => c.GetInstanceID()));
         }
     }
 }

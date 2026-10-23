@@ -17,14 +17,14 @@ namespace VrBattlegrounds.Editor.Avatars
     /// Разбор и план: tasks/hand-rig-quality/reports/cyborg-fit/pipeline-design.md, Details.md §«Grip Extraction Tools».
     ///
     /// <para>
-    /// <c>VrBattlegrounds.Editor.Avatars.GripExtraction.RunJson("{\"recipes\":[\"all\"],\"target\":\"MEF\",\"anchor\":\"wrist\",\"mode\":\"measure\",\"outDir\":\"…\"}")</c>
+    /// <c>VrBattlegrounds.Editor.Avatars.GripExtraction.RunJson("{\"recipes\":[\"all\"],\"target\":\"CyborgHands\",\"mode\":\"measure\",\"outDir\":\"…\"}")</c>
     /// — запрос <see cref="GripExtractionRequest" />, полный отчёт <see cref="GripExtractionReport" /> пишется в outDir
     /// (<c>grip-extraction-&lt;mode&gt;.json</c>), возвращается сводка (или полный отчёт при <c>returnFull</c>).
     /// </para>
     ///
     /// <para>
-    /// R0: <c>target=MEF, anchor=wrist</c> (кодирование source, без сдвига и curl) должен совпасть с текущими align
-    /// <c>Grabs/HandsPack/&lt;поза&gt;/MEF_Base_Avatar/Left|Right</c> и позами паков (≤ toleranceMm/toleranceDeg).
+    /// Профиля MEF и сверки R0 с прежним импортёром (align <c>Grabs/HandsPack/&lt;поза&gt;/MEF_Base_Avatar</c>) больше нет:
+    /// аватар хвата MEF выведен (решение пользователя 2026-10-23), его записи сняты с оружия.
     /// </para>
     /// </summary>
     public static class GripExtraction
@@ -96,7 +96,6 @@ namespace VrBattlegrounds.Editor.Avatars
                     }
                 }
 
-                report.R0 = EvaluateR0(profile, report.Points, request);
                 if (mode != GripExtractionMode.Measure)
                 {
                     Write(mode, profile, report, request);
@@ -118,7 +117,7 @@ namespace VrBattlegrounds.Editor.Avatars
             }
 
             GameLog.Debug.Info($"[GripExtraction] {report.Status}: {report.Mode} {report.Target}/{report.Anchor}, точек {report.Points.Count}, " +
-                               $"записано {report.Written.Count}, предупреждений {report.Warnings.Count}, R0 {(report.R0 == null ? "—" : report.R0.Applicable ? (report.R0.Pass ? "pass" : "fail") : "n/a")} → {report.ReportPath}");
+                               $"записано {report.Written.Count}, предупреждений {report.Warnings.Count} → {report.ReportPath}");
             return report;
         }
 
@@ -238,76 +237,6 @@ namespace VrBattlegrounds.Editor.Avatars
             }
         }
 
-        /// <summary>R0: новый расчёт против align и поз, которые сейчас лежат на префабах (и против прямого вызова прежнего aligner).</summary>
-        private static GripR0Check EvaluateR0(GripTargetProfile profile, List<GripExtractionResult> points, GripExtractionRequest request)
-        {
-            var check = new GripR0Check { ToleranceMm = request.ToleranceMm, ToleranceDeg = request.ToleranceDeg };
-            bool tuned = points.SelectMany(p => p.Hands).Any(h => h.NormalOffsetMm != 0 || (h.CurlDeg != null && h.CurlDeg.Count > 0));
-            check.Applicable = profile.Name == GripTargetProfile.MefName && profile.Anchor == GripAnchor.Wrist && profile.Encoding == GripPoseEncoding.AsSource && !tuned;
-            if (!check.Applicable)
-            {
-                check.Reason = "R0 — только target=MEF, anchor=wrist, encoding=source, без сдвига по нормали и curl.";
-                return check;
-            }
-
-            foreach (GripExtractionResult point in points)
-            {
-                if (point.Error != null)
-                {
-                    check.Failed.Add($"{point.Pose}: {point.Error}");
-                    continue;
-                }
-
-                foreach (GripHandResult hand in point.Hands)
-                {
-                    string            key      = $"{point.Pose}/{hand.Side}";
-                    GripExistingAlign existing = hand.ExistingNamed ?? hand.ExistingRecord;
-                    if (existing == null)
-                    {
-                        check.Missing.Add($"{key}: нет align на префабе");
-                    }
-                    else
-                    {
-                        check.Compared++;
-                        check.MaxAlignMm  = Math.Max(check.MaxAlignMm, existing.DeltaMm);
-                        check.MaxAlignDeg = Math.Max(check.MaxAlignDeg, existing.DeltaDeg);
-                        if (existing.DeltaMm > check.ToleranceMm || existing.DeltaDeg > check.ToleranceDeg)
-                        {
-                            check.Failed.Add($"{key}: align {existing.DeltaMm:0.###} мм / {existing.DeltaDeg:0.###}° ({existing.Path})");
-                        }
-                    }
-
-                    if (hand.PoseVsExistingDeg == null)
-                    {
-                        check.Missing.Add($"{key}: нет ассета позы {point.PosePath}");
-                    }
-                    else
-                    {
-                        check.MaxPoseDeg = Math.Max(check.MaxPoseDeg, hand.PoseVsExistingDeg.Value);
-                        if (hand.PoseVsExistingDeg.Value > check.ToleranceDeg) check.Failed.Add($"{key}: поза {hand.PoseVsExistingDeg.Value:0.###}°");
-                    }
-
-                    GripDelta aligner = hand.VsHandsPackAligner;
-                    if (aligner == null || aligner.Error != null)
-                    {
-                        check.Failed.Add($"{key}: прямой вызов HandsPackGripAligner не выполнен {aligner?.Error}");
-                    }
-                    else
-                    {
-                        check.MaxAlignerMm  = Math.Max(check.MaxAlignerMm, aligner.Mm);
-                        check.MaxAlignerDeg = Math.Max(check.MaxAlignerDeg, aligner.Deg);
-                        if (aligner.Mm > check.ToleranceMm || aligner.Deg > check.ToleranceDeg)
-                        {
-                            check.Failed.Add($"{key}: против HandsPackGripAligner {aligner.Mm:0.###} мм / {aligner.Deg:0.###}°");
-                        }
-                    }
-                }
-            }
-
-            check.Pass = check.Compared > 0 && check.Failed.Count == 0 && check.Missing.Count == 0;
-            return check;
-        }
-
         /// <summary>Отчёт — вне Assets (как Hand Pose Fit), чтобы не запускать импорт.</summary>
         private static string ResolveOutDir(string outDir, GripExtractionMode mode)
         {
@@ -325,7 +254,7 @@ namespace VrBattlegrounds.Editor.Avatars
             return directory;
         }
 
-        /// <summary>Сводка для execute_code: статус, R0, до 10 примеров, строка на руку.</summary>
+        /// <summary>Сводка для execute_code: статус, до 10 примеров, строка на руку.</summary>
         private static object Summary(GripExtractionReport r) =>
             new
             {
@@ -336,23 +265,6 @@ namespace VrBattlegrounds.Editor.Avatars
                 r.Anchor,
                 r.Encoding,
                 r.ReportPath,
-                R0 = r.R0 == null
-                         ? null
-                         : new
-                         {
-                             r.R0.Applicable,
-                             r.R0.Pass,
-                             r.R0.Reason,
-                             r.R0.Compared,
-                             r.R0.MaxAlignMm,
-                             r.R0.MaxAlignDeg,
-                             r.R0.MaxPoseDeg,
-                             r.R0.MaxAlignerMm,
-                             r.R0.MaxAlignerDeg,
-                             Missing = r.R0.Missing.Count,
-                             Failed  = r.R0.Failed.Count,
-                             Examples = r.R0.Failed.Concat(r.R0.Missing).Take(10).ToList()
-                         },
                 Points          = r.Points.Count,
                 Errors          = r.Points.Where(p => p.Error != null).Select(p => $"{p.Pose}: {p.Error}").Take(10).ToList(),
                 Warnings        = r.Warnings.Count,

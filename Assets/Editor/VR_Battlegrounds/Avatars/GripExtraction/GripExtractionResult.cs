@@ -122,24 +122,6 @@ namespace VrBattlegrounds.Editor.Avatars
         public GripHandResult Hand(string side) => Hands.Find(h => h.Side == side);
     }
 
-    /// <summary>R0: профиль MEF, опора по запястью, поза как есть — совпадение с текущими записями MEF.</summary>
-    public sealed class GripR0Check
-    {
-        public bool         Applicable;
-        public string       Reason;
-        public double       ToleranceMm;
-        public double       ToleranceDeg;
-        public int          Compared;
-        public double       MaxAlignMm;
-        public double       MaxAlignDeg;
-        public double       MaxPoseDeg;
-        public double       MaxAlignerMm;
-        public double       MaxAlignerDeg;
-        public bool         Pass;
-        public List<string> Missing = new List<string>();
-        public List<string> Failed  = new List<string>();
-    }
-
     /// <summary>Полный отчёт прогона (пишется в outDir).</summary>
     public sealed class GripExtractionReport
     {
@@ -161,7 +143,6 @@ namespace VrBattlegrounds.Editor.Avatars
         public string Meaning = "align — поза граббера в системе корня предмета; palm.errorHandMm — [вправо, вверх (тыл), вперёд (пальцы)] в осях кисти цели; normalOffsetMm > 0 — ладонь ближе к предмету";
 
         public GripExtractionRequest      Request;
-        public GripR0Check                R0;
         public List<GripExtractionResult> Points   = new List<GripExtractionResult>();
         public List<string>               Warnings = new List<string>();
         public List<string>               Written  = new List<string>();

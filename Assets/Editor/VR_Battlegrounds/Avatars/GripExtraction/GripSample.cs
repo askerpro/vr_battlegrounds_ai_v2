@@ -100,7 +100,7 @@ namespace VrBattlegrounds.Editor.Avatars
             position = rotation * ((palmCenter - bodyPosition) * k);
         }
 
-        /// <summary>Поза пальцев руки <paramref name="side" />: как в <c>HandsPackPoseImporter.CreatePoseAsset</c>.</summary>
+        /// <summary>Поза пальцев руки <paramref name="side" />: снятая рука как есть, вторая — её зеркало (правило поз паков).</summary>
         public UxrHandDescriptor DescriptorFor(UxrHandSide side) => side == Side ? Hand : Hand.Mirrored();
     }
 }

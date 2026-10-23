@@ -161,9 +161,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             (MagazineOnlyProfile, WeaponAmmoCapability.MagazineOnly, WeaponPhysicalCapability.NoAction, WeaponChamberPolicy.AutoOnMagazineInsert, WeaponEmptyPose.ReturnToRest),
         };
 
+        /// <summary>Путь ассета дефолтов категории (входы пересборки и preflight).</summary>
+        public static string DefaultsPathFor(WeaponFeedbackCategory category) => Array.Find(DefaultsSpecs, spec => spec.Category == category).Path;
+
         /// <summary>Ассет дефолтов категории с диска (null — ещё не создан).</summary>
         public static WeaponFeedbackDefaults LoadDefaults(WeaponFeedbackCategory category) =>
-            AssetDatabase.LoadAssetAtPath<WeaponFeedbackDefaults>(Array.Find(DefaultsSpecs, spec => spec.Category == category).Path);
+            AssetDatabase.LoadAssetAtPath<WeaponFeedbackDefaults>(DefaultsPathFor(category));
 
         private static bool IsMagazineOnlyScope(Entry[] entries) =>
             entries.Length > 0 && entries.All(entry => entry.Profile == MagazineOnlyProfile);
@@ -869,20 +872,18 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         public const string EjectaLayer = "Ignore Raycast";
         private const string EjectaPhysicsPath = EjectionFolder + "/EjectaPhysics.physicMaterial";
-        private static readonly string[] BrassImpacts =
-            { "Assets/Audio/SFX/Arsenal/IMPACT_Metal_Cling_Bright_mono.wav", "Assets/Audio/SFX/Impacts/IMPACT_Bullet_Metal_01_mono.wav" };
-        private static readonly string[] HullImpacts = { "Assets/Audio/SFX/Impacts/IMPACT_Bullet_Metal_01_mono.wav" };
 
         /// <summary>
         /// Префаб вылета: меш пака только ссылкой (<see cref="Mesh"/> — FBX пака или извлечённый меш ствола), материалы —
         /// рендерера FBX или рендерера ствола <see cref="MaterialFrom"/>, где этот меш уже нарисован. Размер — реальный
         /// (<see cref="Length"/>, <see cref="Diameter"/>, м): длинная ось меша → +Z, узкий конец (пуля, дульце) — к +Z.
+        /// Звуков касания префаб не получает: без своих клипов звучат звуки категории ствола
+        /// (<see cref="WeaponFeedbackDefaults.EjectaImpacts"/>, решение пользователя 2026-10-23 — дефолты в ассетах).
         /// </summary>
         private sealed class EjectaSpec
         {
             public string Name, Mesh, MaterialFrom;
             public float Length, Diameter, Mass, Volume;
-            public string[] Impacts;
             public string Path => EjectionFolder + "/" + Name + ".prefab";
         }
 
@@ -892,22 +893,22 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static readonly EjectaSpec[] EjectaSpecs =
         {
             new EjectaSpec { Name = "Pistol_Round", Mesh = ArtKinemation + "Viper/Meshes/Viper_Cartridge_025.asset",
-                MaterialFrom = "Assets/Prefabs/Weapons/Viper/Viper_mag.prefab", Length = 0.0297f, Diameter = 0.0099f, Mass = 0.008f, Volume = 0.45f, Impacts = BrassImpacts },
+                MaterialFrom = "Assets/Prefabs/Weapons/Viper/Viper_mag.prefab", Length = 0.0297f, Diameter = 0.0099f, Mass = 0.008f, Volume = 0.45f },
             new EjectaSpec { Name = "Pistol_Casing", Mesh = Casings + "9mm/SM_9mm_Casing.FBX",
-                Length = 0.019f, Diameter = 0.0099f, Mass = 0.004f, Volume = 0.4f, Impacts = BrassImpacts },
+                Length = 0.019f, Diameter = 0.0099f, Mass = 0.004f, Volume = 0.4f },
             new EjectaSpec { Name = "Rifle_Round", Mesh = ArtKinemation + "TR15/Meshes/TR15_Cartridge_1.asset",
-                MaterialFrom = "Assets/Prefabs/Weapons/TR15/TR15_mag.prefab", Length = 0.057f, Diameter = 0.0096f, Mass = 0.012f, Volume = 0.45f, Impacts = BrassImpacts },
+                MaterialFrom = "Assets/Prefabs/Weapons/TR15/TR15_mag.prefab", Length = 0.057f, Diameter = 0.0096f, Mass = 0.012f, Volume = 0.45f },
             new EjectaSpec { Name = "Rifle_Casing", Mesh = Casings + "556x45_NATO/SM_5_56x45-NATO_Casing.FBX",
-                Length = 0.045f, Diameter = 0.0096f, Mass = 0.006f, Volume = 0.4f, Impacts = BrassImpacts },
+                Length = 0.045f, Diameter = 0.0096f, Mass = 0.006f, Volume = 0.4f },
             new EjectaSpec { Name = "Shotgun_Shell", Mesh = ArtKinemation + "Herrington/Meshes/Herrington_Cartridge.asset",
-                MaterialFrom = "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab", Length = 0.07f, Diameter = 0.0205f, Mass = 0.035f, Volume = 0.35f, Impacts = HullImpacts },
+                MaterialFrom = "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab", Length = 0.07f, Diameter = 0.0205f, Mass = 0.035f, Volume = 0.35f },
             new EjectaSpec { Name = "Shotgun_Hull", Mesh = Casings + "12-Gauge/SM_12-Gauge.FBX",
-                Length = 0.07f, Diameter = 0.0205f, Mass = 0.012f, Volume = 0.3f, Impacts = HullImpacts },
+                Length = 0.07f, Diameter = 0.0205f, Mass = 0.012f, Volume = 0.3f },
             // Снайперский .308 (7.62×51): патрон — меш Mk14 (тот же калибр), гильза — .338 Lapua Kinemation под размер .308.
             new EjectaSpec { Name = "Sniper_Round", Mesh = ArtKinemation + "Mk14/Meshes/Mk14_Mk14_Ammo_001.asset",
-                MaterialFrom = "Assets/Prefabs/Weapons/Mk14/Mk14_mag.prefab", Length = 0.071f, Diameter = 0.0119f, Mass = 0.024f, Volume = 0.45f, Impacts = BrassImpacts },
+                MaterialFrom = "Assets/Prefabs/Weapons/Mk14/Mk14_mag.prefab", Length = 0.071f, Diameter = 0.0119f, Mass = 0.024f, Volume = 0.45f },
             new EjectaSpec { Name = "Sniper_Casing", Mesh = Casings + "338_Lapua/SM_338-Lapua_Casing.FBX",
-                Length = 0.051f, Diameter = 0.0119f, Mass = 0.012f, Volume = 0.4f, Impacts = BrassImpacts },
+                Length = 0.051f, Diameter = 0.0119f, Mass = 0.012f, Volume = 0.4f },
         };
 
         /// <summary>Начальный вылет категории: какой префаб и импульс (система окна: +X наружу, +Y вверх, +Z к дулу).</summary>
@@ -1065,11 +1066,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 var data = new SerializedObject(ejecta);
                 data.FindProperty("_audio").objectReferenceValue = audio;
                 data.FindProperty("_impactVolume").floatValue = spec.Volume;
-                SerializedProperty clips = data.FindProperty("_impactClips");
-                clips.arraySize = spec.Impacts.Length;
-                for (int index = 0; index < spec.Impacts.Length; index++)
-                    clips.GetArrayElementAtIndex(index).objectReferenceValue =
-                        AssetDatabase.LoadAssetAtPath<AudioClip>(spec.Impacts[index]) ?? throw new InvalidOperationException("Нет звука " + spec.Impacts[index]);
+                data.FindProperty("_impactClips").arraySize = 0; // звук касания — дефолт категории ствола
                 data.ApplyModifiedPropertiesWithoutUndo();
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, spec.Path);
                 return saved != null ? saved : throw new InvalidOperationException(spec.Path + ": сохранение не удалось");

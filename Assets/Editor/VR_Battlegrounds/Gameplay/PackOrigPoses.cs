@@ -37,7 +37,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// <para>
     /// <b>Snap-точка.</b> Пустой <see cref="Transform" /> без компонентов
     /// <c>&lt;Grabs&gt;/Orig/&lt;имя позы&gt;/Left|Right</c> в префабе предмета (<c>Grabs</c> — <c>MeshContainer/Grabs</c>, иначе
-    /// <c>Grabs</c> корня, иначе корень): рамка ладони руки пака в кадре клипа (<see cref="GripSample.PalmInBody" />) —
+    /// <c>Grabs</c> корня, иначе корень; уже существующий <c>Orig</c> — там, где он есть, <see cref="GrabsOf" />): рамка ладони руки пака в кадре клипа (<see cref="GripSample.PalmInBody" />) —
     /// начало в центре ладони SDK, оси — универсальные оси кисти. От граббера аватара не зависит: align аватара потом —
     /// snap · (рамка ладони → граббер) его кисти. В записи хватов и <c>UxrGrabbableObject</c> не входит.
     /// Запись — только добавленные объекты и их трансформы через экземпляр в превью-сцене
@@ -87,7 +87,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// </summary>
         public static Transform FindSnap(Transform root, string point, UxrHandSide side)
         {
-            Transform grabs = root.Find("MeshContainer/Grabs") ?? root.Find("Grabs") ?? root;
+            Transform grabs = GrabsOf(root);
             Transform orig = grabs.Find(SnapFolder);
             if (orig == null) return null;
             string suffix = $"_{point}{Suffix}";
@@ -522,7 +522,20 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
         }
 
-        private static Transform GrabsOf(Transform root) => root.Find("MeshContainer/Grabs") ?? root.Find("Grabs") ?? root;
+        /// <summary>
+        /// Контейнер snap-точек <c>Orig</c>: тот из <c>MeshContainer/Grabs</c>, <c>Grabs</c>, корня, где <c>Orig</c> уже есть;
+        /// иначе первый существующий. Так <c>Grabs</c>, созданный позже у корня (snap-узлы аватаров инспектора UXR или
+        /// <see cref="AvatarGripRegistration" />), не прячет прежний <c>Orig</c> корня и не порождает второй.
+        /// </summary>
+        internal static Transform GrabsOf(Transform root)
+        {
+            foreach (Transform container in new[] { root.Find("MeshContainer/Grabs"), root.Find("Grabs"), root })
+            {
+                if (container != null && container.Find(SnapFolder) != null) return container;
+            }
+
+            return root.Find("MeshContainer/Grabs") ?? root.Find("Grabs") ?? root;
+        }
 
         /// <summary>Snap-точки предмета в загруженном содержимом префаба: создать недостающие, сдвинуть отличающиеся.</summary>
         private static void PlaceSnaps(GameObject root, List<OrigPoint> points, Dictionary<string, string> problems,
@@ -571,7 +584,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Пересохранить префаб до устойчивых байтов (с каноном после каждого сохранения).</summary>
-        private static void Converge(string prefabPath)
+        internal static void Converge(string prefabPath)
         {
             Canonicalize(prefabPath);
             for (int pass = 0; pass < 3; pass++)
@@ -586,7 +599,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>SaveAsPrefabAsset пишет _assetId = 0 и флаги UXR как вне префаба — вернуть канон на диске.</summary>
-        private static void Canonicalize(string prefabPath)
+        internal static void Canonicalize(string prefabPath)
         {
             NetworkAssetIdNormalizer.Normalize(new[] { prefabPath }, false);
             UxrUniqueIdPersister.Normalize(prefabPath);
@@ -651,7 +664,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             return problems.Count == 0 ? null : string.Join("; ", problems.Take(8)) + (problems.Count > 8 ? $" … ещё {problems.Count - 8}" : "");
         }
 
-        private static Dictionary<long, (int Class, string[] Lines)> Documents(string text, out string header)
+        internal static Dictionary<long, (int Class, string[] Lines)> Documents(string text, out string header)
         {
             var documents = new Dictionary<long, (int, string[])>();
             var preamble = new List<string>();
@@ -688,7 +701,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         }
 
         /// <summary>Первая различающаяся строка документа — для отчёта об отказе.</summary>
-        private static string FirstDifference(string[] was, string[] now)
+        internal static string FirstDifference(string[] was, string[] now)
         {
             for (int i = 0; i < Math.Max(was.Length, now.Length); i++)
             {
@@ -699,7 +712,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             return "без различий строк";
         }
 
-        private static bool IsSubsequence(string[] part, string[] whole)
+        internal static bool IsSubsequence(string[] part, string[] whole)
         {
             int i = 0;
             foreach (string line in whole)

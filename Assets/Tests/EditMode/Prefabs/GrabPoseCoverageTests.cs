@@ -14,8 +14,8 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.Tests.Prefabs
 {
     /// <summary>
-    /// Покрытие поз хвата: <b>каждый хватаемый предмет × каждый играбельный аватар</b> → у каждой
-    /// точки хвата есть настройка хвата именно для этого аватара.
+    /// Покрытие поз хвата: <b>каждый хватаемый предмет × каждое семейство играбельных аватаров</b> → у каждой
+    /// точки хвата есть настройка хвата для этого семейства.
     ///
     /// <para>
     /// <b>Как UltimateXR выбирает хват.</b> Записи хвата (<see cref="UxrGripPoseInfo"/>: поза пальцев
@@ -44,6 +44,15 @@ namespace VrBattlegrounds.Tests.Prefabs
     /// </para>
     ///
     /// <para>
+    /// <b>Семейство аватаров</b> (решение пользователя 2026-10-23): аватары с общей базой семейства — один аватар
+    /// проверки, их хваты подходят друг другу. База семейства — префаб из <see cref="FamilyBaseGuids"/> в цепочке
+    /// <see cref="UxrAvatar.GetParentPrefabChain"/> аватара реестра (кисти Cyborg — <c>CyborgHandsBase</c>); аватар вне
+    /// семейства — сам себе семейство. Проверка идёт по базе: запись найдена по цепочке базы, поза зарегистрирована у
+    /// базы или её родителей, align заданы. Свои записи потомков (мимо базы) запрещает
+    /// <c>CyborgGripEntriesOwnershipTests</c>; один пропуск — один красный случай, а не по красному на каждый скин.
+    /// </para>
+    ///
+    /// <para>
     /// <b>Призрак выбывшего</b> (T-35) — отдельный аватар, вариант киборга, в реестре в поле
     /// <c>AvatarRegistry.ghost</c>, а не в списке скинов, поэтому в матрицу не входит: он берёт только
     /// планшет (<c>GhostGrabRule</c>), а позы планшета наследует от киборга (цепочка префабов аватара).
@@ -58,6 +67,9 @@ namespace VrBattlegrounds.Tests.Prefabs
     public class GrabPoseCoverageTests
     {
         private const string PrefabsRoot = "Assets/Prefabs";
+
+        /// <summary>Базы семейств аватаров: CyborgHandsBase (кисти Cyborg: MEF_cyborg_hands_Player, _Black, PlayerControllersCyborgAvatar).</summary>
+        public static readonly string[] FamilyBaseGuids = { "71b74b0d08444f49bbb7aa2828d0890a" };
 
         // ══════════════════════════════════════════════════════════════════
         //  Источники
@@ -76,6 +88,14 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             return avatars.Distinct().OrderBy(a => a.name);
         }
+
+        /// <summary>База семейства аватара: первый префаб цепочки (сам аватар, затем родители) из <see cref="FamilyBaseGuids"/>; нет — сам аватар.</summary>
+        public static UxrAvatar FamilyOf(UxrAvatar avatar) =>
+            new[] { avatar }.Concat(avatar.GetParentPrefabChain())
+                            .FirstOrDefault(a => FamilyBaseGuids.Contains(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(a)))) ?? avatar;
+
+        /// <summary>Семейства играбельных аватаров — базы семейств аватаров реестра (аватар вне семейства — сам).</summary>
+        public static IEnumerable<UxrAvatar> Families() => Avatars().Select(FamilyOf).Distinct().OrderBy(a => a.name);
 
         /// <summary>
         /// Префабы с хватаемыми предметами: всё из <c>Assets/Prefabs</c> (кроме самих аватаров) и
@@ -105,7 +125,7 @@ namespace VrBattlegrounds.Tests.Prefabs
 
         private static IEnumerable<TestCaseData> Pairs()
         {
-            List<UxrAvatar> avatars = Avatars().ToList();
+            List<UxrAvatar> avatars = Families().ToList();
 
             foreach (string item in ItemPaths())
             {
@@ -117,9 +137,9 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
         }
 
-        private static IEnumerable<TestCaseData> AvatarCases()
+        private static IEnumerable<TestCaseData> FamilyCases()
         {
-            foreach (UxrAvatar avatar in Avatars())
+            foreach (UxrAvatar avatar in Families())
             {
                 yield return new TestCaseData(AssetDatabase.GetAssetPath(avatar)).SetName($"{{m}}({avatar.name})");
             }
@@ -129,7 +149,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         //  Тесты
         // ══════════════════════════════════════════════════════════════════
 
-        /// <summary>Предмет × аватар: каждая точка хвата настроена под этого аватара.</summary>
+        /// <summary>Предмет × семейство: каждая точка хвата настроена под базу семейства (или аватар вне семейства).</summary>
         [TestCaseSource(nameof(Pairs))]
         public void У_каждой_точки_хвата_есть_хват_аватара(string itemPath, string avatarPath)
         {
@@ -143,7 +163,7 @@ namespace VrBattlegrounds.Tests.Prefabs
             }
 
             Assert.IsEmpty(problems, $"{item.name} × {avatar.name}: нет хвата ({problems.Count}):\n  " + string.Join("\n  ", problems) +
-                                     "\nНастраивается на UxrGrabbableObject: Grab Points → вкладка аватара (или его базы PlayerBase_SdkHands / PlayerBase_NonSdkHands).");
+                                     "\nНастраивается на UxrGrabbableObject: Grab Points → вкладка базы семейства (CyborgHandsBase) или аватара вне семейства; позы паков — окно арсенала, «Взаимодействие» → «Зарегистрировать позы для выбранного аватара».");
         }
 
         /// <summary>
@@ -151,7 +171,7 @@ namespace VrBattlegrounds.Tests.Prefabs
         /// и экземпляры сэмплов UltimateXR. Проверяется экземпляр со всеми override'ами сцены;
         /// одинаковые отказы разных экземпляров одного источника схлопываются.
         /// </summary>
-        [TestCaseSource(nameof(AvatarCases))]
+        [TestCaseSource(nameof(FamilyCases))]
         public void У_каждого_предмета_сцен_есть_хват_аватара(string avatarPath)
         {
             UxrAvatar avatar = Load(avatarPath).GetComponent<UxrAvatar>();
@@ -201,6 +221,11 @@ namespace VrBattlegrounds.Tests.Prefabs
         public void Источники_видят_аватары_оружие_и_планшет()
         {
             Assert.IsNotEmpty(Avatars(), "Ни одного аватара — тест ничего не проверяет.");
+            Assert.That(Families().Select(a => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(a))), Is.Unique, "Семейства повторяются.");
+            foreach (UxrAvatar avatar in Avatars())
+            {
+                Assert.That(Families(), Has.Member(FamilyOf(avatar)), $"{avatar.name}: семейство не проверяется.");
+            }
 
             List<string> items = ItemPaths().ToList();
             Assert.That(items, Has.Some.EndsWith("/Tablet.prefab"), "Планшет меню не попал в выборку предметов.");

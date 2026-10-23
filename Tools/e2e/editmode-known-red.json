@@ -45,219 +45,75 @@
       "reason": "выстрел: повтор у наблюдателя"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(BrowningHiPower_Magazine, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(BrowningHiPower_Magazine, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(BrowningHiPower_Magazine, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(BrowningHiPower_Magazine, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, CyborgHandsBase)",
       "reason": "хваты: покрытие поз хвата аватаров"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(DogTag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: покрытие поз хвата аватаров"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS_Ammo, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS_Ammo, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS_Ammo, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS_Ammo, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MP5K_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Mk14_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(PPK_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(R08_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington_mag, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Revolver_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington_mag, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington_mag, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Scar_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_mag, MEF_cyborg_hands_Player)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_mag, MEF_cyborg_hands_Player_Black)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MKR9_mag, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Uzi_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MP5K_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MP5K_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(MP5K_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Mk14_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Mk14_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Mk14_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(PPK_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(PPK_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(PPK_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(R08_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(R08_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(R08_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Revolver_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Revolver_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Revolver_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SRM12_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Scar_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Scar_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Scar_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(SniperRifle_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(TR15_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Uzi_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Uzi_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Uzi_mag, PlayerControllersCyborgAvatar)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_mag, MEF_cyborg_hands_Player)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_mag, MEF_cyborg_hands_Player_Black)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_mag, PlayerControllersCyborgAvatar)",
+      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Viper_mag, CyborgHandsBase)",
       "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
     },
     {

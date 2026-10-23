@@ -124,7 +124,7 @@ namespace VrBattlegrounds.Editor.Avatars
         /// (<c>__prefabGuid</c> пуст, <c>__isInPrefab</c>=0), в отличие от остальных точек хвата префаба.
         /// Проставляет GUID префаба, не меняя уже записанный ID; у существующих компонентов ничего не меняет.
         /// </summary>
-        private static void BindToPrefab(Transform align, string weaponPath)
+        internal static void BindToPrefab(Transform align, string weaponPath)
         {
             if (!align.TryGetComponent(out UxrGrabbableObjectSnapTransform snap)) return;
             var    serialized = new SerializedObject(snap);

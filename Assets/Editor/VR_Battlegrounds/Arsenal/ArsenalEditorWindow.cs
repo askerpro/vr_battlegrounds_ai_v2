@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UltimateXR.Avatar;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VrBattlegrounds.Arsenal;
@@ -28,6 +29,13 @@ namespace VrBattlegrounds.Editor.Arsenal
         [SerializeField] private string search = "";
         [SerializeField] private int categoryFilter;
         [SerializeField] private int sourceFilter;
+        [SerializeField] private UxrAvatar gripAvatar;
+        [SerializeField] private bool gripWholeCatalogue = true;
+        [SerializeField] private bool gripReplaceSdk = true;
+        [SerializeField] private bool gripRebuild;
+        [SerializeField] private bool gripRebuildGrip, gripRebuildSupport, gripRebuildMagazine;
+        private bool gripSetExpanded;
+        private readonly HashSet<WeaponInfo> gripSet = new HashSet<WeaponInfo>();
         private WeaponInfo[] catalogue = Array.Empty<WeaponInfo>();
         private ArsenalPreset[] presets = Array.Empty<ArsenalPreset>();
         private MapData[] maps = Array.Empty<MapData>();
@@ -338,7 +346,7 @@ namespace VrBattlegrounds.Editor.Arsenal
         private void DrawBuild()
         {
             var kin = ArsenalEditorActions.Kinemation(weapon); var hands = ArsenalEditorActions.Hands(weapon);
-            EditorGUILayout.HelpBox("Пересборка из источника изменяет оружие, магазин, Art/motion/interaction и звуки. Позы и хваты аватаров сборка не регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — «Зарегистрировать хваты для аватара MEF» во вкладке «Взаимодействие» и Grip Extraction. Сборка экспортирует исходные позы пака _orig (" + PackOrigPoses.Root + ") и snap-точки Orig в префабы оружия и магазина. Прицел, хост WeaponSystem и баланс ставятся сборкой; воспроизводимость новой readiness policy ведётся отдельным этапом. Этот маршрут не подтверждает игровую готовность.", MessageType.Warning);
+            EditorGUILayout.HelpBox("Пересборка из источника изменяет оружие, магазин, Art/motion/interaction и звуки. Позы и хваты аватаров сборка не регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — «Зарегистрировать позы для выбранного аватара» во вкладке «Взаимодействие» (блок «Позы рук из паков») из готовых _orig. Сборка экспортирует исходные позы пака _orig (" + PackOrigPoses.Root + ") и snap-точки Orig в префабы оружия и магазина. Прицел, хост WeaponSystem и баланс ставятся сборкой; воспроизводимость новой readiness policy ведётся отдельным этапом. Этот маршрут не подтверждает игровую готовность.", MessageType.Warning);
             if (kin != null)
             {
                 EditorGUILayout.LabelField("Рецепт: " + kin.Weapon.Name + " · исходник: " + kin.PackPrefab);
@@ -410,18 +418,93 @@ namespace VrBattlegrounds.Editor.Arsenal
         }
         private void DrawInteraction()
         {
+            // Позы рук из паков — команда каталога или набора: видна и без выбранного оружия.
+            DrawPackPoseRegistration();
             if (weapon == null || weapon.WeaponPrefab == null) return;
             var selected = weapon; string path = AssetDatabase.GetAssetPath(selected.WeaponPrefab);
             EditorGUILayout.HelpBox("Хват, ручной цикл и смещения редактируются в существующем Inspector префаба. Подгонка кисти по геометрии пока исследование; успешного отчёта о прилегании здесь нет.", MessageType.Info);
-            EditorGUILayout.HelpBox("Регистрация хватов MEF из поз пака — явная команда, сборка её не делает: изменяет grabs выбранного оружия, общую базу поз и MEF; наследующие аватары получают обновление. Это не локальная настройка одной станции.", MessageType.Info);
             if (GUILayout.Button("Проверить области хвата выбранного оружия")) Try(() => ArsenalEditorActions.Run("Проверка областей выбранного оружия", Array.Empty<string>(), () => WeaponInteractionReview.Preflight(new[] { path }), false));
             Command("Обновить подсветку и напоминание выбранного оружия", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons" }).ToArray(), "Выбранное оружие и его магазин; existing installer. Корпус, баланс и позы кистей не пересобираются.", () => WeaponInteractionReview.Apply(new[] { path }, selected.MagazinePrefab == null ? Array.Empty<string>() : new[] { AssetDatabase.GetAssetPath(selected.MagazinePrefab) }), savesAllAssets: false);
             var kin = ArsenalEditorActions.Kinemation(selected);
             if (kin != null) Command("Обновить механические анимации KINEMATION", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { KinemationWeapon.ArtRoot + "/" + kin.Weapon.Name, ArsenalBuildPreflight.InsertionMaterial }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).ToArray(), "Motion + bindings/контакты и Empty range; KinemationFixReview.Apply. Исходные ModelImporter могут получить Read/Write.", () => { KinemationFixReview.Apply(kin.Weapon.Name); return "Механика обновлена."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
-            if (kin != null) Command("Зарегистрировать хваты для аватара MEF (позы KINEMATION)", ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { KinemationWeaponBuilder.PoseFolder, AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath }).ToArray(), "Прежний импорт поз пака: позы Kinemation_*, grabs оружия, общий pose base и MEF. Source model import dependencies могут получить Read/Write.", () => { KinemationWeaponBuilder.ImportPoses(kin); return "Позы KINEMATION импортированы."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
-            if (HandsPackPoseImporter.Recipes.Any(r => r.Weapon == path))
-                Command("Зарегистрировать хваты для аватара MEF (позы Hands)", new[] { path, "Assets/Art/HandPoses", AvatarHandBases.NonSdkHands, HandsPackPoseImporter.MefBaseAvatarPath }, "Поза оружия, MEF grip avatar и общий pose base; наследующие аватары получают обновление.", () => { HandsPackPoseImporter.ImportFor(path); return "Позы импортированы."; }, HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path).Select(p => HandsPackWeapon.PackModels + p.Folder).ToArray(), savesAllAssets: false);
             Command("Обновить внутренний патрон двух дробовиков", new[] { "Assets/Prefabs/Weapons/FabarmSDASS", "Assets/Prefabs/Weapons/Herrington" }, "Фиксированный набор двух дробовиков: ammo alignment/ejection, не баланс/ёмкость.", WeaponInternalAmmoAlignment.ApplyCurrentShotguns);
+        }
+        /// <summary>
+        /// Блок «Позы рук из паков»: регистрация для выбранного аватара из готовых _orig (AvatarGripRegistration) — точки
+        /// Grip/Support оружия и точка магазина, весь каталог или выбранный набор. Снимок области без раскрытия зависимостей:
+        /// входы — только YAML-ассеты (позы _orig, префабы, аватар, риг, база).
+        /// </summary>
+        private void DrawPackPoseRegistration()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Позы рук из паков", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Позы берутся из готовых _orig и snap-точек Orig (" + PackOrigPoses.Root + "): их готовит сборка оружия и кнопка «Экспортировать позы рук (все стволы)» на вкладке «Сборка». Клипы и модели паков здесь не читаются. Точки: Grip (0) и Support (1) оружия, точка 0 магазина; точка с хватом аватара (своим или по цепочке до базы) пропускается, существующие позы не перезаписываются.", MessageType.Info);
+            if (gripAvatar == null) gripAvatar = AssetDatabase.LoadAssetAtPath<GameObject>(GripTargetProfile.MefCyborgPlayerPath)?.GetComponent<UxrAvatar>();
+            var nextAvatar = (UxrAvatar)EditorGUILayout.ObjectField("Аватар", gripAvatar, typeof(UxrAvatar), false);
+            if (nextAvatar != gripAvatar) { gripAvatar = nextAvatar; CancelPlan(); }
+            AvatarGripRegistration.Target target = null;
+            try { target = AvatarGripRegistration.ResolveTarget(gripAvatar); }
+            catch (Exception exception) { EditorGUILayout.HelpBox(exception.Message, MessageType.Warning); }
+            if (target != null) EditorGUILayout.HelpBox(target.Describe(), MessageType.None);
+            int scope = GUILayout.Toolbar(gripWholeCatalogue ? 0 : 1, new[] { "Весь каталог (" + catalogue.Length + ")", "Выбранные (" + catalogue.Count(gripSet.Contains) + ")" });
+            if ((scope == 0) != gripWholeCatalogue) { gripWholeCatalogue = scope == 0; CancelPlan(); }
+            if (!gripWholeCatalogue)
+            {
+                gripSetExpanded = EditorGUILayout.Foldout(gripSetExpanded, "Оружие для регистрации", true);
+                if (gripSetExpanded)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Все")) { gripSet.UnionWith(catalogue); CancelPlan(); }
+                        if (GUILayout.Button("Ничего")) { gripSet.Clear(); CancelPlan(); }
+                        using (new EditorGUI.DisabledScope(weapon == null))
+                            if (GUILayout.Button("Добавить выбранное оружие") && weapon != null) { gripSet.Add(weapon); CancelPlan(); }
+                    }
+                    foreach (var item in catalogue)
+                    {
+                        bool wasSelected = gripSet.Contains(item);
+                        bool nowSelected = EditorGUILayout.ToggleLeft(item.DisplayName + " · " + ArsenalEditorActions.Source(item), wasSelected);
+                        if (wasSelected != nowSelected) { if (nowSelected) gripSet.Add(item); else gripSet.Remove(item); CancelPlan(); }
+                    }
+                }
+            }
+            bool replaceSdk = EditorGUILayout.ToggleLeft(new GUIContent("Заменять временные записи с позами SDK (по умолчанию включено)",
+                "Запись цели с позой из Assets/ThirdParty/UltimateXR (GrabClaw, Grab, GrabStandard, Demo*) считается незаполненной: новая поза из _orig (магазин без _orig — шаблон AK105), новые snap-узлы; прежние align удаляются, только если на них никто больше не ссылается. Записи с позами проекта не трогаются."), gripReplaceSdk);
+            if (replaceSdk != gripReplaceSdk) { gripReplaceSdk = replaceSdk; CancelPlan(); }
+            if (gripWholeCatalogue)
+                EditorGUILayout.HelpBox("«Пересоздать из пака выбранные точки» доступно только для выбранного оружия (область «Выбранные»): ручные позы проекта по всему каталогу не перезаписываются.", MessageType.None);
+            else
+            {
+                bool rebuild = EditorGUILayout.ToggleLeft(new GUIContent("Пересоздать из пака выбранные точки",
+                    "Записи цели выбранных точек, в том числе с ручной позой проекта: поза перезаписывается на месте данными _orig (GUID и путь прежние; общая для нескольких записей поза — отказ), align записи переставляются от snap Orig (узлы переиспользуются)."), gripRebuild);
+                if (rebuild != gripRebuild) { gripRebuild = rebuild; CancelPlan(); }
+                if (gripRebuild)
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        bool g = EditorGUILayout.ToggleLeft("Рукоять", gripRebuildGrip, GUILayout.Width(100));
+                        bool s = EditorGUILayout.ToggleLeft("Цевьё", gripRebuildSupport, GUILayout.Width(100));
+                        bool m = EditorGUILayout.ToggleLeft("Магазин", gripRebuildMagazine, GUILayout.Width(100));
+                        if (g != gripRebuildGrip || s != gripRebuildSupport || m != gripRebuildMagazine)
+                        { gripRebuildGrip = g; gripRebuildSupport = s; gripRebuildMagazine = m; CancelPlan(); }
+                    }
+            }
+            var options = new AvatarGripRegistration.Options { ReplaceSdkPoses = gripReplaceSdk };
+            if (!gripWholeCatalogue && gripRebuild)
+            {
+                if (gripRebuildGrip) options.RebuildPoints.Add(AvatarGripRegistration.GripPoint);
+                if (gripRebuildSupport) options.RebuildPoints.Add(AvatarGripRegistration.SupportPoint);
+                if (gripRebuildMagazine) options.RebuildPoints.Add(AvatarGripRegistration.MagazinePoint);
+            }
+            var avatar = gripAvatar;
+            var weapons = gripWholeCatalogue ? catalogue.ToArray() : catalogue.Where(gripSet.Contains).ToArray();
+            string[] rebuildPoses = target == null ? Array.Empty<string>() : AvatarGripRegistration.RebuildPosePaths(target, weapons, options);
+            using (new EditorGUI.DisabledScope(target == null || weapons.Length == 0))
+                Command("Зарегистрировать позы для выбранного аватара (" + weapons.Length + " ед. оружия)", target == null ? Array.Empty<string>() : AvatarGripRegistration.OutputPaths(target, weapons).Concat(rebuildPoses).Distinct().ToArray(),
+                    "Из готовых _orig (магазин без них — шаблон AK105): копия позы (<Пак>_<Предмет>_Grip / _Support / _Mag_Grip / _Shell_Grip) в папке поз цели, регистрация в _handPoses базы, запись хвата и snap-узлы Grabs/<цель>/<точка>/Left|Right Grab на оружии (Grip, Support) и магазине. Точки с хватом аватара пропускаются, существующие позы не перезаписываются" +
+                    (options.ReplaceSdkPoses ? "; временные записи с позами SDK заменяются" : "") +
+                    (options.RebuildPoints.Count > 0 ? "; пересоздаются из пака точки " + string.Join(", ", options.RebuildPoints) + " — позы перезаписываются на месте: " + (rebuildPoses.Length == 0 ? "нет" : string.Join(", ", rebuildPoses)) : "") +
+                    ". Оружие с вложенным магазином получает overrides __prefabGuid snap-компонентов. Снимок — только YAML-входы, без зависимостей. Подгонка и проверка в шлеме — отдельно.",
+                    () => AvatarGripRegistration.Register(avatar, weapons, options), target == null ? null : AvatarGripRegistration.InputPaths(target), savesAllAssets: false, expandDependencies: false);
         }
         private void DrawChecks()
         {
@@ -452,12 +535,13 @@ namespace VrBattlegrounds.Editor.Arsenal
             Command("Проверить компиляцию под Android", new[] { "Temp/AndroidCompileGate" }, "Компилирует player scripts; игровые ассеты не меняет. Editor-only окно проверяется компиляцией Unity Editor.", () => { var report = AndroidCompileGate.Run(); return report.Summary + "\n" + string.Join("\n", report.Errors); });
             EditorGUILayout.HelpBox("Существующие EditMode проверки: WeaponDropPhysicsTests, OutOfWorldGuardTests, WeaponPartGrabTests, WeaponScaleTests, WeaponBalanceTests, ArsenalPrefabMutationTests. Запуск — Window/General/Test Runner, сборка VrBattlegrounds.Tests.EditMode. Проверка в шлеме отдельно: хват, перезарядка, отдача, магазины и открытие станции.", MessageType.Info);
         }
-        private void Command(string title, string[] paths, string note, Func<string> action, string[] readPaths = null, Scene? sceneContext = null, bool savesAllAssets = true)
+        /// <param name="expandDependencies">false — снимок только перечисленных путей (и их .meta), без AssetDatabase.GetDependencies</param>
+        private void Command(string title, string[] paths, string note, Func<string> action, string[] readPaths = null, Scene? sceneContext = null, bool savesAllAssets = true, bool expandDependencies = true)
         {
             using (new EditorGUI.DisabledScope(pending != null || ArsenalEditorActions.BlockReason != null))
-                if (GUILayout.Button(title)) Try(() => BeginPrepare(title, paths, note, action, readPaths, sceneContext, savesAllAssets));
+                if (GUILayout.Button(title)) Try(() => BeginPrepare(title, paths, note, action, readPaths, sceneContext, savesAllAssets, expandDependencies));
         }
-        private string BeginPrepare(string title, string[] paths, string note, Func<string> action, string[] reads, Scene? scene, bool saveAll)
+        private string BeginPrepare(string title, string[] paths, string note, Func<string> action, string[] reads, Scene? scene, bool saveAll, bool expandDependencies = true)
         {
             if (pending != null) throw new InvalidOperationException("Дождитесь завершения текущей операции.");
             CancelPlan();
@@ -471,6 +555,13 @@ namespace VrBattlegrounds.Editor.Arsenal
                 Stage = OperationStage.Dependencies, StageLabel = "Очередь зависимостей"
             };
             operation.ScenePath = operation.HasScene ? operation.Scene.path : null;
+            if (!expandDependencies)
+            {
+                // Только перечисленные входы: стадия зависимостей сразу переходит к снимку.
+                operation.Dependencies.UnionWith(operation.Inputs);
+                operation.InputIndex = operation.Inputs.Length;
+                operation.StageLabel = "Без раскрытия зависимостей: " + operation.Inputs.Length + " входов";
+            }
             try
             {
                 operation.Lease = ArsenalEditorActions.AcquireLease(title);

@@ -4242,6 +4242,10 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: 2472d08be23174c4b9863d83cddf68f8
       objectReference: {fileID: 0}
+    - target: {fileID: 2744657395378468373, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
+      propertyPath: __prefabGuid
+      value: 2472d08be23174c4b9863d83cddf68f8
+      objectReference: {fileID: 0}
     - target: {fileID: 2754127896509867834, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
       propertyPath: m_Name
       value: SRM12_mag
@@ -4251,6 +4255,10 @@ PrefabInstance:
       value: 2472d08be23174c4b9863d83cddf68f8
       objectReference: {fileID: 0}
     - target: {fileID: 4824152128943231292, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
+      propertyPath: __prefabGuid
+      value: 2472d08be23174c4b9863d83cddf68f8
+      objectReference: {fileID: 0}
+    - target: {fileID: 4888584923553383407, guid: 32bac82101ae21544b671d744fd34d82, type: 3}
       propertyPath: __prefabGuid
       value: 2472d08be23174c4b9863d83cddf68f8
       objectReference: {fileID: 0}

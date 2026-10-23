@@ -3196,6 +3196,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: R08_mag
       objectReference: {fileID: 0}
+    - target: {fileID: 4188583992932109481, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
+      propertyPath: __prefabGuid
+      value: fac3a1d89b21c3c42b8292f09026d44b
+      objectReference: {fileID: 0}
     - target: {fileID: 5175273434113168880, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
       propertyPath: __prefabGuid
       value: fac3a1d89b21c3c42b8292f09026d44b
@@ -3205,6 +3209,10 @@ PrefabInstance:
       value: fac3a1d89b21c3c42b8292f09026d44b
       objectReference: {fileID: 0}
     - target: {fileID: 6632483050664006130, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
+      propertyPath: __prefabGuid
+      value: fac3a1d89b21c3c42b8292f09026d44b
+      objectReference: {fileID: 0}
+    - target: {fileID: 8979614779004870058, guid: a2ee1d507e0d63140a4d137bd3077eec, type: 3}
       propertyPath: __prefabGuid
       value: fac3a1d89b21c3c42b8292f09026d44b
       objectReference: {fileID: 0}

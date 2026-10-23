@@ -2899,6 +2899,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Revolver_mag
       objectReference: {fileID: 0}
+    - target: {fileID: 6265255821704571154, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
+      propertyPath: __prefabGuid
+      value: 3eee9bb131ea6a64ca4fc336d3eea0b9
+      objectReference: {fileID: 0}
+    - target: {fileID: 7282523469671450452, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
+      propertyPath: __prefabGuid
+      value: 3eee9bb131ea6a64ca4fc336d3eea0b9
+      objectReference: {fileID: 0}
     - target: {fileID: 9021345109162045747, guid: 24bb8e6e4c7897848802a0c534714580, type: 3}
       propertyPath: m_LocalScale.x
       value: 1

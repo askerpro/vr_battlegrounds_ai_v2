@@ -3647,6 +3647,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: TR15_mag
       objectReference: {fileID: 0}
+    - target: {fileID: 4087064436518044882, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
+      propertyPath: __prefabGuid
+      value: 3935229bb05b32b45b3af04c07bfbfbe
+      objectReference: {fileID: 0}
     - target: {fileID: 5323787411456911463, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
       propertyPath: __prefabGuid
       value: 3935229bb05b32b45b3af04c07bfbfbe
@@ -3660,6 +3664,10 @@ PrefabInstance:
       value: 3935229bb05b32b45b3af04c07bfbfbe
       objectReference: {fileID: 0}
     - target: {fileID: 6153089292043505042, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
+      propertyPath: __prefabGuid
+      value: 3935229bb05b32b45b3af04c07bfbfbe
+      objectReference: {fileID: 0}
+    - target: {fileID: 8793654093998565353, guid: c1288aacdfca72346b6966bf7d6b906e, type: 3}
       propertyPath: __prefabGuid
       value: 3935229bb05b32b45b3af04c07bfbfbe
       objectReference: {fileID: 0}

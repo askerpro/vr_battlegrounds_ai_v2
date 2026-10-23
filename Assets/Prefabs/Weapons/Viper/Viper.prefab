@@ -3692,6 +3692,10 @@ PrefabInstance:
       propertyPath: __prefabGuid
       value: 188e4570e48eabf418fa869094785d53
       objectReference: {fileID: 0}
+    - target: {fileID: 3108746128575543093, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
+      propertyPath: __prefabGuid
+      value: 188e4570e48eabf418fa869094785d53
+      objectReference: {fileID: 0}
     - target: {fileID: 3623618244936806757, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
       propertyPath: __prefabGuid
       value: 188e4570e48eabf418fa869094785d53
@@ -3749,6 +3753,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5566022427136682395, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
+      propertyPath: __prefabGuid
+      value: 188e4570e48eabf418fa869094785d53
+      objectReference: {fileID: 0}
+    - target: {fileID: 6338195229319690985, guid: e2881f975378c1d4c865fc5f94053e45, type: 3}
       propertyPath: __prefabGuid
       value: 188e4570e48eabf418fa869094785d53
       objectReference: {fileID: 0}

@@ -3621,6 +3621,10 @@ PrefabInstance:
       propertyPath: _grabPoint._enableOnHandNear
       value: 
       objectReference: {fileID: 3283912852920005328}
+    - target: {fileID: 3373412166245449222, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
+      propertyPath: __prefabGuid
+      value: 26b1fd63ab9a4274cb17304b23cb6318
+      objectReference: {fileID: 0}
     - target: {fileID: 3521067315164190836, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
       propertyPath: m_Name
       value: Mk14_mag
@@ -3638,6 +3642,10 @@ PrefabInstance:
       value: 26b1fd63ab9a4274cb17304b23cb6318
       objectReference: {fileID: 0}
     - target: {fileID: 6059360643670371954, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
+      propertyPath: __prefabGuid
+      value: 26b1fd63ab9a4274cb17304b23cb6318
+      objectReference: {fileID: 0}
+    - target: {fileID: 8500382763759175398, guid: bb9de8cc9dc96064695457eb90647c70, type: 3}
       propertyPath: __prefabGuid
       value: 26b1fd63ab9a4274cb17304b23cb6318
       objectReference: {fileID: 0}

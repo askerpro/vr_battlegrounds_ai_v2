@@ -121,6 +121,39 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &1732167926280448519
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9155892604967007546}
+  m_Layer: 0
+  m_Name: Main Grab Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9155892604967007546
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732167926280448519}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4621003455135146483}
+  - {fileID: 6047903128273112089}
+  m_Father: {fileID: 142404671610999121}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1905738287481025706
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,6 +299,53 @@ Transform:
   - {fileID: 3523632649536569586}
   m_Father: {fileID: 3385199439301016477}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2836585173562343569
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4621003455135146483}
+  - component: {fileID: 189669134485477791}
+  m_Layer: 0
+  m_Name: Left Grab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4621003455135146483
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2836585173562343569}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.08822174, y: 0.02046338, z: -0.18197455, w: 0.97912383}
+  m_LocalPosition: {x: 0.0168, y: -0.2917175, z: -0.078}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 9155892604967007546}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &189669134485477791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2836585173562343569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 02c2a3c9-d4df-46e0-b883-ea1efd186b22
+  __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
+  __isInPrefab: 1
 --- !u!1 &3185191106594231496
 GameObject:
   m_ObjectHideFlags: 0
@@ -343,9 +423,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: f709f8ff-1c05-4056-90ed-d4a5c0571183
+  _uxrUniqueId: f95da264-97a5-47cf-9186-9ad2b1e8935d
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
+--- !u!1 &4224233131687471602
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 142404671610999121}
+  m_Layer: 0
+  m_Name: CyborgHandsBase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &142404671610999121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4224233131687471602}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 9155892604967007546}
+  m_Father: {fileID: 3385199439301016477}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4557109516753966950
 GameObject:
   m_ObjectHideFlags: 0
@@ -506,6 +618,7 @@ Transform:
   m_Children:
   - {fileID: 8750104235683855954}
   - {fileID: 9162218491044783920}
+  - {fileID: 142404671610999121}
   m_Father: {fileID: 5432238697901038367}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5035552030784186516
@@ -584,7 +697,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: e129ebad-1388-49d8-b44b-b244540da49b
+  _uxrUniqueId: 6a38747a-cba7-48bd-92b8-15cf019eb942
+  __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
+  __isInPrefab: 1
+--- !u!1 &7053875989427466848
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6047903128273112089}
+  - component: {fileID: 6782785592839084569}
+  m_Layer: 0
+  m_Name: Right Grab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6047903128273112089
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7053875989427466848}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.020463381, y: -0.08822175, z: 0.97912383, w: -0.18197455}
+  m_LocalPosition: {x: -0.0168, y: -0.2917175, z: -0.078}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 9155892604967007546}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6782785592839084569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7053875989427466848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
+  _uxrUniqueId: 69f54420-798d-48dc-b646-be6ac6c76442
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
 --- !u!1 &7182258339646233927
@@ -620,7 +780,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7182258339646233927}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.20867454, y: 0.20867454, z: 0.20867454}
   m_ConstrainProportionsScale: 0
@@ -642,7 +802,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 6fdae0ac-345f-4450-83b9-14b5f0c00a90
+  _uxrUniqueId: 3e80c8d5-735b-4550-a3c7-450d428356a3
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
@@ -699,6 +859,11 @@ MonoBehaviour:
       _poseBlendValue: 0.68
       _gripAlignTransformHandLeft: {fileID: 8799477975538550439}
       _gripAlignTransformHandRight: {fileID: 9152868038148570290}
+    - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
+      _handPose: {fileID: 11400000, guid: ac9e924e235059f48b952fe5aa117ee3, type: 2}
+      _poseBlendValue: 0.33
+      _gripAlignTransformHandLeft: {fileID: 4621003455135146483}
+      _gripAlignTransformHandRight: {fileID: 6047903128273112089}
     _alignToController: 0
     _alignToControllerAxes: {fileID: 0}
     _grabProximityMode: 0
@@ -759,7 +924,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d17182e9c78c594d96529eb7adbcbe0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 99539606-b752-47f5-9e18-80af72742c4b
+  _uxrUniqueId: d45121ad-1cbf-4278-a7e8-3417c65f18ad
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
   _continuousManipulationHaptics: 0
@@ -825,7 +990,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de9b9b50632dc364ba61a4632566e267, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4be1c965-edcd-4669-bc37-8c1751084dc1
+  _uxrUniqueId: 4e7ebe20-cd6a-44a9-98fd-a673923ee40d
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
   _audioOnGrab:
@@ -861,7 +1026,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 097a8eab230aadf40bdce734556f5482, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _uxrUniqueId: 4af8cc3c-d376-4981-a02f-60429662e89a
+  _uxrUniqueId: cb25591e-1eec-47e9-a31a-3e8e6f93c9d4
   __prefabGuid: 6064c964013ccf24ca87fb5aee2b829b
   __isInPrefab: 1
   _rounds: 30

@@ -35,6 +35,10 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             /// <summary>Сетка: 0 — кольцо с точкой (как XPS2), 1 — перекрестие; радиусы — углы, рад.</summary>
             public float ReticleStyle, RingRadius = 0.01f, RingWidth = 0.0004f, DotRadius = 0.0003f;
             public Color ReticleColor = new Color(1f, 0.025f, 0.012f, 1f);
+            /// <summary>Цвет точки в центре; alpha 0 — цвет сетки.</summary>
+            public Color DotColor = new Color(0f, 0f, 0f, 0f);
+            /// <summary>Стекло вне увеличения; alpha 1 — непрозрачное (корпус пака не просвечивает).</summary>
+            public Color GlassTint = new Color(0.08f, 0.12f, 0.15f, 0.06f);
         }
 
         public const string Folder = "Assets/Art/Weapons/Sights/Pack";
@@ -45,12 +49,17 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
         /// <summary>
         /// Призменный прицел ×2 пака Hands (<c>Sight_08</c>) для SniperRifleAuto (решение пользователя 2026-10-23). Размер
         /// пака — реальный (труба 133 мм), оси пака совпадают с осями комплекта: объектив — +Z (торец шире, 51,5 против
-        /// 50 мм), окуляр — −Z. Сетка — как у коллиматора XPS2: красное кольцо с точкой.
+        /// 50 мм), окуляр — −Z. Сетка снайперская (шлем 2026-10-23: «ближе к снайперской винтовке», не точка коллиматора):
+        /// тонкое чёрное перекрестие, толстые столбики дальше 6 мрад, красная точка 0,6 мрад. Стекло вне увеличения
+        /// непрозрачное тёмное: модель пака односторонняя, сквозь прозрачное стекло просвечивал корпус изнутри.
         /// </summary>
         public static readonly Spec Sight08 = new Spec
         {
             Name = "Sight08", SourceModel = HandsDetails + "Sight/Mesh/Sight_08_Mesh.FBX", GlassPart = "Sight_Glasses_8_Mesh",
             MeshPath = Folder + "/Sight08_Optic.asset", ReticleMaterialPath = Folder + "/Sight08_Reticle.mat",
+            ReticleStyle = 1f, RingRadius = 0.006f, RingWidth = 0.0005f, DotRadius = 0.0006f,
+            ReticleColor = new Color(0.01f, 0.01f, 0.01f, 1f), DotColor = new Color(1f, 0.025f, 0.012f, 1f),
+            GlassTint = new Color(0.03f, 0.045f, 0.06f, 1f),
         };
 
         public static readonly Spec[] All = { Sight08 };
@@ -72,11 +81,13 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 throw new InvalidOperationException("Сборка оптики — только в Edit Mode");
             var parts = ReadSource(spec);
             Mesh mesh = Bake(spec, parts, out float radius, out float length);
+            // До записи: SaveMesh переносит данные в существующий ассет и уничтожает временный меш.
+            string triangles = $"{mesh.GetIndexCount(0) / 3} + {mesh.GetIndexCount(1) / 3} треугольников";
             EnsureFolder(Folder);
             SaveMesh(mesh, spec.MeshPath);
             Material reticle = EnsureReticle(spec);
-            return $"{spec.Name}: труба {length * 1000:0} мм, окуляр Ø{radius * 2000:0.0} мм, " +
-                   $"{mesh.GetIndexCount(0) / 3} + {mesh.GetIndexCount(1) / 3} треугольников; {spec.MeshPath}, {AssetDatabase.GetAssetPath(reticle)}";
+            return $"{spec.Name}: труба {length * 1000:0} мм, окуляр Ø{radius * 2000:0.0} мм, {triangles}; " +
+                   $"{spec.MeshPath}, {AssetDatabase.GetAssetPath(reticle)}";
         }
 
         /// <summary>Все меши модели пака с их позой относительно корня модели.</summary>
@@ -215,6 +226,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             }
             material.shader = shader;
             material.SetColor("_ReticleColor", spec.ReticleColor);
+            material.SetColor("_DotColor", spec.DotColor);
+            material.SetColor("_GlassTint", spec.GlassTint);
             material.SetFloat("_ReticleStyle", spec.ReticleStyle);
             material.SetFloat("_RingRadius", spec.RingRadius);
             material.SetFloat("_RingWidth", spec.RingWidth);

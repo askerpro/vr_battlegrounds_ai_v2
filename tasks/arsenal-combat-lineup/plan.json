@@ -33,7 +33,8 @@
         "Assets/Editor/VR_Battlegrounds/Arsenal/**",
         "Assets/Editor/VR_Battlegrounds/Gameplay/**",
         "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**",
-        "Assets/Art/HandPoses/Orig/**"
+        "Assets/Art/HandPoses/Orig/**",
+        "Assets/Audio/SFX/Weapons/SniperRifleAuto/**"
       ],
       "after": [],
       "needs": []

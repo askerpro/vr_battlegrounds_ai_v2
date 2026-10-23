@@ -23,6 +23,9 @@ namespace VrBattlegrounds.Weapons.Sights
 
         public const string ShaderName = "VR Battlegrounds/Weapons/Finite Focus Reticle";
 
+        /// <summary>Общие настройки прицелов (дистанция сведения, допуск ракурса оптики).</summary>
+        public WeaponSightCalibrationSettings Settings => _settings;
+
         private MaterialPropertyBlock _properties;
         // Проверка шейдера кэшируется по материалу: sharedMaterials и shader.name выделяли память на каждой камере каждого кадра.
         private static readonly System.Collections.Generic.List<Material> SharedMaterials = new System.Collections.Generic.List<Material>();
@@ -34,8 +37,13 @@ namespace VrBattlegrounds.Weapons.Sights
         private static readonly int RightId = Shader.PropertyToID("_OpticRightWS");
         private static readonly int UpId = Shader.PropertyToID("_OpticUpWS");
         private static readonly int ScopeActiveId = Shader.PropertyToID("_ScopeActive");
+        private static readonly int ScopeEquippedId = Shader.PropertyToID("_ScopeEquipped");
         private static readonly int ScopeTexId = Shader.PropertyToID("_ScopeTex");
         private static readonly int ScopeFieldId = Shader.PropertyToID("_ScopeApparentHalfField");
+        private static readonly int ScopeEyepieceId = Shader.PropertyToID("_ScopeEyepieceWS");
+        private static readonly int ScopeAxisId = Shader.PropertyToID("_ScopeAxisWS");
+        private static readonly int ScopePupilId = Shader.PropertyToID("_ScopePupil");
+        private static readonly int ScopeLensRadiusId = Shader.PropertyToID("_ScopeLensRadius");
 
         private void OnEnable() => RenderPipelineManager.beginCameraRendering += HandleBeginCameraRendering;
         private void OnDisable()
@@ -68,11 +76,16 @@ namespace VrBattlegrounds.Weapons.Sights
                 _properties.SetVector(UpId, muzzle.up);
             }
             bool scope = valid && _scope != null && _scope.IsViewing;
+            _properties.SetFloat(ScopeEquippedId, _scope != null ? 1f : 0f);
             _properties.SetFloat(ScopeActiveId, scope ? 1f : 0f);
             if (scope)
             {
                 _properties.SetTexture(ScopeTexId, _scope.Texture);
                 _properties.SetFloat(ScopeFieldId, _scope.ApparentHalfField);
+                _properties.SetVector(ScopeEyepieceId, _scope.Eyepiece);
+                _properties.SetVector(ScopeAxisId, _scope.Axis);
+                _properties.SetFloat(ScopePupilId, _scope.ExitPupil);
+                _properties.SetFloat(ScopeLensRadiusId, _scope.LensRadius);
             }
             _lensRenderer.SetPropertyBlock(_properties, _lensMaterialIndex);
             return valid;
@@ -102,13 +115,24 @@ namespace VrBattlegrounds.Weapons.Sights
             return true;
         }
 
-        /// <summary>Мировые bounds renderer линзы (корпус прицела): по ним камера кратности находит центр и окуляр.</summary>
-        public bool TryGetLensBounds(out Bounds bounds)
+        /// <summary>
+        /// Стекло (submesh линзы) в мире: центр и радиус — по bounds submesh. Опора камеры кратности и картинки на стекле:
+        /// центр bounds всего корпуса лежит не на оси трубы (крепление внизу, барабанчики сверху).
+        /// </summary>
+        public bool TryGetLens(out Vector3 center, out float radius)
         {
-            bounds = default;
+            center = default;
+            radius = 0f;
             if (!CanWrite()) return false;
-            bounds = _lensRenderer.bounds;
-            return true;
+            var filter = _lensRenderer.GetComponent<MeshFilter>();
+            Mesh mesh = filter != null ? filter.sharedMesh : null;
+            if (mesh == null || _lensMaterialIndex >= mesh.subMeshCount) return false;
+            Bounds local = mesh.GetSubMesh(_lensMaterialIndex).bounds;
+            Transform t = _lensRenderer.transform;
+            center = t.TransformPoint(local.center);
+            Vector3 scale = t.lossyScale;
+            radius = Mathf.Max(local.extents.x * Mathf.Abs(scale.x), local.extents.y * Mathf.Abs(scale.y));
+            return radius > 0f;
         }
 
         private bool CanWrite()

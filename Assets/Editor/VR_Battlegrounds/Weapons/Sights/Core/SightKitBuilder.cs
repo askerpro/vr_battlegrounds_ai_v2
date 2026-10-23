@@ -117,8 +117,6 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             public int LensMaterialIndex;
             /// <summary>Кратность увеличивающего прицела (<see cref="WeaponScopeCamera"/>); 0 — коллиматор без увеличения.</summary>
             public float ScopeMagnification;
-            /// <summary>Видимое поле окуляра увеличивающего прицела, тангенс половины угла (<see cref="WeaponScopeCamera"/>).</summary>
-            public float ScopeApparentHalfField = 0.1f;
         }
 
         public const string SettingsPath = "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset";
@@ -135,7 +133,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 MeshEuler = new Vector3(90f, 0f, 0f), LensMaterialIndex = 1
             },
             // Призма ×2 пака Hands для SniperRifleAuto (arsenal-combat-lineup, решение пользователя 2026-10-23): меш и сетку
-            // делает PackOpticBuilder, кратность — камера прицела (малая RT, бюджет +1 мс GPU). Поле окуляра ~20° (tg 0,18).
+            // делает PackOpticBuilder, кратность — камера прицела (малая RT, бюджет +1 мс GPU).
             new OpticKitSpec
             {
                 Name = "SightKit_Sight08", PrefabPath = PrefabFolder + "/SightKit_Sight08.prefab", NodeName = "Sight08", SightId = "Sight08",
@@ -143,7 +141,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 HousingMaterialPath = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Materials/Hands_Automatic_rifle03.mat",
                 ReticleMaterialPath = PackOpticBuilder.Sight08.ReticleMaterialPath,
                 MeshEuler = Vector3.zero, LensMaterialIndex = PackOpticBuilder.LensMaterialIndex,
-                ScopeMagnification = 2f, ScopeApparentHalfField = 0.18f
+                ScopeMagnification = 2f
             }
         };
 
@@ -267,10 +265,14 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     if (optic.ScopeMagnification > 0f)
                     {
                         if (scope == null) scope = node.gameObject.AddComponent<WeaponScopeCamera>();
+                        // Писатель комплекта владеет настройками камеры: значения по умолчанию из кода (пороги «у глаза»,
+                        // разрешение), поверх — поля спецификации. Иначе новые умолчания не доходят до готового префаба.
+                        var defaults = new GameObject("ScopeDefaults") { hideFlags = HideFlags.HideAndDontSave };
+                        try { EditorUtility.CopySerialized(defaults.AddComponent<WeaponScopeCamera>(), scope); }
+                        finally { UnityEngine.Object.DestroyImmediate(defaults); }
                         var scopeSo = new SerializedObject(scope);
                         scopeSo.FindProperty("_view").objectReferenceValue = view;
                         scopeSo.FindProperty("_magnification").floatValue = optic.ScopeMagnification;
-                        scopeSo.FindProperty("_apparentHalfField").floatValue = optic.ScopeApparentHalfField;
                         scopeSo.ApplyModifiedPropertiesWithoutUndo();
                     }
                     else if (scope != null) UnityEngine.Object.DestroyImmediate(scope);

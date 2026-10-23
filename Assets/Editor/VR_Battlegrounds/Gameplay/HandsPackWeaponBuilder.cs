@@ -309,10 +309,43 @@ namespace VrBattlegrounds.Editor.Gameplay
                 r.Name = "SniperRifleAuto";
                 r.PrefabFolder = "SniperRifleAuto";
                 r.ShotCycle = UxrShotCycle.FullyAutomatic;
-                // Свой выстрел: снайперский набор пака Hands ни одним стволом реестра не занят (WeaponShotSoundTests).
-                r.ShotAudio = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/11Sniper_Rifle_Set/Sniper_Rifle_Shot_2.mp3";
+                // Свой выстрел (WeaponShotSoundTests): обрезанный выстрел снайперского набора пака Hands — см. MakeSniperRifleAutoShot.
+                r.ShotAudio = SniperRifleAutoShotPath;
                 return r;
             }
+        }
+
+        /// <summary>Выстрел SniperRifleAuto: начало выстрела снайперского набора пака Hands, без цикла болта.</summary>
+        public const string SniperRifleAutoShotPath = "Assets/Audio/SFX/Weapons/SniperRifleAuto/SniperRifleAuto_Shot.wav";
+        private const string SniperRifleAutoShotSource =
+            "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/11Sniper_Rifle_Set/Sniper_Rifle_Shot_2.mp3";
+
+        /// <summary>
+        /// Делает <see cref="SniperRifleAutoShotPath" /> и ставит его на спуск префаба SniperRifleAuto (без пересборки: одно
+        /// поле). Файлы выстрелов снайперского набора пака (1,88 с) несут и звук болтовки (подъём, назад, вперёд, вниз
+        /// после 0,55 с): у автомата он звучал на каждый выстрел как перезарядка (шлем 2026-10-23). Оставляем 0,5 с.
+        /// </summary>
+        public static string MakeSniperRifleAutoShot()
+        {
+            string folder = SniperRifleAutoShotPath.Substring(0, SniperRifleAutoShotPath.LastIndexOf('/'));
+            KinemationWeapon.EnsureFolder(folder);
+            AudioClip clip = KinemationAudio.Shot(SniperRifleAutoShotSource, 0.5f, folder,
+                                                  System.IO.Path.GetFileNameWithoutExtension(SniperRifleAutoShotPath));
+            string prefabPath = $"Assets/Prefabs/Weapons/{SniperRifleAuto.PrefabFolder}/{SniperRifleAuto.Name}.prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) == null) return $"{SniperRifleAutoShotPath} ({clip.length:F2} с); префаба ещё нет";
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var so = new SerializedObject(root.GetComponent<UxrFirearmWeapon>());
+                so.FindProperty("_triggers").GetArrayElementAtIndex(0).FindPropertyRelative("_shotAudio._clip").objectReferenceValue = clip;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            return $"{prefabPath}: выстрел {SniperRifleAutoShotPath} ({clip.length:F2} с)";
         }
 
         public static IEnumerable<HandsPackWeaponRecipe> T38 => new[] { Scar, Uzi, MP5K, PPK, Revolver, SniperRifle, SniperRifleAuto };

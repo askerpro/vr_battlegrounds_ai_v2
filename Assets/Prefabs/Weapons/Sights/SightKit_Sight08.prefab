@@ -129,13 +129,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.Sights.WeaponScopeCamera
   _view: {fileID: 1859575232491584421}
   _magnification: 2
-  _apparentHalfField: 0.18
-  _resolution: 320
+  _resolution: 384
+  _antiAliasing: 4
   _farClip: 80
-  _enterDistance: 0.1
-  _exitDistance: 0.14
-  _enterAngle: 10
-  _exitAngle: 15
+  _enterDistance: 0.15
+  _exitDistance: 0.2
+  _enterOffset: 0.02
+  _exitOffset: 0.03
+  _exitPupil: 0.004
   _minHoldSeconds: 0.5
 --- !u!1 &5768839823647715281
 GameObject:

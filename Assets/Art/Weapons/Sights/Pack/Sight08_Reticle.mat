@@ -29,19 +29,20 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _DotRadius: 0.0003
+    - _DotRadius: 0.0006
     - _OpticValid: 0
-    - _ReticleStyle: 0
-    - _RingRadius: 0.01
-    - _RingWidth: 0.0004
+    - _ReticleStyle: 1
+    - _RingRadius: 0.006
+    - _RingWidth: 0.0005
     - _ScopeActive: 0
     - _ScopeApparentHalfField: 0.1
     m_Colors:
-    - _GlassTint: {r: 0.079999976, g: 0.11999995, b: 0.14999998, a: 0.06}
+    - _DotColor: {r: 1, g: 0.025, b: 0.012, a: 1}
+    - _GlassTint: {r: 0.03, g: 0.045, b: 0.06, a: 1}
     - _OpticForwardWS: {r: 0, g: 0, b: 1, a: 0}
     - _OpticRightWS: {r: 1, g: 0, b: 0, a: 0}
     - _OpticUpWS: {r: 0, g: 1, b: 0, a: 0}
     - _OpticZeroWS: {r: 0, g: 0, b: 15, a: 15}
-    - _ReticleColor: {r: 1, g: 0.025, b: 0.012, a: 1}
+    - _ReticleColor: {r: 0.01, g: 0.01, b: 0.01, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

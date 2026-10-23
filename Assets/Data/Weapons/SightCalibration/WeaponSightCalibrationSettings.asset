@@ -11,5 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 239f1bf1f8c64b0b85167a2a8c1b21f6, type: 3}
   m_Name: WeaponSightCalibrationSettings
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   _defaultZeroDistance: 15
+  _scopeEyeTolerance: 0.005

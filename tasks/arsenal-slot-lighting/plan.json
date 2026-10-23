@@ -21,7 +21,6 @@
         "Assets/Prefabs/Arsenal/Slots/**",
         "Assets/Scenes/Lobby.unity",
         "Assets/Scenes/Lobby/**",
-        "Assets/Data/Maps/MapRuntimeCatalog.asset",
         "Assets/Tests/EditMode/Arsenal/**",
         "Docs/Arsenal/Arsenal_Code_Architecture_RU.md",
         "experts/gameplay/journal/**",

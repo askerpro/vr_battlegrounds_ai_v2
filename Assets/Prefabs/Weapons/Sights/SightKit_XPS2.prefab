@@ -177,3 +177,4 @@ MonoBehaviour:
   _settings: {fileID: 11400000, guid: 8528714aa2c14bf7a71129e7c47f23c5, type: 2}
   _profile: {fileID: 0}
   _calibratedZeroDistance: 0
+  _scope: {fileID: 0}

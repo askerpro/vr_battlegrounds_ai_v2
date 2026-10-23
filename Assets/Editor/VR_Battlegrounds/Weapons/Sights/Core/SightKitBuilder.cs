@@ -115,6 +115,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             /// <summary>Поворот меша относительно корня комплекта (+Z корня — вдоль планки к дулу, +Y — вверх).</summary>
             public Vector3 MeshEuler;
             public int LensMaterialIndex;
+            /// <summary>Кратность увеличивающего прицела (<see cref="WeaponScopeCamera"/>); 0 — коллиматор без увеличения.</summary>
+            public float ScopeMagnification;
         }
 
         public const string SettingsPath = "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset";
@@ -129,6 +131,17 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 ReticleMaterialPath = "Assets/Art/Weapons/Kinemation/TR15/Materials/TR15_XPS2_Reticle.mat",
                 // Как стоял узел SM_Attach_AR15_XPS2 в TR15 относительно ShotSource (до раунда 1): поворот X 90°.
                 MeshEuler = new Vector3(90f, 0f, 0f), LensMaterialIndex = 1
+            },
+            // Оптика Barrett M82 (arsenal-combat-lineup, 2026-10-23): меш и сетку-перекрестие делает LowPolyOpticBuilder,
+            // кратность — камера прицела (решение пользователя: малая RT, бюджет +1 мс GPU).
+            new OpticKitSpec
+            {
+                Name = "SightKit_M82Scope", PrefabPath = PrefabFolder + "/SightKit_M82Scope.prefab", NodeName = "M82Scope", SightId = "M82Scope",
+                MeshPath = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.Barrett.MeshPath,
+                HousingMaterialPath = "Assets/ThirdParty/Low Poly Weapons VOL.2/Gun_MAT.mat",
+                ReticleMaterialPath = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.Barrett.ReticleMaterialPath,
+                MeshEuler = Vector3.zero, LensMaterialIndex = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.LensMaterialIndex,
+                ScopeMagnification = 1.75f
             }
         };
 
@@ -248,6 +261,17 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                     so.FindProperty("_settings").objectReferenceValue = settings;
                     so.FindProperty("_profile").objectReferenceValue = null;
                     so.FindProperty("_calibratedZeroDistance").floatValue = 0f;  // не сведён: сетка выключена
+                    var scope = node.GetComponent<WeaponScopeCamera>();
+                    if (optic.ScopeMagnification > 0f)
+                    {
+                        if (scope == null) scope = node.gameObject.AddComponent<WeaponScopeCamera>();
+                        var scopeSo = new SerializedObject(scope);
+                        scopeSo.FindProperty("_view").objectReferenceValue = view;
+                        scopeSo.FindProperty("_magnification").floatValue = optic.ScopeMagnification;
+                        scopeSo.ApplyModifiedPropertiesWithoutUndo();
+                    }
+                    else if (scope != null) UnityEngine.Object.DestroyImmediate(scope);
+                    so.FindProperty("_scope").objectReferenceValue = optic.ScopeMagnification > 0f ? scope : null;
                     so.ApplyModifiedPropertiesWithoutUndo();
                     if (PrefabUtility.SaveAsPrefabAsset(root, optic.PrefabPath) == null)
                         throw new InvalidOperationException("Не удалось сохранить " + optic.PrefabPath);
@@ -299,7 +323,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 if (!allowed.Contains(t.name))
                     throw new InvalidOperationException($"{optic.PrefabPath}: чужой узел «{t.name}» — writer его не перезаписывает");
                 foreach (var c in t.GetComponents<Component>())
-                    if (c == null || !(c is Transform || c is MeshFilter || c is MeshRenderer || c is WeaponOpticView))
+                    if (c == null || !(c is Transform || c is MeshFilter || c is MeshRenderer || c is WeaponOpticView || c is WeaponScopeCamera))
                         throw new InvalidOperationException($"{optic.PrefabPath}: чужой компонент на «{t.name}»");
             }
         }
@@ -312,6 +336,10 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 throw new InvalidOperationException("Readback: у коллиматора не должно быть деталей механики и коллайдеров");
             var views = asset.GetComponentsInChildren<WeaponOpticView>(true);
             if (views.Length != 1) throw new InvalidOperationException("Readback: нужен ровно один WeaponOpticView");
+            var scopes = asset.GetComponentsInChildren<WeaponScopeCamera>(true);
+            if (scopes.Length != (optic.ScopeMagnification > 0f ? 1 : 0)
+                || scopes.Length == 1 && !Mathf.Approximately(scopes[0].Magnification, optic.ScopeMagnification))
+                throw new InvalidOperationException("Readback: камера кратности не совпала со спецификацией");
             if (asset.transform.Find(SightRailMount.MountName) == null) throw new InvalidOperationException("Readback: нет узла крепления " + SightRailMount.MountName);
             Transform node = asset.transform.Find(optic.NodeName);
             if (node == null || (node.localPosition - nodePosition).magnitude > 1e-7f || Quaternion.Angle(node.localRotation, Quaternion.Euler(optic.MeshEuler)) > 1e-3f)

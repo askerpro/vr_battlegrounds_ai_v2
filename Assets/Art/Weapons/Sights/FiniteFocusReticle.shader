@@ -115,17 +115,17 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
                     float3 onGlass = input.positionWS - _ScopeEyepieceWS.xyz;
                     float2 lens = float2(dot(onGlass, _OpticRightWS.xyz), dot(onGlass, _OpticUpWS.xyz)) / max(_ScopeLensRadius, 0.00001);
                     half3 image = SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, 0.5 + 0.5 * lens).rgb;
-                    // Зрачок выхода: смещение этого глаза от оси прицела (в долях зрачка) сужает светлый круг и сдвигает его
-                    // в сторону, куда надо подвинуть голову; вне круга картинка приглушена, но видна — понятно, куда править.
+                    // Зрачок выхода (решение пользователя 2026-10-24): светлое поле всегда в центре стекла, вокруг — затенение
+                    // с мягким затуханием к краям. Смещение глаза от оси (в долях допуска ракурса) сужает светлое поле;
+                    // чем ровнее ракурс, тем дальше затенение отступает к трубе, на оси его нет.
                     float3 fromEyepiece = eye - _ScopeEyepieceWS.xyz;
                     float3 lateral = fromEyepiece - _ScopeAxisWS.xyz * dot(fromEyepiece, _ScopeAxisWS.xyz);
                     float2 offset = float2(dot(lateral, _OpticRightWS.xyz), dot(lateral, _OpticUpWS.xyz)) / max(_ScopePupil, 0.00001);
                     float miss = length(offset);
-                    float2 toward = miss > 0.0001 ? -offset / miss * min(miss * 0.35, 0.7) : float2(0.0, 0.0);
-                    float open = clamp(1.0 - 0.3 * miss, 0.35, 1.0);
-                    half inside = 1.0 - smoothstep(open - 0.15, open, length(lens - toward));
+                    float open = clamp(1.3 - 0.4 * miss, 0.3, 1.3);
+                    half inside = 1.0 - smoothstep(open - 0.35, open, length(lens));
                     half tube = 1.0 - smoothstep(0.92, 1.0, length(lens));
-                    half4 background = half4(image * lerp(0.15, 1.0, inside) * tube, 1.0);
+                    half4 background = half4(image * lerp(0.1, 1.0, inside) * tube, 1.0);
                     half coverage = Reticle(lens * field, centre) * inside * tube;
                     return Compose(background, coverage, centre * inside * tube);
                 }

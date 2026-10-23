@@ -12,6 +12,7 @@
       "id": "work",
       "writes": [
         "tasks/scope-enter-distance/**",
+        "Assets/Art/Weapons/Sights/FiniteFocusReticle.shader",
         "Assets/Scripts/Weapons/Sights/WeaponScopeCamera.cs",
         "Assets/Scripts/Weapons/Sights/WeaponSightCalibrationSettings.cs",
         "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset",

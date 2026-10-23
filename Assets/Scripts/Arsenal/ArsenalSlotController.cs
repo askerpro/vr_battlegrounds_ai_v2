@@ -56,8 +56,10 @@ namespace VrBattlegrounds.Arsenal
         [SerializeField] private UxrGrabbableObjectAnchor _itemAnchor;
 
         [Header("Visual Feedback")]
-        [SerializeField] private Light _slotLight;
+        [Tooltip("Светящаяся подложка-индикатор (arsenal-slot-lighting); realtime-лампы у слота нет.")]
+        [SerializeField] private ArsenalSlotGlow _glow;
         [SerializeField] private Color _availableColor  = new Color(1f, 0.85f, 0.6f); // warm white
+        [Tooltip("Цвет «недоступно»: подложка гаснет.")]
         [SerializeField] private Color _unavailableColor = Color.black;
         [SerializeField] private Color _takenColor       = Color.green;
 
@@ -343,7 +345,7 @@ namespace VrBattlegrounds.Arsenal
                 _spawnedItem = null;
             }
 
-            SetLightState(false);
+            SetGlowState(false);
         }
 
         /// <summary>
@@ -355,7 +357,7 @@ namespace VrBattlegrounds.Arsenal
 
             SetItemGrabbable(false);
 
-            SetLightState(false);
+            SetGlowState(false);
             GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' locked.");
         }
 
@@ -438,8 +440,8 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Подсветка по предложению: по карману (и бесплатно) — свет слота горит, ствол обычный;
-        /// дорого или стена ничья — свет погашен, ствол приглушён. Карточка сохраняет характеристики и в разминке.
+        /// Подсветка по предложению: по карману (и бесплатно) — подложка слота горит, ствол обычный;
+        /// дорого или стена ничья — подложка погашена, ствол приглушён. Карточка сохраняет характеристики и в разминке.
         /// </summary>
         private void ApplyOfferVisuals()
         {
@@ -447,8 +449,8 @@ namespace VrBattlegrounds.Arsenal
 
             if (!IsLocked)
             {
-                if (!IsItemPresent) SetLightColor(_takenColor);
-                else SetLightColor(grabbable ? _availableColor : _unavailableColor);
+                if (!IsItemPresent) SetGlowColor(_takenColor);
+                else SetGlowColor(grabbable ? _availableColor : _unavailableColor);
             }
 
             SetDimmed(IsItemPresent && !grabbable ? CurrentItem : null);
@@ -524,26 +526,25 @@ namespace VrBattlegrounds.Arsenal
 
             GameLog.Arsenal.Info($"[Arsenal] Item taken from slot '{DisplayName}'.");
             SetDimmed(null);
-            SetLightColor(_takenColor);
+            SetGlowColor(_takenColor);
             OnItemTaken?.Invoke(this);
             ItemTakenBy?.Invoke(this, e.GrabbableObject, e.Grabber);
         }
 
-        // ── Protected: Light Helpers ───────────────────────────
+        // ── Protected: Glow Helpers ────────────────────────────
 
-        protected void SetLightState(bool on)
+        protected void SetGlowState(bool on)
         {
-            if (_slotLight != null)
-                _slotLight.enabled = on;
+            if (_glow == null) return;
+            if (on) _glow.Show(_availableColor);
+            else _glow.Hide();
         }
 
-        protected void SetLightColor(Color color)
+        protected void SetGlowColor(Color color)
         {
-            if (_slotLight != null)
-            {
-                _slotLight.enabled = color != _unavailableColor;
-                _slotLight.color = color;
-            }
+            if (_glow == null) return;
+            if (color == _unavailableColor) _glow.Hide();
+            else _glow.Show(color);
         }
     }
 }

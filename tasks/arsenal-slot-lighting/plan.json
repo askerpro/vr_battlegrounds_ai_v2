@@ -1,0 +1,34 @@
+{
+  "task_id": "arsenal-slot-lighting",
+  "owner": "arsenal-slot-lighting",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/arsenal-slot-lighting",
+  "base_sha": "40e59c6d188e5755f170786bf4b141301181fb4d",
+  "doc_path": "tasks/arsenal-slot-lighting/Readme.md",
+  "title": "Арсенал: подсветка слотов вместо realtime-ламп",
+  "branch": "task/arsenal-slot-lighting",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/arsenal-slot-lighting/**",
+        "Assets/Scripts/Arsenal/ArsenalSlotController.cs",
+        "Assets/Scripts/Arsenal/ArsenalSlotGlow.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalSlotLighting.cs",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/LobbyNightLighting.cs",
+        "Assets/Materials/Arsenal/ArsenalSlotGlow.png",
+        "Assets/Materials/Arsenal/ArsenalSlotGlow.mat",
+        "Assets/Prefabs/Arsenal/Slots/**",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "Assets/Tests/EditMode/Arsenal/**",
+        "Docs/Arsenal/Arsenal_Code_Architecture_RU.md",
+        "experts/gameplay/journal/**",
+        "experts/level-design/journal/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

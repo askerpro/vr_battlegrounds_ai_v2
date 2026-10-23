@@ -386,6 +386,8 @@ namespace VrBattlegrounds.EditorTools
             int baked = 0, mixed = 0, realtime = 0, snapped = 0;
             foreach (var light in environment.GetComponentsInChildren<Light>(true))
             {
+                // Прожекторы слотов арсенала — свои у инструмента подсветки слотов (единственный владелец).
+                if (IsArsenalSlotLighting(light.transform, environment)) continue;
                 Undo.RecordObject(light, "Ночной свет");
                 Undo.RecordObject(light.gameObject, "Ночной свет");
                 Undo.RecordObject(light.transform, "Ночной свет");
@@ -499,6 +501,13 @@ namespace VrBattlegrounds.EditorTools
 
         // Свет зоны, отставший от своего светильника после перестановки, переносится к ближайшему сокету
         // «LightingSocket__…CommonLightingOwner» той же зоны (или к лампе-плафону, если сокета нет).
+        private static bool IsArsenalSlotLighting(Transform node, Transform environment)
+        {
+            for (; node != null && node != environment; node = node.parent)
+                if (node.parent == environment && node.name == VrBattlegrounds.Editor.Arsenal.ArsenalSlotLighting.ContainerName) return true;
+            return false;
+        }
+
         private static bool SnapToFixture(Light light, Transform environment, StringBuilder log)
         {
             var zone = light.transform;
@@ -552,7 +561,7 @@ namespace VrBattlegrounds.EditorTools
             int lightmapped = 0, probeLit = 0, skipped = 0;
             foreach (Transform zone in environment)
             {
-                if (zone.GetComponent<Light>() != null || zone.name == ContainerName) continue;
+                if (zone.GetComponent<Light>() != null || zone.name == ContainerName || zone.name == VrBattlegrounds.Editor.Arsenal.ArsenalSlotLighting.ContainerName) continue;
                 if (!ZoneLightmapScale.TryGetValue(zone.name, out float scale))
                 {
                     log.AppendLine("ПРЕДУПРЕЖДЕНИЕ: зона без правила GI пропущена: " + zone.name);

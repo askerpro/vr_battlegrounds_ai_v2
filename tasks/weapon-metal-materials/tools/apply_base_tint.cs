@@ -16,7 +16,10 @@ foreach (var kv in avg)
     if (m == null) { sb.Append("нет ").Append(kv.Key).Append("; "); continue; }
     float f = Mathf.Round(Mathf.Clamp(TARGET / kv.Value, 1f, MAX) * 100f) / 100f;
     if (f <= 1f) continue;
+    // _Color — легаси-зеркало _BaseColor: при расхождении его синхронизирует загрузка сцены, материал становится
+    // dirty (сбой публикации базы 1113), поэтому оба свойства пишутся одинаково.
     m.SetColor("_BaseColor", new Color(f, f, f, 1f));
+    m.SetColor("_Color", new Color(f, f, f, 1f));
     UnityEditor.EditorUtility.SetDirty(m);
     sb.Append(kv.Key).Append(" x").Append(f.ToString("0.00")).Append("; ");
 }

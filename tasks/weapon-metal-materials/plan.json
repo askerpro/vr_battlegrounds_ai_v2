@@ -21,6 +21,16 @@
       ],
       "after": [],
       "needs": []
+    },
+    {
+      "id": "color-sync",
+      "writes": [
+        "tasks/weapon-metal-materials/**",
+        "Assets/Art/Weapons/Kinemation/Materials/**",
+        "experts/weapon-system/journal/2026-10-23-weapon-metal-materials.md"
+      ],
+      "after": [{"task": "weapon-metal-materials", "stage": "work", "state": "merged"}],
+      "needs": []
     }
   ]
 }

@@ -16,7 +16,10 @@
 - Все 17 стволов пересобираются транзакционно. Магазины — самостоятельные префабы без геометрии и сэмплов SDK.
   Базы MagGun/MagMachinegun/MagShotgun и `Assets/Unused` удалены. Шарнир отдачи в руках — запястье держащей руки.
 - Тесты добавлены после приёмки. Известные красные: покрытие хвата Cyborg у магазинов (регистрация поз отдельно).
-- Осталось: повторный heavy, ревью зон (weapon-system, avatar-grip, gameplay, manipulation, launch-infra), merge.
+- Heavy 2 на 2c13576a3 (ticket 1075, `Tools/e2e/results/heavy/20261022-203752-editor-default/verdict.json`):
+  код 0 — e2e 8/8, EditMode 2952, новых красных 0. Ревью пяти зон на 2c13576a3 — approve; повтор после
+  дописанного в writes старого пути `Avatars/PackOrigPoses.cs` (перенос в Gameplay).
+- Осталось: merge-request/merge-execute, request-base, закрытие задачи.
 - Временный зонд `WeaponRebuildProbe` в коммит не входит; копия — `reports/probe/`.
 
 Код этапов 1–2 и правки по прогонам описаны ниже и в changelog.

@@ -40,6 +40,8 @@
         "Assets/Editor/VR_Battlegrounds/Avatars/HandPoseReview/Tests/HandPoseGripRulesTests.cs",
         "Assets/Editor/VR_Battlegrounds/Avatars/HandsPackPoseImporter.cs",
         "Assets/Editor/VR_Battlegrounds/Avatars/KinemationPoseExtractor.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/PackOrigPoses.cs",
+        "Assets/Editor/VR_Battlegrounds/Avatars/PackOrigPoses.cs.meta",
         "Assets/Editor/VR_Battlegrounds/Avatars/WeaponGripCarryOver.cs",
         "Assets/Editor/VR_Battlegrounds/Gameplay/GameTagsTool.cs",
         "Assets/Editor/VR_Battlegrounds/Gameplay/HandsPackLegacyRebuild.cs",

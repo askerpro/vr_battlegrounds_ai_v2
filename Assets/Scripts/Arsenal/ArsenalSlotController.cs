@@ -56,12 +56,15 @@ namespace VrBattlegrounds.Arsenal
         [SerializeField] private UxrGrabbableObjectAnchor _itemAnchor;
 
         [Header("Visual Feedback")]
-        [Tooltip("Светящаяся подложка-индикатор (arsenal-slot-lighting); realtime-лампы у слота нет.")]
+        [Tooltip("Боковая LED-лента — индикатор (arsenal-slot-lighting); realtime-лампы у слота нет.")]
         [SerializeField] private ArsenalSlotGlow _glow;
-        [SerializeField] private Color _availableColor  = new Color(1f, 0.85f, 0.6f); // warm white
-        [Tooltip("Цвет «недоступно»: подложка гаснет.")]
+        [SerializeField] private Color _availableColor  = new Color(1f, 0.6f, 0.25f); // тёплый янтарный
+        [Tooltip("Цвет «недоступно»: лента гаснет.")]
         [SerializeField] private Color _unavailableColor = Color.black;
         [SerializeField] private Color _takenColor       = Color.green;
+        /// <summary>Лента слота и её цвет «доступно» — для редакторского превью станций (вид как у собранного слота).</summary>
+        public ArsenalSlotGlow Glow => _glow;
+        public Color AvailableColor => _availableColor;
 
         [Header("Экономика (T-45)")]
         [Tooltip("Во сколько раз темнее ствол, на который у владельца стены не хватает денег.")]

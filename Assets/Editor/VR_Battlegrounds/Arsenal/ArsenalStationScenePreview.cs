@@ -328,6 +328,13 @@ namespace VrBattlegrounds.Editor.Arsenal
                                                         part.GetComponent<UxrGrabbableObjectAnchor>() != null ||
                                                         part.name == ArsenalPresentationApplicator.SupportsContainerName ||
                                                         part.name == ArsenalPresentationApplicator.ReturnHintsContainerName);
+            // Ленту красит контроллер слота, а не материал: в превью — цвет «доступно», как у собранного слота.
+            if (prefab.Glow != null)
+            {
+                Transform glow = frame.Find(AnimationUtility.CalculateTransformPath(prefab.Glow.transform, prefab.transform));
+                Renderer renderer = glow != null ? glow.GetComponent<Renderer>() : null;
+                if (renderer != null) ArsenalSlotGlow.Paint(renderer, prefab.AvailableColor, prefab.Glow.Strength, new MaterialPropertyBlock());
+            }
 
             Item(frame, weapon.WeaponPrefab, presentation.ItemTarget, "Оружие");
             Item(frame, weapon.MagazinePrefab, presentation.MagazineTarget, "Магазин");

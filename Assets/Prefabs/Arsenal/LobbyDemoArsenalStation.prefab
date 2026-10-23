@@ -385,7 +385,7 @@ MonoBehaviour:
   _slotPrefab: {fileID: 5617748707475017936, guid: a465f540d467e0e469042f73de34f97a, type: 3}
   _slotOrigin: {x: 0.08500004, y: 0, z: 0}
   _slotEulerAngles: {x: -0, y: 0, z: 0}
-  _gap: 0.024999946
+  _gap: 0.095
   _alignment: 0
 --- !u!1 &1943793814591475617
 GameObject:
@@ -3671,7 +3671,7 @@ MonoBehaviour:
   _slotPrefab: {fileID: 5295113628900573978, guid: 65ac852a98aeaf64b8a669a6afa56387, type: 3}
   _slotOrigin: {x: 0.08500004, y: 0.04, z: 0}
   _slotEulerAngles: {x: -0, y: 0, z: 0}
-  _gap: 0.03000006
+  _gap: 0.075
   _alignment: 0
 --- !u!1001 &543666664015714932
 PrefabInstance:

@@ -1,0 +1,33 @@
+{
+  "task_id": "weapon-rebuild-docs-followups",
+  "owner": "weapon-rebuild-docs-followups",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/weapon-rebuild-docs-followups",
+  "base_sha": "048c1d87b31d715a2e63efe637396f152172cd13",
+  "doc_path": "tasks/weapon-rebuild-docs-followups/Readme.md",
+  "title": "Документация пересборки оружия и хвосты ревью",
+  "branch": "task/weapon-rebuild-docs-followups",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        ".claude/skills/add-weapon/SKILL.md",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/WeaponRebuildFinish.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/WeaponSightTable.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/SightAutoZeroPanel.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/WeaponSightAuthoring.cs",
+        "Assets/Scripts/Weapons/RecoilAccumulator.cs",
+        "Assets/Tests/EditMode/Sights/WeaponSightPrefabTests.cs",
+        "Docs/gameplay.md",
+        "Docs/grip-extraction.md",
+        "Docs/weapons/decisions.md",
+        "Docs/weapons/sight-calibration.md",
+        "Tools/e2e/editmode-known-red.json",
+        "experts/weapon-system/journal/2026-10-23-weapon-rebuild-docs-followups.md",
+        "tasks/weapon-rebuild-docs-followups/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

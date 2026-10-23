@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "updated": "2026-10-22",
-  "baseSha": "e29417d5d4c1f3caf24b015ce223a5b0887617f9",
-  "source": "heavy --editmode also на кандидате e2e-series (20261022-070345, origin/dev 6f77bfa08): 2930 тестов, 19 красных; 18 GrabPoseCoverage позеленели, 2 новых пришли с dev",
+  "updated": "2026-10-23",
+  "baseSha": "d32f9ef8306f195ccabe6673bc7a4f087828ba5d",
+  "source": "heavy --editmode also на кандидате weapon-rebuild-docs-followups (20261023-094344, поверх origin/dev 47135fae0): 2964 тестов, 69 красных — все известные; затем a2c2f7e51 сняла позеленевшие GrabPoseCoverage (хваты магазинов CyborgHandsBase)",
   "tests": [
     {
       "name": "VrBattlegrounds.Tests.Arsenal.ArsenalMapGeometryTests.WalletAndDogTagAreVisibleAndEquipmentPathIsClear(\"Assets/Scenes/Maps/TestMap1.unity\",8)",
@@ -46,11 +46,11 @@
     },
     {
       "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, CyborgHandsBase)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
+      "reason": "хваты: патрон в гнезде ствола — развёрнутая копия, не наследует хват CyborgHandsBase из префаба патрона; решение пользователя 2026-10-23 — класть патрон вложенным экземпляром (следующая оружейная задача)"
     },
     {
       "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, CyborgHandsBase)",
-      "reason": "хваты: хват магазина Cyborg не переносится из геометрии SDK — регистрация поз магазинов отдельно (решение пользователя 2026-10-22, weapon-rebuild-sight-guarantee)"
+      "reason": "хваты: патрон в гнезде ствола — развёрнутая копия, не наследует хват CyborgHandsBase из префаба патрона; решение пользователя 2026-10-23 — класть патрон вложенным экземпляром (следующая оружейная задача)"
     },
     {
       "name": "VrBattlegrounds.Tests.Prefabs.HandsPackWeaponTests.Детали_стоят_как_в_паке(Scar)",

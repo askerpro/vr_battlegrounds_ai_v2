@@ -50,6 +50,8 @@ namespace VrBattlegrounds.Editor.Gameplay
             var extras = (extraPaths ?? Enumerable.Empty<string>()).ToList();
             if (info != null) extras.Add(AssetDatabase.GetAssetPath(info));
             extras.Add(PackOrigPoses.Root);
+            // Автосведение родного прицела без записи дописывает таблицу — отказ пересборки возвращает и её.
+            extras.Add(WeaponSightTable.AssetPath);
             WeaponRebuildTransaction transaction = WeaponRebuildTransaction.Begin(new[] { weaponPath, magazinePath }, extras);
             // Сборка сохраняет только свою область. Несохранённое в ней до начала — чужая правка, которую сборка
             // записала бы на диск или затёрла; несохранённое вне области (материалы паков и т. п.) не мешает.
@@ -120,7 +122,14 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (string.IsNullOrEmpty(path)) continue;
                 var tags = new VrBattlegrounds.Editor.GameTagsTool.Result();
                 int retagged = VrBattlegrounds.Editor.GameTagsTool.ApplyToPrefab(path, tags);
-                if (retagged > 0) GameLog.Debug.Info($"[{source}] {path}: тегов размечено {retagged}");
+                if (retagged > 0)
+                {
+                    GameLog.Debug.Info($"[{source}] {path}: тегов размечено {retagged}");
+                    // Разметка сохраняет префаб через SaveAsPrefabAsset, а он пишет _assetId = 0 — вернуть канон
+                    // (NetworkAssetIdOnDiskTests), как после записи хватов и прицела.
+                    int ids = VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { path }, false);
+                    if (ids > 0) GameLog.Debug.Info($"[{source}] {path}: _assetId возвращён после разметки тегов");
+                }
                 foreach (string conflict in tags.Conflicts) GameLog.WeaponSystem.Warning($"[{source}] {conflict}");
             }
             // SaveAsPrefabAsset пишет __isInPrefab: 0 — с такими флагами редактор перевыдаёт _uxrUniqueId (MPPM-02).

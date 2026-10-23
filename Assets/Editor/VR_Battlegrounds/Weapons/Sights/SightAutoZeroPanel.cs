@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using VrBattlegrounds.Arsenal;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Editor.Gameplay.SightSplit;
 using VrBattlegrounds.Weapons.Sights;
 
@@ -118,6 +119,10 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 EditorGUILayout.LabelField("В таблице", entry == null ? "записи нет" :
                     $"{(entry.Kit != null ? entry.Kit.name : "встроенный")}, " +
                     (SightParts.IsOpticKit(entry.Kit) ? "коллиматор" : $"сдвиг {entry.MovingOffset * 1000:+0.00;-0.00;0.00} мм") + $", {entry.ZeroDistance} м");
+                // Намеренная смена оси выстрела (пак, рецепт, обвес): без записи пересборка сведёт родной прицел сама.
+                if (nativeSpec != null && entry != null
+                    && GUILayout.Button(new GUIContent("Сбросить запись", "Удалить запись родного прицела из таблицы: следующая пересборка ствола сведёт его заново (автосведение). Префаб не меняется")))
+                    Run(() => ResetEntry(selected));
 
                 using (new EditorGUI.DisabledScope(selected == null || (!nativeSelected && kitSelected == null)))
                     if (GUILayout.Button("Открыть стенд"))
@@ -538,6 +543,26 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                            $"в окне при глазе в {OpticEyeRelief * 100:0} см: {vertical * OpticEyeRelief * 1000:+0.0;-0.0;0.0} / {horizontal * OpticEyeRelief * 1000:+0.0;-0.0;0.0} мм от центра. " +
                            $"Окно над осью ствола: {Vector3.Dot(lens - muzzle.position, muzzle.up) * 1000:0.0} мм. Крен комплекта {tilt:0.00}°.";
             if (write) _message = "Коллиматор сведён (сетка привязана к ShotSource). Проверьте «Вид через прицел».";
+        }
+
+        /// <summary>
+        /// Сброс записи родного прицела после намеренной смены оси выстрела: префаб не меняется, следующая пересборка
+        /// ствола сводит прицел заново (<see cref="WeaponSightAuthoring.ApplyNative"/>).
+        /// </summary>
+        private void ResetEntry(WeaponInfo info)
+        {
+            if (!EditorUtility.DisplayDialog("Сбросить запись прицела",
+                    $"{info.DisplayName}: удалить запись родного прицела из таблицы?\n\nПрефаб не меняется. Следующая пересборка ствола " +
+                    "сведёт прицел заново тем же решателем, что «Свести».", "Сбросить", "Отмена"))
+                return;
+            WeaponSightTable table = WeaponSightTable.Load();
+            if (table == null) throw new InvalidOperationException("Нет таблицы " + WeaponSightTable.AssetPath);
+            Undo.RecordObject(table, "Сбросить запись прицела");
+            if (!table.Remove(info)) throw new InvalidOperationException(info.WeaponId + ": записи в таблице нет");
+            EditorUtility.SetDirty(table);
+            AssetDatabase.SaveAssetIfDirty(table);
+            GameLog.WeaponSystem.Info($"[SightAutoZero] {info.WeaponId}: запись родного прицела сброшена — следующая пересборка сведёт заново");
+            _message = $"Запись {info.WeaponId} сброшена. Пересоберите ствол — родной прицел сведётся автоматически.";
         }
 
         /// <summary>Запись позы комплекта и сведения в таблицу. Префаб оружия не меняется.</summary>

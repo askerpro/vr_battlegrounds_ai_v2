@@ -101,7 +101,8 @@ SDK берёт хват по умолчанию (без позы кисти, о�
   `OutOfWorldGuard`; помпа → `UxrShotgunPump`, затвор → `AutomaticWeaponSlideFeedback`;
 - `MeshContainer`: корпус с выпуклым `MeshCollider`, статичные детали, спуск (им вращает
   `UxrFirearmWeapon`, угол и ось — из клипа), `Tip`/`ShotSource` по кольцу вершин у дула,
-  `RecoilSourceAxes` у рукояти, `MagAnchor` у окна магазина со звуком донора;
+  `RecoilSourceAxes` у рукояти (точка сборки; в руках шарнир отдачи сам встаёт в запястье держащей руки —
+  `RecoilAccumulator`, вручную не настраивается), `MagAnchor` у окна магазина со звуком донора;
 - помпа/затвор — отдельный граббабл у корня с `RestrictLocalOffset` на ход из клипа и
   `GrabOnlyWhenParentHeld`. Помпа наводит ствол (`Control Parent Direction` вкл.,
   `Ignore Grabbable Parent Dependency` выкл. — как у сэмпла SDK, `PumpAimTests`), затвор —

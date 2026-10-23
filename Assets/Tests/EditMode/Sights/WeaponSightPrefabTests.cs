@@ -100,6 +100,43 @@ namespace VrBattlegrounds.Tests.Sights
             Assert.That(moving.IsWithinTravel(entry.MovingOffset), Is.True);
         }
 
+        /// <summary>
+        /// Автосведение пересборки (родной прицел без записи, решение пользователя 2026-10-23, проверено на worker:
+        /// Scar −2,0254 мм) — тот же решатель, что «Свести» стенда: по разделённым деталям префаба оно повторяет сдвиг
+        /// принятой записи таблицы. Содержимое префаба загружается и выгружается без сохранения.
+        /// </summary>
+        [TestCaseSource(nameof(NativeWeapons))]
+        public void NativeSight_AutoZeroReproducesTableEntry(string weaponId)
+        {
+            SightSplitSpec spec = SightSplitTable.Get(weaponId);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(spec.PrefabPath);
+            WeaponSightTable.Entry entry = WeaponSightTable.Load()?.Find(InfoOf(prefab));
+            Assert.That(entry, Is.Not.Null, $"{weaponId}: нет записи в {WeaponSightTable.AssetPath}");
+            // Писатель прицела — в Assembly-CSharp-Editor, на которую asmdef тестов сослаться не может: по имени типа.
+            Type authoring = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(a => a.GetType("VrBattlegrounds.Editor.Weapons.Sights.WeaponSightAuthoring")).FirstOrDefault(t => t != null);
+            Assert.That(authoring, Is.Not.Null, "WeaponSightAuthoring");
+            string settingsPath = (string)authoring.GetField("SettingsPath").GetValue(null);
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(settingsPath);
+            Assert.That(settings, Is.Not.Null, settingsPath);
+            Assert.That(entry.ZeroDistance, Is.EqualTo(settings.DefaultZeroDistance), $"{weaponId}: запись на другую дистанцию");
+            System.Reflection.MethodInfo autoZero = authoring.GetMethod("AutoZero",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.That(autoZero, Is.Not.Null, "WeaponSightAuthoring.AutoZero");
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(spec.PrefabPath);
+            try
+            {
+                object[] args = { contents, SightParts.FindShotSource(contents), settings, spec.PrefabPath, null };
+                float offset = (float)autoZero.Invoke(null, args);
+                Assert.That(offset, Is.EqualTo(entry.MovingOffset).Within(1e-6f), $"{weaponId}: автосведение ≠ записи таблицы ({args[4]})");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+        }
+
         [TestCaseSource(nameof(KitWeapons))]
         public void Kit_NestedInRecordedPose(string weaponId)
         {

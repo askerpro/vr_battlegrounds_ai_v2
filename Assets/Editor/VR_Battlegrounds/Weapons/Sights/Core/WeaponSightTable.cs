@@ -59,6 +59,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             else _entries.Add(entry);
         }
 
+        /// <summary>Убирает запись оружия; false — записи не было. Сохранение ассета — на вызывающем.</summary>
+        public bool Remove(WeaponInfo weapon) => weapon != null && _entries.RemoveAll(e => e != null && e.Weapon == weapon) > 0;
+
         public static WeaponSightTable Load() => AssetDatabase.LoadAssetAtPath<WeaponSightTable>(AssetPath);
 
         /// <summary>Единственная точка создания ассета таблицы (пустой).</summary>

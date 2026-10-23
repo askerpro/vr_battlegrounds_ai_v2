@@ -19,6 +19,11 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// </para>
     ///
     /// <para>
+    /// Цвет материала — <c>_TintColor</c> пака, умноженный на <see cref="AlbedoBoost" /> (тёмное альбедо пака поднимается
+    /// до <see cref="AlbedoTarget" />), одинаково в <c>_BaseColor</c> и легаси <c>_Color</c>.
+    /// </para>
+    ///
+    /// <para>
     /// Уже созданные материалы <see cref="Convert" /> не пересобирает; карты металличности и гладкости
     /// всех материалов <see cref="MaterialsFolder" /> пересчитывает <see cref="RepackAll" /> (те же PNG, GUID сохраняются).
     /// </para>
@@ -54,7 +59,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             Texture roughness = Tex(src, "_Roughness");
 
             Color tint = src.HasProperty("_TintColor") ? src.GetColor("_TintColor") : Color.white;
-            mat.SetColor("_BaseColor", new Color(tint.r, tint.g, tint.b, 1f));
+            float boost = AlbedoBoost(MeanLinear(baseColor));
+            var color = new Color(tint.r * boost, tint.g * boost, tint.b * boost, 1f);
+            // _Color — легаси-зеркало _BaseColor: при расхождении URP (LitShader.ValidateMaterial) выравнивает его
+            // при загрузке сцены и помечает материал dirty — так падала публикация базы worker.
+            mat.SetColor("_BaseColor", color);
+            mat.SetColor("_Color", color);
             mat.SetTexture("_BaseMap", baseColor);
             LimitForAndroid(baseColor);
 
@@ -138,6 +148,32 @@ namespace VrBattlegrounds.Editor.Gameplay
             if (!m.HasProperty(property)) return fallback;
             Color c = m.GetColor(property);
             return new Vector2(c.r, c.g);
+        }
+
+        /// <summary>Целевая средняя линейная яркость альбедо (решение пользователя 2026-10-23, weapon-metal-materials).</summary>
+        public const float AlbedoTarget = 0.055f;
+
+        /// <summary>Наибольший подъём альбедо: 0,10/×3 и 0,07/×2 пользователь отклонил как «слишком светло».</summary>
+        public const float AlbedoMaxBoost = 1.6f;
+
+        /// <summary>
+        /// Серый множитель цвета материала: тёмное альбедо пака поднимается до <see cref="AlbedoTarget" />, не больше
+        /// <see cref="AlbedoMaxBoost" />; светлое не трогается. Округление до 0,01 — как в принятых материалах.
+        /// </summary>
+        public static float AlbedoBoost(float meanLinearAlbedo)
+        {
+            if (meanLinearAlbedo <= 0f) return 1f;
+            return Mathf.Round(Mathf.Clamp(AlbedoTarget / meanLinearAlbedo, 1f, AlbedoMaxBoost) * 100f) / 100f;
+        }
+
+        /// <summary>Средняя линейная яркость карты (среднее R, G, B), как её выбирает шейдер; нет карты — 0.</summary>
+        private static float MeanLinear(Texture texture)
+        {
+            Color[] pixels = Read(texture);
+            if (pixels == null || pixels.Length == 0) return 0f;
+            double sum = 0;
+            foreach (Color p in pixels) sum += (p.r + p.g + p.b) / 3f;
+            return (float)(sum / pixels.Length);
         }
 
         /// <summary>

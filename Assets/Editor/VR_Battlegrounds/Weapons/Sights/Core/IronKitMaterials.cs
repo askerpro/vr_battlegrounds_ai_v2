@@ -58,7 +58,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             if (create) mat = new Material(Shader.Find(LitShader)) { name = Path.GetFileNameWithoutExtension(MaterialPath) };
             else mat.shader = Shader.Find(LitShader);
             Color tint = src.HasProperty("_TintColor") ? src.GetColor("_TintColor") : Color.white;
+            // _Color — легаси-зеркало _BaseColor: расхождение URP выравнивает при загрузке сцены и пачкает материал.
             mat.SetColor("_BaseColor", new Color(tint.r, tint.g, tint.b, 1f));
+            mat.SetColor("_Color", new Color(tint.r, tint.g, tint.b, 1f));
             mat.SetTexture("_BaseMap", baseColor);
             if (normal != null)
             {

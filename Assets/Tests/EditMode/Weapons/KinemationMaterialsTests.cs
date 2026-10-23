@@ -11,6 +11,7 @@ namespace VrBattlegrounds.Tests.Weapons
     /// совпадает с шейдером пака <c>Shader_TacticalShooterWeapon</c>: гладкость = lerp(x, y, 1 − шероховатость),
     /// металличность = lerp(x, y, карта), карты читаются линеаризованными (импорт пака sRGB). Прежняя формула
     /// 1 − lerp(x, y, шероховатость) без линеаризации давала «хром» (SRM-12 гладкость 0,82 вместо 0,55).
+    /// Тон альбедо (AlbedoBoost: цель 0,055, не больше ×1,6) — тоже принят пользователем 2026-10-23.
     /// Принято пользователем 2026-10-23 (арсенал Lobby в worker, задача weapon-metal-materials).
     /// </summary>
     public class KinemationMaterialsTests
@@ -49,6 +50,22 @@ namespace VrBattlegrounds.Tests.Weapons
             Assert.AreEqual(c.r, c.g, Eps);
             Assert.AreEqual(c.r, c.b, Eps);
             Assert.AreEqual(0.45f, c.a, Eps, "lerp(0,2; 0,7; 0,5)");
+        }
+
+        private static float Boost(float mean) =>
+            (float)Materials().GetMethod("AlbedoBoost", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { mean });
+
+        [Test]
+        public void AlbedoBoost_ReproducesAcceptedTint()
+        {
+            // Средние линейные альбедо карт пака и принятые множители (_BaseColor в Kinemation/Materials, 2026-10-23).
+            Assert.AreEqual(1.31f, Boost(0.042f), Eps, "AK105_Body");
+            Assert.AreEqual(1.57f, Boost(0.035f), Eps, "SRM-12_Body");
+            Assert.AreEqual(1.06f, Boost(0.052f), Eps, "Herrington");
+            Assert.AreEqual(1.6f, Boost(0.017f), Eps, "TR15_Body — потолок");
+            Assert.AreEqual(1f, Boost(0.108f), Eps, "Mk14 — светлее цели, не трогается");
+            Assert.AreEqual(1f, Boost(0.548f), Eps, "патроны R08");
+            Assert.AreEqual(1f, Boost(0f), Eps, "нет карты");
         }
 
         [Test]

@@ -1,0 +1,25 @@
+{
+  "task_id": "kinemation-albedo-tint",
+  "owner": "kinemation-albedo-tint",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/kinemation-albedo-tint",
+  "base_sha": "d908a2ab97f10b2b311756fe158cafc973dfca36",
+  "doc_path": "tasks/kinemation-albedo-tint/Readme.md",
+  "title": "KinemationMaterials: принятый тон альбедо и _Color в конвертере",
+  "branch": "task/kinemation-albedo-tint",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/kinemation-albedo-tint/**",
+        "Assets/Art/Weapons/Kinemation/Materials/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationMaterials.cs",
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/IronKitMaterials.cs",
+        "Assets/Tests/EditMode/Weapons/KinemationMaterialsTests.cs",
+        "experts/weapon-system/journal/2026-10-23-kinemation-albedo-tint.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

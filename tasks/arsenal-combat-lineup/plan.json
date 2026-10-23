@@ -13,10 +13,10 @@
       "writes": [
         "tasks/arsenal-combat-lineup/**",
         "Assets/Art/Weapons/Interaction/SniperRifleAuto/**",
+        "Assets/Prefabs/Managers/--- MANAGERS ---.prefab",
         "Assets/Prefabs/Weapons/SniperRifleAuto/**",
         "Assets/Art/Weapons/Sights/Pack/**",
         "Assets/Audio/SFX/Weapons/SniperRifleAuto/**",
-        "---.prefab",
         "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Magazine_orig.asset",
         "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Magazine_orig.asset.meta",
         "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_orig_sources.json",
@@ -52,7 +52,6 @@
         "Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/PackOpticBuilder.cs",
         "Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/PackOpticBuilder.cs.meta",
         "Assets/Editor/VR_Battlegrounds/Weapons/Sights/Core/SightKitBuilder.cs",
-        "Assets/Prefabs/Managers/---",
         "Assets/Prefabs/Weapons/Revolver/Revolver.prefab",
         "Assets/Prefabs/Weapons/Sights/SightKit_Sight08.prefab",
         "Assets/Prefabs/Weapons/Sights/SightKit_Sight08.prefab.meta",
@@ -78,7 +77,6 @@
         "Docs/gameplay.md",
         "Docs/weapons/decisions.md",
         "Docs/weapons/sight-calibration.md",
-        "MANAGERS",
         "experts/avatar-grip/journal/2026-10-23-arsenal-combat-lineup.md",
         "experts/gameplay/journal/2026-10-23-arsenal-combat-lineup.md",
         "experts/weapon-system/journal/2026-10-23-arsenal-combat-lineup.md"

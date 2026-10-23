@@ -38,6 +38,9 @@ namespace VrBattlegrounds.Weapons.Sights
 
         private Camera _camera;
         private RenderTexture _texture;
+        // UxrAvatar.LocalAvatar — LINQ по компонентам с выделением на каждый вызов: берётся заново, только когда
+        // закешированный аватар пропал, выключен или перестал быть локальным.
+        private UxrAvatar _localAvatar;
         private bool _viewing;
         private float _viewingSince;
         private float _nextNearLog;
@@ -102,7 +105,8 @@ namespace VrBattlegrounds.Weapons.Sights
         // После позы трекинга и SDK, до рендера кадра: та же поза, что увидит WeaponOpticView.
         private void HandleBeforeRender()
         {
-            Transform head = UxrAvatar.LocalAvatar != null ? UxrAvatar.LocalAvatar.CameraTransform : null;
+            UxrAvatar avatar = LocalAvatar();
+            Transform head = avatar != null ? avatar.CameraTransform : null;
             if (head == null || _view == null || !_view.TryGetZero(out Vector3 zero, out Transform muzzle, out _)
                 || !_view.TryGetLens(out Vector3 eyepiece, out float lensRadius))
             {
@@ -122,7 +126,7 @@ namespace VrBattlegrounds.Weapons.Sights
                 return;
             }
             // Ближний к оси глаз: в стерео смотрит один глаз, центр головы смещён от оси на полглаза.
-            Eyes(UxrAvatar.LocalAvatar.CameraComponent, head, out Vector3 left, out Vector3 right);
+            Eyes(avatar.CameraComponent, head, out Vector3 left, out Vector3 right);
             Offset(left, eyepiece, dir, out float behind, out float offset);
             Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
             if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
@@ -148,6 +152,14 @@ namespace VrBattlegrounds.Weapons.Sights
             _camera.nearClipPlane = Mathf.Max(0.05f, Vector3.Dot(muzzle.position - eyepiece, dir) + 0.05f);
             _camera.farClipPlane = Mathf.Max(_camera.nearClipPlane + 1f, _farClip);
             _camera.fieldOfView = 2f * Mathf.Atan(ApparentHalfField / _magnification) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>Локальный аватар без покадровых выделений: кеш, пока он включён и остаётся локальным.</summary>
+        private UxrAvatar LocalAvatar()
+        {
+            if (_localAvatar == null || !_localAvatar.isActiveAndEnabled || _localAvatar.AvatarMode != UxrAvatarMode.Local)
+                _localAvatar = UxrAvatar.LocalAvatar;
+            return _localAvatar;
         }
 
         /// <summary>Позиции глаз в мире без выделений: стерео-матрицы камеры головы, иначе оба — центр головы.</summary>
@@ -210,7 +222,8 @@ namespace VrBattlegrounds.Weapons.Sights
             data.requiresColorOption = CameraOverrideOption.Off;
             data.requiresDepthOption = CameraOverrideOption.Off;
             data.antialiasing = AntialiasingMode.None;
-            Camera head = UxrAvatar.LocalAvatar != null ? UxrAvatar.LocalAvatar.CameraComponent : null;
+            UxrAvatar avatar = LocalAvatar();
+            Camera head = avatar != null ? avatar.CameraComponent : null;
             if (head != null)
             {
                 _camera.cullingMask = head.cullingMask;

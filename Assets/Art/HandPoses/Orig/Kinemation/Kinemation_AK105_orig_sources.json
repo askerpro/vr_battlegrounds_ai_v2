@@ -75,16 +75,15 @@
             "clip": "A_FP_AK105_Reload_Empty",
             "weaponClip": "A_W_AK105_Reload_Empty",
             "sourceKind": "kinemation",
-            "sourceSide": "Left",
+            "sourceSide": "Right",
             "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
             "time": 3.183000087738037,
             "frame": 191.0,
             "heldBy": [
-                "Left",
                 "Right"
             ],
             "snaps": [
-                "Slide/Orig/Kinemation_AK105_Slide_orig/Left",
+                "Slide/Orig/Kinemation_AK105_Slide_orig/Left (зеркало)",
                 "Slide/Orig/Kinemation_AK105_Slide_orig/Right"
             ]
         }

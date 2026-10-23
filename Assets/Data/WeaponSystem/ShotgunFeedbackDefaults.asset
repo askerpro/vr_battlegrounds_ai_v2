@@ -105,3 +105,5 @@ MonoBehaviour:
   _magazineTakeOut: {fileID: 8300000, guid: accf33387ed73af4fac6208871199082, type: 3}
   _ejectaImpacts:
   - {fileID: 8300000, guid: b67fb4de16e9fd141a030da492477139, type: 3}
+  _dropImpacts:
+  - {fileID: 8300000, guid: 4b93338b60cd97a4a9c086056ab306e7, type: 3}

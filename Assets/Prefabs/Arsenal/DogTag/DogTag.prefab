@@ -346,7 +346,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f5a30897a3c024c805c866226dd743, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObject
-  _uxrUniqueId: 4bea14a0-6447-4143-949c-c5dd0b15cab1
+  _uxrUniqueId: 3548f234-e5f4-417e-8187-205206e9b3ea
   __prefabGuid: 4e2288bc51abb624c9451d05a592532e
   __isInPrefab: 1
   _isDummyGrabbableParent: 0
@@ -374,10 +374,10 @@ MonoBehaviour:
   _rigidBodyDynamicOnRelease: 1
   _verticalReleaseMultiplier: 1
   _horizontalReleaseMultiplier: 1
-  _previewGrabPosesMode: 3
+  _previewGrabPosesMode: 2
   _previewPosesRegenerationType: 0
   _previewPosesRegenerationIndex: -1
-  _selectedAvatarForGrips: {fileID: 0}
+  _selectedAvatarForGrips: {fileID: 2537556764526307725, guid: 71b74b0d08444f49bbb7aa2828d0890a, type: 3}
   _firstGrabPointIsMain: 1
   _grabPoint:
     _editorFoldout: 1
@@ -391,7 +391,7 @@ MonoBehaviour:
     _defaultGripPoseInfo:
       _avatarPrefabGuid: 
       _handPose: {fileID: 0}
-      _poseBlendValue: 0
+      _poseBlendValue: -1
       _gripAlignTransformHandLeft: {fileID: 0}
       _gripAlignTransformHandRight: {fileID: 0}
     _snapMode: 3
@@ -399,8 +399,8 @@ MonoBehaviour:
     _snapReference: 1
     _avatarGripPoseEntries:
     - _avatarPrefabGuid: 71b74b0d08444f49bbb7aa2828d0890a
-      _handPose: {fileID: 11400000, guid: dcabcdee226065943a69427e8801f5c9, type: 2}
-      _poseBlendValue: 0.5
+      _handPose: {fileID: 11400000, guid: 50e73c61f1d966d409da705792e92e86, type: 2}
+      _poseBlendValue: 0.674
       _gripAlignTransformHandLeft: {fileID: 8622929432064822723}
       _gripAlignTransformHandRight: {fileID: 1822603429089349277}
     _alignToController: 0
@@ -640,13 +640,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6540025735155705353}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
-  m_LocalPosition: {x: -0.0555, y: -0.045, z: -0.037}
+  m_LocalRotation: {x: 0.068774134, y: -0.061401855, z: 0.74278045, w: -0.66315705}
+  m_LocalPosition: {x: 0.004, y: -0.006, z: -0.0157}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7757397913348825035}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
+  m_LocalEulerAnglesHint: {x: 0, y: 10.58, z: 263.517}
 --- !u!114 &6577867715759651637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -659,7 +659,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 11e40045-7cc4-45dc-9fed-4e939234170d
+  _uxrUniqueId: 595d2870-dd1e-476c-9f63-a6b398d6fcbf
   __prefabGuid: 4e2288bc51abb624c9451d05a592532e
   __isInPrefab: 1
 --- !u!1 &7161482540274407077
@@ -719,8 +719,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8531879833333450651}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0555, y: -0.045, z: -0.037}
+  m_LocalRotation: {x: 0.06140186, y: -0.06877414, z: -0.663157, w: 0.74278045}
+  m_LocalPosition: {x: -0.004, y: -0.006, z: -0.0157}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -738,6 +738,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212ce82ef45e9684daf388b699410086, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UltimateXR::UltimateXR.Manipulation.UxrGrabbableObjectSnapTransform
-  _uxrUniqueId: 79cbab4c-9eed-4d39-9378-f4e79de4f6b7
+  _uxrUniqueId: 28fd6023-097f-4db5-95c4-d52a239475f6
   __prefabGuid: 4e2288bc51abb624c9451d05a592532e
   __isInPrefab: 1

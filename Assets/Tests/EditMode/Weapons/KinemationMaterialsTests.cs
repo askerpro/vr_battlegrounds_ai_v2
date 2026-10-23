@@ -87,5 +87,32 @@ namespace VrBattlegrounds.Tests.Weapons
                 UnityEngine.Object.DestroyImmediate(src);
             }
         }
+
+        /// <summary>
+        /// Затенение из карты цвета 0,9 и гладкость ×0,75 (ApplyShading) — принято пользователем в Play 2026-10-23
+        /// (arsenal-slot-lighting): без затенения металл пака «бледный»/«серебряный», затенение 1 — «слишком тёмные».
+        /// </summary>
+        [Test]
+        public void Materials_HaveAcceptedShading()
+        {
+            Type type = Materials();
+            Assert.AreEqual(0.9f, (float)type.GetField("OcclusionStrength").GetValue(null), Eps);
+            Assert.AreEqual(0.75f, (float)type.GetField("SmoothnessScale").GetValue(null), Eps);
+
+            string folder = (string)type.GetField("MaterialsFolder").GetValue(null);
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:Material", new[] { folder });
+            Assert.IsNotEmpty(guids);
+            foreach (string guid in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                var mat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat.shader == null || mat.shader.name != (string)type.GetField("Shader").GetValue(null)) continue;
+                Assert.AreSame(mat.GetTexture("_BaseMap"), mat.GetTexture("_OcclusionMap"), path + ": затенение из карты цвета");
+                Assert.IsTrue(mat.IsKeywordEnabled("_OCCLUSIONMAP"), path);
+                Assert.AreEqual(0.9f, mat.GetFloat("_OcclusionStrength"), Eps, path);
+                if (mat.GetTexture("_MetallicGlossMap") != null)
+                    Assert.AreEqual(0.75f, mat.GetFloat("_Smoothness"), Eps, path + ": множитель гладкости карты");
+            }
+        }
     }
 }

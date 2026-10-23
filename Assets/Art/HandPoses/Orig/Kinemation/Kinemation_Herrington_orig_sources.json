@@ -65,6 +65,25 @@
             "snaps": [
                 "Orig/Kinemation_Herrington_Shell_orig/Left"
             ]
+        },
+        {
+            "name": "Kinemation_Herrington_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_Herrington_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab",
+            "body": "Slide/Bolt",
+            "clip": "",
+            "weaponClip": "",
+            "sourceKind": "computed",
+            "sourceSide": "Left",
+            "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [],
+            "snaps": [
+                "Slide/Orig/Kinemation_Herrington_Slide_orig/Left",
+                "Slide/Orig/Kinemation_Herrington_Slide_orig/Right (зеркало)"
+            ]
         }
     ],
     "magazineScan": [

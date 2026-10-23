@@ -13,3 +13,18 @@ MonoBehaviour:
   m_Name: MagazineAnchorSoundDefaults
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.MagazineAnchorSoundDefaults
   _insertClip: {fileID: 8300000, guid: 45d1b3c6ecf9f354cb8035a52e81721e, type: 3}
+  _weaponAnchor:
+    place: {fileID: 8300000, guid: d537951daf5480c49ab6ee80d79a61ed, type: 3}
+    takeOut: {fileID: 8300000, guid: 0bf3cfa2168de8649ba90f4b7cc9e4d8, type: 3}
+  _riflePocket:
+    place: {fileID: 8300000, guid: f69a7cdbfe6beae4e9256e2f0bbd351d, type: 3}
+    takeOut: {fileID: 8300000, guid: fc63625d5f619fb42aa1e2418f6dcc66, type: 3}
+  _pistolPocket:
+    place: {fileID: 8300000, guid: a4cbe52bc8cf7de4ca599817d9fd7ba5, type: 3}
+    takeOut: {fileID: 8300000, guid: a1df14d71740eda4b8dea131401e6b0c, type: 3}
+  _magazinePocket:
+    place: {fileID: 8300000, guid: e3c4909ba49d09042b8debdb275b34a1, type: 3}
+    takeOut: {fileID: 8300000, guid: 6188e3ee7cc1a554badbab2691867b74, type: 3}
+  _magazineSocket:
+    place: {fileID: 0}
+    takeOut: {fileID: 0}

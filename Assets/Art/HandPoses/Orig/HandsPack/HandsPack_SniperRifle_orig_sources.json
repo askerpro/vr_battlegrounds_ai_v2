@@ -65,6 +65,25 @@
             "snaps": [
                 "Orig/HandsPack_SniperRifle_Magazine_orig/Left"
             ]
+        },
+        {
+            "name": "HandsPack_SniperRifle_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifle_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab",
+            "body": "Slide/Sniper_Rifle_Gate_End",
+            "clip": "",
+            "weaponClip": "",
+            "sourceKind": "computed",
+            "sourceSide": "Left",
+            "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [],
+            "snaps": [
+                "Slide/Orig/HandsPack_SniperRifle_Slide_orig/Left",
+                "Slide/Orig/HandsPack_SniperRifle_Slide_orig/Right (зеркало)"
+            ]
         }
     ],
     "magazineScan": [

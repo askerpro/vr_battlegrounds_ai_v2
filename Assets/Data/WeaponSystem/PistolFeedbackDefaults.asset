@@ -101,3 +101,7 @@ MonoBehaviour:
       _velocityJitter: 0.2
       _spin: {x: 0, y: 15, z: 25}
       _lifetime: 10
+  _magazineInsert: {fileID: 8300000, guid: 1f6104b284fea4943aee34e672e46e40, type: 3}
+  _magazineTakeOut: {fileID: 8300000, guid: accf33387ed73af4fac6208871199082, type: 3}
+  _ejectaImpacts:
+  - {fileID: 8300000, guid: a8e2b0dd188b5ef4ea5ccb5f34b368ef, type: 3}

@@ -65,6 +65,27 @@
             "snaps": [
                 "Orig/Kinemation_SRM12_Magazine_orig/Left"
             ]
+        },
+        {
+            "name": "Kinemation_SRM12_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_SRM12_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab",
+            "body": "Slide/Bolt",
+            "clip": "A_FP_SRM-12_Reload_Empty",
+            "weaponClip": "A_W_SRM-12_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Right",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 0.550000011920929,
+            "frame": 33.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Slide/Orig/Kinemation_SRM12_Slide_orig/Left (зеркало)",
+                "Slide/Orig/Kinemation_SRM12_Slide_orig/Right"
+            ]
         }
     ],
     "magazineScan": [

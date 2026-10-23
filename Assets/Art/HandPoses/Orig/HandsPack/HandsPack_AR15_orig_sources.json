@@ -5,6 +5,48 @@
     "magazineNote": "выбран Reload, деталь Rifle_Magazine_Mesh, кадры 17–59 (0,567–1,967 с), середина 1,267 с; держит: Left. Эксперимент — проверить глазами.",
     "points": [
         {
+            "name": "HandsPack_AR15_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_AR15_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+            "body": "MeshContainer/Rifle_Body_Mesh",
+            "clip": "Aim_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_AR15_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_AR15_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "HandsPack_AR15_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_AR15_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+            "body": "MeshContainer/Rifle_Body_Mesh",
+            "clip": "Aim_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_AR15_Support_orig/Left",
+                "Orig/HandsPack_AR15_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
             "name": "HandsPack_AR15_Magazine_orig",
             "point": "Magazine",
             "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_AR15_Magazine_orig.asset",
@@ -22,6 +64,25 @@
             ],
             "snaps": [
                 "Orig/HandsPack_AR15_Magazine_orig/Left"
+            ]
+        },
+        {
+            "name": "HandsPack_AR15_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_AR15_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+            "body": "Slide/Rifle_Detail_01",
+            "clip": "",
+            "weaponClip": "",
+            "sourceKind": "computed",
+            "sourceSide": "Left",
+            "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [],
+            "snaps": [
+                "Slide/Orig/HandsPack_AR15_Slide_orig/Left",
+                "Slide/Orig/HandsPack_AR15_Slide_orig/Right (зеркало)"
             ]
         }
     ],

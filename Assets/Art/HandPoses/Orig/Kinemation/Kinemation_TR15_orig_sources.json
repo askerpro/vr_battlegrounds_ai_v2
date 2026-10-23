@@ -2,7 +2,7 @@
     "pack": "Kinemation",
     "item": "TR15",
     "weapon": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
-    "magazineNote": "ни в одном клипе перезарядки рука не держит деталь жёстко (см. magazineScan)",
+    "magazineNote": "выбран A_FP_TR15_Reload_Empty + A_W_TR15_Reload_Empty, деталь Magazine, кадры 71–125 (1,183–2,083 с), середина 1,633 с; держит: Left. Эксперимент — проверить глазами.",
     "points": [
         {
             "name": "Kinemation_TR15_Grip_orig",
@@ -45,6 +45,45 @@
                 "Orig/Kinemation_TR15_Support_orig/Left",
                 "Orig/Kinemation_TR15_Support_orig/Right (зеркало)"
             ]
+        },
+        {
+            "name": "Kinemation_TR15_Magazine_orig",
+            "point": "Magazine",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_TR15_Magazine_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/TR15/TR15_mag.prefab",
+            "body": "Mesh",
+            "clip": "A_FP_TR15_Reload_Empty",
+            "weaponClip": "A_W_TR15_Reload_Empty",
+            "sourceKind": "kinemation",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 1.6330000162124634,
+            "frame": 98.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/Kinemation_TR15_Magazine_orig/Left"
+            ]
+        },
+        {
+            "name": "Kinemation_TR15_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/Kinemation/Kinemation_TR15_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/TR15/TR15.prefab",
+            "body": "Slide/Bolt",
+            "clip": "",
+            "weaponClip": "",
+            "sourceKind": "computed",
+            "sourceSide": "Left",
+            "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [],
+            "snaps": [
+                "Slide/Orig/Kinemation_TR15_Slide_orig/Left",
+                "Slide/Orig/Kinemation_TR15_Slide_orig/Right (зеркало)"
+            ]
         }
     ],
     "magazineScan": [
@@ -53,19 +92,19 @@
             "weaponClip": "A_W_TR15_Reload_Empty",
             "part": "Magazine",
             "side": "Left",
-            "result": "нет окна",
-            "distance": "начало детали",
-            "frames": 0,
-            "startFrame": 0,
-            "endFrame": 0,
-            "startTime": 0.0,
-            "endTime": 0.0,
-            "midTime": 0.0,
-            "rigidMm": 0.0,
+            "result": "окно",
+            "distance": "меш",
+            "frames": 55,
+            "startFrame": 71,
+            "endFrame": 125,
+            "startTime": 1.1829999685287476,
+            "endTime": 2.0829999446868898,
+            "midTime": 1.6330000162124634,
+            "rigidMm": 0.004999999888241291,
             "rigidDeg": 0.0,
-            "palmMm": 0.0,
-            "seatMm": 1167.873046875,
-            "minPalmMm": 120.76499938964844
+            "palmMm": 19.639999389648439,
+            "seatMm": 89.26699829101563,
+            "minPalmMm": 0.0
         },
         {
             "clip": "A_FP_TR15_Reload_Empty",
@@ -73,7 +112,7 @@
             "part": "Magazine",
             "side": "Right",
             "result": "нет окна",
-            "distance": "начало детали",
+            "distance": "меш",
             "frames": 0,
             "startFrame": 0,
             "endFrame": 0,
@@ -84,26 +123,26 @@
             "rigidDeg": 0.0,
             "palmMm": 0.0,
             "seatMm": 1167.873046875,
-            "minPalmMm": 125.0770034790039
+            "minPalmMm": 92.5199966430664
         },
         {
             "clip": "A_FP_TR15_Reload_Tactical",
             "weaponClip": "A_W_TR15_Reload_Tac",
             "part": "Magazine",
             "side": "Left",
-            "result": "нет окна",
-            "distance": "начало детали",
-            "frames": 0,
-            "startFrame": 0,
-            "endFrame": 0,
-            "startTime": 0.0,
-            "endTime": 0.0,
-            "midTime": 0.0,
-            "rigidMm": 0.0,
+            "result": "окно",
+            "distance": "меш",
+            "frames": 46,
+            "startFrame": 74,
+            "endFrame": 119,
+            "startTime": 1.2330000400543213,
+            "endTime": 1.9830000400543213,
+            "midTime": 1.600000023841858,
+            "rigidMm": 0.23199999332427979,
             "rigidDeg": 0.0,
-            "palmMm": 0.0,
-            "seatMm": 672.3140258789063,
-            "minPalmMm": 108.90299987792969
+            "palmMm": 19.638999938964845,
+            "seatMm": 149.36500549316407,
+            "minPalmMm": 0.0
         },
         {
             "clip": "A_FP_TR15_Reload_Tactical",
@@ -111,7 +150,7 @@
             "part": "Magazine",
             "side": "Right",
             "result": "нет окна",
-            "distance": "начало детали",
+            "distance": "меш",
             "frames": 0,
             "startFrame": 0,
             "endFrame": 0,
@@ -122,7 +161,7 @@
             "rigidDeg": 0.0,
             "palmMm": 0.0,
             "seatMm": 672.3140258789063,
-            "minPalmMm": 127.57499694824219
+            "minPalmMm": 91.94999694824219
         }
     ]
 }

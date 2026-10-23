@@ -1,0 +1,20 @@
+{
+    "pack": "HandsPack",
+    "item": "AR15",
+    "weapon": "Assets/Prefabs/Weapons/AR15/AR15.prefab",
+    "point": "Slide",
+    "part": "Rifle_Detail_01_Mesh",
+    "prefabPart": "Slide/Rifle_Detail_01",
+    "mirrorFrame": "MeshContainer/Rifle_Body_Mesh",
+    "source": "computed",
+    "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+    "note": "расчётная точка: в паке — деталь в клипах пака не ходит: наибольший сдвиг от покоя 0,0 мм; snap по геометрии Slide/Rifle_Detail_01, поза — шаблон Grab. Проверить глазами.",
+    "warning": "",
+    "computedTemplate": "Assets/ThirdParty/UltimateXR/Runtime/Art/Avatars/Cyborg/HandPoses/Grab.asset",
+    "computedRule": "ось хода — ход граббабла (0.000, 0.000, -0.060); опора — верх у заднего торца детали (Slide/Rifle_Detail_01, габарит по ходу/верху/боку (26, 7, 51) мм); ладонь в 20 мм наружу, пальцы поперёк хода",
+    "computedNote": "",
+    "travelMm": 0.0,
+    "minSeatMm": 0.0,
+    "minRangeMm": 0.0,
+    "scan": []
+}

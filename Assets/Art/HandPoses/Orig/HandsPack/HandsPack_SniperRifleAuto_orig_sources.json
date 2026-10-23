@@ -5,6 +5,48 @@
     "magazineNote": "выбран Recharge, деталь Sniper_Rifle_Magazine_Mesh, кадры 53–68 (1,767–2,267 с), середина 2,000 с; держит: Left. Эксперимент — проверить глазами.",
     "points": [
         {
+            "name": "HandsPack_SniperRifleAuto_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aiming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_SniperRifleAuto_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_SniperRifleAuto_Grip_orig/Right"
+            ]
+        },
+        {
+            "name": "HandsPack_SniperRifleAuto_Support_orig",
+            "point": "Support",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Support_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aiming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Orig/HandsPack_SniperRifleAuto_Support_orig/Left",
+                "Orig/HandsPack_SniperRifleAuto_Support_orig/Right (зеркало)"
+            ]
+        },
+        {
             "name": "HandsPack_SniperRifleAuto_Magazine_orig",
             "point": "Magazine",
             "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Magazine_orig.asset",
@@ -22,6 +64,25 @@
             ],
             "snaps": [
                 "Orig/HandsPack_SniperRifleAuto_Magazine_orig/Left"
+            ]
+        },
+        {
+            "name": "HandsPack_SniperRifleAuto_Slide_orig",
+            "point": "Slide",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_SniperRifleAuto_Slide_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab",
+            "body": "Slide/Sniper_Rifle_Gate_End",
+            "clip": "",
+            "weaponClip": "",
+            "sourceKind": "computed",
+            "sourceSide": "Left",
+            "check": "Расчётная точка, проверить глазами: в паке нет кадра руки на детали — snap по геометрии детали, поза — шаблон SDK.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [],
+            "snaps": [
+                "Slide/Orig/HandsPack_SniperRifleAuto_Slide_orig/Left",
+                "Slide/Orig/HandsPack_SniperRifleAuto_Slide_orig/Right (зеркало)"
             ]
         }
     ],

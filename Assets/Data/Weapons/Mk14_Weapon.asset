@@ -42,6 +42,8 @@ MonoBehaviour:
     _inaccuracyFire: 18.61
     _recoveryTime: 0.544331
   _recoilMagnitude: 31
+  _projectileSpeed: 400
+  _projectileMaxDistance: 120
   _category: 0
   _weaponPositionOffset: {x: 0, y: 0, z: -0.075}
   _weaponRotationOffset: {x: 0, y: 0, z: 0}

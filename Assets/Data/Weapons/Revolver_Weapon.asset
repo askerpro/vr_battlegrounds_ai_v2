@@ -24,12 +24,12 @@ MonoBehaviour:
   _readinessProfile: {fileID: 0}
   _commonFeedbackProfile: {fileID: 0}
   _feedbackOverride: {fileID: 0}
-  _price: 700
+  _price: 1250
   _damage: 53
   _rangeModifier: 0.85
   _penetration: 2
   _armorRatio: 1.864
-  _fireRate: 267
+  _fireRate: 180
   _fullAuto: 0
   _magazineSize: 6
   _reserveAmmo: 21

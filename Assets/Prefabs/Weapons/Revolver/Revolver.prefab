@@ -557,7 +557,7 @@ MonoBehaviour:
   - _projectileShotIndex: 0
     _cycleType: 1
     _useHasReloadedForSemiAndFullAuto: 0
-    _maxShotFrequency: 4
+    _maxShotFrequency: 3
     _shotAudio:
       _clip: {fileID: 8300000, guid: 1757de17fbdc3914c98b81141ec9c387, type: 3}
       _volume: 1
@@ -588,7 +588,7 @@ MonoBehaviour:
     _recoilAngleTwoHands: 2.5305
     _recoilOffsetOneHand: {x: 0, y: 0, z: -0.03374}
     _recoilOffsetTwoHands: {x: 0, y: 0, z: -0.01687}
-    _recoilDurationSeconds: 0.2
+    _recoilDurationSeconds: 0.26666668
 --- !u!114 &4462623291201037141
 MonoBehaviour:
   m_ObjectHideFlags: 0

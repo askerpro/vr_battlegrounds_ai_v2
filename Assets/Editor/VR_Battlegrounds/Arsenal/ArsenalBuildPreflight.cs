@@ -37,7 +37,8 @@ namespace VrBattlegrounds.Editor.Arsenal
         public static string[] Inputs(WeaponInfo weapon)
         {
             var kin = ArsenalEditorActions.Kinemation(weapon);
-            var recipe = kin?.Weapon ?? ArsenalEditorActions.Hands(weapon);
+            var lowPoly = ArsenalEditorActions.LowPoly(weapon);
+            var recipe = ArsenalEditorActions.Recipe(weapon);
             if (recipe == null) return Array.Empty<string>();
             // Хват MEF доноров и пак донора сборка не читает: записей хвата аватаров она не пишет.
             var paths = new List<string> { AssetDatabase.GetAssetPath(weapon), recipe.GripDonor, recipe.FirearmDonor, recipe.MagazineBase,
@@ -50,6 +51,14 @@ namespace VrBattlegrounds.Editor.Arsenal
                 paths.Add(KinemationPoseExtractor.Character);
                 paths.AddRange(Sounds(kin));
                 if (kin.Weapon.Name == "TR15") paths.AddRange(Tr15OpticBuilder.InputPaths());
+            }
+            else if (lowPoly != null)
+            {
+                // Префаб пака (меши и материал Gun_MAT берутся из него) и модель, на которую он ссылается.
+                paths.Add(LowPolyWeaponBuilder.PackPrefabPath(lowPoly));
+                paths.AddRange(AssetDatabase.GetDependencies(LowPolyWeaponBuilder.PackPrefabPath(lowPoly), true)
+                    .Where(p => p.StartsWith(LowPolyWeaponBuilder.Pack, StringComparison.Ordinal)));
+                paths.AddRange(RecipeSounds(recipe));
             }
             else
             {
@@ -71,8 +80,10 @@ namespace VrBattlegrounds.Editor.Arsenal
             {
                 var kin = ArsenalEditorActions.Kinemation(weapon);
                 var hands = ArsenalEditorActions.Hands(weapon);
+                var lowPoly = ArsenalEditorActions.LowPoly(weapon);
                 if (kin != null) Validate(kin);
                 else if (hands != null) Validate(hands);
+                else if (lowPoly != null) Validate(lowPoly);
                 else throw new InvalidOperationException("Нет полного рецепта: " + (weapon != null ? weapon.DisplayName : "пустая запись"));
             }
             return "Входы полной сборки проверены без записи: " + selection.Length + " рецептов.";
@@ -165,6 +176,21 @@ namespace VrBattlegrounds.Editor.Arsenal
             // Рецепты поз читает только экспорт _orig (PackOrigPoses): у нового оружия их может не быть.
             string path = $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab";
             foreach (var pose in HandsPackPoseImporter.Recipes.Where(p => p.Weapon == path)) ValidatePose(pose);
+        }
+
+        /// <summary>Low Poly: детали пака, оси и механика из чисел рецепта, центры ладоней — тем же путём, что сборка.</summary>
+        private static void Validate(LowPolyWeaponRecipe lowPoly)
+        {
+            HandsPackWeaponRecipe recipe = lowPoly.Weapon;
+            ValidateDonors(recipe);
+            foreach (var audioPath in RecipeSounds(recipe)) Required<AudioClip>(audioPath);
+            using var source = LowPolyWeaponBuilder.Model(lowPoly);
+            foreach (var part in Parts(recipe)) RequireMesh(source.MeshOf(part), part);
+            var body = HandsPackWeaponBuilder.BodyPlacement(recipe, source);
+            if (recipe.Action != HandsPackWeaponRecipe.ActionKind.None) HandsPackWeaponBuilder.ResolveActionTravel(recipe, source, body, out _);
+            HandsPackWeaponBuilder.ResolveTriggerRotation(recipe, source.Measure(recipe.TriggerPart, recipe.ActionClip, recipe.RestClip));
+            if (WeaponSystemAuthoring.EntryFor(recipe.Name) == null)
+                throw new InvalidOperationException(recipe.Name + ": нет строки в WeaponSystemAuthoring.Weapons — хост WeaponSystem не настроится");
         }
 
         public static void ValidatePose(HandsPackPoseRecipe pose)

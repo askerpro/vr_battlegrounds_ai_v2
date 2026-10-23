@@ -429,3 +429,29 @@ MonoBehaviour:
       - {x: 1, y: 1, z: 1}
       - {x: 1, y: 1, z: 1}
       - {x: 1, y: 1, z: 1}
+  - Weapon: {fileID: 11400000, guid: 93f7ff924a332a04fbf64dfef1fbc543, type: 2}
+    WeaponId: Barrett
+    Kit: {fileID: 8716753216683904569, guid: 864f10350f10e08468bb0f6cb4f215d6, type: 3}
+    KitLocalPosition: {x: 0.0010645833, y: 0.08162998, z: 0.20526847}
+    KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
+    RearAlongRail: 0
+    FrontAlongRail: 0
+    MovingOffset: 0
+    ZeroDistance: 15
+    ShotSource:
+      Names:
+      - ShotSource
+      - MeshContainer
+      - Barrett
+      LocalPositions:
+      - {x: 0, y: 0.04417436, z: 0.8181561}
+      - {x: 0, y: 0, z: 0}
+      - {x: 0, y: 0, z: 0}
+      LocalRotations:
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      - {x: 0, y: 0, z: 0, w: 1}
+      LocalScales:
+      - {x: 1, y: 1, z: 1}
+      - {x: 1, y: 1, z: 1}
+      - {x: 1.0038549, y: 1.0038549, z: 1.0038549}

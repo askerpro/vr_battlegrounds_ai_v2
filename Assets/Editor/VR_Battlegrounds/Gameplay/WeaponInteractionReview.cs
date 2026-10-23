@@ -24,9 +24,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static WeaponInteractionRecipe Recipe(GameObject root)
         {
             KinemationWeaponRecipe kinemation = KinemationWeaponBuilder.All.FirstOrDefault(k => k.Weapon.Name == root.name);
-            HandsPackWeaponRecipe source = kinemation?.Weapon ?? HandsPackWeaponBuilder.T38
+            LowPolyWeaponRecipe lowPoly = LowPolyWeaponBuilder.Find(root.name);
+            HandsPackWeaponRecipe source = kinemation?.Weapon ?? lowPoly?.Weapon ?? HandsPackWeaponBuilder.T38
                 .Concat(new[] { HandsPackWeaponBuilder.ShotgunReal }).FirstOrDefault(r => r.Name == root.name);
-            var recipe = WeaponInteractionRecipes.For(root, source, Palms(root, kinemation));
+            var recipe = WeaponInteractionRecipes.For(root, source, Palms(root, kinemation, lowPoly));
             if (kinemation != null) recipe.AssetFolder = KinemationFixReview.InteractionFolder(root.name);
             return recipe;
         }
@@ -34,10 +35,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// <summary>
         /// Нейтральные точки хвата для областей: snap-точки <c>Orig</c> префаба, если есть все нужные (их читает
         /// <see cref="WeaponInteractionRecipes.For" />, здесь — null), иначе центры ладоней рук пака в кадре позы
-        /// (<see cref="HandsPackWeaponBuilder.PalmPoints" />, как при сборке). Записи хвата аватаров не читаются; оружие
+        /// (<see cref="HandsPackWeaponBuilder.PalmPoints" />, как при сборке; у Low Poly — числа рецепта). Записи хвата аватаров не читаются; оружие
         /// без рецепта пака и без <c>Orig</c> — исключение.
         /// </summary>
-        private static Vector3[] Palms(GameObject root, KinemationWeaponRecipe kinemation)
+        private static Vector3[] Palms(GameObject root, KinemationWeaponRecipe kinemation, LowPolyWeaponRecipe lowPoly)
         {
             int points = root.GetComponent<UxrGrabbableObject>().GrabPointCount;
             if (PackOrigPoses.FindSnap(root.transform, "Grip", UltimateXR.Core.UxrHandSide.Right) != null &&
@@ -50,6 +51,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 using var model = new KinemationWeapon(kinemation.PackPrefab, kinemation.AnimFolder, kinemation.PoseClip, kinemation.Weapon.Name,
                     kinemation.Weapon.BodyPart, kinemation.RestClip, kinemation.Attachments);
                 return HandsPackWeaponBuilder.PalmPoints(model, kinemation.Weapon.PoseClip, root.transform, Body(kinemation.Weapon));
+            }
+            if (lowPoly != null)
+            {
+                using var model = LowPolyWeaponBuilder.Model(lowPoly);
+                return HandsPackWeaponBuilder.PalmPoints(model, null, root.transform, Body(lowPoly.Weapon));
             }
             HandsPackWeaponRecipe hands = HandsPackWeaponBuilder.T38.Concat(new[] { HandsPackWeaponBuilder.ShotgunReal })
                 .Concat(LegacyPalmSources).FirstOrDefault(r => r.Name == root.name);

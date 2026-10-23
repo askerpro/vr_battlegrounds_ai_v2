@@ -30,4 +30,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 802986f4d017e7d4882c1c6022341af4, type: 2}
   - {fileID: 11400000, guid: e4fe34bd1f05bb245b5d1589a10a69d4, type: 2}
   - {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}
+  - {fileID: 11400000, guid: 93f7ff924a332a04fbf64dfef1fbc543, type: 2}
   _defaultSidearm: {fileID: 11400000, guid: 805abd57d56b11d4cbb9548e3c9ade04, type: 2}

@@ -49,3 +49,5 @@ MonoBehaviour:
     Row: pegboard
   - Weapon: {fileID: 11400000, guid: 60bc69af3cd41db4bb971e35f2a44346, type: 2}
     Row: pegboard
+  - Weapon: {fileID: 11400000, guid: 93f7ff924a332a04fbf64dfef1fbc543, type: 2}
+    Row: pegboard

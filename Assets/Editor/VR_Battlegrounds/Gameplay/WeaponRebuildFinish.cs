@@ -101,6 +101,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
             else
             {
+                // Новый префаб (первая сборка ствола) после SaveAsPrefabAsset несёт _assetId 0, а нормализатор импорта
+                // срабатывает только в delayCall — после этого вызова. Миграция сверяет канон до и после: выставить сейчас.
+                VrBattlegrounds.EditorTools.VersionControl.NetworkAssetIdNormalizer.Normalize(new[] { magazinePath, weaponPath }, false);
                 Dictionary<string, object> migration = WeaponSystemAuthoring.MigrateWeapons(name);
                 if (!(bool)migration["passed"])
                     throw new InvalidOperationException($"{name}: перевод на WeaponSystem не прошёл — " +

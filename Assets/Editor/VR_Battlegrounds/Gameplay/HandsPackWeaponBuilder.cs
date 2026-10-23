@@ -336,7 +336,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         /// (<see cref="PackOrigPoses" />, <see cref="GripSample.PalmInBody" />). От аватаров не зависит: по ним сборка
         /// ставит точку отдачи, решает о <see cref="MainGripAimLock" /> и печёт области подсветки
         /// (<see cref="WeaponInteractionRecipes" />). <paramref name="body" /> — корпус в префабе, тот же меш, что в паке;
-        /// <paramref name="poseClip" /> — клип пака Hands (у KINEMATION клип позы задаёт модель).
+        /// <paramref name="poseClip" /> — клип пака Hands (у KINEMATION клип позы задаёт модель, у Low Poly клипов нет).
         /// </summary>
         internal static Vector3[] PalmPoints(IWeaponModel pack, string poseClip, Transform root, Transform body)
         {
@@ -350,7 +350,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                     return root.InverseTransformPoint(body.position + body.rotation * position);
                 }
 
-                return root.InverseTransformPoint(body.TransformPoint(((HandsPackWeapon)pack).PalmCenterInBody(side == UxrHandSide.Right)));
+                // Центр ладони в осях корпуса: пак Hands — по рукам FPS в клипе позы, Low Poly — из рецепта.
+                if (pack is IPalmSource palm)
+                    return root.InverseTransformPoint(body.TransformPoint(palm.PalmCenterInBody(side)));
+                throw new System.InvalidOperationException($"{pack.GetType().Name}: источник без центров ладоней (IHandGripSource или IPalmSource)");
             }
 
             var hands = pack as HandsPackWeapon;

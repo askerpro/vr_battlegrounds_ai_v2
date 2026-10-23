@@ -7,8 +7,9 @@ namespace VrBattlegrounds.Editor.Gameplay
 {
     /// <summary>
     /// Источник геометрии и механики оружия для <see cref="HandsPackWeaponBuilder" />: детали, их места
-    /// относительно корпуса, ход деталей в клипах. Реализации — пак Hands (<see cref="HandsPackWeapon" />)
-    /// и пак KINEMATION (<see cref="KinemationWeapon" />).
+    /// относительно корпуса, ход деталей в клипах. Реализации — пак Hands (<see cref="HandsPackWeapon" />),
+    /// пак KINEMATION (<see cref="KinemationWeapon" />) и Low Poly Weapons VOL.2 (<see cref="LowPolyWeapon" />,
+    /// механика — числами рецепта).
     ///
     /// <para>
     /// Деталь называется строкой источника (рендерер пака Hands, кость KINEMATION). Размеры — в единицах
@@ -44,5 +45,18 @@ namespace VrBattlegrounds.Editor.Gameplay
     {
         /// <summary>Кадр руки <paramref name="side" /> на оружии; корпус — деталь-корпус источника, масштаб 1.</summary>
         HandsPackPoseExtractor.Sample GripSample(UxrHandSide side);
+    }
+
+    /// <summary>
+    /// Источник, у которого есть центр ладони на оружии, но нет кадра руки в осях UltimateXR (пак Hands — по рукам FPS
+    /// в клипе позы, Low Poly — числами рецепта). Точка — та же, что у <see cref="HandsPackWeaponBuilder.PalmPoints" />.
+    /// </summary>
+    public interface IPalmSource
+    {
+        /// <summary>
+        /// Центр ладони руки <paramref name="side" /> в осях корпуса, единицы меша: правая — рукоять (точка 0), левая —
+        /// вторая рука (точка 1). У пака Hands — в текущей позе модели (клип позы ставит вызывающий).
+        /// </summary>
+        Vector3 PalmCenterInBody(UxrHandSide side);
     }
 }

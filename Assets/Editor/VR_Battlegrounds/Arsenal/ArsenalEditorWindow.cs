@@ -197,11 +197,11 @@ namespace VrBattlegrounds.Editor.Arsenal
             using (new EditorGUILayout.HorizontalScope())
             {
                 categoryFilter = EditorGUILayout.Popup("Категория", categoryFilter, new[] { "Все", "Винтовки", "Пистолеты", "Снаряжение", "Ближний бой" });
-                sourceFilter = EditorGUILayout.Popup("Источник", sourceFilter, new[] { "Все", "KINEMATION", "Hands", "SDK / нет рецепта" });
+                sourceFilter = EditorGUILayout.Popup("Источник", sourceFilter, new[] { "Все", "KINEMATION", "Hands", "SDK / нет рецепта", "Low Poly" });
             }
             var visible = catalogue.Where(w => (w.DisplayName + " " + w.WeaponId).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 &&
                 (categoryFilter == 0 || (int)w.Category == categoryFilter - 1) &&
-                (sourceFilter == 0 || sourceFilter == 1 && ArsenalEditorActions.Kinemation(w) != null || sourceFilter == 2 && ArsenalEditorActions.Source(w).StartsWith("Hands") || sourceFilter == 3 && ArsenalEditorActions.Source(w).StartsWith("SDK"))).ToArray();
+                (sourceFilter == 0 || sourceFilter == 1 && ArsenalEditorActions.Kinemation(w) != null || sourceFilter == 2 && ArsenalEditorActions.Source(w).StartsWith("Hands") || sourceFilter == 3 && ArsenalEditorActions.Source(w).StartsWith("SDK") || sourceFilter == 4 && ArsenalEditorActions.LowPoly(w) != null)).ToArray();
             if (visible.Length == 0) EditorGUILayout.HelpBox("Совпадений нет", MessageType.Info);
             else
             {
@@ -345,7 +345,7 @@ namespace VrBattlegrounds.Editor.Arsenal
         }
         private void DrawBuild()
         {
-            var kin = ArsenalEditorActions.Kinemation(weapon); var hands = ArsenalEditorActions.Hands(weapon);
+            var kin = ArsenalEditorActions.Kinemation(weapon); var hands = ArsenalEditorActions.Hands(weapon); var lowPoly = ArsenalEditorActions.LowPoly(weapon);
             EditorGUILayout.HelpBox("Пересборка из источника изменяет оружие, магазин, Art/motion/interaction и звуки. Позы и хваты аватаров сборка не регистрирует: записи хвата переносятся из текущего префаба как есть, регистрация — «Зарегистрировать позы для выбранного аватара» во вкладке «Взаимодействие» (блок «Позы рук из паков») из готовых _orig. Сборка экспортирует исходные позы пака _orig (" + PackOrigPoses.Root + ") и snap-точки Orig в префабы оружия и магазина. Прицел, хост WeaponSystem и баланс ставятся сборкой; воспроизводимость новой readiness policy ведётся отдельным этапом. Этот маршрут не подтверждает игровую готовность.", MessageType.Warning);
             if (kin != null)
             {
@@ -361,6 +361,13 @@ namespace VrBattlegrounds.Editor.Arsenal
                 if (GUILayout.Button("Проверить источник Hands")) Try(() => ArsenalEditorActions.Run("Проверка источника Hands", Array.Empty<string>(), () => { using var source = new HandsPackWeapon(hands.Folder, hands.BodyPart); return source.Report(hands.RestClip); }, false));
                 var selected = weapon;
                 Command("Пересобрать выбранное оружие Hands T-38 из источника", BuildPaths(selected), "BuildFull: geometry/magazine, recoil и regions по ладоням пака → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс и экспорт _orig (позы + snap Orig); аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); HandsPackWeaponBuilder.BuildFull(hands); return "Source rebuild " + hands.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
+            }
+            else if (lowPoly != null)
+            {
+                EditorGUILayout.LabelField("Рецепт: " + lowPoly.Weapon.Name + " · исходник: " + LowPolyWeaponBuilder.PackPrefabPath(lowPoly));
+                if (GUILayout.Button("Проверить источник Low Poly")) Try(() => ArsenalEditorActions.Run("Проверка источника Low Poly", Array.Empty<string>(), () => LowPolyWeaponBuilder.Report(lowPoly), false));
+                var selected = weapon;
+                Command("Пересобрать выбранное оружие Low Poly из источника", BuildPaths(selected), "Геометрия и магазин из префаба пака, механика (ход затвора, угол спуска, оси, ладони) — числа рецепта; recoil и regions по ладоням рецепта → перенос хватов как есть. Дальше прицел, хост WeaponSystem, баланс; поз _orig у пака нет; аватары не меняются; игровая проверка отдельно.", () => { ArsenalBuildPreflight.Validate(new[] { selected }); LowPolyWeaponBuilder.Build(lowPoly); return "Source rebuild " + lowPoly.Weapon.Name + " завершён; игровая проверка отдельно."; }, ArsenalBuildPreflight.Inputs(selected), savesAllAssets: false);
             }
             else EditorGUILayout.HelpBox("Для этого предмета нет одиночного полного рецепта. SDK-варианты не пересобираются этим окном; три прежних Hands-импорта доступны отдельным набором ниже.", MessageType.Info);
             // Позы рук _orig — последний шаг сборки; отдельно — без пересборки (решение пользователя 2026-10-22).
@@ -384,7 +391,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                     if (wasSelected != nowSelected) { if (nowSelected) buildSet.Add(item); else buildSet.Remove(item); CancelPlan(); }
                 }
                 var selectedSet = catalogue.Where(buildSet.Contains).ToArray();
-                var unsupported = selectedSet.Where(w => ArsenalEditorActions.Kinemation(w) == null && ArsenalEditorActions.Hands(w) == null).ToArray();
+                var unsupported = selectedSet.Where(w => ArsenalEditorActions.Recipe(w) == null).ToArray();
                 if (unsupported.Length > 0) EditorGUILayout.HelpBox("Нет одиночного полного рецепта: " + string.Join(", ", unsupported.Select(w => w.DisplayName)), MessageType.Warning);
                 using (new EditorGUI.DisabledScope(selectedSet.Length == 0 || unsupported.Length > 0))
                     Command("Пересобрать выбранный набор из источников (" + selectedSet.Length + ")", selectedSet.SelectMany(BuildPaths).Distinct().ToArray(), "Сначала preflight каждого источника, затем существующие source pipelines. Source import dependencies и позы _orig входят в область; дальше перенос хватов как есть, прицел, хост WeaponSystem, баланс и snap Orig; аватары не меняются.", () =>
@@ -393,7 +400,10 @@ namespace VrBattlegrounds.Editor.Arsenal
                         foreach (var item in selectedSet)
                         {
                             var k = ArsenalEditorActions.Kinemation(item);
-                            if (k != null) KinemationWeaponBuilder.Build(k); else HandsPackWeaponBuilder.BuildFull(ArsenalEditorActions.Hands(item));
+                            var low = ArsenalEditorActions.LowPoly(item);
+                            if (k != null) KinemationWeaponBuilder.Build(k);
+                            else if (low != null) LowPolyWeaponBuilder.Build(low);
+                            else HandsPackWeaponBuilder.BuildFull(ArsenalEditorActions.Hands(item));
                         }
                         return "Пересобрано из источников оружий: " + selectedSet.Length + "; игровая проверка отдельно.";
                     }, selectedSet.SelectMany(ArsenalBuildPreflight.Inputs).Distinct().ToArray(), savesAllAssets: false);
@@ -409,7 +419,7 @@ namespace VrBattlegrounds.Editor.Arsenal
         {
             var kin = ArsenalEditorActions.Kinemation(selected);
             string name = selected != null && selected.WeaponPrefab != null ? selected.WeaponPrefab.name : "";
-            var recipe = kin?.Weapon ?? ArsenalEditorActions.Hands(selected);
+            var recipe = ArsenalEditorActions.Recipe(selected);
             var paths = ArsenalEditorStatus.Prefabs(new[] { selected }).Concat(new[] { "Assets/Art/Weapons/Interaction/" + name, ArsenalBuildPreflight.InsertionMaterial, PackOrigPoses.Root });
             if (recipe != null) paths = paths.Concat(new[] { $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.Name}.prefab", $"Assets/Prefabs/Weapons/{recipe.PrefabFolder}/{recipe.MagazineName ?? recipe.Name + "_mag"}.prefab" });
             if (kin != null) paths = paths.Concat(new[] { KinemationWeapon.ArtRoot + "/" + name, KinemationWeapon.ArtRoot + "/Materials", KinemationAudio.Root + "/" + name }).Concat(ArsenalEditorActions.SourceSettingsPaths(kin)).Concat(ArsenalBuildPreflight.MaterialSettingsPaths(kin));

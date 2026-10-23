@@ -31,7 +31,7 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// масштаб корня префаба (правило CLAUDE.md, эталон в <c>WeaponScaleTests</c>).
     /// </para>
     /// </summary>
-    public sealed class HandsPackWeapon : IDisposable, IWeaponModel
+    public sealed class HandsPackWeapon : IDisposable, IWeaponModel, IPalmSource
     {
         public const string PackModels = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Modelas/";
 
@@ -190,6 +190,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             Vector3 palm = Unscaled(body).inverse.MultiplyPoint3x4(VrBattlegrounds.Editor.Avatars.HandsPackPoseExtractor.PalmCenterWorld(arm.Hand));
             return palm / body.lossyScale.x;
         }
+
+        /// <summary>Тот же центр ладони — для <see cref="HandsPackWeaponBuilder.PalmPoints" /> (клип позы ставит вызывающий).</summary>
+        Vector3 IPalmSource.PalmCenterInBody(UltimateXR.Core.UxrHandSide side) => PalmCenterInBody(side == UltimateXR.Core.UxrHandSide.Right);
 
         /// <summary>
         /// Ход и поворот детали относительно корпуса за клип, от кадра <paramref name="restClip" />.

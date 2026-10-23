@@ -187,6 +187,10 @@ namespace VrBattlegrounds.Editor.Arsenal
             KinemationWeaponBuilder.All.FirstOrDefault(r => KinemationWeaponBuilder.PrefabPath(r) == UnityEditor.AssetDatabase.GetAssetPath(weapon.WeaponPrefab));
         public static HandsPackWeaponRecipe Hands(WeaponInfo weapon) => weapon == null ? null :
             HandsPackWeaponBuilder.T38.FirstOrDefault(r => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab" == AssetDatabase.GetAssetPath(weapon.WeaponPrefab));
+        public static LowPolyWeaponRecipe LowPoly(WeaponInfo weapon) => weapon == null ? null :
+            LowPolyWeaponBuilder.All.FirstOrDefault(r => LowPolyWeaponBuilder.PrefabPath(r) == AssetDatabase.GetAssetPath(weapon.WeaponPrefab));
+        /// <summary>Общий рецепт ствола любого источника (KINEMATION, Hands T-38, Low Poly); null — полного рецепта нет.</summary>
+        public static HandsPackWeaponRecipe Recipe(WeaponInfo weapon) => Kinemation(weapon)?.Weapon ?? Hands(weapon) ?? LowPoly(weapon)?.Weapon;
         public static UnityEngine.GameObject SourcePrefab(KinemationWeaponRecipe recipe) => AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>(KinemationWeapon.Pack + "Prefabs/Weapons/" + recipe.PackPrefab + ".prefab")
             ?? throw new InvalidOperationException("Нет исходного префаба KINEMATION: " + recipe.PackPrefab);
         public static string[] SourceSettingsPaths(KinemationWeaponRecipe recipe)
@@ -200,6 +204,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             return KinemationWeaponBuilder.Report(recipe);
         }
         public static string Source(WeaponInfo weapon) => Kinemation(weapon) != null ? "KINEMATION" : Hands(weapon) != null ? "Hands T-38" :
+            LowPoly(weapon) != null ? "Low Poly" :
             weapon != null && new[] { "BrowningHiPower", "AR15", "FabarmSDASS" }.Contains(weapon.WeaponPrefab != null ? weapon.WeaponPrefab.name : "") ? "Hands: набор из трёх" : "SDK / нет поддержанного полного рецепта";
     }
 }

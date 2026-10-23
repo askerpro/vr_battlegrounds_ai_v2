@@ -24,6 +24,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             public string Name, SourceModel, MeshPath, ReticleMaterialPath;
             /// <summary>Объект модели со стеклом (обе линзы); null — стекла нет, окуляр — сгенерированный диск.</summary>
             public string GlassPart;
+            /// <summary>Объекты модели, которые в комплект не идут (свой материал пака, вспомогательная геометрия).</summary>
+            public string[] SkipParts = Array.Empty<string>();
             /// <summary>Множитель к единицам импортированного меша пака.</summary>
             public float Scale = 1f;
             /// <summary>Поворот меша пака в оси комплекта: после него ось трубы — +Z (объектив впереди), верх — +Y.</summary>
@@ -62,7 +64,43 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             GlassTint = new Color(0.03f, 0.045f, 0.06f, 1f),
         };
 
-        public static readonly Spec[] All = { Sight08 };
+        /// <summary>
+        /// Компактный прицел пака Hands (<c>Sight_03</c>, 137 мм) — для стенда калибровки, на стволы не ставится (решение
+        /// пользователя 2026-10-23: «оба добавим в пак прицелов стенда», ×2, сетка и механизм как у <see cref="Sight08"/>).
+        /// Подсветка сетки пака (<c>Sight_Emessesive_03_Mesh</c>, свой материал) и пустой <c>Plane003</c> в меш не идут:
+        /// корпус — один материал, сетку рисует шейдер стекла.
+        /// </summary>
+        public static readonly Spec Sight03 = SniperReticle(new Spec
+        {
+            Name = "Sight03", SourceModel = HandsDetails + "Sight/Mesh/Sight_03_Mesh.FBX", GlassPart = "Sight_Glasses_03_Mesh",
+            SkipParts = new[] { "Sight_Emessesive_03_Mesh", "Plane003" },
+            MeshPath = Folder + "/Sight03_Optic.asset", ReticleMaterialPath = Folder + "/Sight03_Reticle.mat",
+        });
+
+        /// <summary>
+        /// Снайперская труба пака Hands (<c>Sight_09</c>, 553 мм) — для стенда калибровки, на стволы не ставится (решение
+        /// пользователя 2026-10-23), ×2, сетка и механизм как у <see cref="Sight08"/>.
+        /// </summary>
+        public static readonly Spec Sight09 = SniperReticle(new Spec
+        {
+            Name = "Sight09", SourceModel = HandsDetails + "Sight/Mesh/Sight_09_Mesh.FBX", GlassPart = "Sight_Glasses_9_Mesh",
+            MeshPath = Folder + "/Sight09_Optic.asset", ReticleMaterialPath = Folder + "/Sight09_Reticle.mat",
+        });
+
+        public static readonly Spec[] All = { Sight08, Sight03, Sight09 };
+
+        /// <summary>Снайперская сетка и непрозрачное стекло — как у <see cref="Sight08"/>.</summary>
+        private static Spec SniperReticle(Spec spec)
+        {
+            spec.ReticleStyle = Sight08.ReticleStyle;
+            spec.RingRadius = Sight08.RingRadius;
+            spec.RingWidth = Sight08.RingWidth;
+            spec.DotRadius = Sight08.DotRadius;
+            spec.ReticleColor = Sight08.ReticleColor;
+            spec.DotColor = Sight08.DotColor;
+            spec.GlassTint = Sight08.GlassTint;
+            return spec;
+        }
 
         public static string[] OutputPaths() => All.SelectMany(s => new[] { s.MeshPath, s.ReticleMaterialPath }).ToArray();
 
@@ -99,7 +137,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             foreach (var filter in model.GetComponentsInChildren<MeshFilter>(true))
             {
                 Mesh mesh = filter.sharedMesh;
-                if (mesh == null) continue;
+                if (mesh == null || spec.SkipParts.Contains(filter.name)) continue;
                 if (!mesh.isReadable)
                     throw new InvalidOperationException($"{spec.Name}: меш {mesh.name} без Read/Write — включить в импорте {spec.SourceModel}");
                 parts.Add((filter.name, mesh, model.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix));

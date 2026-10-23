@@ -136,7 +136,6 @@ MonoBehaviour:
   _exitDistance: 0.2
   _enterOffset: 0.02
   _exitOffset: 0.03
-  _exitPupil: 0.004
   _minHoldSeconds: 0.5
 --- !u!1 &5768839823647715281
 GameObject:

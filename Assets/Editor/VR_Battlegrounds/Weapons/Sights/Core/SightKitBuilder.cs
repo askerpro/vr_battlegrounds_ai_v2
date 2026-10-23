@@ -142,6 +142,26 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 ReticleMaterialPath = PackOpticBuilder.Sight08.ReticleMaterialPath,
                 MeshEuler = Vector3.zero, LensMaterialIndex = PackOpticBuilder.LensMaterialIndex,
                 ScopeMagnification = 2f
+            },
+            // Компактный Sight_03 и труба Sight_09 пака Hands — только в списке стенда калибровки, на стволы не ставятся
+            // (решение пользователя 2026-10-23), ×2, механизм как у Sight08.
+            new OpticKitSpec
+            {
+                Name = "SightKit_Sight03", PrefabPath = PrefabFolder + "/SightKit_Sight03.prefab", NodeName = "Sight03", SightId = "Sight03",
+                MeshPath = PackOpticBuilder.Sight03.MeshPath,
+                HousingMaterialPath = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Materials/Sight.mat",
+                ReticleMaterialPath = PackOpticBuilder.Sight03.ReticleMaterialPath,
+                MeshEuler = Vector3.zero, LensMaterialIndex = PackOpticBuilder.LensMaterialIndex,
+                ScopeMagnification = 2f
+            },
+            new OpticKitSpec
+            {
+                Name = "SightKit_Sight09", PrefabPath = PrefabFolder + "/SightKit_Sight09.prefab", NodeName = "Sight09", SightId = "Sight09",
+                MeshPath = PackOpticBuilder.Sight09.MeshPath,
+                HousingMaterialPath = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Materials/Hands_Sniper_Rifle.mat",
+                ReticleMaterialPath = PackOpticBuilder.Sight09.ReticleMaterialPath,
+                MeshEuler = Vector3.zero, LensMaterialIndex = PackOpticBuilder.LensMaterialIndex,
+                ScopeMagnification = 2f
             }
         };
 

@@ -28,6 +28,8 @@
         "Assets/Audio/SFX/Handling/**",
         "Assets/Audio/SFX/Casings.meta",
         "Assets/Audio/SFX/Casings/**",
+        "Assets/Audio/SFX/Weapons/**",
+        "Assets/Data/Arsenal/ArsenalCompositionCatalog.asset",
         "Assets/Resources/ImpactSoundDefaults.asset",
         "Assets/Resources/ImpactSoundDefaults.asset.meta",
         "Assets/Resources/MagazineAnchorSoundDefaults.asset",

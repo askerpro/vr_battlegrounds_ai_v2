@@ -1,6 +1,7 @@
 using System;
 using UltimateXR.Manipulation;
 using UnityEngine;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Interaction
 {
@@ -16,7 +17,8 @@ namespace VrBattlegrounds.Interaction
     /// </para>
     ///
     /// <para>
-    /// Клипы: свои (<see cref="OwnClips"/>, оверрайд предмета) → набор вида предмета (<see cref="Kind"/>) из
+    /// Клипы: свои (<see cref="OwnClips"/>, оверрайд предмета) → у оружия падение категории ствола
+    /// (<see cref="WeaponFeedbackDefaults.DropImpacts"/>) → набор вида предмета (<see cref="Kind"/>) из
     /// <see cref="ImpactSoundDefaults"/> в момент удара. Пишет компонент <c>ImpactSoundInstaller</c> (вид, источник, громкость);
     /// клипы по умолчанию в префаб не копируются.
     /// </para>
@@ -39,12 +41,21 @@ namespace VrBattlegrounds.Interaction
         /// <summary>Сыгран удар: предмет, клип, громкость. Для тестов и отладки.</summary>
         public static event Action<ImpactSound, AudioClip, float> Played;
 
-        /// <summary>Итоговые клипы удара: свои, а без них — набор вида из <see cref="ImpactSoundDefaults"/> (не null).</summary>
+        /// <summary>
+        /// Итоговые клипы удара (не null): свои; у оружия — падение категории ствола (<see cref="WeaponFeedbackDefaults.DropImpacts"/>
+        /// по ссылке хоста <see cref="WeaponSystem"/>); иначе — набор вида из <see cref="ImpactSoundDefaults"/>.
+        /// </summary>
         public AudioClip[] Clips
         {
             get
             {
                 if (_clips != null && _clips.Length > 0) return _clips;
+                if (_kind == ImpactSoundKind.Weapon)
+                {
+                    if (!_hostResolved) { _host = GetComponentInParent<WeaponSystem>(true); _hostResolved = true; }
+                    AudioClip[] drop = _host != null && _host.FeedbackDefaults != null ? _host.FeedbackDefaults.DropImpacts : null;
+                    if (drop != null && drop.Length > 0) return drop;
+                }
                 ImpactSoundDefaults defaults = ImpactSoundDefaults.Instance;
                 return defaults != null ? defaults.For(_kind) : Array.Empty<AudioClip>();
             }
@@ -59,6 +70,8 @@ namespace VrBattlegrounds.Interaction
         public float Cooldown => _cooldown;
 
         private UxrGrabbableObject _grabbable;
+        private WeaponSystem _host;
+        private bool _hostResolved;
         private float _lastPlayed = float.NegativeInfinity;
 
         private void Awake() => _grabbable = GetComponent<UxrGrabbableObject>();

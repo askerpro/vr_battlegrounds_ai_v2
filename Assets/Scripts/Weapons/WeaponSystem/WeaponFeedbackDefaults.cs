@@ -19,7 +19,8 @@ namespace VrBattlegrounds.Weapons
     /// Звуковые дефолты вне машины (решение пользователя 2026-10-23: дефолты — данные в ассетах, не константы в коде):
     /// запасная пара гнезда магазина (<see cref="MagazineInsert"/>, <see cref="MagazineTakeOut"/>) — подставляет
     /// <c>AnchorSound</c> гнезда и окна приёма патрона, когда у них нет своего клипа; звуки касания вылета
-    /// (<see cref="EjectaImpacts"/>) — <see cref="WeaponEjecta"/> без своих клипов. «Нет патронов» — <see cref="WeaponAudioSet.DryFire"/>:
+    /// (<see cref="EjectaImpacts"/>) — <see cref="WeaponEjecta"/> без своих клипов; падение ствола (<see cref="DropImpacts"/>) —
+    /// <c>ImpactSound</c> ствола без своих клипов (пистолет и винтовка звучат по-разному, решение пользователя 2026-10-24). «Нет патронов» — <see cref="WeaponAudioSet.DryFire"/>:
     /// его играет исполнитель, а сборщик копирует клип отсюда в поле спуска SDK (щелчок упёртого ствола у <c>BarrelObstruction</c>).
     /// </para>
     ///
@@ -55,6 +56,10 @@ namespace VrBattlegrounds.Weapons
                  "(WeaponEjecta) важнее. Пусто — касание без звука.")]
         [SerializeField] private AudioClip[] _ejectaImpacts = new AudioClip[0];
 
+        [Tooltip("Звуки падения (удара о мир) брошенного ствола категории (случайный). Свои клипы ImpactSound ствола важнее. " +
+                 "Пусто — общий набор оружия ImpactSoundDefaults.")]
+        [SerializeField] private AudioClip[] _dropImpacts = new AudioClip[0];
+
         public WeaponFeedbackCategory Category => _category;
         public WeaponAudioSet Audio => _audio;
         public WeaponHapticSet Haptics => _haptics;
@@ -68,5 +73,8 @@ namespace VrBattlegrounds.Weapons
 
         /// <summary>Звуки касания вылета категории (не null); подставляет <see cref="WeaponEjecta"/> без своих клипов.</summary>
         public AudioClip[] EjectaImpacts => _ejectaImpacts ?? System.Array.Empty<AudioClip>();
+
+        /// <summary>Звуки падения ствола категории (не null); подставляет <c>ImpactSound</c> ствола без своих клипов.</summary>
+        public AudioClip[] DropImpacts => _dropImpacts ?? System.Array.Empty<AudioClip>();
     }
 }

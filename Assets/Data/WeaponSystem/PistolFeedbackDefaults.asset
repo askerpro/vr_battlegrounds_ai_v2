@@ -106,4 +106,4 @@ MonoBehaviour:
   _ejectaImpacts:
   - {fileID: 8300000, guid: a8e2b0dd188b5ef4ea5ccb5f34b368ef, type: 3}
   _dropImpacts:
-  - {fileID: 8300000, guid: 80e4c9a0793e7ad4baf984a3fe3a14f1, type: 3}
+  - {fileID: 8300000, guid: 682bf1def4644f649946b2b6d840a2c9, type: 3}

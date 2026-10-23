@@ -37,6 +37,8 @@
         "Assets/Prefabs/Arsenal/Slots/**",
         "Assets/Prefabs/Player/Equipment/Pockets/**",
         "Assets/Prefabs/Player/Avatars/CyborgHands/Cyborg/PlayerControllersCyborgAvatar.prefab",
+        "Assets/Prefabs/Player/Avatars/CyborgHands/Base/CyborgHandsBase.prefab",
+        "Assets/Prefabs/Player/HandPoses/CyborgHands/**",
         "Docs/sound-library.md",
         "experts/manipulation/journal/2026-10-23-weapon-batch-legacy-recipe.md",
         "Assets/Tests/EditMode/**",

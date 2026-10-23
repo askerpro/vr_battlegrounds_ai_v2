@@ -77,6 +77,8 @@ namespace VrBattlegrounds.Arsenal
                 }
                 item.RigidBodySource.isKinematic = true;
             }
+            // Магазин недоступного слота гаснет вместе с ним (вид слота ведёт контроллер слота).
+            if (_slot != null) _slot.RefreshDimming();
         }
 
         public void RefreshAvailability()
@@ -94,6 +96,8 @@ namespace VrBattlegrounds.Arsenal
             // SDK уже завершил перепарентинг при GrabObject. При UseParenting=false убираем только остаточную связь со станцией.
             if (e.GrabbableObject.transform.IsChildOf(_anchor.transform))
                 e.GrabbableObject.transform.SetParent(null, true);
+            // Взятый магазин в руке — обычного вида.
+            if (_slot != null) _slot.RefreshDimming();
             Taken?.Invoke(this, e);
         }
     }

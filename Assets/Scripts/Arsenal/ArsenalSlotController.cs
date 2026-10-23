@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UltimateXR.Manipulation;
@@ -65,10 +66,6 @@ namespace VrBattlegrounds.Arsenal
         /// <summary>Лента слота и её цвет «доступно» — для редакторского превью станций (вид как у собранного слота).</summary>
         public ArsenalSlotGlow Glow => _glow;
         public Color AvailableColor => _availableColor;
-
-        [Header("Экономика (T-45)")]
-        [Tooltip("Во сколько раз темнее ствол, на который у владельца стены не хватает денег.")]
-        [SerializeField, Range(0f, 1f)] private float _unaffordableBrightness = 0.3f;
 
         // ── Events ─────────────────────────────────────────────
         public System.Action<ArsenalSlotController> OnItemTaken;
@@ -152,8 +149,10 @@ namespace VrBattlegrounds.Arsenal
         private ArsenalWallController _wall;
         private SlotOffer _offer = SlotOffer.Free;
 
-        /// <summary>Предмет, который сейчас приглушён (ему выставлен блок свойств рендера).</summary>
-        private GameObject _dimmedItem;
+        /// <summary>Слот погашен: его предметы берут пробы в точке без подсветки (<see cref="RefreshDimming"/>).</summary>
+        private bool _dimmed;
+        private readonly Dictionary<Renderer, Transform> _dimmedProbeAnchors = new Dictionary<Renderer, Transform>();
+        private Transform _dimProbeAnchor;
 
         private ArsenalPriceTag _priceTag;
 
@@ -361,6 +360,7 @@ namespace VrBattlegrounds.Arsenal
             SetItemGrabbable(false);
 
             SetGlowState(false);
+            SetDimmed(IsItemPresent);
             GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' locked.");
         }
 
@@ -443,8 +443,9 @@ namespace VrBattlegrounds.Arsenal
         }
 
         /// <summary>
-        /// Подсветка по предложению: по карману (и бесплатно) — подложка слота горит, ствол обычный;
-        /// дорого или стена ничья — подложка погашена, ствол приглушён. Карточка сохраняет характеристики и в разминке.
+        /// Подсветка по предложению: по карману (и бесплатно) — лента слота горит, ствол обычный;
+        /// дорого, стена ничья или слот закрыт — лента погашена, у ствола и магазина нет подсветки (<see cref="RefreshDimming"/>).
+        /// Карточка сохраняет характеристики и в разминке.
         /// </summary>
         private void ApplyOfferVisuals()
         {
@@ -456,7 +457,7 @@ namespace VrBattlegrounds.Arsenal
                 else SetGlowColor(grabbable ? _availableColor : _unavailableColor);
             }
 
-            SetDimmed(IsItemPresent && !grabbable ? CurrentItem : null);
+            SetDimmed(IsItemPresent && (IsLocked || !grabbable));
 
             if (_weaponInfo != null && _itemAnchor != null && Application.isPlaying)
             {
@@ -465,34 +466,57 @@ namespace VrBattlegrounds.Arsenal
             }
         }
 
-        /// <summary>
-        /// Приглушает ствол на стене блоком свойств рендера (цвет основы темнее), прежний — возвращает.
-        /// Блок свойств, а не материал: материалы оружия общие, их нельзя менять на ассете.
-        /// </summary>
-        private void SetDimmed(GameObject item)
+        private void SetDimmed(bool dimmed)
         {
-            if (_dimmedItem == item) return;
-
-            if (_dimmedItem != null)
-            {
-                foreach (Renderer r in _dimmedItem.GetComponentsInChildren<Renderer>(true))
-                    r.SetPropertyBlock(null);
-            }
-
-            _dimmedItem = item;
-            if (item == null) return;
-
-            var block = new MaterialPropertyBlock();
-            Color dim = new Color(_unaffordableBrightness, _unaffordableBrightness, _unaffordableBrightness, 1f);
-            block.SetColor(BaseColorId, dim);
-            block.SetColor(ColorId, dim);
-
-            foreach (Renderer r in item.GetComponentsInChildren<Renderer>(true))
-                r.SetPropertyBlock(block);
+            _dimmed = dimmed;
+            RefreshDimming();
         }
 
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        /// <summary>
+        /// Гасит свет недоступного слота — предметов <see cref="DimmedParts"/>, погашенное раньше возвращает. Свет на оружии
+        /// станции запечён: лампы слота — в пробах света у слота, блики — в пробе отражений станции (arsenal-slot-lighting).
+        /// Погашенный предмет берёт пробы света и отражений в точке <see cref="DimProbeDistance"/> перед слотом — вне ламп
+        /// и пробы станции, только слабый общий свет: оружие видно, но без подсветки (решение пользователя 2026-10-23;
+        /// окраска основы делала металл чёрным). Цвет материала не меняется. Зовут слот и выдача магазина
+        /// (<see cref="ArsenalMagazineOffer"/>), когда предмет пришёл в якорь или ушёл из него.
+        /// </summary>
+        public void RefreshDimming()
+        {
+            foreach (KeyValuePair<Renderer, Transform> anchor in _dimmedProbeAnchors)
+                if (anchor.Key != null) anchor.Key.probeAnchor = anchor.Value;
+            _dimmedProbeAnchors.Clear();
+            if (!_dimmed) return;
+
+            Transform dimAnchor = DimProbeAnchor();
+            foreach (GameObject part in DimmedParts())
+            {
+                if (part == null) continue;
+                foreach (Renderer r in part.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (_dimmedProbeAnchors.ContainsKey(r)) continue;
+                    _dimmedProbeAnchors[r] = r.probeAnchor;
+                    r.probeAnchor = dimAnchor;
+                }
+            }
+        }
+
+        /// <summary>Предметы слота, которые гаснут вместе с ним: базовый слот — ствол.</summary>
+        protected virtual IEnumerable<GameObject> DimmedParts()
+        {
+            if (CurrentItem != null) yield return CurrentItem;
+        }
+
+        /// <summary>Точка проб погашенного слота: <see cref="DimProbeDistance"/> перед ним (−Z слота — к игроку).</summary>
+        private Transform DimProbeAnchor()
+        {
+            if (_dimProbeAnchor != null) return _dimProbeAnchor;
+            _dimProbeAnchor = new GameObject("DimProbeAnchor").transform;
+            _dimProbeAnchor.SetParent(transform, false);
+            _dimProbeAnchor.localPosition = Vector3.back * DimProbeDistance + Vector3.up * .5f;
+            return _dimProbeAnchor;
+        }
+
+        private const float DimProbeDistance = 2f;
 
         // ── Private: Events ────────────────────────────────────
 
@@ -528,7 +552,7 @@ namespace VrBattlegrounds.Arsenal
             if (IsLocked) return;
 
             GameLog.Arsenal.Info($"[Arsenal] Item taken from slot '{DisplayName}'.");
-            SetDimmed(null);
+            SetDimmed(false);
             SetGlowColor(_takenColor);
             OnItemTaken?.Invoke(this);
             ItemTakenBy?.Invoke(this, e.GrabbableObject, e.Grabber);

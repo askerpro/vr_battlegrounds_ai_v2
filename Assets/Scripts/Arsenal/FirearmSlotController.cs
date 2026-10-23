@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UltimateXR.Manipulation;
 
@@ -35,5 +36,13 @@ namespace VrBattlegrounds.Arsenal
 
         /// <summary>Якорь серверного предложения и размещения в редакторе.</summary>
         public UxrGrabbableObjectAnchor MagAnchor => _magAnchor;
+
+        /// <summary>Гаснут ствол и выданный магазин: <see cref="ArsenalMagazineOffer.Assign"/> кладёт его ребёнком якоря.</summary>
+        protected override IEnumerable<GameObject> DimmedParts()
+        {
+            foreach (GameObject part in base.DimmedParts()) yield return part;
+            if (_magAnchor == null) yield break;
+            foreach (Transform child in _magAnchor.transform) yield return child.gameObject;
+        }
     }
 }

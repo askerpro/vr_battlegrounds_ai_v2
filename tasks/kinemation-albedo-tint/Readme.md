@@ -4,7 +4,7 @@
 
 ## Цель
 
-Конвертер KinemationMaterials сам воспроизводит принятый пользователем тон альбедо M_* (цель средней линейной яркости 0,055, множитель 1..1,6) и пишет _Color = _BaseColor; IronKitMaterials тоже пишет _Color = _BaseColor. Существующие материалы не меняются.
+Конвертер KinemationMaterials сам воспроизводит принятый пользователем тон альбедо M_* (цель средней линейной яркости 0,055, множитель 1..1,6) и пишет _Color = _BaseColor; IronKitMaterials тоже пишет _Color = _BaseColor. Существующие материалы приводятся к правилу (решение пользователя 2026-10-23).
 
 ## Итоги (2026-10-23)
 
@@ -14,7 +14,7 @@
   «привести материалы к правилу». Worker 1123 ([tools/apply_rule.cs](tools/apply_rule.cs)): 8 материалов,
   AK105 Body 1,31→1,26, Rail 1,41→1,40, Herrington 1,06→1,05, R08 1,17→1,16, SRM-12 Body 1,57→1,53, Mag 1,38→1,36,
   Viper Body 1,34→1,32, Magazine 1,53→1,57; [tools/boost_check.cs](tools/boost_check.cs) mismatch=0;
-  Offline → Lobby + 10 с — 0 dirty-материалов; `KinemationMaterialsTests` 4/4.
+  Offline → Lobby + 10 с — 0 dirty-материалов; `KinemationMaterialsTests` 4/4 (тест формулы переименован в `AlbedoBoost_FollowsAcceptedRule` после ревью).
 
 ## Этапы
 

@@ -158,7 +158,7 @@ namespace VrBattlegrounds.Editor.Gameplay
 
         /// <summary>
         /// Серый множитель цвета материала: тёмное альбедо пака поднимается до <see cref="AlbedoTarget" />, не больше
-        /// <see cref="AlbedoMaxBoost" />; светлое не трогается. Округление до 0,01 — как в принятых материалах.
+        /// <see cref="AlbedoMaxBoost" />; светлое не трогается. Округление до 0,01.
         /// </summary>
         public static float AlbedoBoost(float meanLinearAlbedo)
         {

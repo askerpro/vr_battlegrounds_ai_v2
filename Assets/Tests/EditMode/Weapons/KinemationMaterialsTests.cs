@@ -56,15 +56,16 @@ namespace VrBattlegrounds.Tests.Weapons
             (float)Materials().GetMethod("AlbedoBoost", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { mean });
 
         [Test]
-        public void AlbedoBoost_ReproducesAcceptedTint()
+        public void AlbedoBoost_FollowsAcceptedRule()
         {
-            // Средние линейные альбедо карт пака и принятые множители (_BaseColor в Kinemation/Materials, 2026-10-23).
-            Assert.AreEqual(1.31f, Boost(0.042f), Eps, "AK105_Body");
-            Assert.AreEqual(1.57f, Boost(0.035f), Eps, "SRM-12_Body");
-            Assert.AreEqual(1.06f, Boost(0.052f), Eps, "Herrington");
-            Assert.AreEqual(1.6f, Boost(0.017f), Eps, "TR15_Body — потолок");
-            Assert.AreEqual(1f, Boost(0.108f), Eps, "Mk14 — светлее цели, не трогается");
-            Assert.AreEqual(1f, Boost(0.548f), Eps, "патроны R08");
+            // Формула на опорных средних: 0,055 / среднее, в пределах 1..1,6, округление 0,01. Значения в .mat
+            // (Kinemation/Materials) — производные Convert от фактических средних карт, не константы этого теста.
+            Assert.AreEqual(1.31f, Boost(0.042f), Eps, "0,055 / 0,042");
+            Assert.AreEqual(1.57f, Boost(0.035f), Eps, "0,055 / 0,035");
+            Assert.AreEqual(1.06f, Boost(0.052f), Eps, "0,055 / 0,052");
+            Assert.AreEqual(1.6f, Boost(0.017f), Eps, "тёмная карта — потолок");
+            Assert.AreEqual(1f, Boost(0.108f), Eps, "светлее цели — не трогается");
+            Assert.AreEqual(1f, Boost(0.548f), Eps, "светлая карта (патроны)");
             Assert.AreEqual(1f, Boost(0f), Eps, "нет карты");
         }
 

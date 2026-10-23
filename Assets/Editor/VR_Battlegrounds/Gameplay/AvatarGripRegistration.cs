@@ -1173,6 +1173,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 // Родитель удалённых узлов: только вычеркнутые строки m_Children (опустевший — «m_Children: []»).
                 string[] after = current.Lines.Select(l => l == "  m_Children: []" && doc.Value.Lines.Contains("  m_Children:") ? "  m_Children:" : l).ToArray();
                 if (subtractive.Contains(doc.Key) && PackOrigPoses.IsSubsequence(after, doc.Value.Lines)) continue;
+                // Родитель и удалённых, и новых узлов (прежние align в той же папке точки — после RetiredGripAvatarCleanup):
+                // без вычеркнутых детей из удалённых и дописанных из новых узлов документ тот же.
+                if (additive.Contains(doc.Key) && subtractive.Contains(doc.Key) &&
+                    doc.Value.Lines.Where(l => !IsChildOf(l, removedIds)).Select(ExpandEmptyChildren)
+                       .SequenceEqual(current.Lines.Where(l => !IsChildOf(l, free)).Select(ExpandEmptyChildren))) continue;
                 problems.Add($"изменён !u!{doc.Value.Class} &{doc.Key}: {string.Join("; ", AvatarGripYaml.Differences(doc.Value.Lines, current.Lines).Take(6))}");
             }
 
@@ -1186,6 +1191,15 @@ namespace VrBattlegrounds.Editor.Gameplay
                 throw new InvalidOperationException("в YAML не только запись хвата — файл возвращён: " + string.Join("; ", problems.Take(8)) +
                                                     (problems.Count > 8 ? $" … ещё {problems.Count - 8}" : ""));
         }
+
+        private const string ChildLinePrefix = "  - {fileID: ";
+
+        /// <summary>Строка списка <c>m_Children</c> со ссылкой на один из <paramref name="ids" />.</summary>
+        private static bool IsChildOf(string line, HashSet<long> ids) =>
+            line.StartsWith(ChildLinePrefix, StringComparison.Ordinal) && line.EndsWith("}", StringComparison.Ordinal) &&
+            long.TryParse(line.Substring(ChildLinePrefix.Length, line.Length - ChildLinePrefix.Length - 1), out long id) && ids.Contains(id);
+
+        private static string ExpandEmptyChildren(string line) => line == "  m_Children: []" ? "  m_Children:" : line;
 
         private static void AddFileId(HashSet<long> ids, Object assetObject)
         {

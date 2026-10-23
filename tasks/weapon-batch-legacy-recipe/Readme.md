@@ -70,7 +70,11 @@
    (моно, Vorbis 0,7, Decompress On Load) — в Unity.
    Снятие магазина — универсальный дефолт всех категорий (`WeaponFeedbackDefaults._magazineTakeOut`):
    `HANDLING_B_FS92_9mm_Remove_Empty_Magazine_mono` (импорт в `Assets/Audio/SFX/Handling/`); нарезки пака ствола
-   (именованные для оружия) остаются его оверрайдом.
+   (именованные для оружия) остаются его оверрайдом. Вставка магазина — нарезки пака ствола, универсал всех категорий
+   (`WeaponFeedbackDefaults._magazineInsert`) — `Assets/Audio/SFX/Universal/Magazine_attach.mp3` (решение пользователя).
+   AX-50 Auto (`SniperRifleAuto`, задача arsenal-combat-lineup) заменяет ручной AX-50 (`SniperRifle`) — решение пользователя
+   2026-10-23: Auto собирается нашим сборщиком (рецепт на базе `SniperRifle`, механизм не ручной, автомат — из баланса);
+   ручной убрать из игры (реестр, стенд ботов, каталог композиции), файлы префабов и `WeaponInfo` оставить.
 7. Пересборка арсенала, проверка на worker, приёмка пользователем (звуки, стрельба в Play/шлеме), тесты, heavy, ревью, вливание.
 
 ## Статус

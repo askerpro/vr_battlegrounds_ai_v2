@@ -78,16 +78,16 @@ namespace VrBattlegrounds.Editor.Gameplay
                 if (!string.IsNullOrEmpty(s.Reload)) (leave, seat) = timing.Excursion(r.MagazinePart, s.ReloadClip);
                 if (leave >= 0f)
                 {
-                    r.TakeOutAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(s.Reload, leave, MagazineCut, folder, $"{r.Name}_MagOut"));
-                    report.Add($"снятие магазина {Short(s.Reload)} @{leave:F2} с");
+                    r.TakeOutAudio = Audible(KinemationAudio.CutAtEvent(s.Reload, leave, MagazineCut, folder, $"{r.Name}_MagOut"), "снятие магазина", report);
+                    if (r.TakeOutAudio != null) report.Add($"снятие магазина {Short(s.Reload)} @{leave:F2} с");
                 }
                 else report.Add("снятие магазина — дефолт категории ствола" +
                                 (string.IsNullOrEmpty(s.Reload) ? " (в наборе нет перезарядки)" : $" (магазин в {s.ReloadClip} неподвижен)"));
                 // Вставка — момент, когда магазин встал в гнездо в том же клипе (решение пользователя 2026-10-23).
                 if (seat >= 0f && seat > leave)
                 {
-                    r.InsertAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(s.Reload, seat, MagazineCut, folder, $"{r.Name}_MagIn"));
-                    report.Add($"вставка магазина {Short(s.Reload)} @{seat:F2} с");
+                    r.InsertAudio = Audible(KinemationAudio.CutAtEvent(s.Reload, seat, MagazineCut, folder, $"{r.Name}_MagIn"), "вставка магазина", report);
+                    if (r.InsertAudio != null) report.Add($"вставка магазина {Short(s.Reload)} @{seat:F2} с");
                 }
                 else report.Add("вставка магазина — дефолт категории ствола" + (string.IsNullOrEmpty(s.Reload) ? " (в наборе нет перезарядки)" : ""));
             }
@@ -110,8 +110,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                         // Затвор ушёл и вернулся один раз (оттяжка и отпускание рукоятки) — «назад» и «вперёд» по краям хода;
                         // клип с уже открытым затвором — один щелчок на оба, как у KINEMATION.
                         if (back < 0.05f) back = forward;
-                        r.SlideBackAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(s.Reload, back, BoltCut, folder, $"{r.Name}_BoltBack"));
-                        r.SlideForwardAudio = AssetDatabase.GetAssetPath(KinemationAudio.CutAtEvent(s.Reload, forward, BoltCut, folder, $"{r.Name}_BoltForward"));
+                        // Время хода берётся из клипа набора, а звук — из перезарядки набора: у стволов, чей клип не совпадает с
+                        // записью (MP5K на Reload.mp3 автоматного набора), кусок может прийтись на паузу — тогда дефолт категории.
+                        r.SlideBackAudio = Audible(KinemationAudio.CutAtEvent(s.Reload, back, BoltCut, folder, $"{r.Name}_BoltBack"), action + " назад", report);
+                        r.SlideForwardAudio = Audible(KinemationAudio.CutAtEvent(s.Reload, forward, BoltCut, folder, $"{r.Name}_BoltForward"), action + " вперёд", report);
                         report.Add($"{action} назад/вперёд — {Short(s.Reload)} @{back:F2}/{forward:F2} с");
                     }
                     else report.Add($"{action} — дефолт категории хоста ({r.ActionPart} в {s.ReloadClip} неподвижен)");
@@ -128,6 +130,20 @@ namespace VrBattlegrounds.Editor.Gameplay
             string text = $"[HandsPackAudio] {r.Name}: " + string.Join("; ", report);
             GameLog.WeaponSystem.Info(text);
             return text;
+        }
+
+        /// <summary>
+        /// Путь нарезки или null, если кусок — почти тишина (порог <see cref="EditorTools.Audio.SfxClipLevel.NearSilenceDbfs" />, как у
+        /// проверки хоста WeaponSystem): такой кусок удаляется, поле остаётся пустым — звучит дефолт категории.
+        /// </summary>
+        private static string Audible(AudioClip clip, string what, List<string> report)
+        {
+            string path = AssetDatabase.GetAssetPath(clip);
+            if (!EditorTools.Audio.SfxClipLevel.TryPeakDbfs(clip, out float peak, out _) || peak >= EditorTools.Audio.SfxClipLevel.NearSilenceDbfs)
+                return path;
+            AssetDatabase.DeleteAsset(path);
+            report.Add($"{what} — дефолт категории (кусок {clip.name} почти тишина, пик {peak:0.#} dBFS)");
+            return null;
         }
 
         private static string Short(string path) => path.StartsWith(Pack, StringComparison.Ordinal) ? path.Substring(Pack.Length) : path;

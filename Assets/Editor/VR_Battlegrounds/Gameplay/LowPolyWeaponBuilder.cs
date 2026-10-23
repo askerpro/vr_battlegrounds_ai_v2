@@ -88,7 +88,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 WeaponGripCarryOver.Snapshot grips = WeaponGripCarryOver.Capture(path, magazine);
                 using (LowPolyWeapon model = Model(k))
                     HandsPackWeaponBuilder.Build(r, model, configureHost: true);
-                WeaponGripCarryOver.Restore(grips, poses, HandsPackWeaponBuilder.MagazineBaseGeometry(r), HandsPackWeaponBuilder.SdkSampleAvatars);
+                WeaponGripCarryOver.Restore(grips, poses, HandsPackWeaponBuilder.MagazineBaseGeometry(r), HandsPackWeaponBuilder.DroppedGripAvatars);
                 // Подсветка выдаваемого отдельно магазина — как у BuildFull пака Hands.
                 WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
                 GameLog.Debug.Info($"[LowPolyWeaponBuilder] {path}: собран из {PackPrefabPath(k)}");

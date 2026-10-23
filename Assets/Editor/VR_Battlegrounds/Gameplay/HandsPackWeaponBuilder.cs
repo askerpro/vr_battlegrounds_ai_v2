@@ -484,8 +484,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                 identity.Verify();
                 WeaponGripCarryOver.Restore(grips, poses, MagazineBaseGeometry(r), DroppedGripAvatars);
                 // Подсветка выдаваемого отдельно магазина. Области хвата оружия сборка уже испекла по центрам ладоней
-                // пака — перенесённые хваты аватаров их не меняют.
-                WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
+                // пака — перенесённые хваты аватаров их не меняют. У внутреннего магазина (трубка FabarmSDASS) выдаётся патрон,
+                // а не магазин: его подсветку ставит ManualLoadingAuthoring в сборке.
+                if (!r.MagazineIsInternal) WeaponInteractionReview.Apply(System.Array.Empty<string>(), new[] { magazine });
             });
         }
 

@@ -1,0 +1,30 @@
+{
+  "task_id": "scope-enter-distance",
+  "owner": "scope-enter-distance",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/scope-enter-distance",
+  "base_sha": "97df9b6c9744fbd44490bb26678602e0692bfd69",
+  "doc_path": "tasks/scope-enter-distance/Readme.md",
+  "title": "Дистанция включения увеличивающего прицела — параметр",
+  "branch": "task/scope-enter-distance",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/scope-enter-distance/**",
+        "Assets/Scripts/Weapons/Sights/WeaponScopeCamera.cs",
+        "Assets/Scripts/Weapons/Sights/WeaponSightCalibrationSettings.cs",
+        "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset",
+        "Assets/Prefabs/Weapons/Sights/SightKit_Sight08.prefab",
+        "Assets/Prefabs/Weapons/Sights/SightKit_Sight03.prefab",
+        "Assets/Prefabs/Weapons/Sights/SightKit_Sight09.prefab",
+        "Assets/Tests/EditMode/Sights/ScopeOpticTests.cs",
+        "Docs/weapons/sight-calibration.md",
+        "Docs/weapons/decisions.md",
+        "experts/weapon-system/journal/2026-10-24-scope-enter-distance.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

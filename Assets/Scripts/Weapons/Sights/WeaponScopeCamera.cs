@@ -27,9 +27,7 @@ namespace VrBattlegrounds.Weapons.Sights
         [Header("У глаза (гистерезис)")]
         // Шлем 2026-10-23: корпус гарнитуры не даёт поднести окуляр ближе ~5 см к глазу; угол к оси у самого окуляра
         // скачет на 20–30° от сдвига на пару сантиметров — условие по углу заменено смещением глаза от оси прицела.
-        [Tooltip("Глаз позади окуляра вдоль оси прицела не дальше, м.")]
-        [SerializeField, Min(0.01f)] private float _enterDistance = 0.15f;
-        [SerializeField, Min(0.01f)] private float _exitDistance = 0.20f;
+        // Дистанция включения (глаз позади окуляра вдоль оси) — ползунок общих настроек прицелов, EnterDistance.
         [Tooltip("Смещение ближнего глаза от оси прицела, м: в этих пределах камера работает, а картинку открывает зрачок выхода.")]
         [SerializeField, Min(0.001f)] private float _enterOffset = 0.02f;
         [SerializeField, Min(0.001f)] private float _exitOffset = 0.03f;
@@ -55,6 +53,12 @@ namespace VrBattlegrounds.Weapons.Sights
         /// <summary>Зрачок выхода — допуск ракурса из общих настроек прицелов (ползунок в <see cref="WeaponSightCalibrationSettings"/>).</summary>
         public float ExitPupil => _view != null && _view.Settings != null
             ? _view.Settings.ScopeEyeTolerance : WeaponSightCalibrationSettings.DefaultScopeEyeTolerance;
+        /// <summary>
+        /// Дистанция включения — глаз не дальше этого позади окуляра, м; ползунок в <see cref="WeaponSightCalibrationSettings"/>
+        /// (решение пользователя 2026-10-24). Выключение — на <see cref="WeaponSightCalibrationSettings.ScopeExitHysteresis"/> дальше.
+        /// </summary>
+        public float EnterDistance => _view != null && _view.Settings != null
+            ? _view.Settings.ScopeEnterDistance : WeaponSightCalibrationSettings.DefaultScopeEnterDistance;
         /// <summary>Окуляр (задний край корпуса на оси) и ось прицела к точке сведения — для тени зрачка в shader.</summary>
         public Vector3 Eyepiece { get; private set; }
         public Vector3 Axis { get; private set; }
@@ -130,9 +134,10 @@ namespace VrBattlegrounds.Weapons.Sights
             Offset(left, eyepiece, dir, out float behind, out float offset);
             Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
             if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
+            float enterDistance = EnterDistance;
             bool near = _viewing
-                ? behind > -0.02f && behind <= _exitDistance && offset <= _exitOffset
-                : behind > -0.02f && behind <= _enterDistance && offset <= _enterOffset;
+                ? behind > -0.02f && behind <= enterDistance + WeaponSightCalibrationSettings.ScopeExitHysteresis && offset <= _exitOffset
+                : behind > -0.02f && behind <= enterDistance && offset <= _enterOffset;
             if (!near && _viewing && Time.unscaledTime - _viewingSince < _minHoldSeconds) near = true;
             SetViewing(near);
             // Диагностика порога: окуляр рядом с глазом, а увеличение не включилось — чего не хватило (не чаще раза в 2 с).
@@ -140,7 +145,7 @@ namespace VrBattlegrounds.Weapons.Sights
             {
                 _nextNearLog = Time.unscaledTime + NearLogInterval;
                 GameLog.WeaponSystem.Info($"{name}: глаз в {behind * 100f:0.0} см за окуляром, в {offset * 100f:0.0} см от оси — увеличение " +
-                                          $"не включено (вход ≤ {_enterDistance * 100f:0} см и ≤ {_enterOffset * 100f:0.0} см от оси).", this);
+                                          $"не включено (вход ≤ {enterDistance * 100f:0} см и ≤ {_enterOffset * 100f:0.0} см от оси).", this);
             }
             if (!_viewing) return;
 

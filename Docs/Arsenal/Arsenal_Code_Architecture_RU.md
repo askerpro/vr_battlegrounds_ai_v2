@@ -234,7 +234,23 @@ Read/Write включается только явным импортным write
 (пресет, раскладка, `WeaponInfo`, стиль, `MapData`, каталоги, импорт `.asset`/`.prefab`). Отложенная пересборка идёт
 через `EditorApplication.update`, не `delayCall`: у редактора без фокуса (worker) очередь `delayCall` стоит. Итог и
 кнопка «Обновить» — окно «Арсенал» → «Станции», меню `Tools/VR Battlegrounds/Arsenal/Обновить превью станций`.
-Отличие от Play: подсветки слотов нет. Проверка — `ArsenalStationScenePreviewTests`.
+Лента слота (`ArsenalSlotGlow.Paint`) в превью горит цветом «доступно»; состояний (недоступно, забрано) нет.
+Проверка — `ArsenalStationScenePreviewTests`.
+
+### Подсветка слотов (arsenal-slot-lighting, 2026-10-23)
+
+- **Индикатор — префаб слота.** `ArsenalSlotGlow` (лента по бокам доски, бортики `StripLip_L/R`) красит
+  `ArsenalSlotController`: доступно — `_availableColor` (янтарный), забрано — зелёный, недоступно — выключена.
+- **Гашение недоступного слота** — `ArsenalSlotController.RefreshDimming`: у предметов `DimmedParts` (ствол;
+  у `FirearmSlotController` и магазин в `MagAnchor`) `Renderer.probeAnchor` переводится в точку 2 м перед слотом —
+  вне ламп слота и пробы станции; цвет материала не меняется. `ArsenalMagazineOffer` зовёт `RefreshDimming` при
+  выдаче и взятии магазина. Писатель `probeAnchor` предметов слота — только контроллер слота.
+- **Свет — сцена карты.** `ArsenalSlotLighting` (Editor, меню «Подсветка слотов (свет и пробы в сцене)») — единственный
+  владелец `Environment/ArsenalSlotLighting`: запечённые лампы по `LampPoints` префаба, «налобный» прожектор станции,
+  пробы света у слотов, пробы отражений рядов (Custom EXR в `Assets/Materials/Arsenal/Reflections`, запекаются
+  сами после Generate Lighting с временно включёнными полосами). Пробу отражений станции не берут доски, бортики,
+  лента, подложка карточки и корпус станции (`reflectionProbeUsage = Off` в префабах). После смены пресета, раскладки
+  или станции — запустить инструмент и перезапечь сцену. Проверка — `ArsenalSlotLightingTests`.
 
 ---
 

@@ -33,7 +33,11 @@
         "Assets/Scripts/Arsenal/ArsenalMagazineOffer.cs",
         "Assets/Scripts/Economy/ArsenalPurchaseRules.cs",
         "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalStationScenePreview.cs",
-        "Assets/Data/Arsenal/SlotLayouts/**"
+        "Assets/Data/Arsenal/SlotLayouts/**",
+        "Docs/Arsenal/ArsenalWall_Design_RU.md",
+        "Assets/Tests/EditMode/Weapons/KinemationMaterialsTests.cs",
+        "experts/performance/journal/**",
+        "experts/weapon-system/journal/**"
       ],
       "after": [],
       "needs": []

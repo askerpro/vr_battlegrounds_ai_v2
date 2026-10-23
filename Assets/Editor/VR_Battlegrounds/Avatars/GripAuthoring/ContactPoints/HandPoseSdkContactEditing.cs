@@ -1460,6 +1460,13 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
 
+            // VR Battlegrounds patch 93: вырожденный дескриптор (схлопнутые оси рига) не применяется к кисти и не записывается
+            if (!UxrHandPoseEditorWindow.TryValidateHandDescriptor(wrappedDescriptor, out string descriptorError))
+            {
+                _status = "Обхват не записан: " + descriptorError;
+                return;
+            }
+
             // 4. Фиксация штатным путём SDK (одна группа Undo, сохранение позы, обновление превью)
             if (_window.TryCommitContactEdit(sdkCtx, wrappedDescriptor, out string commitReason))
             {
@@ -2089,6 +2096,13 @@ namespace VrBattlegrounds.Editor.HandPoseReview
                 }
             }
 
+            // VR Battlegrounds patch 93: вырожденный дескриптор (схлопнутые оси рига) не применяется к кисти и не записывается
+            if (!UxrHandPoseEditorWindow.TryValidateHandDescriptor(solvedDescriptor, out string descriptorError))
+            {
+                _status = $"IK ({FingerNamesRu[(int)fingerType]}): поза не записана: " + descriptorError;
+                return;
+            }
+
             if (_window.TryCommitContactEdit(sdkCtx, solvedDescriptor, out string commitReason))
             {
                 _status = $"IK ({FingerNamesRu[(int)fingerType]}): поза обновлена.";
@@ -2350,6 +2364,13 @@ namespace VrBattlegrounds.Editor.HandPoseReview
             if (!anyChanged)
             {
                 _status = "Убрать скручивание: поза не изменена.\n" + details;
+                return;
+            }
+
+            // VR Battlegrounds patch 93: вырожденный дескриптор (схлопнутые оси рига) не применяется к кисти и не записывается
+            if (!UxrHandPoseEditorWindow.TryValidateHandDescriptor(solvedDescriptor, out string descriptorError))
+            {
+                _status = "Убрать скручивание: поза не записана: " + descriptorError;
                 return;
             }
 

@@ -2140,3 +2140,32 @@ CyborgHandsBase (`71b74b0d08444f49bbb7aa2828d0890a`); потомки (PlayerCont
 Если обновление вернёт сэмплы, заново заменить GUID в шести записях и пяти `_selectedAvatarForGrips`
 (поиск `8e0e06323e4754f479a9f19788554652` в `ShootingRange/Weapons/*.prefab`). Записи не удалять
 (см. выше). Проверка — EditMode `CyborgGripEntriesOwnershipTests`, `GrabPoseCoverageTests`.
+
+## Патч 93: редактор поз не записывает вырожденный дескриптор руки (2026-10-22)
+
+Маркер `// VR Battlegrounds patch 93` в `Editor/Manipulation/HandPoses/UxrHandPoseEditorWindow.cs`.
+
+### Проблема
+
+`SavePose`/`CreatePose` (ручные спиннеры, Copy Left/Right To Right/Left, Save, создание позы) считают
+`UxrHandDescriptor` по `UxrAvatar.AvatarRigInfo` без проверки. Если оси пальцев рига вырождены
+(`UxrAvatarArmInfo.SolveHandAndFingerAxes` по согнутой кисти даёт `LocalUp = 0`, `LocalForward = −LocalRight`;
+rig info пересчитывается в `UxrAvatar.OnValidate`), в ассет пишутся узлы с `_up = 0` и нулевые узлы. Так в
+коммите 1b2f88612 (2026-10-16) испорчены правые руки `HandsPack_Gun_Grip`, `Kinemation_Herrington_Grip`,
+`DemoMachinegun` (Open) и `DemoLabLaser` (Open); в игре рука на этих хватах выворачивается. «Copy Left To Right»
+при вырожденных осях снова записывает испорченную руку.
+
+### Изменение
+
+- `TryValidateHandDescriptor(UxrHandDescriptor, out string)` / `GetFingerNodeDescriptorDefect`: оси узла единичные,
+  попарно ортогональны, правая тройка (допуск `HandDescriptorAxisTolerance = 0.1`); пропускается только пястная
+  при `HasMetacarpalInfo = false`.
+- `SavePose` и `CreatePose` отказываются записывать вырожденный дескриптор: ошибка в консоль и уведомление в окне.
+- Та же проверка — перед записью в «Обхватить», IK и «Убрать скручивание» (`HandPoseSdkContactEditing`).
+- Страж данных — EditMode `HandPoseDescriptorSanityTests`: оси всех узлов всех `UxrHandPoseAsset` не вырождены,
+  правая рука близка к `Mirrored()` левой (среднее ≤ 35°, узел ≤ 90°).
+
+### Как повторить при обновлении SDK
+
+Вернуть проверку перед записью дескриптора в `SavePose` и `CreatePose`. При отказе сохранения — вернуть кисть в
+исходную позу и пересчитать rig info аватара, затем сохранить снова.

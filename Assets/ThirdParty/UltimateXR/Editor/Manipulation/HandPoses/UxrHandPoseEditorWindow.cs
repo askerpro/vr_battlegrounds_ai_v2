@@ -389,6 +389,103 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
             handPoseWindow.LoadAvatar(avatar, handPose);
         }
 
+        // VR Battlegrounds patch 93: страж записи дескриптора позы. Вырожденные оси узлов (нулевые векторы, _forward = −_right)
+        // получаются при схлопнутых осях пальцев рига (AvatarRigInfo.FingerUniversalLocalAxes): SolveHandAndFingerAxes берёт
+        // ближайшие оси, и при пересчёте rig info по согнутой кисти (UxrAvatar.OnValidate) right совпадает с ±forward, up = 0.
+        // SavePose и CreatePose такой дескриптор не пишут; ту же проверку перед фиксацией зовёт HandPoseSdkContactEditing.
+        // Тест-страж ассетов поз — Assets/Tests/EditMode/Prefabs/HandPoseDescriptorSanityTests.cs (дублирует проверку:
+        // сборка тестов не ссылается на UltimateXR.Editor).
+
+        /// <summary>
+        ///     VR Battlegrounds patch 93: допуск длины осей узла, их попарной ортогональности и правой тройки
+        ///     (right × up = forward). У здоровых поз проекта отклонение до 0.045 (масштаб костей пака).
+        /// </summary>
+        public const float HandDescriptorAxisTolerance = 0.1f;
+
+        /// <summary>
+        ///     VR Battlegrounds patch 93: проверяет, что у каждого узла дескриптора оси единичные, попарно ортогональны и
+        ///     образуют правую тройку. Пястная без данных (<see cref="UxrFingerDescriptor.HasMetacarpalInfo" /> = false)
+        ///     у SDK нулевая и не проверяется.
+        /// </summary>
+        /// <param name="descriptor">Дескриптор одной руки</param>
+        /// <param name="error">Описание первых дефектов: палец, узел, причина, значения осей</param>
+        /// <returns>Дескриптор можно записывать</returns>
+        public static bool TryValidateHandDescriptor(UxrHandDescriptor descriptor, out string error)
+        {
+            error = null;
+
+            if (descriptor == null)
+            {
+                error = "дескриптор отсутствует";
+                return false;
+            }
+
+            List<string> defects = new List<string>();
+
+            foreach (UxrFingerType fingerType in new[] { UxrFingerType.Thumb, UxrFingerType.Index, UxrFingerType.Middle, UxrFingerType.Ring, UxrFingerType.Little })
+            {
+                UxrFingerDescriptor finger = descriptor.GetFinger(fingerType);
+
+                if (finger.HasMetacarpalInfo)
+                {
+                    AddFingerNodeDescriptorDefect(defects, fingerType, "Metacarpal", finger.Metacarpal);
+                }
+
+                AddFingerNodeDescriptorDefect(defects, fingerType, "Proximal",             finger.Proximal);
+                AddFingerNodeDescriptorDefect(defects, fingerType, "ProximalNoMetacarpal", finger.ProximalNoMetacarpal);
+                AddFingerNodeDescriptorDefect(defects, fingerType, "Intermediate",         finger.Intermediate);
+                AddFingerNodeDescriptorDefect(defects, fingerType, "Distal",               finger.Distal);
+            }
+
+            if (defects.Count == 0)
+            {
+                return true;
+            }
+
+            error = $"вырожденные оси узлов ({defects.Count}): {string.Join("; ", defects.Take(3))}{(defects.Count > 3 ? "; …" : string.Empty)}";
+            return false;
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 93: причина вырожденности осей узла или null, если узел в порядке.
+        /// </summary>
+        /// <param name="node">Узел дескриптора</param>
+        /// <returns>Причина или null</returns>
+        public static string GetFingerNodeDescriptorDefect(UxrFingerNodeDescriptor node)
+        {
+            Vector3 right   = node.Right;
+            Vector3 up      = node.Up;
+            Vector3 forward = node.Forward;
+            float   tol     = HandDescriptorAxisTolerance;
+
+            if (Mathf.Abs(right.magnitude - 1.0f) > tol || Mathf.Abs(up.magnitude - 1.0f) > tol || Mathf.Abs(forward.magnitude - 1.0f) > tol)
+            {
+                return $"длины осей {right.magnitude:0.000}/{up.magnitude:0.000}/{forward.magnitude:0.000} вместо 1";
+            }
+
+            if (Mathf.Abs(Vector3.Dot(right, up)) > tol || Mathf.Abs(Vector3.Dot(up, forward)) > tol || Mathf.Abs(Vector3.Dot(right, forward)) > tol)
+            {
+                return $"оси не ортогональны (right·up {Vector3.Dot(right, up):0.000}, up·forward {Vector3.Dot(up, forward):0.000}, right·forward {Vector3.Dot(right, forward):0.000})";
+            }
+
+            if ((Vector3.Cross(right, up) - forward).magnitude > tol)
+            {
+                return $"тройка осей не правая (|right × up − forward| = {(Vector3.Cross(right, up) - forward).magnitude:0.000})";
+            }
+
+            return null;
+        }
+
+        private static void AddFingerNodeDescriptorDefect(List<string> defects, UxrFingerType fingerType, string nodeName, UxrFingerNodeDescriptor node)
+        {
+            string defect = GetFingerNodeDescriptorDefect(node);
+
+            if (defect != null)
+            {
+                defects.Add($"{fingerType}.{nodeName}: {defect}; right {node.Right.ToString("F3")}, up {node.Up.ToString("F3")}, forward {node.Forward.ToString("F3")}");
+            }
+        }
+
         #endregion
 
         #region Unity
@@ -2204,6 +2301,13 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 return;
             }
 
+            // VR Battlegrounds patch 93: дескриптор, посчитанный по схлопнутым осям пальцев рига, не записывается.
+            if (saveFlags.HasFlag(SaveHandPoseFlags.HandDescriptors) && !TryValidateHandDescriptor(handDescriptorTmp, out string descriptorError))
+            {
+                ReportRejectedHandDescriptor(handPose, handSide, descriptorError);
+                return;
+            }
+
             // Export pose data
 
             if (saveFlags.HasFlag(SaveHandPoseFlags.HandDescriptors))
@@ -2219,6 +2323,30 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(handPose));
                 SavePoseAssetToDisk(handPose); // VR Battlegrounds patch 91
             }
+        }
+
+        /// <summary>
+        ///     VR Battlegrounds patch 93: сообщает об отказе записать вырожденный дескриптор. Ошибка в консоль — один раз на
+        ///     одинаковый текст (автосохранение зовёт SavePose на каждую правку), уведомление в окне — каждый раз.
+        /// </summary>
+        /// <param name="handPose">Поза или null, если она ещё не создана</param>
+        /// <param name="handSide">Рука</param>
+        /// <param name="error">Результат <see cref="TryValidateHandDescriptor" /></param>
+        /// <param name="posePath">Путь позы, если её ещё нет в AssetDatabase</param>
+        private void ReportRejectedHandDescriptor(UxrHandPoseAsset handPose, UxrHandSide handSide, string error, string posePath = null)
+        {
+            string path    = handPose != null ? AssetDatabase.GetAssetPath(handPose) : posePath;
+            string message = $"[UxrHandPoseEditor] Поза {path} ({handSide}) не записана: {error}. Оси пальцев рига аватара " +
+                             $"{(_avatar != null ? _avatar.name : "?")} (AvatarRigInfo.FingerUniversalLocalAxes) вырождены — rig info, " +
+                             "вероятно, пересчитан по согнутой кисти. Верните кисть в исходную позу, пересчитайте rig info аватара и повторите.";
+
+            if (message != s_lastRejectedHandDescriptorMessage)
+            {
+                s_lastRejectedHandDescriptorMessage = message;
+                Debug.LogError(message);
+            }
+
+            ShowNotification(new GUIContent($"Поза ({handSide}) не записана: вырожденные оси пальцев рига, см. консоль"));
         }
 
         /// <summary>
@@ -2370,6 +2498,17 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
                 handPose.HandDescriptorOpenRight   = new UxrHandDescriptor(_avatar, UxrHandSide.Right);
                 handPose.HandDescriptorClosedLeft  = new UxrHandDescriptor(_avatar, UxrHandSide.Left);
                 handPose.HandDescriptorClosedRight = new UxrHandDescriptor(_avatar, UxrHandSide.Right);
+
+                // VR Battlegrounds patch 93: поза со схлопнутыми осями пальцев рига не создаётся.
+                foreach (UxrHandSide side in new[] { UxrHandSide.Left, UxrHandSide.Right })
+                {
+                    if (!TryValidateHandDescriptor(handPose.GetHandDescriptor(side), out string descriptorError))
+                    {
+                        ReportRejectedHandDescriptor(null, side, descriptorError, UxrEditorUtils.GetProjectRelativePath(path));
+                        DestroyImmediate(handPose);
+                        return null;
+                    }
+                }
 
                 string file = UxrEditorUtils.GetProjectRelativePath(path);
                 AssetDatabase.CreateAsset(handPose, file);
@@ -3299,6 +3438,9 @@ namespace UltimateXR.Editor.Manipulation.HandPoses
 
         private static bool s_editInheritedPoses;
         private static bool s_editInheritedPosesLoaded;
+
+        // VR Battlegrounds patch 93: последний текст отказа записи вырожденного дескриптора (без повторов в консоли).
+        private static string s_lastRejectedHandDescriptorMessage;
 
         // VR Battlegrounds patch 91: поза, явно изменённая пользователем с момента загрузки (сбрасывается при смене позы).
         [NonSerialized] private UxrHandPoseAsset _userEditedPose;

@@ -20,7 +20,8 @@ namespace VrBattlegrounds.Editor.Gameplay
     ///
     /// <para>
     /// Цвет материала — <c>_TintColor</c> пака, умноженный на <see cref="AlbedoBoost" /> (тёмное альбедо пака поднимается
-    /// до <see cref="AlbedoTarget" />), одинаково в <c>_BaseColor</c> и легаси <c>_Color</c>.
+    /// до <see cref="AlbedoTarget" />), одинаково в <c>_BaseColor</c> и легаси <c>_Color</c>. Затенение из карты цвета
+    /// и множитель гладкости — <see cref="ApplyShading" />.
     /// </para>
     ///
     /// <para>
@@ -81,7 +82,6 @@ namespace VrBattlegrounds.Editor.Gameplay
             {
                 mat.SetTexture("_MetallicGlossMap", packed);
                 mat.SetFloat("_Metallic", 1f);
-                mat.SetFloat("_Smoothness", 1f);
                 mat.SetFloat("_SmoothnessTextureChannel", 0f);
                 mat.EnableKeyword("_METALLICSPECGLOSSMAP");
             }
@@ -90,6 +90,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                 mat.SetFloat("_Metallic", 0.5f);
                 mat.SetFloat("_Smoothness", 0.4f);
             }
+            ApplyShading(mat, packed != null);
 
             mat.SetFloat("_Surface", 0f);
             mat.SetFloat("_Cull", 2f);
@@ -128,6 +129,44 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
             AssetDatabase.SaveAssets();
             GameLog.WeaponSystem.Info($"KINEMATION: карты металличности и гладкости пересчитаны — {done}");
+        }
+
+        /// <summary>
+        /// Затенение и гладкость (решение пользователя 2026-10-23, arsenal-slot-lighting): у пака нет карты затенения, и
+        /// металл отражал окружение одинаково на гранях и в щелях — «бледный» и «серебряный» рядом с Hands_*, у которых
+        /// она есть. Затенение берётся из карты цвета (тёмные щели темнее) с силой <see cref="OcclusionStrength" />,
+        /// гладкость карты — с множителем <see cref="SmoothnessScale" />. Подбор в Play под realtime-прожектором:
+        /// затенение 1 — «слишком тёмные», 0,5 и средние значения Hands_* 1 в 1 — белый «хром»; принято 0,9 / 0,75.
+        /// </summary>
+        public const float OcclusionStrength = 0.9f, SmoothnessScale = 0.75f;
+
+        private static void ApplyShading(Material mat, bool packedGloss)
+        {
+            Texture baseColor = mat.GetTexture("_BaseMap");
+            if (baseColor != null)
+            {
+                mat.SetTexture("_OcclusionMap", baseColor);
+                mat.SetFloat("_OcclusionStrength", OcclusionStrength);
+                mat.EnableKeyword("_OCCLUSIONMAP");
+            }
+            if (packedGloss) mat.SetFloat("_Smoothness", SmoothnessScale);
+        }
+
+        /// <summary>Затенение и гладкость (<see cref="ApplyShading" />) всем материалам <see cref="MaterialsFolder" />.</summary>
+        [MenuItem("Tools/VR Battlegrounds/Weapons/KINEMATION: затенение и гладкость материалов")]
+        public static void ApplyShadingAll()
+        {
+            int done = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { MaterialsFolder }))
+            {
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                if (mat == null || mat.shader == null || mat.shader.name != Shader) continue;
+                ApplyShading(mat, mat.GetTexture("_MetallicGlossMap") != null);
+                EditorUtility.SetDirty(mat);
+                done++;
+            }
+            AssetDatabase.SaveAssets();
+            GameLog.WeaponSystem.Info($"KINEMATION: затенение {OcclusionStrength} и гладкость ×{SmoothnessScale} — {done} материалов");
         }
 
         private static Material PackMaterial(string name)

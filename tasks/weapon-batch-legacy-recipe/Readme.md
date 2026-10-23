@@ -90,3 +90,8 @@ BrowningHiPower_Magazine удалена; донор-снимки удалены;
 каталог композиции пересобран (17 стволов). Все 17 стволов собраны новым сборщиком. Ждёт: приёмка пользователем в Play/шлеме
 (звуки, стрельба, хваты затворов); выбор падения оружия/магазина (`reports/sound-candidates/` 11–12, вкл. `fall_sounds`).
 Затем тесты, heavy, ревью зон, вливание.
+2026-10-24 (worker 1133, 1134; rebase на origin/dev 97df9b6c9): падение — файлы пользователя `fall_sounds`: пистолеты
+`Weapon_Fall_Pistol`, винтовки/дробовики/снайперские `Weapon_Fall_Rifle` (новое поле категории `_dropImpacts`, читает
+`ImpactSound` ствола через хост), магазины `Magazine_Fall` (`ImpactSoundDefaults._magazine`). Попадание — файлы
+`impact_sounds`: тело `Hit_Body_01`, голова `Hit_Head`, голова в шлеме `Hit_Head_Helmet` (новое поле `PlayerHitEffects`,
+не играет — шлемов нет); клипы — данные префаба `Resources/PlayerHitEffects`, `HitEffectBuilder` больше не держит путей.

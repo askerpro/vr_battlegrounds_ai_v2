@@ -149,8 +149,9 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             for (int i = 0; i < pixels.Length; i++)
             {
                 float metal = Mathf.Lerp(mRemap.x, mRemap.y, m != null ? m[i].r : 0f);
-                float rough = Mathf.Lerp(rRemap.x, rRemap.y, r != null ? r[i].r : 1f);
-                pixels[i] = new Color(metal, metal, metal, 1f - rough);
+                // Как в шейдере пака (и KinemationMaterials.PackPixel): диапазон гладкости — к инвертированной карте.
+                float smooth = Mathf.Lerp(rRemap.x, rRemap.y, 1f - (r != null ? r[i].r : 1f));
+                pixels[i] = new Color(metal, metal, metal, smooth);
             }
             return pixels;
         }

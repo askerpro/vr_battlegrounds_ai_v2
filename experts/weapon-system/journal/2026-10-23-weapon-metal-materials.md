@@ -10,7 +10,8 @@
 - Тёмное альбедо пака поднято серым `_BaseColor` до ~0,055 (×1,06–1,6, 13 материалов) — решение пользователя; живёт
   только в `.mat` (`Convert` при пересоздании материала берёт `_TintColor` пака), воспроизведение —
   `tasks/weapon-metal-materials/tools/apply_base_tint.cs`.
-- Тот же дефект формулы — в `Weapons/Sights/Core/IronKitMaterials.cs` (MX68), не исправлен.
+- Та же формула гладкости исправлена в `Weapons/Sights/Core/IronKitMaterials.cs` (MX68; карты там уже читались
+  линейно). У `M_MX68_03` диапазоны (0; 1), карта прицела от этого не меняется — перегенерация не нужна.
 - Недоступное оружие в арсенале чёрное: `ArsenalSlotController.SetDimmed` заменяет `_BaseColor` на 0,3 — передано
   arsenal-slot-lighting.
 - Тест `KinemationMaterialsTests` (формула, линеаризация).

@@ -20,6 +20,7 @@
 - [x] AX-50 Auto: модель SniperRifle, автомат, хваты перенесены с SniperRifle, выстрел без болтовки.
 - [x] Оптика `SightKit_Sight08` ×2: картинка и снайперская сетка на стекле, зрачок выхода с подсказкой, допуск 5 мм (ползунок `WeaponSightCalibrationSettings`).
 - [x] **Принято пользователем в шлеме (worker) 2026-10-23.**
+- [x] Комплекты стенда `SightKit_Sight03` и `SightKit_Sight09` ×2 (на стволы не ставятся; Sight03 проверен на AX-50 в шлеме, AX-50 оставлен с Sight08) — принято 2026-10-23.
 - [ ] Тесты: `WeaponBalanceTests`, `HitsToKillTests`, `WeaponScaleTests` обновлены; новые `ScopeOpticTests`, `CombatLineupTests` — прогон EditMode.
 - [ ] Ревью зон, heavy, вливание.
 - Замер GPU камеры прицела на Quest 3 — отдельная задача (решение пользователя).

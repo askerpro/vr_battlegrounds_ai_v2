@@ -46,6 +46,35 @@ namespace VrBattlegrounds.Tests.Sights
             Assert.That(radius, Is.InRange(0.01f, 0.05f), "радиус стекла окуляра, м");
         }
 
+        /// <summary>Комплекты стенда (решение пользователя 2026-10-23): ×2, сетка как у Sight08, Sight03 — окуляр уже, на стволах их нет.</summary>
+        [Test]
+        public void Комплекты_стенда_Sight03_и_Sight09_x2_не_на_стволах()
+        {
+            foreach (string name in new[] { "SightKit_Sight03", "SightKit_Sight09" })
+            {
+                CollectionAssert.Contains(ScopeKits, name);
+                Assert.AreEqual(2f, Spec(name).ScopeMagnification, name);
+                var reticle = AssetDatabase.LoadAssetAtPath<Material>(Spec(name).ReticleMaterialPath);
+                Assert.AreEqual(1f, reticle.GetFloat("_ReticleStyle"), name + ": снайперская сетка");
+                Assert.AreEqual(1f, reticle.GetColor("_GlassTint").a, name + ": стекло непрозрачное");
+            }
+            float Radius(string name)
+            {
+                var view = AssetDatabase.LoadAssetAtPath<GameObject>(Spec(name).PrefabPath).GetComponentInChildren<WeaponOpticView>(true);
+                Assert.IsTrue(view.TryGetLens(out _, out float radius), name);
+                return radius;
+            }
+            Assert.Less(Radius("SightKit_Sight03"), Radius("SightKit_Sight08"), "Sight03 — прицел поуже диаметром");
+
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs/Weapons" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.Contains("/Sights/")) continue;
+                foreach (Transform t in AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponentsInChildren<Transform>(true))
+                    Assert.IsFalse(t.name == "SightKit_Sight03" || t.name == "SightKit_Sight09", $"{path}: комплект стенда на стволе");
+            }
+        }
+
         [Test]
         public void Коллиматор_XPS2_без_камеры_кратности()
         {

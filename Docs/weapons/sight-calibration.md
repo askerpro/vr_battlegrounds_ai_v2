@@ -196,7 +196,8 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
    с узким полем (FOV = 2·atan(K / M)) рендерит в RT 384² (MSAA 4×), только пока глаз у окуляра локального игрока; шейдер линзы
    показывает RT в координатах стекла окуляра, сетка поверх. Писатель MPB линзы по-прежнему один —
    `WeaponOpticView` (точку сведения считает только он, `TryGetZero`). Комплект с кратностью — `OpticKitSpec.ScopeMagnification`
-   (`SightKit_Sight08`, ×2; меш — `PackOpticBuilder`: заднее стекло пака — линза, переднее — в корпусе). Принято в шлеме
+   (`SightKit_Sight08`, ×2; для стенда — `SightKit_Sight03` (компактный, окуляр Ø24 мм) и `SightKit_Sight09` (труба 553 мм),
+   оба ×2, на стволы не ставятся; меш — `PackOpticBuilder`: заднее стекло пака — линза, переднее — в корпусе). Принято в шлеме
    2026-10-23: картинка и сетка в координатах стекла окуляра (центр и радиус — submesh стекла, `TryGetLens`); поле
    окуляра = радиус / удаление глаза; включение — глаз ≤ 15 см за окуляром и ≤ 2 см от оси; зрачок выхода — допуск
    ракурса `WeaponSightCalibrationSettings._scopeEyeTolerance` (5 мм), вне ракурса светлое пятно указывает, куда сдвинуть
@@ -284,7 +285,7 @@ pivot на точке прицеливания (F — вершина мушки,
 | Часть | Где |
 |---|---|
 | Окно | вкладка «Калибровка прицела» окна `Tools/VR Battlegrounds/Weapons/Настройка оружия` (`WeaponSetupWindow`, `SightAutoZeroPanel`) |
-| Комплекты | `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68,XPS2,Sight08}.prefab` (стенд показывает все `SightKit_*` папки); FBX механики — `Assets/Art/Weapons/Sights/IronKits/`; сборка — `…/Weapons/Sights/Build Iron Sight Kits`, `Build Optic Sight Kits` (`SightKitBuilder`) |
+| Комплекты | `Assets/Prefabs/Weapons/Sights/SightKit_{TR15,MX68,XPS2,Sight08,Sight03,Sight09}.prefab` (стенд показывает все `SightKit_*` папки); FBX механики — `Assets/Art/Weapons/Sights/IronKits/`; сборка — `…/Weapons/Sights/Build Iron Sight Kits`, `Build Optic Sight Kits` (`SightKitBuilder`) |
 | Решатель / подвижная деталь | `Weapons/Sights/Core/SightAutoZeroSolver.cs` / `Assets/Scripts/Weapons/Sights/SightAdjustablePart.cs` |
 | Разделитель | `Assets/Editor/VR_Battlegrounds/Gameplay/SightSplit/` (`SightPartSplitter`, генерируемая `SightSplitTable`) |
 | Писатель | `Weapons/Sights/WeaponSightAuthoring.cs` |

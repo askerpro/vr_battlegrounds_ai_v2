@@ -8,7 +8,7 @@
   (`TryGetZero`) и стекло (`TryGetLens`, submesh) считаются только в нём. Шейдер `FiniteFocusReticle`: картинка и сетка в
   координатах стекла, зрачок выхода (допуск — `WeaponSightCalibrationSettings._scopeEyeTolerance`, 5 мм), стиль сетки
   «перекрестие», своя точка, флаг `_ScopeEquipped`. Убраны аллокации `CanWrite` на каждой камере.
-- Комплекты: `SightKitBuilder.Optics.ScopeMagnification` → `SightKit_Sight08` (призма пака Hands ×2); писатель сбрасывает
+- Комплекты: `SightKitBuilder.Optics.ScopeMagnification` → `SightKit_Sight08` (призма пака Hands ×2), для стенда — `SightKit_Sight03`, `SightKit_Sight09` (×2, на стволы не ставятся; `PackOpticBuilder.Spec.SkipParts` убирает подсветку Sight_03); писатель сбрасывает
   камеру к значениям кода. `PackOpticBuilder` (бывший LowPolyOpticBuilder) запекает модель прицела пака в оси комплекта.
 - Сборщик: третий источник `LowPolyWeapon` (IWeaponModel, без рецептов — Barrett снят), `IPalmSource` в `PalmPoints`.
   `WeaponRebuildFinish` нормализует `_assetId` перед `MigrateWeapons` — первая сборка нового ствола больше не откатывается.

@@ -259,9 +259,10 @@ namespace VrBattlegrounds.Editor.Gameplay
                     StaticParts = new string[0],
                     TriggerPart = "Trigger_mesh", ActionPart = "Reload_frame_mesh", SupportGrip = false,
                     UxrTag = "Gun", MagazinePart = "Magazine_Mesh", MagazineTag = "MagUzi", MagazineCapacity = 30,
+                    // Выстрел набора Tommy Gun режется в 0,05 с почти тишины (шлем 2026-10-24) — прежний выстрел ствола.
+                    ShotAudio = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Effects/Automatic_rifle/VFX/Sounds/MachineGun2.wav",
                     PackSounds = new HandsPackSoundRecipe
                     {
-                        Shot = Snd + "12Tommy_Gun/Tommy_GunI_1.mp3",
                         Reload = Snd + "12Tommy_Gun/Tommy_Gun_Reload.mp3", ReloadClip = "Reloading", SlideFromReload = true
                     }
                 });
@@ -347,10 +348,12 @@ namespace VrBattlegrounds.Editor.Gameplay
             TriggerPart = "Sniper_Rifle_Triger_Mesh", ActionPart = "Sniper _Rifle_Gate_End_Mesh",
             ActionExtraParts = new[] { "Sniper _Rifle_Gate_Mesh" }, SupportGrip = true, ManualCycle = true,
             UxrTag = "BackWeapon", MagazinePart = "Sniper_Rifle_Magazine_Mesh", MagazineTag = "MagSniper", MagazineCapacity = 10,
+            // Затвор — прежняя пара (шлем 2026-10-24): куски перезарядки снайперского набора тихие (−15 dB) и непохожие.
+            SlideBackAudio = "Assets/Audio/SFX/Universal/Zatvor2.mp3", SlideForwardAudio = "Assets/Audio/SFX/Universal/Zatvor1.mp3",
             PackSounds = new HandsPackSoundRecipe
             {
                 Shot = Snd + "11Sniper_Rifle_Set/Sniper_Rifle_Shot_1.mp3",
-                Reload = Snd + "11Sniper_Rifle_Set/Reload.mp3", ReloadClip = "Recharge", SlideFromReload = true
+                Reload = Snd + "11Sniper_Rifle_Set/Reload.mp3", ReloadClip = "Recharge"
             }
         });
 

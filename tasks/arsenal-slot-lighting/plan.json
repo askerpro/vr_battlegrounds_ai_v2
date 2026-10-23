@@ -24,7 +24,16 @@
         "Assets/Tests/EditMode/Arsenal/**",
         "Docs/Arsenal/Arsenal_Code_Architecture_RU.md",
         "experts/gameplay/journal/**",
-        "experts/level-design/journal/**"
+        "experts/level-design/journal/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/KinemationMaterials.cs",
+        "Assets/Art/Weapons/Kinemation/Materials/**",
+        "Assets/Prefabs/Arsenal/LobbyDemoArsenalStation.prefab",
+        "Assets/Materials/Arsenal/**",
+        "Assets/Scripts/Arsenal/FirearmSlotController.cs",
+        "Assets/Scripts/Arsenal/ArsenalMagazineOffer.cs",
+        "Assets/Scripts/Economy/ArsenalPurchaseRules.cs",
+        "Assets/Editor/VR_Battlegrounds/Arsenal/ArsenalStationScenePreview.cs",
+        "Assets/Data/Arsenal/SlotLayouts/**"
       ],
       "after": [],
       "needs": []

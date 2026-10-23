@@ -63,8 +63,8 @@ namespace VrBattlegrounds.Editor.Arsenal
         internal const float StripDistance = 1.2f, StripTall = 0.15f, StripOverhang = 0.2f, BoardWidth = 0.45f;
         internal static readonly float[] WallStripHeights = { -0.4f, 0.3f, 1.0f };
         internal const float ShelfStripUp = 0.55f, ShelfStripForward = 0.15f;
-        internal const float StripBrightness = 1.5f;
-        internal static readonly Color StripColor = new Color(1f, .93f, .85f);
+        internal const float StripBrightness = 3f;
+        internal static readonly Color StripColor = new Color(1f, .98f, .95f);
 
         // Рассеянный свет — 4 запечённые лампы на слот в точках LampPoints префаба слота (углы доски, 20 см перед ней),
         // каждая на свою четверть доски в 5 см перед ней (там висит оружие), мягкий край конуса — схема пользователя
@@ -72,9 +72,17 @@ namespace VrBattlegrounds.Editor.Arsenal
         // прожектор с места игрока не освещал станцию 4,4 м ровно: края в 2–4 раза темнее центра, металлическая доска
         // (WeaponRackMaterial, metallic 0,7) без пробы станции — почти чёрная (запекания 2026-10-23).
         public const string LampPointsName = "LampPoints";
-        internal const float LampIntensity = 1f, LampRange = 1f, LampAngle = 50f, LampInner = 0f, LampAimForward = 0.05f;
+        // Тёплые (1; 0,85; 0,6) лампы 1,0 в ночном шатре делали оружие тусклым и коричневым; пользователь сравнил с видом
+        // Scene view (белый ровный свет) — нейтральный белый и вдвое ярче (2026-10-23). Тёплый — только у ленты слота.
+        internal const float LampIntensity = 2f, LampRange = 1f, LampAngle = 50f, LampInner = 0f, LampAimForward = 0.05f;
         internal const float LampRefDistance = 0.35f;
-        internal static readonly Color LampColor = new Color(1f, .85f, .6f);
+        internal static readonly Color LampColor = new Color(1f, .97f, .93f);
+
+        // «Налобный» прожектор: образец вида пользователь выбрал в Play realtime-светом (2026-10-23) — широкий белый
+        // прожектор с места игрока (1,3 м перед стеной, 1,75 м высоты) на середину между стеной и полкой. Здесь он
+        // запечён: рассеянный свет — через пробы света у слотов, блики металла — полосы в пробе станции.
+        internal const float HeadDistance = 1.3f, HeadHeight = 1.75f, HeadIntensity = 2.5f, HeadRange = 5f;
+        internal const float HeadAngle = 140f, HeadInnerAngle = 110f;
 
         // Влияние пробы станции — только слой, где висит оружие: от 3 см за лицом доски до 25 см перед ним, выше доски на
         // 25 см (ствол снайперской винтовки). Коробка во всю станцию с запасом 0,4 м накрывала место игрока: его руки и
@@ -193,6 +201,7 @@ namespace VrBattlegrounds.Editor.Arsenal
                         frame.Width, stripMaterial));
                 }
                 stripRoot.gameObject.SetActive(false);
+                CreateHead(group, frame);
                 Vector3 eye = frame.WallCenter + frame.Face * (ReflectionEyeDistance - AimOffset);
                 CreateReflectionProbe(group, WallReflectionName, slots.Where(s => !s.IsShelf), eye);
                 CreateReflectionProbe(group, ShelfReflectionName, slots.Where(s => s.IsShelf), eye);
@@ -371,6 +380,25 @@ namespace VrBattlegrounds.Editor.Arsenal
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
             GameObjectUtility.SetStaticEditorFlags(strip, StaticEditorFlags.ReflectionProbeStatic);
             return strip.transform;
+        }
+
+        /// <summary>Запечённый «налобный» прожектор станции с места игрока (см. <see cref="HeadDistance" />).</summary>
+        private static void CreateHead(Transform parent, StationFrame frame)
+        {
+            var go = new GameObject("HeadLight");
+            go.transform.SetParent(parent, false);
+            Vector3 position = new Vector3(frame.WallCenter.x, HeadHeight, frame.WallCenter.z) + frame.Face * HeadDistance;
+            Vector3 target = frame.HasShelf ? (frame.WallCenter + frame.ShelfCenter) * .5f : frame.WallCenter;
+            go.transform.SetPositionAndRotation(position, Quaternion.LookRotation(target - position, Vector3.up));
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Spot;
+            light.lightmapBakeType = LightmapBakeType.Baked;
+            light.color = Color.white;
+            light.intensity = HeadIntensity;
+            light.range = HeadRange;
+            light.spotAngle = HeadAngle;
+            light.innerSpotAngle = HeadInnerAngle;
+            light.shadows = LightShadows.None;
         }
 
         private static void CreateLamp(Transform parent, string name, Vector3 position, Vector3 target, Vector3 up)

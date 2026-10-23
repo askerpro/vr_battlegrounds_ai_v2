@@ -27,5 +27,5 @@ MonoBehaviour:
     Row: shelf
   - Weapon: {fileID: 11400000, guid: 71578ee82c8283640ab0a08d6396549b, type: 2}
     Row: shelf
-  - Weapon: {fileID: 11400000, guid: 93f7ff924a332a04fbf64dfef1fbc543, type: 2}
+  - Weapon: {fileID: 11400000, guid: 62612a82d013f22478d2acdea44a330b, type: 2}
     Row: pegboard

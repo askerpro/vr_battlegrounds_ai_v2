@@ -88,7 +88,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             E("Scar", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),
             E("Uzi", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Pistol),
             E("SniperRifle", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // AX-50
-            E("Barrett", "F3", DetachableReturnToRestProfile, WeaponFeedbackCategory.Sniper),  // Barrett M82 (Low Poly), без клипов затвора
+            E("SniperRifleAuto", "F2", DetachableReturnToRestProfile, WeaponFeedbackCategory.Rifle),  // вид SniperRifle (AX-50), механика Mk14
             E("Revolver", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
             E("R08", "F5", MagazineOnlyProfile, WeaponFeedbackCategory.Pistol),
         };
@@ -846,7 +846,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             ["Mk14"] = new Vector3(0.012f, 0.010f, -0.615f),         // Slide/BoltCharger (окно сверху-справа, как у M14)
             ["SRM12"] = new Vector3(0.022f, 0f, -0.680f),            // Slide/Bolt z −0,741…−0,624
             ["SniperRifle"] = new Vector3(0.020f, 0.005f, -0.730f),  // Slide/Sniper_Rifle_Gate z −0,838…−0,683
-            ["Barrett"] = new Vector3(0.022f, 0.006f, -0.660f),      // МЕРИТЬ: правый борт коробки над магазином (z пака ≈ −0,03)
+            ["SniperRifleAuto"] = new Vector3(0.020f, 0.005f, -0.730f), // та же модель, что SniperRifle
             ["Uzi"] = new Vector3(0.020f, 0.010f, -0.225f),          // Slide/Reload_frame (правый борт)
             ["Scar"] = new Vector3(0.018f, 0f, -0.320f),             // MeshContainer/Scar_Planck (правый борт)
             // Пистолеты: верх-право кожуха-затвора, за казёнником.

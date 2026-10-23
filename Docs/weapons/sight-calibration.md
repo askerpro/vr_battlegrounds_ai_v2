@@ -196,7 +196,8 @@ weapon-sight-calibration/` и `…/tmp/weapon-sight-calibration/`. В этом w
    с узким полем (FOV = 2·atan(K / M)) рендерит в RT 320², только пока окуляр у глаза локального игрока; шейдер линзы
    показывает RT вокруг точки сведения (UV = 0,5 + 0,5·угол/K), сетка поверх. Писатель MPB линзы по-прежнему один —
    `WeaponOpticView` (точку сведения считает только он, `TryGetZero`). Комплект с кратностью — `OpticKitSpec.ScopeMagnification`
-   (`SightKit_M82Scope`, ×1,75; меш — `LowPolyOpticBuilder`). Для SniperRifle увеличения нет. Открыто: замер на Quest.
+   (`SightKit_Sight08`, ×2, поле окуляра tg 0,18; меш — `PackOpticBuilder`: заднее стекло пака — линза, переднее — в корпусе).
+   Стоит на SniperRifleAuto; у болтового SniperRifle увеличения нет. Открыто: замер на Quest.
 8. Stereo Quest и eyebox для `FiniteFocusReticle`; звук щитов не выбран; ожидания `LobbyLayoutTests` устарели.
 9. Единое обозначение дистанции сведения в будущем `Docs/weapons/` (R или Z).
 

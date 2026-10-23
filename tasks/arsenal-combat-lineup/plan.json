@@ -32,7 +32,8 @@
         "Assets/Data/WeaponSystem/**",
         "Assets/Editor/VR_Battlegrounds/Arsenal/**",
         "Assets/Editor/VR_Battlegrounds/Gameplay/**",
-        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**"
+        "Assets/Editor/VR_Battlegrounds/Weapons/Sights/**",
+        "Assets/Art/HandPoses/Orig/**"
       ],
       "after": [],
       "needs": []

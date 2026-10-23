@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M82Scope_Reticle
+  m_Name: Sight08_Reticle
   m_Shader: {fileID: 4800000, guid: f6dd5cd66fcdf6b419f9f6ca1ce789b7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -29,11 +29,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _DotRadius: 0.0002
+    - _DotRadius: 0.0003
     - _OpticValid: 0
-    - _ReticleStyle: 1
-    - _RingRadius: 0.004
-    - _RingWidth: 0.00025
+    - _ReticleStyle: 0
+    - _RingRadius: 0.01
+    - _RingWidth: 0.0004
     - _ScopeActive: 0
     - _ScopeApparentHalfField: 0.1
     m_Colors:
@@ -42,6 +42,6 @@ Material:
     - _OpticRightWS: {r: 1, g: 0, b: 0, a: 0}
     - _OpticUpWS: {r: 0, g: 1, b: 0, a: 0}
     - _OpticZeroWS: {r: 0, g: 0, b: 15, a: 15}
-    - _ReticleColor: {r: 0.02, g: 0.02, b: 0.02, a: 1}
+    - _ReticleColor: {r: 1, g: 0.025, b: 0.012, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -42,49 +42,10 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string Pack = "Assets/ThirdParty/Low Poly Weapons VOL.2/";
         private const string HandsSounds = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/";
 
-        /// <summary>
-        /// Дальнобойная винтовка (роль AWP по месту в линейке, решение пользователя): Barrett M82 — самозарядная .50 BMG,
-        /// магазин на 10. Модель пака — <c>sniper_03</c> (в FBX «M107»): корпус на корне, затвор <c>Bolt</c> с рукояткой
-        /// справа, спуск <c>Trigger</c>, магазин <c>Magazin</c> с патронами <c>Bullets</c>. Ствол пака — по −Z (вершины FBX:
-        /// дульный тормоз у z −0,70, приклад у +0,54, рукоять и спуск позади магазина), верх +Y.
-        /// Без клипов затвора хост WeaponSystem — профиль ReturnToRest (строка в <see cref="WeaponSystemAuthoring.Weapons" />).
-        /// </summary>
-        public static LowPolyWeaponRecipe Barrett
-        {
-            get
-            {
-                HandsPackWeaponRecipe r = HandsPackWeaponBuilder.RifleDonor(new HandsPackWeaponRecipe
-                {
-                    Name = "Barrett", PrefabFolder = "Barrett", BodyPart = "sniper_03",
-                    PoseClip = null, ActionClip = null, RestClip = null, // клипов у пака нет
-                    TargetLength = 1.24f, // длина модели пака в префабе — длина прототипа (решение пользователя)
-                    StaticParts = new string[0],
-                    TriggerPart = "Trigger", ActionPart = "Bolt",
-                    // Рукоятка затвора — выступ меша Bolt справа (вершины x −0,065…−0,029, z −0,313…−0,304 в осях Bolt).
-                    ActionGripContact = new Vector3(-0.047f, 0.018f, -0.309f), // МЕРИТЬ: точка контакта на рукоятке затвора
-                    SupportGrip = true,
-                    UxrTag = "BackWeapon", MagazinePart = "Magazin", MagazineExtraParts = new[] { "Bullets" },
-                    MagazineTag = "MagBarrett", MagazineCapacity = 10,
-                    // Свой выстрел: снайперский набор пака Hands ни одним стволом не занят (WeaponShotSoundTests — без общего клипа).
-                    ShotAudio = HandsSounds + "11Sniper_Rifle_Set/Sniper_Rifle_Shot_2.mp3"
-                });
-                // MuzzlePart не задан: дульный тормоз — часть корпуса, срез — передний край его вершин.
-                r.ShotCycle = UxrShotCycle.SemiAutomatic; // самозарядная (донор M16 — автоматический огонь)
-                return new LowPolyWeaponRecipe
-                {
-                    Weapon = r, PackPrefab = "Prefabs/Sniper/sniper_03",
-                    Forward = Vector3.back, Up = Vector3.up, // по вершинам FBX; проверить на виде модели
-                    BoltTravel = 0.08f,                      // МЕРИТЬ: ход затвора, м
-                    BoltAxis = Vector3.forward,              // МЕРИТЬ: «назад» при стволе по −Z — это +Z
-                    TriggerDeg = -15f,                       // МЕРИТЬ: низ спуска уходит назад (+Z) при повороте −15° вокруг X
-                    TriggerAxis = 0,                         // МЕРИТЬ: ось поворота спуска — X (поперёк ствола)
-                    PalmGrip = new Vector3(-0.025f, -0.09f, 0.19f),   // МЕРИТЬ: правая ладонь на пистолетной рукояти позади спуска
-                    PalmSupport = new Vector3(0f, -0.015f, -0.16f)    // МЕРИТЬ: левая ладонь под цевьём, на 0,35 м впереди рукояти
-                };
-            }
-        }
-
-        public static IEnumerable<LowPolyWeaponRecipe> All => new[] { Barrett };
+        // Рецептов нет: Barrett M82 (sniper_03) собран и снят 2026-10-23 — вид лоу-поли пака не подходит к остальным
+        // стволам (решение пользователя). Источник оставлен для других моделей пака: рецепт — LowPolyWeaponRecipe с
+        // числами механики, строки ствола в WeaponSystemAuthoring.Weapons и EjectionPorts.
+        public static IEnumerable<LowPolyWeaponRecipe> All => System.Array.Empty<LowPolyWeaponRecipe>();
 
         /// <summary>Рецепт по имени ствола (<see cref="HandsPackWeaponRecipe.Name" />); null — нет.</summary>
         public static LowPolyWeaponRecipe Find(string name) => All.FirstOrDefault(r => r.Weapon.Name == name);
@@ -105,7 +66,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             return model.Report();
         }
 
-        /// <summary>Вход для <c>execute_code</c>: полная пересборка ствола по имени (<c>Barrett</c>).</summary>
+        /// <summary>Вход для <c>execute_code</c>: полная пересборка ствола по имени рецепта.</summary>
         public static GameObject Build(string name) =>
             Build(Find(name) ?? throw new System.ArgumentException($"Нет рецепта Low Poly '{name}'. Есть: {string.Join(", ", All.Select(r => r.Weapon.Name))}"));
 

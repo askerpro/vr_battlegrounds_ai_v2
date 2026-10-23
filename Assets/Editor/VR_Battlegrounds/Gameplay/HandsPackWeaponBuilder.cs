@@ -296,7 +296,26 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
         }
 
-        public static IEnumerable<HandsPackWeaponRecipe> T38 => new[] { Scar, Uzi, MP5K, PPK, Revolver, SniperRifle };
+        /// <summary>
+        /// Автоматическая винтовка дальнего боя (arsenal-combat-lineup, решение пользователя 2026-10-23): вид SniperRifle
+        /// (AX-50 пака Hands), поведение Mk14 — автоматический огонь, отъёмный магазин на 10; оптика ×2 — комплект прицела.
+        /// Та же модель и детали, что у <see cref="SniperRifle" />, свой префаб и магазин; тег магазина общий (тот же магазин).
+        /// </summary>
+        public static HandsPackWeaponRecipe SniperRifleAuto
+        {
+            get
+            {
+                HandsPackWeaponRecipe r = SniperRifle;
+                r.Name = "SniperRifleAuto";
+                r.PrefabFolder = "SniperRifleAuto";
+                r.ShotCycle = UxrShotCycle.FullyAutomatic;
+                // Свой выстрел: снайперский набор пака Hands ни одним стволом реестра не занят (WeaponShotSoundTests).
+                r.ShotAudio = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/11Sniper_Rifle_Set/Sniper_Rifle_Shot_2.mp3";
+                return r;
+            }
+        }
+
+        public static IEnumerable<HandsPackWeaponRecipe> T38 => new[] { Scar, Uzi, MP5K, PPK, Revolver, SniperRifle, SniperRifleAuto };
 
         private static void BuildT38() => VrBattlegrounds.Editor.Arsenal.ArsenalEditorWindow.OpenBuildSet(T38.Select(r => $"Assets/Prefabs/Weapons/{r.PrefabFolder}/{r.Name}.prefab"));
 

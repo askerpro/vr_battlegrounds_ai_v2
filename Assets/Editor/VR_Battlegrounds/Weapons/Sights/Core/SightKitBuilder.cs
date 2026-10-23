@@ -117,6 +117,8 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
             public int LensMaterialIndex;
             /// <summary>Кратность увеличивающего прицела (<see cref="WeaponScopeCamera"/>); 0 — коллиматор без увеличения.</summary>
             public float ScopeMagnification;
+            /// <summary>Видимое поле окуляра увеличивающего прицела, тангенс половины угла (<see cref="WeaponScopeCamera"/>).</summary>
+            public float ScopeApparentHalfField = 0.1f;
         }
 
         public const string SettingsPath = "Assets/Data/Weapons/SightCalibration/WeaponSightCalibrationSettings.asset";
@@ -132,16 +134,16 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                 // Как стоял узел SM_Attach_AR15_XPS2 в TR15 относительно ShotSource (до раунда 1): поворот X 90°.
                 MeshEuler = new Vector3(90f, 0f, 0f), LensMaterialIndex = 1
             },
-            // Оптика Barrett M82 (arsenal-combat-lineup, 2026-10-23): меш и сетку-перекрестие делает LowPolyOpticBuilder,
-            // кратность — камера прицела (решение пользователя: малая RT, бюджет +1 мс GPU).
+            // Призма ×2 пака Hands для SniperRifleAuto (arsenal-combat-lineup, решение пользователя 2026-10-23): меш и сетку
+            // делает PackOpticBuilder, кратность — камера прицела (малая RT, бюджет +1 мс GPU). Поле окуляра ~20° (tg 0,18).
             new OpticKitSpec
             {
-                Name = "SightKit_M82Scope", PrefabPath = PrefabFolder + "/SightKit_M82Scope.prefab", NodeName = "M82Scope", SightId = "M82Scope",
-                MeshPath = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.Barrett.MeshPath,
-                HousingMaterialPath = "Assets/ThirdParty/Low Poly Weapons VOL.2/Gun_MAT.mat",
-                ReticleMaterialPath = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.Barrett.ReticleMaterialPath,
-                MeshEuler = Vector3.zero, LensMaterialIndex = VrBattlegrounds.Editor.Weapons.Sights.LowPolyOpticBuilder.LensMaterialIndex,
-                ScopeMagnification = 1.75f
+                Name = "SightKit_Sight08", PrefabPath = PrefabFolder + "/SightKit_Sight08.prefab", NodeName = "Sight08", SightId = "Sight08",
+                MeshPath = PackOpticBuilder.Sight08.MeshPath,
+                HousingMaterialPath = "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Materials/Hands_Automatic_rifle03.mat",
+                ReticleMaterialPath = PackOpticBuilder.Sight08.ReticleMaterialPath,
+                MeshEuler = Vector3.zero, LensMaterialIndex = PackOpticBuilder.LensMaterialIndex,
+                ScopeMagnification = 2f, ScopeApparentHalfField = 0.18f
             }
         };
 
@@ -268,6 +270,7 @@ namespace VrBattlegrounds.Editor.Weapons.Sights
                         var scopeSo = new SerializedObject(scope);
                         scopeSo.FindProperty("_view").objectReferenceValue = view;
                         scopeSo.FindProperty("_magnification").floatValue = optic.ScopeMagnification;
+                        scopeSo.FindProperty("_apparentHalfField").floatValue = optic.ScopeApparentHalfField;
                         scopeSo.ApplyModifiedPropertiesWithoutUndo();
                     }
                     else if (scope != null) UnityEngine.Object.DestroyImmediate(scope);

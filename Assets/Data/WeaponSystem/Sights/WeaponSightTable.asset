@@ -429,10 +429,10 @@ MonoBehaviour:
       - {x: 1, y: 1, z: 1}
       - {x: 1, y: 1, z: 1}
       - {x: 1, y: 1, z: 1}
-  - Weapon: {fileID: 11400000, guid: 93f7ff924a332a04fbf64dfef1fbc543, type: 2}
-    WeaponId: Barrett
-    Kit: {fileID: 8716753216683904569, guid: 864f10350f10e08468bb0f6cb4f215d6, type: 3}
-    KitLocalPosition: {x: 0.0010645833, y: 0.08162998, z: 0.20526847}
+  - Weapon: {fileID: 11400000, guid: 62612a82d013f22478d2acdea44a330b, type: 2}
+    WeaponId: SniperRifleAuto
+    Kit: {fileID: 5768839823647715281, guid: 202930ca510a60341b865dcf0be4e83f, type: 3}
+    KitLocalPosition: {x: -0.0060573095, y: 0.0689686, z: 0.034192286}
     KitLocalRotation: {x: -0, y: -0, z: -0, w: 1}
     RearAlongRail: 0
     FrontAlongRail: 0
@@ -442,9 +442,9 @@ MonoBehaviour:
       Names:
       - ShotSource
       - MeshContainer
-      - Barrett
+      - SniperRifleAuto
       LocalPositions:
-      - {x: 0, y: 0.04417436, z: 0.8181561}
+      - {x: -0.0000000027939677, y: 0.054552488, z: 0.7476974}
       - {x: 0, y: 0, z: 0}
       - {x: 0, y: 0, z: 0}
       LocalRotations:
@@ -454,4 +454,4 @@ MonoBehaviour:
       LocalScales:
       - {x: 1, y: 1, z: 1}
       - {x: 1, y: 1, z: 1}
-      - {x: 1.0038549, y: 1.0038549, z: 1.0038549}
+      - {x: 1.0959959, y: 1.0959959, z: 1.0959959}

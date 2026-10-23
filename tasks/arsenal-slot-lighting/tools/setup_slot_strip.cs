@@ -3,7 +3,8 @@
 // - SlotGlow — квад во всю доску с текстурой боковых полос (glow_texture.py), цвет «доступно» янтарный × 1,2;
 // - StripLip_L/R — бортики 2 см × 3 см по боковым краям доски (дети PegboardSection: оси доски, масштаб доски учтён);
 // - LampPoints/Lamp_0..3 — углы доски в 20 см от неё по нормали лица; направление считает инструмент запекания;
-// - LobbyDemoArsenalStation: зазор ряда стены 0,095, полки 0,075 (просвет между досками ≈4,5 см).
+// - LobbyDemoArsenalStation: зазор ряда стены 0,095, полки 0,075 (просвет между досками ≈4,5 см);
+// - доска, бортики, лента и подложка карточки без проб отражений (пробу станции с полосами берут только оружие).
 // Повторный запуск пересоздаёт бортики и точки ламп. Тело для execute_code: UnityEngine/UnityEditor подключает обёртка.
 
 const string TexPath = "Assets/Materials/Arsenal/ArsenalSlotGlow.png";
@@ -64,6 +65,16 @@ System.Action<string> setup = path =>
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
+        // Пробу отражений станции (запечённые полосы, ArsenalSlotLighting) берут только оружие и магазины:
+        // доска, бортики, лента и подложка карточки — без проб отражений, иначе полосы бликуют на них.
+        foreach (var path2 in new[] { "PegboardSection", "PegboardSection/StripLip_L", "PegboardSection/StripLip_R",
+                                      "PegboardSection/SlotGlow", "WeaponCard/CardBacking" })
+        {
+            var part = root.transform.Find(path2);
+            var pr = part != null ? part.GetComponent<Renderer>() : null;
+            if (pr != null) pr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        }
+
         var points = root.transform.Find("LampPoints");
         if (points == null)
         {
@@ -98,6 +109,13 @@ try
         so.ApplyModifiedPropertiesWithoutUndo();
         log.AppendLine(row.name + " zone=" + row.Zone + " gap=" + (shelf ? ShelfGap : WallGap));
     }
+    // Корпус станции Lobby без проб отражений: проба станции с запечёнными полосами — только для оружия (иначе
+    // кромка полки и козырёк бликуют полосами).
+    int corpus = 0;
+    foreach (var r in station.GetComponentsInChildren<Renderer>(true))
+        if (r.reflectionProbeUsage != UnityEngine.Rendering.ReflectionProbeUsage.Off)
+        { r.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off; corpus++; }
+    log.AppendLine("корпус без проб отражений: " + corpus);
     PrefabUtility.SaveAsPrefabAsset(station, StationPath);
 }
 finally { PrefabUtility.UnloadPrefabContents(station); }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEditor;
@@ -15,48 +16,65 @@ using VrBattlegrounds.Maps.Runtime;
 namespace VrBattlegrounds.Editor.Arsenal
 {
     /// <summary>
-    ///     Подсветка слотов арсенала в сцене карты (задача arsenal-slot-lighting, решения пользователя 2026-10-22/23).
+    ///     Свет на оружие станций арсенала в сцене карты (задача arsenal-slot-lighting, решения пользователя 2026-10-23).
     ///     <para>
     ///     Слоты станции создаёт код при загрузке карты, поэтому запечённый свет и пробы живут в сцене, а не в префабе
     ///     слота. Инструмент считает позы слотов тем же кодом, что запуск карты и превью станций
     ///     (<see cref="MapArsenalStationDescriber" />, <see cref="ArsenalStationComposer.PlanComposition" />), в открытой
-    ///     позе оборудования (<see cref="ArsenalEquipmentPoses" />). На каждый слот — запечённый прожектор на невидимом
-    ///     кронштейне сверху-спереди, луч в лицевую сторону доски слота, и пробы света там же и перед слотом.
+    ///     позе оборудования (<see cref="ArsenalEquipmentPoses" />).
     ///     </para>
     ///     <para>
-    ///     Оружие почти целиком металл: его вид — отражение, а не рассеянный свет. Поэтому у станции своя запечённая
-    ///     проба отражений (Box Projection) и над верхним рядом светящаяся LED-планка — в пробе она даёт металлу блик.
-    ///     Прожектор через пробу света освещает неметаллические части. Видимое пятно и состояние слота — подложка
-    ///     <see cref="ArsenalSlotGlow" /> в префабе слота. Runtime-цена: одна кубмапа на станцию, источники запечены.
+    ///     Свет «со стороны смотрящего» (как Scene view без освещения сцены): большинство стволов металлические, их вид —
+    ///     отражение. У станции своя проба отражений; в неё запечены узкие светящиеся полосы перед стеной и над полкой —
+    ///     металл отражает их бликами с тёмными промежутками. Полосы существуют только на время запекания этой пробы
+    ///     (<see cref="BakeReflections" />, сразу после Generate Lighting), в игре их нет. Проба — в режиме Custom со своим
+    ///     EXR: Generate Lighting её не перезапекает. Рассеянный свет — 4 запечённые лампы на слот в точках LampPoints
+    ///     префаба слота, через пробы света у слотов. Пробу станции берут только оружие и магазины: доски, бортики и карточки
+    ///     слота и корпус станции её не используют (настроено в префабах слотов и станции Lobby) — иначе полосы бликуют
+    ///     на них. Runtime-цена: одна кубмапа на станцию, источники запечены.
+    ///     Состояние слота — боковая лента <see cref="ArsenalSlotGlow" /> в префабе слота.
     ///     </para>
     ///     <para>
     ///     Владелец <c>Environment/ArsenalSlotLighting</c> — только этот инструмент; контейнер пересобирается целиком.
     ///     После смены пресета, раскладки или станции — запустить снова и перезапечь свет сцены.
     ///     </para>
     /// </summary>
+    [InitializeOnLoad]
     public static class ArsenalSlotLighting
     {
         public const string MenuPath = "Tools/VR Battlegrounds/Arsenal/Подсветка слотов (свет и пробы в сцене)";
+        public const string BakeMenuPath = "Tools/VR Battlegrounds/Arsenal/Подсветка слотов: запечь отражения станций";
         public const string ContainerName = "ArsenalSlotLighting";
         public const string ProbeGroupName = "SlotProbes";
-        public const string BarName = "SlotLedBar", ReflectionName = "SlotReflections";
+        public const string StripsName = "BakeStrips", ReflectionName = "SlotReflections";
+        public const string StripMaterialPath = "Assets/Materials/Arsenal/ArsenalBakeStrip.mat";
+        public const string ReflectionFolder = "Assets/Materials/Arsenal/Reflections";
         public const string BoardName = "PegboardSection";
-        public const string BarMaterialPath = "Assets/Materials/Arsenal/ArsenalSlotLedBar.mat";
         private const string CatalogPath = "Assets/Data/Maps/MapRuntimeCatalog.asset";
 
-        // Точки в осях слота (лицо — −Z, верх — +Y): прицел — 7 см перед лицевой стороной доски слота (вертикальная
-        // доска стрелкового ряда и горизонтальная полка пистолетов), кронштейн — 35 см выше и 30 см вперёд от прицела.
-        internal const float AimOffset = 0.07f, BracketUp = 0.35f, BracketForward = 0.30f, ProbeForward = 0.25f;
+        // Пробы света в осях слота (лицо — −Z, верх — +Y): 7 см перед лицевой стороной доски и 25 см перед ней.
+        internal const float AimOffset = 0.07f, ProbeForward = 0.25f;
 
-        // 1,5 давало в центре слота 1,69 при фоне шатра 0,14, но металл оставался тёмным (запекание 1079); 0,3 — 0,44,
-        // «слишком тускло» (пользователь 2026-10-23); металлу блик даёт планка в пробе отражений, прожектор — 0,6.
-        internal const float SpotIntensity = 0.6f, SpotRange = 1.2f, SpotAngle = 70f, SpotInnerAngle = 40f;
-        internal static readonly Color SpotColor = new Color(1f, .9f, .78f);
+        // Полосы подобраны с пользователем в Play (tools/softbox_prototype.cs): большая ровная панель делает гладкий металл
+        // «серебряным», узкие полосы с тёмными промежутками дают тёмный металл с бликами. Стена: 3 полосы по 15 см в 1,2 м
+        // перед стеной, на −0,4 / +0,3 / +1,0 м от центра досок — верх стволов отражает область выше глаз. Полка: полоса
+        // над ней, наклонена к ней. Яркость >1 — в HDR-пробе это блик.
+        internal const float StripDistance = 1.2f, StripTall = 0.15f, StripOverhang = 0.2f, BoardWidth = 0.45f;
+        internal static readonly float[] WallStripHeights = { -0.4f, 0.3f, 1.0f };
+        internal const float ShelfStripUp = 0.55f, ShelfStripForward = 0.15f;
+        internal const float StripBrightness = 4f;
+        internal static readonly Color StripColor = new Color(1f, .93f, .85f);
 
-        // Планка: 6 см над верхом доски верхнего ряда, 22 см перед ней; яркость >1 — в HDR-пробе это блик.
-        internal const float BarAbove = 0.06f, BarForward = 0.22f, BarHeight = 0.025f, BarDepth = 0.04f, BarOverhang = 0.25f;
-        internal const float BarBrightness = 3f;
-        internal static readonly Color BarColor = new Color(1f, .92f, .82f);
+        // Рассеянный свет — 4 запечённые лампы на слот в точках LampPoints префаба слота (углы доски, 20 см перед ней),
+        // каждая на свою четверть доски в 5 см перед ней (там висит оружие), мягкий край конуса — схема пользователя
+        // (прототип ламп 2026-10-23). Лампа, чья цель ближе LampRefDistance, слабее по квадрату расстояния. Один общий
+        // прожектор с места игрока не освещал станцию 4,4 м ровно: края в 2–4 раза темнее центра, металлическая доска
+        // (WeaponRackMaterial, metallic 0,7) без пробы станции — почти чёрная (запекания 2026-10-23).
+        public const string LampPointsName = "LampPoints";
+        internal const float LampIntensity = 1f, LampRange = 1f, LampAngle = 50f, LampInner = 0f, LampAimForward = 0.05f;
+        internal const float LampRefDistance = 0.35f;
+        internal static readonly Color LampColor = new Color(1f, .85f, .6f);
+
         internal const float ReflectionMargin = 0.4f;
         internal const int ReflectionResolution = 128, ReflectionImportance = 2;
 
@@ -64,13 +82,23 @@ namespace VrBattlegrounds.Editor.Arsenal
         public readonly struct SlotPoints
         {
             public readonly ArsenalSlotRow Row;
-            public readonly Vector3 Aim, Bracket, Front, BoardTop, Up, Forward, Along;
+            public readonly Vector3 Aim, Front, BoardTop, Up, Forward, Along;
+            public readonly Vector3[] Lamps, LampAims;
 
-            public SlotPoints(ArsenalSlotRow row, Vector3 aim, Vector3 bracket, Vector3 front, Vector3 boardTop, Vector3 up,
-                Vector3 forward, Vector3 along)
+            public SlotPoints(ArsenalSlotRow row, Vector3 aim, Vector3 front, Vector3 boardTop, Vector3 up, Vector3 forward, Vector3 along,
+                Vector3[] lamps, Vector3[] lampAims)
             {
-                Row = row; Aim = aim; Bracket = bracket; Front = front; BoardTop = boardTop; Up = up; Forward = forward; Along = along;
+                Row = row; Aim = aim; Front = front; BoardTop = boardTop; Up = up; Forward = forward; Along = along;
+                Lamps = lamps; LampAims = lampAims;
             }
+
+            public bool IsShelf => Row != null && Row.Zone == ArsenalPresentationZone.Shelf;
+        }
+
+        static ArsenalSlotLighting()
+        {
+            Lightmapping.bakeCompleted -= OnBakeCompleted;
+            Lightmapping.bakeCompleted += OnBakeCompleted;
         }
 
         [MenuItem(MenuPath)]
@@ -81,18 +109,37 @@ namespace VrBattlegrounds.Editor.Arsenal
             EditorUtility.DisplayDialog("Подсветка слотов арсенала", report, "OK");
         }
 
+        [MenuItem(BakeMenuPath)]
+        private static void BakeMenu()
+        {
+            string report = BakeReflections(SceneManager.GetActiveScene());
+            GameLog.Arsenal.Info("[ArsenalSlotLighting] " + report);
+            EditorUtility.DisplayDialog("Отражения станций арсенала", report, "OK");
+        }
+
         [MenuItem(MenuPath, true)]
+        [MenuItem(BakeMenuPath, true)]
         private static bool MenuValidate() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
-        /// <summary>Пересобрать подсветку слотов всех станций сцены. Возвращает отчёт.</summary>
+        /// <summary>Отражения станций снимаются после GI: в них должны попасть готовые лайтмапы шатра.</summary>
+        private static void OnBakeCompleted()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded || Container(scene) == null) continue;
+                GameLog.Arsenal.Info("[ArsenalSlotLighting] после Generate Lighting: " + BakeReflections(scene));
+            }
+        }
+
+        /// <summary>Пересобрать свет и пробы станций сцены. Возвращает отчёт.</summary>
         public static string Apply(Scene scene)
         {
-            if (!scene.IsValid() || !scene.isLoaded) throw new InvalidOperationException("Сцена не загружена.");
-            GameObject environment = scene.GetRootGameObjects().SingleOrDefault(r => r.name == "Environment")
-                                     ?? throw new InvalidOperationException("В сцене " + scene.name + " нет корня Environment.");
+            GameObject environment = Environment(scene);
             ArsenalCompositionCatalog catalog = AssetDatabase.LoadAssetAtPath<MapRuntimeCatalog>(CatalogPath)?.ArsenalComposition
                                                 ?? throw new InvalidOperationException("Нет каталога оформления станций (" + CatalogPath + ").");
-            Material barMaterial = BarMaterial();
+            Material stripMaterial = StripMaterial();
 
             Transform old = environment.transform.Find(ContainerName);
             if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
@@ -112,16 +159,33 @@ namespace VrBattlegrounds.Editor.Arsenal
                 if (slots.Count == 0) continue;
                 var group = new GameObject(station.StationKey).transform;
                 group.SetParent(container.transform, false);
-                for (int i = 0; i < slots.Count; i++)
+                for (int s = 0; s < slots.Count; s++)
                 {
-                    CreateSpot(group, "SlotLight_" + i, slots[i]);
-                    probes.Add(slots[i].Aim);
-                    probes.Add(slots[i].Front);
+                    SlotPoints slot = slots[s];
+                    probes.Add(slot.Aim);
+                    probes.Add(slot.Front);
+                    for (int i = 0; i < slot.Lamps.Length; i++)
+                        CreateLamp(group, "SlotLamp_" + s + "_" + i, slot.Lamps[i], slot.LampAims[i], slot.Up);
+                    lights += slot.Lamps.Length;
                 }
-                CreateBar(group, slots, barMaterial);
-                CreateReflectionProbe(group, slots);
+                StationFrame frame = Frame(slots);
+                var strips = new List<Transform>();
+                var stripRoot = new GameObject(StripsName).transform;
+                stripRoot.SetParent(group, false);
+                for (int i = 0; i < WallStripHeights.Length; i++)
+                {
+                    Vector3 position = frame.WallCenter + frame.Face * (StripDistance - AimOffset) + Vector3.up * WallStripHeights[i];
+                    strips.Add(CreateStrip(stripRoot, "WallStrip_" + i, position, frame.Face, frame.Width, stripMaterial));
+                }
+                if (frame.HasShelf)
+                {
+                    Vector3 position = frame.ShelfCenter + Vector3.up * (ShelfStripUp - AimOffset) + frame.Face * ShelfStripForward;
+                    strips.Add(CreateStrip(stripRoot, "ShelfStrip", position, (Vector3.up * .7f + frame.Face * .3f).normalized,
+                        frame.Width, stripMaterial));
+                }
+                stripRoot.gameObject.SetActive(false);
+                CreateReflectionProbe(group, slots, strips, frame.WallCenter.y);
                 stations++;
-                lights += slots.Count;
                 report.Append(station.StationKey).Append(": ").Append(slots.Count).Append(" слотов. ");
             }
 
@@ -130,8 +194,38 @@ namespace VrBattlegrounds.Editor.Arsenal
             probeGroup.probePositions = probes.Select(p => container.transform.InverseTransformPoint(p)).ToArray();
 
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"Станций {stations}, прожекторов {lights}, проб {probes.Count}. " + report +
-                   "Перезапеките свет сцены (Generate Lighting).";
+            return $"Станций {stations}, ламп {lights}, проб света {probes.Count}. " + report +
+                   "Перезапеките свет сцены (Generate Lighting): отражения станций запекутся следом сами.";
+        }
+
+        /// <summary>
+        ///     Запечь пробы отражений станций с полосами: полосы включаются только на время снимка, проба получает свой EXR
+        ///     в режиме Custom. Вызывается сам после Generate Lighting; вручную — из меню. Возвращает отчёт.
+        /// </summary>
+        public static string BakeReflections(Scene scene)
+        {
+            Transform container = Container(scene) ?? throw new InvalidOperationException("В сцене " + scene.name + " нет " + ContainerName + ".");
+            Directory.CreateDirectory(ReflectionFolder);
+            var report = new StringBuilder();
+            foreach (Transform group in container)
+            {
+                var probe = group.Find(ReflectionName)?.GetComponent<ReflectionProbe>();
+                Transform strips = group.Find(StripsName);
+                if (probe == null || strips == null) continue;
+                string path = ReflectionFolder + "/" + scene.name + "_" + group.name + ".exr";
+                strips.gameObject.SetActive(true);
+                bool baked;
+                try { baked = Lightmapping.BakeReflectionProbe(probe, path); }
+                finally { strips.gameObject.SetActive(false); }
+                if (!baked) { report.Append(group.name).Append(": проба не запеклась. "); continue; }
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                probe.mode = ReflectionProbeMode.Custom;
+                probe.customBakedTexture = AssetDatabase.LoadAssetAtPath<Texture>(path);
+                EditorUtility.SetDirty(probe);
+                report.Append(group.name).Append(": ").Append(path).Append(". ");
+            }
+            EditorSceneManager.MarkSceneDirty(scene);
+            return report.Length == 0 ? "Станций с пробой нет." : report + "Сохраните сцену.";
         }
 
         /// <summary>Точки подсветки каждого слота станции в открытой позе оборудования, в порядке плана.</summary>
@@ -163,12 +257,31 @@ namespace VrBattlegrounds.Editor.Arsenal
             if (Vector3.Dot(boardUp, Vector3.up) < 0f) boardUp = -boardUp;
 
             Vector3 aim = center + face * AimOffset;
-            Vector3 bracket = aim + Vector3.up * BracketUp + Vector3.back * BracketForward;
             Vector3 front = aim + Vector3.back * ProbeForward;
             Vector3 top = center + boardUp * halfHeight;
-            return new SlotPoints(row, frame.MultiplyPoint3x4(aim), frame.MultiplyPoint3x4(bracket), frame.MultiplyPoint3x4(front),
-                frame.MultiplyPoint3x4(top), frame.MultiplyVector(Vector3.up).normalized, frame.MultiplyVector(Vector3.back).normalized,
-                frame.MultiplyVector(Vector3.right).normalized);
+
+            // Лампы: точки LampPoints/Lamp_0..3 префаба (низ-лево, низ-право, верх-лево, верх-право), цель — центр
+            // четверти доски того же угла в LampAimForward перед ней.
+            Transform points = row.SlotPrefab != null ? row.SlotPrefab.transform.Find(LampPointsName) : null;
+            var lamps = new List<Vector3>();
+            var lampAims = new List<Vector3>();
+            if (points != null && board != null)
+            {
+                Vector3 right = rotation * Vector3.right;
+                if (Vector3.Dot(right, Vector3.right) < 0f) right = -right;
+                for (int i = 0; i < points.childCount; i++)
+                {
+                    Vector3 lamp = points.GetChild(i).localPosition;
+                    float cx = Mathf.Sign(Vector3.Dot(lamp - center, right)), cy = Mathf.Sign(Vector3.Dot(lamp - center, boardUp));
+                    Vector3 target = center + right * (cx * board.localScale.x * .25f) + boardUp * (cy * board.localScale.y * .25f)
+                                     + face * LampAimForward;
+                    lamps.Add(frame.MultiplyPoint3x4(lamp));
+                    lampAims.Add(frame.MultiplyPoint3x4(target));
+                }
+            }
+            return new SlotPoints(row, frame.MultiplyPoint3x4(aim), frame.MultiplyPoint3x4(front), frame.MultiplyPoint3x4(top),
+                frame.MultiplyVector(Vector3.up).normalized, frame.MultiplyVector(Vector3.back).normalized,
+                frame.MultiplyVector(Vector3.right).normalized, lamps.ToArray(), lampAims.ToArray());
         }
 
         /// <summary>Мировая матрица ряда, когда подвижное оборудование станции полностью выдвинуто.</summary>
@@ -184,51 +297,75 @@ namespace VrBattlegrounds.Editor.Arsenal
             return row.localToWorldMatrix;
         }
 
-        private static void CreateSpot(Transform parent, string name, SlotPoints slot)
+        /// <summary>Центр стены и полки станции (точки прицела слотов), горизонтальное направление к игроку, ширина рядов.</summary>
+        internal readonly struct StationFrame
         {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.SetPositionAndRotation(slot.Bracket, Quaternion.LookRotation(slot.Aim - slot.Bracket, slot.Up));
-            var light = go.AddComponent<Light>();
-            light.type = LightType.Spot;
-            light.lightmapBakeType = LightmapBakeType.Baked;
-            light.color = SpotColor;
-            light.intensity = SpotIntensity;
-            light.range = SpotRange;
-            light.spotAngle = SpotAngle;
-            light.innerSpotAngle = SpotInnerAngle;
-            light.shadows = LightShadows.None;
+            public readonly Vector3 WallCenter, ShelfCenter, Face;
+            public readonly float Width;
+            public readonly bool HasShelf;
+
+            public StationFrame(Vector3 wall, Vector3 shelf, bool hasShelf, Vector3 face, float width)
+            {
+                WallCenter = wall; ShelfCenter = shelf; HasShelf = hasShelf; Face = face; Width = width;
+            }
         }
 
-        /// <summary>LED-планка над верхним рядом станции: видна в пробе отражений, в GI не участвует.</summary>
-        private static void CreateBar(Transform parent, IReadOnlyList<SlotPoints> slots, Material material)
+        internal static StationFrame Frame(IReadOnlyList<SlotPoints> slots)
         {
-            float topY = slots.Max(s => s.BoardTop.y);
-            List<SlotPoints> row = slots.Where(s => s.BoardTop.y > topY - 0.05f).ToList();
-            Vector3 along = row[0].Along, origin = row[0].BoardTop;
-            float min = row.Min(s => Vector3.Dot(s.BoardTop - origin, along)) - BarOverhang;
-            float max = row.Max(s => Vector3.Dot(s.BoardTop - origin, along)) + BarOverhang;
-            Vector3 mid = row.Aggregate(Vector3.zero, (sum, s) => sum + s.BoardTop) / row.Count;
-            mid += along * ((min + max) * .5f - Vector3.Dot(mid - origin, along));
+            List<SlotPoints> wall = slots.Where(s => !s.IsShelf).ToList();
+            List<SlotPoints> shelf = slots.Where(s => s.IsShelf).ToList();
+            if (wall.Count == 0) wall = shelf;
+            Vector3 face = wall.Aggregate(Vector3.zero, (sum, s) => sum + s.Forward);
+            face.y = 0f;
+            face = face.sqrMagnitude > 1e-6f ? face.normalized : Vector3.back;
+            Vector3 along = Vector3.Cross(Vector3.up, face).normalized;
+            Vector3 wallCenter = wall.Aggregate(Vector3.zero, (sum, s) => sum + s.Aim) / wall.Count;
+            Vector3 shelfCenter = shelf.Count > 0 ? shelf.Aggregate(Vector3.zero, (sum, s) => sum + s.Aim) / shelf.Count : wallCenter;
+            float min = slots.Min(s => Vector3.Dot(s.Aim - wallCenter, along)), max = slots.Max(s => Vector3.Dot(s.Aim - wallCenter, along));
+            float width = max - min + BoardWidth + StripOverhang * 2f;
+            wallCenter += along * ((min + max) * .5f);
+            shelfCenter += along * Vector3.Dot(wallCenter - shelfCenter, along);
+            return new StationFrame(wallCenter, shelfCenter, shelf.Count > 0, face, width);
+        }
 
-            GameObject bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            UnityEngine.Object.DestroyImmediate(bar.GetComponent<Collider>());
-            bar.name = BarName;
-            bar.transform.SetParent(parent, false);
-            bar.transform.SetPositionAndRotation(mid + row[0].Up * BarAbove + row[0].Forward * BarForward,
-                Quaternion.LookRotation(-row[0].Forward, row[0].Up));
-            bar.transform.localScale = new Vector3(max - min, BarHeight, BarDepth);
-            var renderer = bar.GetComponent<MeshRenderer>();
+        /// <summary>Светящаяся полоса для пробы отражений: квад, лицо — к станции, только ReflectionProbeStatic.</summary>
+        private static Transform CreateStrip(Transform parent, string name, Vector3 position, Vector3 away, float width, Material material)
+        {
+            GameObject strip = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            UnityEngine.Object.DestroyImmediate(strip.GetComponent<Collider>());
+            strip.name = name;
+            strip.transform.SetParent(parent, false);
+            strip.transform.SetPositionAndRotation(position, Quaternion.LookRotation(away, Vector3.up));
+            strip.transform.localScale = new Vector3(width, StripTall, 1f);
+            var renderer = strip.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            GameObjectUtility.SetStaticEditorFlags(bar, StaticEditorFlags.ReflectionProbeStatic | StaticEditorFlags.BatchingStatic);
+            GameObjectUtility.SetStaticEditorFlags(strip, StaticEditorFlags.ReflectionProbeStatic);
+            return strip.transform;
         }
 
-        /// <summary>Запечённая проба отражений станции: коробка вокруг всех слотов с запасом.</summary>
-        private static void CreateReflectionProbe(Transform parent, IReadOnlyList<SlotPoints> slots)
+        private static void CreateLamp(Transform parent, string name, Vector3 position, Vector3 target, Vector3 up)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.SetPositionAndRotation(position, Quaternion.LookRotation(target - position, up));
+            float distance = Vector3.Distance(position, target);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Spot;
+            light.lightmapBakeType = LightmapBakeType.Baked;
+            light.color = LampColor;
+            light.intensity = LampIntensity * (distance < LampRefDistance ? distance * distance / (LampRefDistance * LampRefDistance) : 1f);
+            light.range = LampRange;
+            light.spotAngle = LampAngle;
+            light.innerSpotAngle = LampInner;
+            light.shadows = LightShadows.None;
+        }
+
+        /// <summary>Проба отражений станции: коробка вокруг слотов и полос с запасом, точка съёмки — на уровне глаз.</summary>
+        private static void CreateReflectionProbe(Transform parent, IReadOnlyList<SlotPoints> slots, IReadOnlyList<Transform> strips, float eyeY)
         {
             var bounds = new Bounds(slots[0].Aim, Vector3.zero);
             foreach (SlotPoints slot in slots)
@@ -237,40 +374,52 @@ namespace VrBattlegrounds.Editor.Arsenal
                 bounds.Encapsulate(slot.Front);
                 bounds.Encapsulate(slot.BoardTop);
             }
+            foreach (Transform strip in strips) bounds.Encapsulate(strip.position);
             bounds.Expand(ReflectionMargin * 2f);
 
             var go = new GameObject(ReflectionName);
             go.transform.SetParent(parent, false);
-            go.transform.position = bounds.center;
+            go.transform.position = new Vector3(bounds.center.x, Mathf.Clamp(eyeY, bounds.min.y, bounds.max.y), bounds.center.z);
             var probe = go.AddComponent<ReflectionProbe>();
-            probe.mode = ReflectionProbeMode.Baked;
+            probe.mode = ReflectionProbeMode.Custom;
             probe.boxProjection = true;
             probe.size = bounds.size;
-            probe.center = Vector3.zero;
+            probe.center = bounds.center - go.transform.position;
             probe.resolution = ReflectionResolution;
             probe.hdr = true;
             probe.importance = ReflectionImportance;
             probe.blendDistance = 0f;
         }
 
-        /// <summary>Материал планки: Unlit тёплый белый с яркостью выше 1 (в HDR-пробе — блик). Писатель — этот инструмент.</summary>
-        private static Material BarMaterial()
+        /// <summary>Материал полос: Unlit, двусторонний, тёплый белый с яркостью выше 1. Писатель — этот инструмент.</summary>
+        private static Material StripMaterial()
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(BarMaterialPath);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(StripMaterialPath);
             if (material == null)
             {
                 material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-                AssetDatabase.CreateAsset(material, BarMaterialPath);
+                AssetDatabase.CreateAsset(material, StripMaterialPath);
             }
-            Color color = BarColor * BarBrightness;
+            Color color = StripColor * StripBrightness;
             color.a = 1f;
-            if (material.GetColor("_BaseColor") != color)
+            if (material.GetColor("_BaseColor") != color || material.GetFloat("_Cull") != 0f)
             {
                 material.SetColor("_BaseColor", color);
+                material.SetFloat("_Cull", 0f);
                 EditorUtility.SetDirty(material);
                 AssetDatabase.SaveAssetIfDirty(material);
             }
             return material;
         }
+
+        private static GameObject Environment(Scene scene)
+        {
+            if (!scene.IsValid() || !scene.isLoaded) throw new InvalidOperationException("Сцена не загружена.");
+            return scene.GetRootGameObjects().SingleOrDefault(r => r.name == "Environment")
+                   ?? throw new InvalidOperationException("В сцене " + scene.name + " нет корня Environment.");
+        }
+
+        private static Transform Container(Scene scene) =>
+            scene.GetRootGameObjects().SingleOrDefault(r => r.name == "Environment")?.transform.Find(ContainerName);
     }
 }

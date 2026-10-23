@@ -14,33 +14,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Arsenal.ArsenalSlotLayout
   _slotKind: 0
   _itemTarget:
-    Position: {x: -0.055, y: 0.42, z: -0.2296435}
+    Position: {x: -0.067220256, y: 0.4276141, z: -0.072005935}
     EulerAngles: {x: 280, y: 0, z: 90}
   _magazineTarget:
-    Position: {x: 0.105, y: 0.71, z: -0.11946007}
-    EulerAngles: {x: 0, y: 90, z: 10}
+    Position: {x: 0.07831528, y: 0.64939606, z: -0.00942818}
+    EulerAngles: {x: 6.7774625, y: 91.20075, z: 10.183003}
   _cardTarget:
-    Position: {x: 0.09, y: 0.905, z: -0.035}
-    EulerAngles: {x: 0, y: 0, z: 0}
+    Position: {x: 0.09799993, y: 0.18500006, z: -0.06899981}
+    EulerAngles: {x: 10.000003, y: 0, z: 0}
   _cardSize: {x: 0.15, y: 0.16}
   _cardFontSize: 0.16
   _supports:
   - Role: Stock
     AnchorKind: 0
     SlotPose:
-      Position: {x: -0.08, y: 0.05857327, z: -0.10013445}
-      EulerAngles: {x: 0, y: 0, z: 0}
+      Position: {x: -0.09222026, y: 0.054988265, z: -0.038865928}
+      EulerAngles: {x: 9.999999, y: 0, z: 0}
   - Role: Forearm
     AnchorKind: 0
     SlotPose:
-      Position: {x: -0.11, y: 0.57341784, z: -0.10013445}
-      EulerAngles: {x: 0, y: 0, z: 0}
+      Position: {x: -0.121220395, y: 0.5813025, z: 0.055968318}
+      EulerAngles: {x: 10.000004, y: 0, z: 270}
   - Role: Spare
     AnchorKind: 1
     SlotPose:
-      Position: {x: 0.104986295, y: 0.68610156, z: -0.10013445}
-      EulerAngles: {x: 0, y: 0, z: 0}
+      Position: {x: 0.075, y: 0.6021394, z: 0.08299724}
+      EulerAngles: {x: 9.999999, y: 0, z: 0}
   _placeZone:
-    Center: {x: -0.055, y: 0.42, z: -0.2296435}
+    Center: {x: -0.038720254, y: 0.3764141, z: -0.22822118}
     Size: {x: 0.2, y: 0.2, z: 0.2}
     EulerAngles: {x: 0, y: 0, z: 0}

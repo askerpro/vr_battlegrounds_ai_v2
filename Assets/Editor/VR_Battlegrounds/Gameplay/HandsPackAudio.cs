@@ -141,8 +141,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             string path = AssetDatabase.GetAssetPath(clip);
             if (!EditorTools.Audio.SfxClipLevel.TryPeakDbfs(clip, out float peak, out _) || peak >= EditorTools.Audio.SfxClipLevel.NearSilenceDbfs)
                 return path;
+            string name = clip.name; // после удаления ассета клип уничтожен
             AssetDatabase.DeleteAsset(path);
-            report.Add($"{what} — дефолт категории (кусок {clip.name} почти тишина, пик {peak:0.#} dBFS)");
+            report.Add($"{what} — дефолт категории (кусок {name} почти тишина, пик {peak:0.#} dBFS)");
             return null;
         }
 

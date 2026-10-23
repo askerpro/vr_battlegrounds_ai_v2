@@ -42,6 +42,9 @@ namespace VrBattlegrounds.Weapons.Sights
         private float _viewingSince;
         private float _nextNearLog;
         private const float NearLogDistance = 0.3f, NearLogInterval = 2f;
+        // Прицелы дальше этого от головы (стена арсенала, пол, чужие руки) отсекаются до расчёта глаз — onBeforeRender
+        // идёт каждый кадр у каждого экземпляра.
+        private const float HeadCullDistance = 0.4f;
         // Поле окуляра: глаз ближе 3 см к стеклу не подходит (гарнитура), пределы — от узкого до широкого окуляра.
         private const float MinEyeRelief = 0.03f, MinField = 0.1f, MaxField = 0.8f;
 
@@ -74,9 +77,13 @@ namespace VrBattlegrounds.Weapons.Sights
         {
             Application.onBeforeRender -= HandleBeforeRender;
             SetViewing(false);
+            ReleaseCamera();
         }
 
-        private void OnDestroy()
+        private void OnDestroy() => ReleaseCamera();
+
+        /// <summary>Камера и RT (384², MSAA) не живут у выключенного прицела; при следующем «у глаза» создаются заново.</summary>
+        private void ReleaseCamera()
         {
             if (_camera != null)
             {
@@ -88,6 +95,8 @@ namespace VrBattlegrounds.Weapons.Sights
                 _texture.Release();
                 Destroy(_texture);
             }
+            _camera = null;
+            _texture = null;
         }
 
         // После позы трекинга и SDK, до рендера кадра: та же поза, что увидит WeaponOpticView.
@@ -107,16 +116,16 @@ namespace VrBattlegrounds.Weapons.Sights
             Eyepiece = eyepiece;
             Axis = dir;
             LensRadius = lensRadius;
-            // Ближний к оси глаз: в стерео смотрит один глаз, центр головы смещён от оси на полглаза.
-            Camera headCamera = UxrAvatar.LocalAvatar.CameraComponent;
-            float behind = 0f, offset = float.MaxValue;
-            foreach (Vector3 eye in Eyes(headCamera, head))
+            if ((eyepiece - head.position).sqrMagnitude > HeadCullDistance * HeadCullDistance)
             {
-                Vector3 w = eye - eyepiece;
-                float along = -Vector3.Dot(w, dir);
-                float lateral = (w + dir * along).magnitude;
-                if (lateral < offset) { offset = lateral; behind = along; }
+                SetViewing(false);
+                return;
             }
+            // Ближний к оси глаз: в стерео смотрит один глаз, центр головы смещён от оси на полглаза.
+            Eyes(UxrAvatar.LocalAvatar.CameraComponent, head, out Vector3 left, out Vector3 right);
+            Offset(left, eyepiece, dir, out float behind, out float offset);
+            Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
+            if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
             bool near = _viewing
                 ? behind > -0.02f && behind <= _exitDistance && offset <= _exitOffset
                 : behind > -0.02f && behind <= _enterDistance && offset <= _enterOffset;
@@ -141,15 +150,23 @@ namespace VrBattlegrounds.Weapons.Sights
             _camera.fieldOfView = 2f * Mathf.Atan(ApparentHalfField / _magnification) * Mathf.Rad2Deg;
         }
 
-        /// <summary>Позиции глаз в мире: стерео-матрицы камеры головы, иначе центр головы.</summary>
-        private static System.Collections.Generic.IEnumerable<Vector3> Eyes(Camera camera, Transform head)
+        /// <summary>Позиции глаз в мире без выделений: стерео-матрицы камеры головы, иначе оба — центр головы.</summary>
+        private static void Eyes(Camera camera, Transform head, out Vector3 left, out Vector3 right)
         {
             if (camera != null && camera.stereoEnabled)
             {
-                yield return camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse.GetColumn(3);
-                yield return camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse.GetColumn(3);
+                left = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse.GetColumn(3);
+                right = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse.GetColumn(3);
             }
-            else yield return head.position;
+            else left = right = head.position;
+        }
+
+        /// <summary>Глаз относительно окуляра: насколько позади вдоль оси и насколько в стороне от неё, м.</summary>
+        private static void Offset(Vector3 eye, Vector3 eyepiece, Vector3 axis, out float behind, out float lateral)
+        {
+            Vector3 w = eye - eyepiece;
+            behind = -Vector3.Dot(w, axis);
+            lateral = (w + axis * behind).magnitude;
         }
 
         private void SetViewing(bool viewing)

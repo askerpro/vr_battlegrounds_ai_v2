@@ -57,15 +57,19 @@ sniper_01 ВСС 0,83 м; 02 СВД 1,26; **03 Barrett M82 1,24**; 04 CheyTac M2
 Копия кадра (opaque texture) отвергнута разбором performance: на Quest при оптике у глаза стоит 2–5 мс GPU
 (разрыв прохода, store/load MSAA 4×, финальный blit, потеря FFR), прозрачные в линзе пропадают.
 
-- `WeaponScopeCamera` (Assets/Scripts/Weapons/Sights): владеет моно-камерой (по умолчанию 320², без теней, MSAA, HDR
-  и пост-обработки), RT и условием «у глаза» — окуляр (задний край bounds линзы вдоль оси) ≤ 10 см и ≤ 10° от оси,
-  выход > 14 см или > 15°, удержание ≥ 0,5 с. Поза — в `Application.onBeforeRender`: из центра линзы на точку
-  сведения, верх — ShotSource.up; ближняя плоскость — за срезом дула; FOV = 2·atan(K / M), K — видимое поле окуляра.
-- `WeaponOpticView` — единственный писатель MPB линзы: точка сведения (`TryGetZero`) считается только в нём,
-  камера прицела её читает; `_ScopeActive/_ScopeTex/_ScopeApparentHalfField` пишет он же.
-- Шейдер `FiniteFocusReticle`: при активной камере UV = 0,5 + 0,5·угол/K (кратность уже в FOV камеры), за краем K —
-  затемнение трубы; сетка поверх; `_ReticleStyle` 0 — кольцо (XPS2), 1 — перекрестие.
-- Комплект `SightKit_Sight08` (`SightKitBuilder.Optics`, ×2, поле окуляра tg 0,18): меш призмы пака Hands запекает
+Принятое в шлеме состояние (2026-10-23):
+- `WeaponScopeCamera` (Assets/Scripts/Weapons/Sights): моно-камера RT 384², MSAA 4×, глубина 24 бита, без теней, HDR и
+  пост-обработки. Включение — ближний глаз (стерео-матрицы) ≤ 15 см позади окуляра и ≤ 2 см от оси; выход — 20 см / 3 см;
+  удержание ≥ 0,5 с; прицелы дальше 0,4 м от головы отсекаются до расчёта глаз. Поза — `Application.onBeforeRender`: из
+  центра стекла окуляра на точку сведения, верх — ShotSource.up; ближняя плоскость — за срезом дула; поле окуляра
+  K = радиус стекла / удаление глаза, FOV камеры = 2·atan(K / M). RT и камера освобождаются в OnDisable.
+- `WeaponOpticView` — единственный писатель MPB линзы: точка сведения (`TryGetZero`) и стекло (`TryGetLens`, кеш по
+  мешу) считаются только в нём; `_ScopeActive/_ScopeTex/_ScopeApparentHalfField/_ScopeEyepieceWS/_ScopeAxisWS/
+  _ScopePupil/_ScopeLensRadius/_ScopeEquipped` пишет он же. Без покадровых выделений (ревью performance/weapon-system).
+- Шейдер `FiniteFocusReticle`: картинка и сетка в координатах стекла окуляра; зрачок выхода — смещение глаза от оси в
+  долях допуска (`WeaponSightCalibrationSettings._scopeEyeTolerance`, 5 мм) сужает светлый круг и сдвигает его туда,
+  куда надо подвинуть голову, остальное приглушено; `_ReticleStyle` 0 — кольцо (XPS2), 1 — перекрестие.
+- Комплект `SightKit_Sight08` (`SightKitBuilder.Optics`, ×2): меш призмы пака Hands запекает
   `PackOpticBuilder` (Core) — метры, оси комплекта; заднее стекло пака — линза (submesh 1), переднее — в корпусе.
   Посадка — в паз планки над ствольной коробкой (сдвиг на 22 см назад от места по умолчанию), окно на 62 мм над осью.
 - Причина «нет увеличения» на первом показе: worker без шлема (`XR_ERROR_FORM_FACTOR_UNAVAILABLE`), глаз ни разу не был у

@@ -31,6 +31,10 @@ namespace VrBattlegrounds.Weapons.Sights
         private static readonly System.Collections.Generic.List<Material> SharedMaterials = new System.Collections.Generic.List<Material>();
         private Material _checkedMaterial;
         private bool _checkedWritable;
+        // Стекло линзы: MeshFilter и локальные bounds submesh кешируются по мешу — TryGetLens зовётся каждый кадр.
+        private MeshFilter _lensFilter;
+        private Mesh _lensMesh;
+        private Bounds _lensLocalBounds;
         private static readonly int ValidId = Shader.PropertyToID("_OpticValid");
         private static readonly int ZeroId = Shader.PropertyToID("_OpticZeroWS");
         private static readonly int ForwardId = Shader.PropertyToID("_OpticForwardWS");
@@ -124,10 +128,16 @@ namespace VrBattlegrounds.Weapons.Sights
             center = default;
             radius = 0f;
             if (!CanWrite()) return false;
-            var filter = _lensRenderer.GetComponent<MeshFilter>();
-            Mesh mesh = filter != null ? filter.sharedMesh : null;
-            if (mesh == null || _lensMaterialIndex >= mesh.subMeshCount) return false;
-            Bounds local = mesh.GetSubMesh(_lensMaterialIndex).bounds;
+            if (_lensFilter == null || _lensFilter.gameObject != _lensRenderer.gameObject) _lensFilter = _lensRenderer.GetComponent<MeshFilter>();
+            Mesh mesh = _lensFilter != null ? _lensFilter.sharedMesh : null;
+            if (mesh == null) return false;
+            if (mesh != _lensMesh)
+            {
+                if (_lensMaterialIndex >= mesh.subMeshCount) return false;
+                _lensMesh = mesh;
+                _lensLocalBounds = mesh.GetSubMesh(_lensMaterialIndex).bounds;
+            }
+            Bounds local = _lensLocalBounds;
             Transform t = _lensRenderer.transform;
             center = t.TransformPoint(local.center);
             Vector3 scale = t.lossyScale;

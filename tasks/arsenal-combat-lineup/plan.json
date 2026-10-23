@@ -37,7 +37,8 @@
         "Assets/Audio/SFX/Weapons/SniperRifleAuto/**",
         "Assets/Tests/EditMode/Sights/**",
         "Assets/Tests/EditMode/Prefabs/WeaponScaleTests.cs",
-        "Assets/Data/Weapons/SightCalibration/**"
+        "Assets/Data/Weapons/SightCalibration/**",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset"
       ],
       "after": [],
       "needs": []

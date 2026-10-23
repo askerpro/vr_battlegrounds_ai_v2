@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using VrBattlegrounds.Core;
 using VrBattlegrounds.Player;
 
 namespace VrBattlegrounds.Editor.Gameplay
@@ -23,17 +24,11 @@ namespace VrBattlegrounds.Editor.Gameplay
         public const string ServicePath = "Assets/Resources/PlayerHitEffects.prefab";
         private const string Textures = "Assets/ThirdParty/ParticlePack/EffectExamples/Weapon Effects/Textures/";
 
-        private static readonly string[] ClipPaths =
-        {
-            "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/5Knife_Set/Full_Hit_k.mp3",
-            "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/5Knife_Set/Full_Hit_r.mp3",
-        };
-
-        /// <summary>Попадание в голову — жёсткий удар (как по шлему).</summary>
-        private static readonly string[] HeadClipPaths =
-        {
-            "Assets/ThirdParty/Hands_Weapons_Animations_Pack_Update/Sounds/2Flashlight_Set/Flashlight_Hit 2.mp3",
-        };
+        /// <summary>
+        /// Звуки попадания — данные префаба сервиса (тело, голова, голова в шлеме; решение пользователя 2026-10-24: звуки
+        /// не в коде). Пересборка переносит их из прежнего префаба как есть.
+        /// </summary>
+        private static readonly string[] ClipFields = { "_clips", "_headClips", "_headHelmetClips" };
 
         private static readonly Color Blood = new Color(0.33f, 0.02f, 0.02f, 0.85f);
         private static readonly Color Hole = new Color(0.1f, 0.01f, 0.01f, 1f);
@@ -45,7 +40,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             Material hole = BuildMaterial(HoleMaterialPath, Textures + "BulletHoleRockAlbedo.tif", Hole);
             BuildService(streak, hole);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[HitEffectBuilder] Собрано: {StreakMaterialPath}, {HoleMaterialPath}, {ServicePath}.");
+            GameLog.Debug.Info($"[HitEffectBuilder] Собрано: {StreakMaterialPath}, {HoleMaterialPath}, {ServicePath}.");
         }
 
         private static Material BuildMaterial(string path, string texture, Color color)
@@ -75,15 +70,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             return material;
         }
 
-        private static void SetClips(SerializedProperty property, string[] paths)
-        {
-            property.arraySize = paths.Length;
-            for (int i = 0; i < paths.Length; i++)
-                property.GetArrayElementAtIndex(i).objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(paths[i]);
-        }
-
         private static void BuildService(Material streak, Material hole)
         {
+            var previous = AssetDatabase.LoadAssetAtPath<PlayerHitEffects>(ServicePath);
             var root = new GameObject(PlayerHitEffects.Resource);
             try
             {
@@ -91,11 +80,11 @@ namespace VrBattlegrounds.Editor.Gameplay
                 var so = new SerializedObject(service);
                 so.FindProperty("_streakMaterial").objectReferenceValue = streak;
                 so.FindProperty("_holeMaterial").objectReferenceValue = hole;
-                SerializedProperty clips = so.FindProperty("_clips");
-                clips.arraySize = ClipPaths.Length;
-                for (int i = 0; i < ClipPaths.Length; i++)
-                    clips.GetArrayElementAtIndex(i).objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(ClipPaths[i]);
-                SetClips(so.FindProperty("_headClips"), HeadClipPaths);
+                if (previous != null)
+                {
+                    var was = new SerializedObject(previous);
+                    foreach (string field in ClipFields) so.CopyFromSerializedProperty(was.FindProperty(field));
+                }
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, ServicePath);

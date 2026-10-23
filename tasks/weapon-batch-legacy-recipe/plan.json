@@ -34,6 +34,8 @@
         "Assets/Resources/ImpactSoundDefaults.asset",
         "Assets/Resources/ImpactSoundDefaults.asset.meta",
         "Assets/Resources/MagazineAnchorSoundDefaults.asset",
+        "Assets/Resources/PlayerHitEffects.prefab",
+        "Assets/Scripts/Player/HitEffects/**",
         "Assets/Data/WeaponSystem/**",
         "Assets/Prefabs/Arsenal/Slots/**",
         "Assets/Prefabs/Player/Equipment/Pockets/**",

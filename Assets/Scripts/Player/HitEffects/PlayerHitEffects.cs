@@ -19,7 +19,8 @@ namespace VrBattlegrounds.Player
     /// <item><b>Урон отменён</b> правилом режима (разминка) — отклика нет: крови без урона не бывает.</item>
     /// <item><b>Попали в меня</b> — звук без пространства, «изнутри»; пятна в голову нет (камера в голове).</item>
     /// <item><b>Звуки</b> — свой набор для головы (<see cref="_headClips"/>) и для тела; пул <see cref="_maxVoices"/>
-    ///       источников, новое попадание забирает самый старый.</item>
+    ///       источников, новое попадание забирает самый старый. Набор «голова в шлеме» (<see cref="_headHelmetClips"/>)
+    ///       хранится заранее и не играет, пока в игре нет шлемов. Клипы — данные префаба, сборщик их не перезаписывает.</item>
     /// </list>
     ///
     /// <para>
@@ -46,6 +47,9 @@ namespace VrBattlegrounds.Player
         [Tooltip("Звуки попадания в голову; пусто — как по телу.")]
         [SerializeField] private AudioClip[] _headClips = new AudioClip[0];
 
+        [Tooltip("Звуки попадания в голову в шлеме. Пока не используются: шлемов в игре нет (решение пользователя 2026-10-24).")]
+        [SerializeField] private AudioClip[] _headHelmetClips = new AudioClip[0];
+
         [SerializeField] private Vector2 _stainSize = new Vector2(0.07f, 0.12f);
         [SerializeField] private float _holeSize = 0.025f;
         [SerializeField] private int _maxStainsPerBody = 6;
@@ -58,6 +62,11 @@ namespace VrBattlegrounds.Player
         private int _nextVoice;
 
         public int VoiceCount => _voices.Count;
+
+        /// <summary>Звуки по телу, в голову и в голову в шлеме (последние — задел, не играют). Данные — в префабе сервиса.</summary>
+        public AudioClip[] BodyClips => _clips;
+        public AudioClip[] HeadClips => _headClips;
+        public AudioClip[] HeadHelmetClips => _headHelmetClips;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()

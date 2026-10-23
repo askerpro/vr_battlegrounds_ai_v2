@@ -5,6 +5,27 @@
     "magazineNote": "выбран Recharge_End, деталь Shogun_Patron_mesh001, кадры 61–63 (2,033–2,100 с), середина 2,067 с; держит: Left. Эксперимент — проверить глазами.",
     "points": [
         {
+            "name": "HandsPack_FabarmSDASS_Grip_orig",
+            "point": "Grip",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_FabarmSDASS_Grip_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab",
+            "body": "MeshContainer/Base",
+            "clip": "Aming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Right",
+            "check": "",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Right"
+            ],
+            "snaps": [
+                "Orig/HandsPack_FabarmSDASS_Grip_orig/Left (зеркало)",
+                "Orig/HandsPack_FabarmSDASS_Grip_orig/Right"
+            ]
+        },
+        {
             "name": "HandsPack_FabarmSDASS_Shell_orig",
             "point": "Shell",
             "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_FabarmSDASS_Shell_orig.asset",
@@ -22,6 +43,27 @@
             ],
             "snaps": [
                 "Orig/HandsPack_FabarmSDASS_Shell_orig/Left"
+            ]
+        },
+        {
+            "name": "HandsPack_FabarmSDASS_Pump_orig",
+            "point": "Pump",
+            "asset": "Assets/Art/HandPoses/Orig/HandsPack/HandsPack_FabarmSDASS_Pump_orig.asset",
+            "prefab": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab",
+            "body": "Pump/ForeEnd",
+            "clip": "Aming_Idle",
+            "weaponClip": "",
+            "sourceKind": "hands",
+            "sourceSide": "Left",
+            "check": "Эксперимент: кадр выбран автоматически — проверить глазами.",
+            "time": 0.0,
+            "frame": 0.0,
+            "heldBy": [
+                "Left"
+            ],
+            "snaps": [
+                "Pump/Orig/HandsPack_FabarmSDASS_Pump_orig/Left",
+                "Pump/Orig/HandsPack_FabarmSDASS_Pump_orig/Right (зеркало)"
             ]
         }
     ],

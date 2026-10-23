@@ -76,7 +76,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 7389ab3e6588eb34e8f637230ab4cca5, type: 3}
+  m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -175,8 +175,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.AnchorSound
   _source: {fileID: 2947356339978589775}
-  _takeOutClip: {fileID: 8300000, guid: 4076bb3823dc4c2428499ff7ab222d97, type: 3}
+  _takeOutClip: {fileID: 0}
   _onlyByHand: 1
+  _takeOutOnlyByHand: 1
 --- !u!1 &7142109513202924980
 GameObject:
   m_ObjectHideFlags: 0

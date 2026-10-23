@@ -831,10 +831,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08536dfa9d139214dbd8ed400f60254f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.ImpactSound
-  _clips:
-  - {fileID: 8300000, guid: b703f0737972b2f4ea62c807d220bddb, type: 3}
-  - {fileID: 8300000, guid: 27dd9f809afa3e84aa25de19848b9a1b, type: 3}
-  _kind: 0
+  _clips: []
+  _kind: 1
   _source: {fileID: 5921384008250224702}
   _minSpeed: 1.2
   _fullSpeed: 5

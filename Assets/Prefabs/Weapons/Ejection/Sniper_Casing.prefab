@@ -285,9 +285,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdda6480b22048d59caec530c3a1122d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponEjecta
-  _impactClips:
-  - {fileID: 8300000, guid: 5665ad57a4e68fa4fa50dae8b5d4cc4b, type: 3}
-  - {fileID: 8300000, guid: e79dc466f0d28c1469a4cc88291f4ecf, type: 3}
+  _impactClips: []
   _impactVolume: 0.4
   _minImpactSpeed: 0.4
   _audio: {fileID: 4890518387559211286}

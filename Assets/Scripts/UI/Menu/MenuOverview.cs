@@ -14,7 +14,8 @@ namespace VrBattlegrounds.UI.Menu
     /// <summary>
     /// Экран «Обзор» — главный экран планшета, аналог TAB из CS (T-33). Показывает ситуацию:
     /// карта, раунд и фаза с часами, счёт, команды с хп / готовностью / У/С/А, серия; в лобби —
-    /// блок «Вы» (команда, скин, калибровка) и зал. У админа — все кнопки ситуации: главное действие
+    /// блок «Вы» (команда, скин, калибровка) и зал, а на карте со стрельбищем — монитор попаданий
+    /// (<see cref="OverviewRangeMonitor"/>). У админа — все кнопки ситуации: главное действие
     /// справа внизу (<see cref="MenuScreen.SetPrimary"/>), остальные — строкой кнопок под шапкой.
     /// «Матч с ботами» (<see cref="OverviewBotMatch"/>, T-48) — и обычному игроку, если он один на сервере.
     ///
@@ -28,6 +29,8 @@ namespace VrBattlegrounds.UI.Menu
     public class MenuOverview : MenuScreen
     {
         private readonly OverviewBuilder _builder = OverviewBuilder.Default;
+        private readonly OverviewRangeMonitor _range = new OverviewRangeMonitor();
+        private bool _rangeShown;
 
         private OverviewSnapshot _last;
         private string _lastAdmin = "";
@@ -66,7 +69,9 @@ namespace VrBattlegrounds.UI.Menu
 
         private void Update()
         {
-            if (!_preview && RefreshDue(0.5f)) Refresh();
+            if (_preview) return;
+            if (RefreshDue(0.5f)) Refresh();
+            _range.Tick();
         }
 
         private void Refresh()
@@ -79,7 +84,9 @@ namespace VrBattlegrounds.UI.Menu
         {
             string adminKey = Signature(admin);
 
-            if (_last == null || adminKey != _lastAdmin || !_last.SameLayout(snapshot) || !SameHeaderShape(_last, snapshot))
+            bool range = !_preview && OverviewRangeMonitor.Available;
+            if (_last == null || adminKey != _lastAdmin || !_last.SameLayout(snapshot) || !SameHeaderShape(_last, snapshot)
+                || range != _rangeShown)
             {
                 Rebuild(snapshot, admin);
                 _lastAdmin = adminKey;
@@ -180,6 +187,10 @@ namespace VrBattlegrounds.UI.Menu
 
             ApplyActions(admin);
 
+            // Монитор попаданий стрельбища (лобби) — сразу под шапкой.
+            _rangeShown = !_preview && OverviewRangeMonitor.Available;
+            if (_rangeShown) _range.Build(Content);
+            else _range.Forget();
 
             foreach (OverviewSection section in s.Sections)
             {

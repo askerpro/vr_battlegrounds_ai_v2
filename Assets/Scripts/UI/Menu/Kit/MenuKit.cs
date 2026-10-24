@@ -106,6 +106,28 @@ namespace VrBattlegrounds.UI.Menu.Kit
             return row;
         }
 
+        /// <summary>
+        /// Квадратная картинка из текстуры (снимок камеры, кадр) со стороной <paramref name="rows"/> высот строки темы.
+        /// В строке (<see cref="Row"/> той же высоты) стоит слева и не сжимается; без текстуры скрыта.
+        /// </summary>
+        public static RawImage Picture(Transform parent, Texture texture, int rows)
+        {
+            float size = PictureSize(rows);
+            GameObject go = New("Picture", parent);
+            var image = go.AddComponent<RawImage>();
+            image.texture = texture;
+            image.raycastTarget = false;
+            image.enabled = texture != null;
+            var element = go.AddComponent<LayoutElement>();
+            element.minWidth = element.preferredWidth = size;
+            element.minHeight = element.preferredHeight = size;
+            element.flexibleWidth = 0f;
+            return image;
+        }
+
+        /// <summary>Сторона картинки <see cref="Picture"/> — для строки, в которую она кладётся.</summary>
+        public static float PictureSize(int rows) => Mathf.Max(1, rows) * T.RowHeight;
+
         /// <summary>Сетка плиток: <paramref name="columns"/> колонок во всю ширину, высота ячейки = ширина × <paramref name="aspect"/>.</summary>
         public static RectTransform Grid(Transform parent, int columns, float aspect)
         {

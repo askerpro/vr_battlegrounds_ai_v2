@@ -163,8 +163,6 @@ MonoBehaviour:
   _resolution: 384
   _antiAliasing: 4
   _farClip: 80
-  _enterDistance: 0.15
-  _exitDistance: 0.2
   _enterOffset: 0.02
   _exitOffset: 0.03
   _minHoldSeconds: 0.5

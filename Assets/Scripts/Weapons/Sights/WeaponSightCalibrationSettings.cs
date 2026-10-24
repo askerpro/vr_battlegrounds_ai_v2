@@ -23,10 +23,10 @@ namespace VrBattlegrounds.Weapons.Sights
 
         [Tooltip("Дистанция включения, м: камера кратности включается, когда глаз не дальше этого позади окуляра вдоль оси " +
                  "прицела; выключается на 5 см дальше (гистерезис). Больше — увеличение включается раньше, при оружии " +
-                 "дальше от лица. В Play правка видна сразу (решение пользователя 2026-10-24; было зашито 15 см).")]
-        [SerializeField, Range(0.05f, 0.3f)] private float _scopeEnterDistance = DefaultScopeEnterDistance;
+                 "дальше от лица. В Play правка видна сразу (решение пользователя 2026-10-24: 35 см; было зашито 15 см).")]
+        [SerializeField, Range(0.05f, 0.5f)] private float _scopeEnterDistance = DefaultScopeEnterDistance;
 
-        public const float DefaultScopeEnterDistance = 0.15f;
+        public const float DefaultScopeEnterDistance = 0.35f;
         /// <summary>Выход дальше входа на столько, м: без дребезга на границе.</summary>
         public const float ScopeExitHysteresis = 0.05f;
 

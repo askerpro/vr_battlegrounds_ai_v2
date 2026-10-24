@@ -42,10 +42,10 @@ namespace VrBattlegrounds.Weapons.Sights
         private bool _viewing;
         private float _viewingSince;
         private float _nextNearLog;
-        private const float NearLogDistance = 0.3f, NearLogInterval = 2f;
-        // Прицелы дальше этого от головы (стена арсенала, пол, чужие руки) отсекаются до расчёта глаз — onBeforeRender
-        // идёт каждый кадр у каждого экземпляра.
-        private const float HeadCullDistance = 0.4f;
+        private const float NearLogInterval = 2f;
+        // Прицелы дальше дистанции выхода + этого запаса от головы (стена арсенала, пол, чужие руки) отсекаются до расчёта
+        // глаз — onBeforeRender идёт каждый кадр у каждого экземпляра. Запас же — окно диагностики «почти у глаза».
+        private const float HeadCullMargin = 0.15f;
         // Поле окуляра: глаз ближе 3 см к стеклу не подходит (гарнитура), пределы — от узкого до широкого окуляра.
         private const float MinEyeRelief = 0.03f, MinField = 0.1f, MaxField = 0.8f;
 
@@ -124,7 +124,10 @@ namespace VrBattlegrounds.Weapons.Sights
             Eyepiece = eyepiece;
             Axis = dir;
             LensRadius = lensRadius;
-            if ((eyepiece - head.position).sqrMagnitude > HeadCullDistance * HeadCullDistance)
+            float enterDistance = EnterDistance;
+            float exitDistance = enterDistance + WeaponSightCalibrationSettings.ScopeExitHysteresis;
+            float cull = exitDistance + HeadCullMargin;
+            if ((eyepiece - head.position).sqrMagnitude > cull * cull)
             {
                 SetViewing(false);
                 return;
@@ -134,14 +137,13 @@ namespace VrBattlegrounds.Weapons.Sights
             Offset(left, eyepiece, dir, out float behind, out float offset);
             Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
             if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
-            float enterDistance = EnterDistance;
             bool near = _viewing
-                ? behind > -0.02f && behind <= enterDistance + WeaponSightCalibrationSettings.ScopeExitHysteresis && offset <= _exitOffset
+                ? behind > -0.02f && behind <= exitDistance && offset <= _exitOffset
                 : behind > -0.02f && behind <= enterDistance && offset <= _enterOffset;
             if (!near && _viewing && Time.unscaledTime - _viewingSince < _minHoldSeconds) near = true;
             SetViewing(near);
             // Диагностика порога: окуляр рядом с глазом, а увеличение не включилось — чего не хватило (не чаще раза в 2 с).
-            if (!_viewing && Mathf.Abs(behind) < NearLogDistance && offset < NearLogDistance && Time.unscaledTime >= _nextNearLog)
+            if (!_viewing && Mathf.Abs(behind) < cull && offset < cull && Time.unscaledTime >= _nextNearLog)
             {
                 _nextNearLog = Time.unscaledTime + NearLogInterval;
                 GameLog.WeaponSystem.Info($"{name}: глаз в {behind * 100f:0.0} см за окуляром, в {offset * 100f:0.0} см от оси — увеличение " +

@@ -1021,7 +1021,6 @@ MonoBehaviour:
   _availableColor: {r: 1, g: 0.6, b: 0.25, a: 1}
   _unavailableColor: {r: 0, g: 0, b: 0, a: 1}
   _takenColor: {r: 0, g: 1, b: 0, a: 1}
-  _unaffordableBrightness: 0.3
   _magAnchor: {fileID: 6546268724562869851}
 --- !u!1 &8502789235931797600
 GameObject:

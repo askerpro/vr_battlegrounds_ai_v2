@@ -21,17 +21,22 @@ namespace VrBattlegrounds.Tests.Player
     /// Руки ставятся абсолютно перед каждым кадром — как трекинг контроллеров в игре: после кадра
     /// SDK переставляет руку в точку хвата, и сдвигать её относительно — значит терять промах.
     /// </para>
+    ///
+    /// <para>
+    /// Аватар — база семейства Cyborg <c>CyborgHandsBase</c>: записи хвата MEF_Base_Avatar сняты с оружия
+    /// (задача weapon-batch-legacy-recipe), хваты стволов хранятся под GUID этой базы.
+    /// </para>
     /// </summary>
     public class PumpGrabFollowTests
     {
         private const string Weapon = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
-        private const string MefAvatarGuid = "b6fe59db941fa944696ece5e1aabc032";
+        private const string CyborgAvatarGuid = "71b74b0d08444f49bbb7aa2828d0890a";
         private const float MissedBy = 0.08f;
 
         [Test]
         public void Помпа_сразу_идёт_за_рукой_взятой_впереди_точки_хвата()
         {
-            using var harness = new TwoHandGrabHarness(Weapon, AssetDatabase.GUIDToAssetPath(MefAvatarGuid), 0, grabMain: false);
+            using var harness = new TwoHandGrabHarness(Weapon, AssetDatabase.GUIDToAssetPath(CyborgAvatarGuid), 0, grabMain: false);
 
             // Этап drive: UxrShotgunPump с FABARM снят, помпой управляет хост WeaponSystem — ручка помпы теперь Rig.Handle.
             var host = harness.Weapon.GetComponent<WeaponSystem>();

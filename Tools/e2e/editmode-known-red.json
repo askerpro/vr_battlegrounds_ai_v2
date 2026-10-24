@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-23",
+  "updated": "2026-10-24",
   "baseSha": "d32f9ef8306f195ccabe6673bc7a4f087828ba5d",
   "source": "heavy --editmode also на кандидате weapon-rebuild-docs-followups (20261023-094344, поверх origin/dev 47135fae0): 2964 тестов, 69 красных — все известные; затем a2c2f7e51 сняла позеленевшие GrabPoseCoverage (хваты магазинов CyborgHandsBase)",
   "tests": [
@@ -45,14 +45,6 @@
       "reason": "выстрел: повтор у наблюдателя"
     },
     {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(FabarmSDASS, CyborgHandsBase)",
-      "reason": "хваты: патрон в гнезде ствола — развёрнутая копия, не наследует хват CyborgHandsBase из префаба патрона; решение пользователя 2026-10-23 — класть патрон вложенным экземпляром (следующая оружейная задача)"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.GrabPoseCoverageTests.У_каждой_точки_хвата_есть_хват_аватара(Herrington, CyborgHandsBase)",
-      "reason": "хваты: патрон в гнезде ствола — развёрнутая копия, не наследует хват CyborgHandsBase из префаба патрона; решение пользователя 2026-10-23 — класть патрон вложенным экземпляром (следующая оружейная задача)"
-    },
-    {
       "name": "VrBattlegrounds.Tests.Prefabs.HandsPackWeaponTests.Детали_стоят_как_в_паке(Scar)",
       "reason": "регрессия dev: детали Scar повёрнуты на 90° после пересборки стволов, weapon-system"
     },
@@ -63,10 +55,6 @@
     {
       "name": "VrBattlegrounds.Tests.Prefabs.ShotgunPelletsTests.Выстрел_дробовика_выпускает_дробь_в_конусе",
       "reason": "выстрел: дробь"
-    },
-    {
-      "name": "VrBattlegrounds.Tests.Prefabs.WeaponShotSoundTests.Стволы_реестра_не_делят_звук_выстрела",
-      "reason": "выстрел: звук"
     },
     {
       "name": "VrBattlegrounds.Tests.Weapons.LedgerSpawnReadyTests.Отказ_replay_при_выключенном_учёте_виден_один_раз",

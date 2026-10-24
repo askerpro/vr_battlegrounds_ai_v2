@@ -80,7 +80,9 @@ namespace VrBattlegrounds.Tests.Interaction
         /// <summary>
         /// Якорь внутри предмета (гнездо магазина оружия) — не карман аватара, даже когда предмет
         /// лежит в кармане и потому висит в иерархии аватара. Иначе вид в шлеме рисовал зону
-        /// гнезда как зону аватара, и она уезжала вместе с оружием, взятым со спины.
+        /// гнезда как зону аватара, и она уезжала вместе с оружием, взятым со спины. Роль такого
+        /// якоря — <see cref="AnchorRoleKind.ItemOther" /> (прочий якорь предмета: у предмета здесь нет
+        /// <c>UxrFirearmWeapon</c>, значит это не гнездо магазина спуска), а не <see cref="AnchorRoleKind.World" />.
         /// </summary>
         [Test]
         public void Якорь_внутри_предмета_не_карман_аватара()
@@ -104,7 +106,7 @@ namespace VrBattlegrounds.Tests.Interaction
 
             Assert.IsFalse(AnchorRole.IsAvatarPocket(magAnchor),
                 "Гнездо магазина оружия, лежащего в кармане, посчитано карманом аватара.");
-            Assert.AreEqual(AnchorRoleKind.World, AnchorRole.Get(magAnchor));
+            Assert.AreEqual(AnchorRoleKind.ItemOther, AnchorRole.Get(magAnchor));
         }
 
         [Test]

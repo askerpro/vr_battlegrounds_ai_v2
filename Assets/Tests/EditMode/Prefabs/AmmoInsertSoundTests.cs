@@ -7,16 +7,19 @@ using UnityEditor;
 using UnityEngine;
 using VrBattlegrounds.Arsenal;
 using VrBattlegrounds.Interaction;
+using VrBattlegrounds.Weapons;
 
 namespace VrBattlegrounds.Tests.Prefabs
 {
     /// <summary>
     /// Звук вставки магазина или патрона один, и задаёт его приёмник — <see cref="AnchorSound" /> гнезда
-    /// (свой клип или общий <see cref="MagazineAnchorSoundDefaults" />). Звук размещения на самом боеприпасе
+    /// (своя нарезка пака, иначе дефолт категории ствола, роли или общий <see cref="MagazineAnchorSoundDefaults" />). Звук размещения на самом боеприпасе
     /// (<see cref="UxrAudioManipulation" />, унаследованный от доноров пака) играл вторым поверх звука гнезда.
     /// </summary>
     public class AmmoInsertSoundTests
     {
+        private const string RegistryPath = "Assets/Data/Weapons/Resources/WeaponRegistry.asset";
+
         [Test]
         public void Есть_общий_звук_вставки()
         {
@@ -24,30 +27,47 @@ namespace VrBattlegrounds.Tests.Prefabs
             Assert.IsNotNull(MagazineAnchorSoundDefaults.Instance.InsertClip, "У MagazineAnchorSoundDefaults не задан звук вставки.");
         }
 
-        /// <summary>Решение пользователя: магазины звучат одним общим звуком; свой звук — только у окна приёма патрона.</summary>
+        /// <summary>
+        /// Решение пользователя 2026-10-24: гнездо магазина каждого ствола звучит своей нарезкой пака; нет её — запасным звуком
+        /// категории ствола (<see cref="WeaponFeedbackDefaults.MagazineInsert" />/<see cref="WeaponFeedbackDefaults.MagazineTakeOut" />),
+        /// затем дефолтом роли и общим звуком <see cref="MagazineAnchorSoundDefaults" />. Итог у каждого гнезда реестра —
+        /// и вставка, и снятие со звуком; без своего клипа вставки звучит именно дефолт категории ствола.
+        /// </summary>
         [Test]
-        public void Гнёзда_магазинов_звучат_общим_звуком()
+        public void Гнёзда_магазинов_звучат_своей_нарезкой_или_дефолтом_категории()
         {
+            var registry = AssetDatabase.LoadAssetAtPath<WeaponRegistry>(RegistryPath);
+            Assert.IsNotNull(registry, "Нет WeaponRegistry.");
+
             var failures = new List<string>();
-            int anchors = 0;
-            foreach (string guid in AssetDatabase.FindAssets("t:WeaponInfo", new[] { "Assets/Data/Weapons" }))
+            int sockets = 0;
+            foreach (WeaponInfo info in registry.Weapons)
             {
-                var info = AssetDatabase.LoadAssetAtPath<WeaponInfo>(AssetDatabase.GUIDToAssetPath(guid));
                 var firearm = info != null && info.WeaponPrefab != null ? info.WeaponPrefab.GetComponent<UxrFirearmWeapon>() : null;
                 if (firearm == null) continue;
-                var triggers = new SerializedObject(firearm).FindProperty("_triggers");
-                for (int i = 0; i < triggers.arraySize; i++)
+                for (int i = 0; i < firearm.TriggerCount; i++)
                 {
-                    var anchor = triggers.GetArrayElementAtIndex(i).FindPropertyRelative("_ammunitionMagAnchor").objectReferenceValue as UxrGrabbableObjectAnchor;
-                    var sound = anchor != null ? anchor.GetComponent<AnchorSound>() : null;
-                    if (sound == null) continue;
-                    anchors++;
-                    if (sound.Source != null && sound.Source.clip != null)
-                        failures.Add($"{info.WeaponPrefab.name}/{anchor.name}: свой звук вставки '{sound.Source.clip.name}' вместо общего.");
+                    if (!firearm.TryGetTriggerMagazineAnchor(i, out UxrGrabbableObjectAnchor anchor) || anchor == null) continue;
+                    sockets++;
+                    string where = $"{info.WeaponPrefab.name}/{anchor.name}";
+                    var sound = anchor.GetComponent<AnchorSound>();
+                    if (sound == null) { failures.Add($"{where}: нет AnchorSound — гнездо немое."); continue; }
+
+                    if (sound.InsertClip == null) failures.Add($"{where}: итоговый звук вставки пуст.");
+                    if (sound.TakeOutClip == null) failures.Add($"{where}: итоговый звук снятия пуст.");
+                    if (sound.OwnInsertClip != null) continue;
+
+                    var host = anchor.GetComponentInParent<WeaponSystem>(true);
+                    WeaponFeedbackDefaults category = host != null ? host.FeedbackDefaults : null;
+                    if (category == null)
+                        failures.Add($"{where}: нет своей нарезки вставки и нет дефолтов категории ствола (хост WeaponSystem/FeedbackDefaults).");
+                    else if (sound.InsertClip != category.MagazineInsert)
+                        failures.Add($"{where}: без своей нарезки звучит '{(sound.InsertClip != null ? sound.InsertClip.name : "—")}', " +
+                                     $"а не дефолт категории '{(category.MagazineInsert != null ? category.MagazineInsert.name : "—")}' ({category.name}).");
                 }
             }
 
-            Assert.Greater(anchors, 0, "Не нашлось ни одного гнезда магазина.");
+            Assert.Greater(sockets, 0, "Не нашлось ни одного гнезда магазина в реестре.");
             Assert.That(failures, Is.Empty, string.Join("\n", failures));
         }
 

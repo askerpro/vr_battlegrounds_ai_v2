@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using UltimateXR.Avatar;
 using UltimateXR.Avatar.Rig;
 using UltimateXR.Manipulation.HandPoses;
 using UnityEditor;
@@ -46,6 +47,15 @@ namespace VrBattlegrounds.Tests.Prefabs
         private const float MirrorMeanLimitDeg  = 35f;
         private const float MirrorNodeLimitDeg  = 90f;
         private const int   MaxDefectsPerRecord = 3;
+
+        /// <summary>База семейства Cyborg — <c>CyborgHandsBase.prefab</c>.</summary>
+        private const string CyborgHandsBaseGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+
+        /// <summary>Пальцы, у которых у кисти Cyborg есть пястная кость.</summary>
+        private static readonly UxrFingerType[] MetacarpalFingers =
+        {
+            UxrFingerType.Index, UxrFingerType.Middle, UxrFingerType.Ring, UxrFingerType.Little
+        };
 
         private static readonly UxrFingerType[] Fingers =
         {
@@ -169,6 +179,51 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             Assert.IsEmpty(failures, "Правая рука расходится с зеркалом левой (формула UxrHandDescriptor.Mirrored):\n" +
                                      string.Join("\n", failures));
+        }
+
+        /// <summary>
+        /// Каждая поза типа Fixed, зарегистрированная в самом <c>CyborgHandsBase</c> (<see cref="UxrAvatar.GetHandPoses"/>, без
+        /// наследованных от базы), записана с пястными у пальцев Index, Middle, Ring, Little обеих рук
+        /// (<see cref="UxrFingerDescriptor.HasMetacarpalInfo"/>).
+        ///
+        /// <para>
+        /// Причина — дефект G6 (<c>Docs/grip-known-issues.md</c>): у кисти Cyborg пястные есть, и поза без них в рантайме SDK
+        /// выгибает пальцы 2–5 назад (~179°), хотя превью в редакторе выглядит верно — статический Fit дефект почти не видит.
+        /// Большой палец не проверяется: дефект G6 — у пальцев 2–5.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void Позы_кисти_Cyborg_с_пястными()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(CyborgHandsBaseGuid));
+            Assert.IsNotNull(prefab, $"Не найден префаб CyborgHandsBase (GUID {CyborgHandsBaseGuid}).");
+            var avatar = prefab.GetComponent<UxrAvatar>();
+            Assert.IsNotNull(avatar, "На CyborgHandsBase нет UxrAvatar.");
+
+            List<UxrHandPoseAsset> poses = avatar.GetHandPoses().Where(p => p.PoseType == UxrHandPoseType.Fixed).ToList();
+            Assert.That(poses, Is.Not.Empty, "У CyborgHandsBase не зарегистрировано ни одной позы Fixed.");
+
+            var failures = new List<string>();
+            foreach (UxrHandPoseAsset pose in poses)
+            {
+                foreach (var (side, descriptor) in new[] { ("Left", pose.HandDescriptorLeft), ("Right", pose.HandDescriptorRight) })
+                {
+                    if (descriptor == null)
+                    {
+                        failures.Add($"{AssetDatabase.GetAssetPath(pose)} {side}: дескриптор отсутствует");
+                        continue;
+                    }
+
+                    List<UxrFingerType> missing = MetacarpalFingers.Where(f => !descriptor.GetFinger(f).HasMetacarpalInfo).ToList();
+                    if (missing.Count > 0)
+                    {
+                        failures.Add($"{AssetDatabase.GetAssetPath(pose)} {side}: без пястных у {string.Join(", ", missing)}");
+                    }
+                }
+            }
+
+            Assert.IsEmpty(failures, "Позы CyborgHandsBase без пястных — в рантайме пальцы 2–5 вывернутся (G6); " +
+                                     "перезаписать позу на кисти Cyborg с пястными:\n" + string.Join("\n", failures));
         }
 
         private static IEnumerable<(string Label, UxrHandDescriptor Left, UxrHandDescriptor Right)> Descriptors(UxrHandPoseAsset pose)

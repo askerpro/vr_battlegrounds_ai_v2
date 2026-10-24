@@ -74,7 +74,10 @@ namespace VrBattlegrounds.Tests.Prefabs
             public string BodyBone = "Bn_Base";
             public string BodyPath = "MeshContainer/Base";
 
-            public override string ToString() => Pose;
+            // Имя кейса, если поза общая у нескольких стволов (одна модель пака); пусто — имя позы.
+            public string Name;
+
+            public override string ToString() => Name ?? Pose;
         }
 
         /// <summary>Пара поз оружия T-38: основная рука — точка 0, вторая (если есть) — точка 1.</summary>
@@ -113,7 +116,10 @@ namespace VrBattlegrounds.Tests.Prefabs
                 .Concat(Pair("MP5K", "Hands_Automatic_Rifle04", "Hands_Automatic_Rifle04_Mesh", "Idle_Aim", "Rifle04_Body_Mesh", "B_Rifle04_Body", W + "MP5K/MP5K.prefab"))
                 .Concat(Pair("PPK", "Hands_Gun02", "Hands_Gun_02_Mesh", "Aim_Idle", "Gun02_Body_Mesh", "B_Gun02_Body", W + "PPK/PPK.prefab"))
                 .Concat(Pair("Revolver", "Hands_Gun_03", "Hands_Gun_03", "Idle_Aiming", "Gun_03_Body_Mesh", "B_Gun_03_Body", W + "Revolver/Revolver.prefab"))
-                .Concat(Pair("SniperRifle", "Hands_Sniper_Rifle", "Sniper_Rifle_Mesh", "Aiming_Idle", "Sniper_Rifle_Base_Mesh", "Bn_Sniper_Rifle_Base_Mesh", W + "SniperRifle/SniperRifle.prefab"));
+                .Concat(Pair("SniperRifle", "Hands_Sniper_Rifle", "Sniper_Rifle_Mesh", "Aiming_Idle", "Sniper_Rifle_Base_Mesh", "Bn_Sniper_Rifle_Base_Mesh", W + "SniperRifle/SniperRifle.prefab"))
+                // SniperRifleAuto — та же модель пака, что SniperRifle, и те же позы HandsPack_SniperRifle_*.
+                .Concat(Pair("SniperRifle", "Hands_Sniper_Rifle", "Sniper_Rifle_Mesh", "Aiming_Idle", "Sniper_Rifle_Base_Mesh", "Bn_Sniper_Rifle_Base_Mesh", W + "SniperRifleAuto/SniperRifleAuto.prefab")
+                            .Select(c => { c.Name = c.Pose + "@SniperRifleAuto"; return c; }));
             foreach (Case c in t38) yield return c;
         }
 
@@ -136,7 +142,7 @@ namespace VrBattlegrounds.Tests.Prefabs
 
             foreach (Case c in Cases())
             foreach (string avatar in avatars)
-                yield return new TestCaseData(c, avatar).SetName($"{{m}}({c.Pose}, {System.IO.Path.GetFileNameWithoutExtension(avatar)})");
+                yield return new TestCaseData(c, avatar).SetName($"{{m}}({c}, {System.IO.Path.GetFileNameWithoutExtension(avatar)})");
         }
 
         [TestCaseSource(nameof(PoseOnAvatarCases))]

@@ -43,8 +43,9 @@ namespace VrBattlegrounds.Tests.Weapons
             yield return new Pilot
             {
                 // Помпа: досылание и закрытие без подачи звучат одинаково — ForwardChambered пуст и берёт ForwardEmpty.
+                // Звуки помпы — нарезки пака FABARM (принято в шлеме 2026-10-24), не общие ShotgunPump01/02.
                 Path = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab", Released = WS.WeaponReleasedAction.Stay,
-                ActionBack = "ShotgunPump01", ActionForwardChambered = null, ActionForwardEmpty = "ShotgunPump02"
+                ActionBack = "FabarmSDASS_BoltBack", ActionForwardChambered = null, ActionForwardEmpty = "FabarmSDASS_BoltForward"
             };
         }
 

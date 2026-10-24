@@ -43,6 +43,11 @@ namespace VrBattlegrounds.Editor.Gameplay
             int freq = src.frequency;
             int from = Mathf.Clamp(Mathf.RoundToInt(start * freq), 0, mono.Length - 1);
             int count = Mathf.Clamp(Mathf.RoundToInt(length * freq), 1, mono.Length - from);
+            // Тишина до основного удара — запаздывание в VR (шлем 2026-10-24: зарядка Herrington 580 мс, выстрелы PPK и
+            // Browning ~100 мс): кусок начинается за LeadIn до первого окна громче OnsetShare пика куска; конец прежний.
+            int lead = LeadingQuiet(mono, from, count, freq);
+            from += lead;
+            count -= lead;
 
             var data = new float[count];
             Array.Copy(mono, from, data, 0, count);
@@ -56,6 +61,32 @@ namespace VrBattlegrounds.Editor.Gameplay
             for (int i = 0; i < fadeIn; i++) data[i] *= i / (float)fadeIn;
 
             return Write(data, freq, folder, name);
+        }
+
+        /// <summary>Доля пика куска, с которой начинается основной звук (окно 10 мс).</summary>
+        public const float OnsetShare = 0.3f;
+        /// <summary>Сколько оставить перед основным звуком, с; меньший запас тишины не срезается.</summary>
+        public const float LeadIn = 0.01f;
+        private const float MinLeadingCut = 0.015f;
+
+        /// <summary>Сколько сэмплов тишины в начале куска [from, from+count) срезать (0 — основной звук и так в начале).</summary>
+        private static int LeadingQuiet(float[] mono, int from, int count, int freq)
+        {
+            float peak = 0f;
+            for (int i = 0; i < count; i++) peak = Mathf.Max(peak, Mathf.Abs(mono[from + i]));
+            if (peak < 1e-4f) return 0; // почти тишина целиком — решает проверка уровня, не обрезка
+            int window = Mathf.Max(1, Mathf.RoundToInt(0.01f * freq));
+            for (int w = 0; w < count; w += window)
+            {
+                int end = Mathf.Min(count, w + window);
+                for (int i = w; i < end; i++)
+                {
+                    if (Mathf.Abs(mono[from + i]) < peak * OnsetShare) continue;
+                    int cut = Mathf.Max(0, w - Mathf.RoundToInt(LeadIn * freq));
+                    return cut >= Mathf.RoundToInt(MinLeadingCut * freq) ? Mathf.Min(cut, count - 1) : 0;
+                }
+            }
+            return 0;
         }
 
         /// <summary>

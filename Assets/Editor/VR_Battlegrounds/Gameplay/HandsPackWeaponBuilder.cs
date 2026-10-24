@@ -349,7 +349,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             ActionExtraParts = new[] { "Sniper _Rifle_Gate_Mesh" }, SupportGrip = true, ManualCycle = true,
             UxrTag = "BackWeapon", MagazinePart = "Sniper_Rifle_Magazine_Mesh", MagazineTag = "MagSniper", MagazineCapacity = 10,
             // Затвор — прежняя пара (шлем 2026-10-24): куски перезарядки снайперского набора тихие (−15 dB) и непохожие.
-            SlideBackAudio = "Assets/Audio/SFX/Universal/Zatvor2.mp3", SlideForwardAudio = "Assets/Audio/SFX/Universal/Zatvor1.mp3",
+            SlideBackAudio = "Assets/Audio/SFX/Handling/HandsPack_Sniper_BoltBack_mono.wav", SlideForwardAudio = "Assets/Audio/SFX/Handling/HandsPack_Sniper_BoltForward_mono.wav",
             PackSounds = new HandsPackSoundRecipe
             {
                 Shot = Snd + "11Sniper_Rifle_Set/Sniper_Rifle_Shot_1.mp3",

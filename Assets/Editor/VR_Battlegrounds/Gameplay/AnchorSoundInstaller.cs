@@ -19,10 +19,11 @@ namespace VrBattlegrounds.Editor.Gameplay
     /// </para>
     ///
     /// <para>
-    /// Клип в префаб пишется, только если его не даёт дефолт роли якоря (<see cref="MagazineAnchorSoundDefaults" />,
-    /// роль — <see cref="AnchorRole.Get" />): заданный дефолт роли звучит сам, копия в префабе мешала бы менять звук
-    /// одним ассетом. Гнезду магазина хватает и общего звука вставки (<c>AmmoInsertSoundTests</c>). Старую пару
-    /// <see cref="PlaceClip" />/<see cref="TakeClip" /> с префабов снимает <see cref="AnchorSoundRoleDefaultsCleanup" />.
+    /// Клипы в префаб не пишутся (решение пользователя 2026-10-23: звуковые дефолты — ассеты): звучит свой клип якоря
+    /// (нарезка пака гнезда, <c>AnchorSoundOverride</c>) или дефолт в момент проигрывания — категории ствола
+    /// (<c>WeaponFeedbackDefaults</c>), роли якоря (<see cref="MagazineAnchorSoundDefaults" />, роль — <see cref="AnchorRole.Get" />)
+    /// или общий звук вставки. Установщик ставит только компонент и источник. Старую пару <see cref="PlaceClip" />/<see cref="TakeClip" />
+    /// с префабов снимает <see cref="AnchorSoundRoleDefaultsCleanup" />.
     /// </para>
     ///
     /// <para>
@@ -34,11 +35,12 @@ namespace VrBattlegrounds.Editor.Gameplay
     public static class AnchorSoundInstaller
     {
         private const string Prefabs = "Assets/Prefabs";
-        /// <summary>Пара клипов карманов и слотов, которую установщик раскладывал до дефолтов по роли.</summary>
+        /// <summary>
+        /// Пара клипов карманов и слотов, которую установщик раскладывал до дефолтов по роли (историческая: по ней
+        /// <see cref="AnchorSoundRoleDefaultsCleanup" /> узнаёт старые копии; файл вставки удалён 2026-10-24).
+        /// </summary>
         internal const string PlaceClip = "Assets/Audio/SFX/Universal/Landing_2_Amm.mp3";
         internal const string TakeClip = "Assets/Audio/SFX/Universal/Weapon_Select.flac";
-        private const string MagInClip = "Assets/Audio/SFX/Universal/Magazine_attach.mp3";
-        private const string MagOutClip = "Assets/Audio/SFX/Universal/Magazine_drop.mp3";
 
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Apply Anchor Sounds")]
         public static void ApplyAll()
@@ -78,11 +80,11 @@ namespace VrBattlegrounds.Editor.Gameplay
             return total;
         }
 
-        /// <summary>Нет компонента, источника или итогового клипа (свой → дефолт роли → общий) вставки или доставания.</summary>
+        /// <summary>Нет компонента или источника (клипы — дефолты в момент проигрывания).</summary>
         private static bool NeedsSound(UxrGrabbableObjectAnchor anchor)
         {
             AnchorSound sound = anchor.GetComponent<AnchorSound>();
-            return sound == null || sound.Source == null || sound.InsertClip == null || sound.TakeOutClip == null;
+            return sound == null || sound.Source == null;
         }
 
         /// <summary>Якорь принадлежит этому префабу, а не вложенному префабу проекта (тот правится у себя).</summary>
@@ -101,13 +103,6 @@ namespace VrBattlegrounds.Editor.Gameplay
         private static bool Install(UxrGrabbableObjectAnchor anchor)
         {
             bool magazineSocket = anchor.GetComponentInParent<UxrFirearmWeapon>(true) != null;
-            AnchorRoleKind role = AnchorRole.Get(anchor);
-            MagazineAnchorSoundDefaults defaults = MagazineAnchorSoundDefaults.Instance;
-            // Гнезду магазина (и окну приёма патрона) годится и общий звук вставки; карманам и слотам — только дефолт роли.
-            bool insertByDefault = defaults != null &&
-                                   (defaults.RolePlaceClip(role) != null || magazineSocket && defaults.InsertClip != null);
-            bool takeOutByDefault = defaults != null && defaults.RoleTakeOutClip(role) != null;
-
             AudioSource source = anchor.GetComponent<AudioSource>();
             if (source == null) source = anchor.gameObject.AddComponent<AudioSource>();
             source.playOnAwake = false;
@@ -116,26 +111,16 @@ namespace VrBattlegrounds.Editor.Gameplay
             source.minDistance = 0.5f;
             source.maxDistance = 12f;
             source.rolloffMode = AudioRolloffMode.Linear;
-            if (source.clip == null && !insertByDefault) source.clip = Load(magazineSocket ? MagInClip : PlaceClip);
 
             // Не «??»: в редакторе GetComponent отсутствующего компонента — «поддельный null», мимо которого «??» проходит.
             AnchorSound sound = anchor.GetComponent<AnchorSound>();
             if (sound == null) sound = anchor.gameObject.AddComponent<AnchorSound>();
             var so = new SerializedObject(sound);
             if (so.FindProperty("_source").objectReferenceValue == null) so.FindProperty("_source").objectReferenceValue = source;
-            if (so.FindProperty("_takeOutClip").objectReferenceValue == null && !takeOutByDefault)
-                so.FindProperty("_takeOutClip").objectReferenceValue = Load(magazineSocket ? MagOutClip : TakeClip);
             so.FindProperty("_onlyByHand").boolValue = true;
             so.FindProperty("_takeOutOnlyByHand").boolValue = !magazineSocket;
             so.ApplyModifiedPropertiesWithoutUndo();
             return true;
-        }
-
-        private static AudioClip Load(string path)
-        {
-            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
-            if (clip == null) GameLog.Error($"[AnchorSoundInstaller] Нет клипа {path}.");
-            return clip;
         }
     }
 }

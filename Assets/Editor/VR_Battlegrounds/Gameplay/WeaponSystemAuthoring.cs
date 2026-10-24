@@ -130,8 +130,8 @@ namespace VrBattlegrounds.Editor.Gameplay
                 Forward = "Assets/Audio/SFX/Weapons/Kinemation/Viper/Viper_BoltForward.wav", Why = "Viper" },
             // Снайперская винтовка (решение пользователя 2026-10-09): эталон — затвор SniperRifle (AX-50).
             new DefaultsSpec { Category = WeaponFeedbackCategory.Sniper, Path = DataFolder + "/SniperFeedbackDefaults.asset",
-                Back = "Assets/Audio/SFX/Universal/Zatvor2.mp3",
-                Forward = "Assets/Audio/SFX/Universal/Zatvor1.mp3", Why = "SniperRifle (AX-50)" },
+                Back = "Assets/Audio/SFX/Handling/HandsPack_Sniper_BoltBack_mono.wav",
+                Forward = "Assets/Audio/SFX/Handling/HandsPack_Sniper_BoltForward_mono.wav", Why = "SniperRifle (AX-50)" },
         };
 
         private const string Srm12Sfx = "Assets/Audio/SFX/Weapons/Kinemation/SRM12/";

@@ -1,4 +1,2645 @@
 {
     "avatarGuid": "71b74b0d08444f49bbb7aa2828d0890a",
-    "entries": []
+    "entries": [
+        {
+            "key": "Assets/Prefabs/Weapons/AK105/AK105.prefab|.|0",
+            "poseGuid": "a5d40ee130b373d4eb6e46a55ecf2ea3",
+            "poseName": "Kinemation_AK105_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 1.8899999856948853,
+                "y": -70.9000015258789,
+                "z": -48.70000076293945
+            },
+            "leftRotation": {
+                "x": -0.07755500078201294,
+                "y": 0.0024049999192357065,
+                "z": -0.7050430178642273,
+                "w": 0.7049070000648499
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.9900000095367432,
+                "y": -70.9000015258789,
+                "z": -48.70000076293945
+            },
+            "rightRotation": {
+                "x": -0.004085000138729811,
+                "y": 0.07748399674892426,
+                "z": 0.7141759991645813,
+                "w": -0.6956520080566406
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AK105/AK105.prefab|.|1",
+            "poseGuid": "a8f0c12373c44a14581020cf060e1d22",
+            "poseName": "Kinemation_AK105_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 2.7009999752044679,
+                "y": 9.300000190734864,
+                "z": 251.33399963378907
+            },
+            "leftRotation": {
+                "x": 0.1117819994688034,
+                "y": 0.5274869799613953,
+                "z": -0.10051099956035614,
+                "w": 0.8361579775810242
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.49900001287460329,
+                "y": 9.300000190734864,
+                "z": 251.33399963378907
+            },
+            "rightRotation": {
+                "x": -0.5274869799613953,
+                "y": -0.1117819994688034,
+                "z": 0.8361579775810242,
+                "w": -0.10051099956035614
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AK105/AK105.prefab|MeshContainer/MagAnchor/AK105_mag|0",
+            "poseGuid": "914d523c2cfb63d4d814e2bfcaf6441e",
+            "poseName": "Kinemation_AK105_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 5.808000087738037,
+                "y": -93.5989990234375,
+                "z": 101.66100311279297
+            },
+            "leftRotation": {
+                "x": -0.20676599442958833,
+                "y": -0.13960100710391999,
+                "z": -0.6947469711303711,
+                "w": 0.6746000051498413
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -3.191999912261963,
+                "y": -93.5989990234375,
+                "z": 101.66100311279297
+            },
+            "rightRotation": {
+                "x": -0.13960100710391999,
+                "y": -0.20676599442958833,
+                "z": -0.6746000051498413,
+                "w": 0.6947469711303711
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AK105/AK105.prefab|Slide|0",
+            "poseGuid": "3e46c4453c5c38942a5c15a8373936b9",
+            "poseName": "Kinemation_AK105_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 42.0,
+                "y": 34.597999572753909,
+                "z": 172.51300048828126
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 42.0,
+                "y": 34.597999572753909,
+                "z": 172.51300048828126
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AK105/AK105_mag.prefab|.|0",
+            "poseGuid": "914d523c2cfb63d4d814e2bfcaf6441e",
+            "poseName": "Kinemation_AK105_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.500999927520752,
+                "y": -21.700000762939454,
+                "z": -7.599999904632568
+            },
+            "leftRotation": {
+                "x": -0.20676599442958833,
+                "y": -0.13960100710391999,
+                "z": -0.6947469711303711,
+                "w": 0.6746000051498413
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.499000072479248,
+                "y": -21.700000762939454,
+                "z": -7.599999904632568
+            },
+            "rightRotation": {
+                "x": -0.13960100710391999,
+                "y": -0.20676599442958833,
+                "z": -0.6746000051498413,
+                "w": 0.6947469711303711
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AR15/AR15.prefab|.|0",
+            "poseGuid": "c3ce1af3fe76eb8469c78798575439c1",
+            "poseName": "Gun",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.0,
+                "y": -64.45999908447266,
+                "z": -94.58499908447266
+            },
+            "leftRotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -0.7071070075035095,
+                "w": 0.7071070075035095
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.0,
+                "y": -49.65999984741211,
+                "z": -94.88500213623047
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -0.7071070075035095,
+                "w": 0.7071070075035095
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AR15/AR15.prefab|.|1",
+            "poseGuid": "412a18dabe7ffc24e8f73816d9cba549",
+            "poseName": "HandsPack_AR15_Support",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -3.6710000038146974,
+                "y": 70.26699829101563,
+                "z": 256.88800048828127
+            },
+            "leftRotation": {
+                "x": -0.08646400272846222,
+                "y": 0.39174601435661318,
+                "z": 0.008098999969661236,
+                "w": 0.9159659743309021
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 3.7730000019073488,
+                "y": 70.2959976196289,
+                "z": 256.93798828125
+            },
+            "rightRotation": {
+                "x": 0.39363399147987368,
+                "y": -0.0819299966096878,
+                "z": -0.9154049754142761,
+                "w": -0.01935500092804432
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AR15/AR15.prefab|MeshContainer/MagAnchor/AR15_Magazine|0",
+            "poseGuid": "06f3305073562b142aacba015d916b19",
+            "poseName": "HandsPack_AR15_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 2.3529999256134035,
+                "y": -127.91200256347656,
+                "z": 66.51300048828125
+            },
+            "leftRotation": {
+                "x": 0.13258199393749238,
+                "y": 0.006444999948143959,
+                "z": 0.6857399940490723,
+                "w": -0.7156410217285156
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -12.694000244140625,
+                "y": -127.91200256347656,
+                "z": 66.51300048828125
+            },
+            "rightRotation": {
+                "x": -0.006444999948143959,
+                "y": -0.13258199393749238,
+                "z": -0.7156410217285156,
+                "w": 0.6857399940490723
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AR15/AR15.prefab|Slide|0",
+            "poseGuid": "b4f1db7c4b66daa48bdd68dad3dcb844",
+            "poseName": "HandsPack_AR15_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -5.166999816894531,
+                "y": 116.74400329589844,
+                "z": -84.44499969482422
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -5.166999816894531,
+                "y": 116.74400329589844,
+                "z": -84.44499969482422
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/AR15/AR15_Magazine.prefab|.|0",
+            "poseGuid": "06f3305073562b142aacba015d916b19",
+            "poseName": "HandsPack_AR15_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 7.52400016784668,
+                "y": -64.95999908447266,
+                "z": -31.516000747680665
+            },
+            "leftRotation": {
+                "x": 0.13258199393749238,
+                "y": 0.006444999948143959,
+                "z": 0.6857399940490723,
+                "w": -0.7156410217285156
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -7.52400016784668,
+                "y": -64.95999908447266,
+                "z": -31.516000747680665
+            },
+            "rightRotation": {
+                "x": -0.006444999948143959,
+                "y": -0.13258199393749238,
+                "z": -0.7156410217285156,
+                "w": 0.6857399940490723
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab|.|0",
+            "poseGuid": "8bb0a400e9dc12a4299e17d4f23419a2",
+            "poseName": "HandsPack_Gun_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 23.39299964904785,
+                "y": -60.81999969482422,
+                "z": -92.19200134277344
+            },
+            "leftRotation": {
+                "x": -0.02849400043487549,
+                "y": 0.017153000459074975,
+                "z": 0.7413129806518555,
+                "w": -0.6703349947929382
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -23.43600082397461,
+                "y": -60.71200180053711,
+                "z": -92.2229995727539
+            },
+            "rightRotation": {
+                "x": 0.016656000167131425,
+                "y": -0.028782999143004419,
+                "z": 0.6793929934501648,
+                "w": -0.7330210208892822
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab|.|1",
+            "poseGuid": "429cb66fa6dcbe546b51426405a6af88",
+            "poseName": "HandsPack_Gun_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 8.043000221252442,
+                "y": -56.345001220703128,
+                "z": -89.34400177001953
+            },
+            "leftRotation": {
+                "x": -0.07111100107431412,
+                "y": 0.0899680033326149,
+                "z": -0.3806450068950653,
+                "w": 0.9175829887390137
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -7.978000164031982,
+                "y": -56.24800109863281,
+                "z": -89.37200164794922
+            },
+            "rightRotation": {
+                "x": 0.09180399775505066,
+                "y": -0.06991200149059296,
+                "z": -0.9220730066299439,
+                "w": 0.36941200494766238
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab|MeshContainer/MagAnchor/BrowningHiPower_Magazine|0",
+            "poseGuid": "7058d82ba93e5e848bc1d2083e7986cf",
+            "poseName": "HandsPack_BrowningHiPower_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -17.055999755859376,
+                "y": -99.35199737548828,
+                "z": -94.11900329589844
+            },
+            "leftRotation": {
+                "x": -0.09944500029087067,
+                "y": -0.3550559878349304,
+                "z": -0.03317800164222717,
+                "w": -0.9289479851722717
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 17.055999755859376,
+                "y": -99.35199737548828,
+                "z": -94.11900329589844
+            },
+            "rightRotation": {
+                "x": -0.3550559878349304,
+                "y": -0.09944500029087067,
+                "z": 0.9289479851722717,
+                "w": 0.03317800164222717
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower.prefab|Slide|0",
+            "poseGuid": "bc400228ecc4d594aa77d6beb6460a2a",
+            "poseName": "HandsPack_BrowningHiPower_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.2409999966621399,
+                "y": 44.04199981689453,
+                "z": 33.125999450683597
+            },
+            "leftRotation": {
+                "x": 0.8039810061454773,
+                "y": -0.06898000091314316,
+                "z": 0.5884780287742615,
+                "w": -0.05048999935388565
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.2409999966621399,
+                "y": 44.04199981689453,
+                "z": 33.125999450683597
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.6806210279464722,
+                "z": 0.0,
+                "w": 0.7326350212097168
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/BrowningHiPower/BrowningHiPower_Magazine.prefab|.|0",
+            "poseGuid": "7058d82ba93e5e848bc1d2083e7986cf",
+            "poseName": "HandsPack_BrowningHiPower_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -17.055999755859376,
+                "y": -55.22999954223633,
+                "z": -25.527000427246095
+            },
+            "leftRotation": {
+                "x": -0.09944500029087067,
+                "y": -0.3550559878349304,
+                "z": -0.03317800164222717,
+                "w": -0.9289479851722717
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 17.055999755859376,
+                "y": -55.22999954223633,
+                "z": -25.527000427246095
+            },
+            "rightRotation": {
+                "x": -0.3550559878349304,
+                "y": -0.09944500029087067,
+                "z": 0.9289479851722717,
+                "w": 0.03317800164222717
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab|.|0",
+            "poseGuid": "c3ce1af3fe76eb8469c78798575439c1",
+            "poseName": "Gun",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 1.7029999494552613,
+                "y": -50.222999572753909,
+                "z": -77.78600311279297
+            },
+            "leftRotation": {
+                "x": -0.1124349981546402,
+                "y": 0.06880000233650208,
+                "z": -0.6966760158538818,
+                "w": 0.7051720023155212
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.4450000524520875,
+                "y": -39.926998138427737,
+                "z": -78.60399627685547
+            },
+            "rightRotation": {
+                "x": -0.1124349981546402,
+                "y": 0.06880000233650208,
+                "z": -0.6966760158538818,
+                "w": 0.7051720023155212
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab|MeshContainer/MagAnchor/FabarmSDASS_Ammo|0",
+            "poseGuid": "5a24b94a64fdbf940acbf2e430434f7a",
+            "poseName": "HandsPack_FabarmSDASS_Shell_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -7.300000190734863,
+                "y": 20.41699981689453,
+                "z": 105.74800109863281
+            },
+            "leftRotation": {
+                "x": 0.16828499734401704,
+                "y": 0.3854759931564331,
+                "z": -0.5660979747772217,
+                "w": 0.7089580297470093
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 7.300000190734863,
+                "y": 20.41699981689453,
+                "z": 105.74800109863281
+            },
+            "rightRotation": {
+                "x": 0.3854759931564331,
+                "y": 0.16828499734401704,
+                "z": -0.7089580297470093,
+                "w": 0.5660979747772217
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab|Pump|0",
+            "poseGuid": "b00382cd1b844434bbe7d8b708e4ab11",
+            "poseName": "HandsPack_FabarmSDASS_Pump_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.0,
+                "y": 25.884000778198243,
+                "z": 299.84100341796877
+            },
+            "leftRotation": {
+                "x": -0.14568500220775605,
+                "y": 0.5675979852676392,
+                "z": 0.1112539991736412,
+                "w": 0.8026400208473206
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.0,
+                "y": 25.884000778198243,
+                "z": 299.84100341796877
+            },
+            "rightRotation": {
+                "x": -0.4668700098991394,
+                "y": -0.07440300285816193,
+                "z": 0.8772940039634705,
+                "w": -0.0827770009636879
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS_Ammo.prefab|.|0",
+            "poseGuid": "5a24b94a64fdbf940acbf2e430434f7a",
+            "poseName": "HandsPack_FabarmSDASS_Shell_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -7.300000190734863,
+                "y": -5.603000164031982,
+                "z": -53.94599914550781
+            },
+            "leftRotation": {
+                "x": 0.16828499734401704,
+                "y": 0.3854759931564331,
+                "z": -0.5660979747772217,
+                "w": 0.7089580297470093
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 7.300000190734863,
+                "y": -5.603000164031982,
+                "z": -53.94599914550781
+            },
+            "rightRotation": {
+                "x": 0.3854759931564331,
+                "y": 0.16828499734401704,
+                "z": -0.7089580297470093,
+                "w": 0.5660979747772217
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Grenade/Grenade.prefab|.|0",
+            "poseGuid": "50e73c61f1d966d409da705792e92e86",
+            "poseName": "GrabStandard",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 13.260000228881836,
+                "y": 46.819000244140628,
+                "z": -24.785999298095704
+            },
+            "leftRotation": {
+                "x": 0.31476300954818728,
+                "y": -0.3833889961242676,
+                "z": -0.6031609773635864,
+                "w": 0.6246070265769959
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -12.538999557495118,
+                "y": 37.441001892089847,
+                "z": -19.892000198364259
+            },
+            "rightRotation": {
+                "x": -0.44246599078178408,
+                "y": 0.2888599932193756,
+                "z": -0.6135849952697754,
+                "w": 0.5867689847946167
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Grenade/Grenade.prefab|GrenadeGeo/Pin|0",
+            "poseGuid": "e653c36e3a9f04d4fb2cbac5f983bc6f",
+            "poseName": "GrabPinchFinger",
+            "blend": 0.527999997138977,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 99.66100311279297,
+                "y": 141.08799743652345,
+                "z": -9.609000205993653
+            },
+            "leftRotation": {
+                "x": -0.7033060193061829,
+                "y": 0.048069000244140628,
+                "z": 0.7072939872741699,
+                "w": -0.05277600139379501
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 95.0979995727539,
+                "y": 144.3979949951172,
+                "z": 64.41200256347656
+            },
+            "rightRotation": {
+                "x": -0.03141799941658974,
+                "y": -0.7446560263633728,
+                "z": -0.004437999799847603,
+                "w": 0.6666939854621887
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab|.|0",
+            "poseGuid": "cd2f84f4493becf46bb683d42792bc59",
+            "poseName": "Kinemation_Herrington_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -4.0,
+                "y": -26.899999618530275,
+                "z": -97.69999694824219
+            },
+            "leftRotation": {
+                "x": 0.029064999893307687,
+                "y": 0.23573100566864015,
+                "z": -0.5600039958953857,
+                "w": 0.7937139868736267
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 4.0,
+                "y": -26.899999618530275,
+                "z": -97.69999694824219
+            },
+            "rightRotation": {
+                "x": -0.23573100566864015,
+                "y": -0.029064999893307687,
+                "z": 0.7937139868736267,
+                "w": -0.5600039958953857
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab|.|1",
+            "poseGuid": "10a75940882d39b48bef5bee35067d6f",
+            "poseName": "Kinemation_Herrington_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 7.698999881744385,
+                "y": -14.0,
+                "z": 290.6090087890625
+            },
+            "leftRotation": {
+                "x": 0.03598399832844734,
+                "y": -0.406345009803772,
+                "z": -0.0017470000311732293,
+                "w": -0.913008987903595
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -7.698999881744385,
+                "y": -14.0,
+                "z": 290.6090087890625
+            },
+            "rightRotation": {
+                "x": -0.406345009803772,
+                "y": 0.03598399832844734,
+                "z": 0.913008987903595,
+                "w": 0.0017470000311732293
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab|MeshContainer/MagAnchor/Herrington_mag|0",
+            "poseGuid": "09472f027db90e040b3ab023eba243f1",
+            "poseName": "Kinemation_Herrington_Shell_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 3.9779999256134035,
+                "y": -28.468000411987306,
+                "z": 121.23500061035156
+            },
+            "leftRotation": {
+                "x": -0.07928399741649628,
+                "y": -0.1506740003824234,
+                "z": 0.633201003074646,
+                "w": -0.7550280094146729
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -3.9779999256134035,
+                "y": -28.468000411987306,
+                "z": 121.23500061035156
+            },
+            "rightRotation": {
+                "x": 0.1506740003824234,
+                "y": 0.07928399741649628,
+                "z": -0.7550280094146729,
+                "w": 0.633201003074646
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Herrington/Herrington.prefab|Slide|0",
+            "poseGuid": "1cabc8a5a713f804588b6b088b83ea3c",
+            "poseName": "Kinemation_Herrington_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 9.991999626159668,
+                "y": 29.298999786376954,
+                "z": 121.09200286865235
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 9.991999626159668,
+                "y": 29.298999786376954,
+                "z": 121.09200286865235
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Herrington/Herrington_mag.prefab|.|0",
+            "poseGuid": "09472f027db90e040b3ab023eba243f1",
+            "poseName": "Kinemation_Herrington_Shell_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 3.9779999256134035,
+                "y": -39.909000396728519,
+                "z": -62.40299987792969
+            },
+            "leftRotation": {
+                "x": -0.07928399741649628,
+                "y": -0.1506740003824234,
+                "z": 0.633201003074646,
+                "w": -0.7550280094146729
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -3.9779999256134035,
+                "y": -39.909000396728519,
+                "z": -62.40299987792969
+            },
+            "rightRotation": {
+                "x": 0.1506740003824234,
+                "y": 0.07928399741649628,
+                "z": -0.7550280094146729,
+                "w": 0.633201003074646
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab|.|0",
+            "poseGuid": "90d7d7bc4a70a194e8905c100b1205c8",
+            "poseName": "Kinemation_MKR9_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -7.929999828338623,
+                "y": -77.25299835205078,
+                "z": -61.67599868774414
+            },
+            "leftRotation": {
+                "x": -0.061827998608350757,
+                "y": 0.011497000232338906,
+                "z": -0.7061039805412293,
+                "w": 0.7053099870681763
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 7.929999828338623,
+                "y": -77.25299835205078,
+                "z": -61.67599868774414
+            },
+            "rightRotation": {
+                "x": -0.011497000232338906,
+                "y": 0.061827998608350757,
+                "z": 0.7053099870681763,
+                "w": -0.7061039805412293
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab|.|1",
+            "poseGuid": "2bcf0221709c3a3468e19b64e205861f",
+            "poseName": "Kinemation_MKR9_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.998000144958496,
+                "y": -21.940000534057618,
+                "z": 112.2770004272461
+            },
+            "leftRotation": {
+                "x": 0.05440099909901619,
+                "y": -0.18207299709320069,
+                "z": 0.5291950106620789,
+                "w": -0.8269479870796204
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.998000144958496,
+                "y": -21.940000534057618,
+                "z": 112.2770004272461
+            },
+            "rightRotation": {
+                "x": 0.18207299709320069,
+                "y": -0.05440099909901619,
+                "z": -0.8269479870796204,
+                "w": 0.5291950106620789
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab|MeshContainer/MagAnchor/MKR9_mag|0",
+            "poseGuid": "5715a5b2d29db6746a8aefcc334fc529",
+            "poseName": "Kinemation_MKR9_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -0.6869999766349793,
+                "y": -137.60499572753907,
+                "z": 98.36499786376953
+            },
+            "leftRotation": {
+                "x": 0.2645449936389923,
+                "y": 0.11125700175762177,
+                "z": 0.6522229909896851,
+                "w": -0.7016000151634216
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 2.3350000381469728,
+                "y": -137.60499572753907,
+                "z": 98.36499786376953
+            },
+            "rightRotation": {
+                "x": -0.11125700175762177,
+                "y": -0.2645449936389923,
+                "z": -0.7016000151634216,
+                "w": 0.6522229909896851
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MKR9/MKR9.prefab|Slide|0",
+            "poseGuid": "cbec2ebcc3ad367438b4e18184cd2c14",
+            "poseName": "Kinemation_MKR9_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 22.0,
+                "y": 65.90399932861328,
+                "z": -90.46800231933594
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 22.0,
+                "y": 65.90399932861328,
+                "z": -90.46800231933594
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MKR9/MKR9_mag.prefab|.|0",
+            "poseGuid": "5715a5b2d29db6746a8aefcc334fc529",
+            "poseName": "Kinemation_MKR9_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.5110000371932984,
+                "y": -56.13800048828125,
+                "z": 3.5309998989105226
+            },
+            "leftRotation": {
+                "x": 0.2645449936389923,
+                "y": 0.11125700175762177,
+                "z": 0.6522229909896851,
+                "w": -0.7016000151634216
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.5110000371932984,
+                "y": -56.13800048828125,
+                "z": 3.5309998989105226
+            },
+            "rightRotation": {
+                "x": -0.11125700175762177,
+                "y": -0.2645449936389923,
+                "z": -0.7016000151634216,
+                "w": 0.6522229909896851
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab|.|0",
+            "poseGuid": "05a115df20ab9334ebfdb3ae672a7c78",
+            "poseName": "HandsPack_MP5K_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 3.8450000286102297,
+                "y": -6.255000114440918,
+                "z": -15.47599983215332
+            },
+            "leftRotation": {
+                "x": -0.038913000375032428,
+                "y": -0.08107399940490723,
+                "z": 0.6102039813995361,
+                "w": -0.78712397813797
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -3.8450000286102297,
+                "y": -6.236999988555908,
+                "z": -15.477999687194825
+            },
+            "rightRotation": {
+                "x": 0.08150699734687805,
+                "y": 0.040247999131679538,
+                "z": -0.7944769859313965,
+                "w": 0.6004520058631897
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab|.|1",
+            "poseGuid": "46fc73f0ab8def742991790ff578f272",
+            "poseName": "HandsPack_MP5K_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.1349999904632569,
+                "y": 0.6209999918937683,
+                "z": 31.165000915527345
+            },
+            "leftRotation": {
+                "x": 0.3037799894809723,
+                "y": -0.2600589990615845,
+                "z": 0.606037974357605,
+                "w": -0.687608003616333
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.1380000114440919,
+                "y": 0.6380000114440918,
+                "z": 31.158000946044923
+            },
+            "rightRotation": {
+                "x": 0.2645829916000366,
+                "y": -0.30020099878311159,
+                "z": -0.6946499943733215,
+                "w": 0.5977759957313538
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab|MeshContainer/MagAnchor/MP5K_mag|0",
+            "poseGuid": "71503db4e2b44674a95fc8b2315f8e58",
+            "poseName": "HandsPack_MP5K_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.1139999628067017,
+                "y": -15.909000396728516,
+                "z": 18.134000778198243
+            },
+            "leftRotation": {
+                "x": 0.3579240143299103,
+                "y": -0.03649900108575821,
+                "z": 0.6504740118980408,
+                "w": -0.6689109802246094
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.024999976158142,
+                "y": -15.909000396728516,
+                "z": 18.134000778198243
+            },
+            "rightRotation": {
+                "x": 0.03649900108575821,
+                "y": -0.3579240143299103,
+                "z": -0.6689109802246094,
+                "w": 0.6504740118980408
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MP5K/MP5K.prefab|Slide|0",
+            "poseGuid": "7c35151de55209d42995cb274b32ff50",
+            "poseName": "HandsPack_MP5K_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -4.670000076293945,
+                "y": 21.59600067138672,
+                "z": 36.119998931884769
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.670000076293945,
+                "y": 21.59600067138672,
+                "z": 36.119998931884769
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/MP5K/MP5K_mag.prefab|.|0",
+            "poseGuid": "71503db4e2b44674a95fc8b2315f8e58",
+            "poseName": "HandsPack_MP5K_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.0700000524520875,
+                "y": -5.011000156402588,
+                "z": -3.7939999103546144
+            },
+            "leftRotation": {
+                "x": 0.3579240143299103,
+                "y": -0.03649900108575821,
+                "z": 0.6504740118980408,
+                "w": -0.6689109802246094
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.0700000524520875,
+                "y": -5.011000156402588,
+                "z": -3.7939999103546144
+            },
+            "rightRotation": {
+                "x": 0.03649900108575821,
+                "y": -0.3579240143299103,
+                "z": -0.6689109802246094,
+                "w": 0.6504740118980408
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab|.|0",
+            "poseGuid": "192f22487947dbd4fbeac1dc346afd0b",
+            "poseName": "Kinemation_Mk14_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 2.065999984741211,
+                "y": -51.21099853515625,
+                "z": -73.1240005493164
+            },
+            "leftRotation": {
+                "x": -0.05726199969649315,
+                "y": 0.21832099556922913,
+                "z": 0.667389988899231,
+                "w": -0.70968097448349
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -2.0929999351501467,
+                "y": -51.13999938964844,
+                "z": -73.15599822998047
+            },
+            "rightRotation": {
+                "x": 0.21814699470996858,
+                "y": -0.05500299856066704,
+                "z": 0.7180269956588745,
+                "w": -0.6586530208587647
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab|.|1",
+            "poseGuid": "a8781e1aee176734da800cb7d93f5a75",
+            "poseName": "Kinemation_Mk14_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 10.791999816894532,
+                "y": 13.359000205993653,
+                "z": 202.125
+            },
+            "leftRotation": {
+                "x": -0.07316099852323532,
+                "y": 0.2039950042963028,
+                "z": -0.16615399718284608,
+                "w": 0.961991012096405
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -10.722000122070313,
+                "y": 13.402000427246094,
+                "z": 202.1269989013672
+            },
+            "rightRotation": {
+                "x": 0.205826997756958,
+                "y": -0.07077900320291519,
+                "z": -0.9637420177459717,
+                "w": 0.15436199307441712
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab|MeshContainer/MagAnchor/Mk14_mag|0",
+            "poseGuid": "6185e5cc71e39804ea7a0d2ceb0bc1c6",
+            "poseName": "Kinemation_Mk14_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 1.9210000038146973,
+                "y": -72.7300033569336,
+                "z": 103.78700256347656
+            },
+            "leftRotation": {
+                "x": 0.2646549940109253,
+                "y": 0.17895099520683289,
+                "z": 0.6507729887962341,
+                "w": -0.6887869834899902
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -1.8969999551773072,
+                "y": -72.7300033569336,
+                "z": 103.78700256347656
+            },
+            "rightRotation": {
+                "x": -0.17895099520683289,
+                "y": -0.2646549940109253,
+                "z": -0.6887869834899902,
+                "w": 0.6507729887962341
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Mk14/Mk14.prefab|Slide|0",
+            "poseGuid": "ecd7a264bd32b6c43ae067c3b5b1be97",
+            "poseName": "Kinemation_Mk14_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 1.8389999866485596,
+                "y": 50.8650016784668,
+                "z": 94.08999633789063
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.8389999866485596,
+                "y": 50.8650016784668,
+                "z": 94.08999633789063
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Mk14/Mk14_mag.prefab|.|0",
+            "poseGuid": "6185e5cc71e39804ea7a0d2ceb0bc1c6",
+            "poseName": "Kinemation_Mk14_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 1.909000039100647,
+                "y": -55.5,
+                "z": 0.4490000009536743
+            },
+            "leftRotation": {
+                "x": 0.2646549940109253,
+                "y": 0.17895099520683289,
+                "z": 0.6507729887962341,
+                "w": -0.6887869834899902
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -1.909000039100647,
+                "y": -55.5,
+                "z": 0.4490000009536743
+            },
+            "rightRotation": {
+                "x": -0.17895099520683289,
+                "y": -0.2646549940109253,
+                "z": -0.6887869834899902,
+                "w": 0.6507729887962341
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/PPK/PPK.prefab|.|0",
+            "poseGuid": "ccf318eb50b9edc409d829df964fafe7",
+            "poseName": "HandsPack_PPK_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 26.777000427246095,
+                "y": -38.7859992980957,
+                "z": -88.61900329589844
+            },
+            "leftRotation": {
+                "x": -0.010741000063717366,
+                "y": -0.004995000082999468,
+                "z": 0.6534559726715088,
+                "w": -0.7568719983100891
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -26.790000915527345,
+                "y": -38.66600036621094,
+                "z": -88.6520004272461
+            },
+            "rightRotation": {
+                "x": -0.005762000102549791,
+                "y": -0.011195000261068344,
+                "z": 0.7648209929466248,
+                "w": -0.6441199779510498
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/PPK/PPK.prefab|.|1",
+            "poseGuid": "cf6043152865be24eb9592b01d01c275",
+            "poseName": "HandsPack_PPK_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 7.234000205993652,
+                "y": -81.11299896240235,
+                "z": -78.38700103759766
+            },
+            "leftRotation": {
+                "x": -0.08015599846839905,
+                "y": 0.4375230073928833,
+                "z": -0.06203699856996536,
+                "w": 0.8934760093688965
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -7.135000228881836,
+                "y": -81.06500244140625,
+                "z": -78.32599639892578
+            },
+            "rightRotation": {
+                "x": 0.43932899832725527,
+                "y": -0.07498999685049057,
+                "z": -0.8937349915504456,
+                "w": 0.05103199928998947
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/PPK/PPK.prefab|MeshContainer/MagAnchor/PPK_mag|0",
+            "poseGuid": "54eb362619358be4092bc4fee7a0788e",
+            "poseName": "HandsPack_PPK_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -12.092000007629395,
+                "y": -67.86100006103516,
+                "z": -127.39099884033203
+            },
+            "leftRotation": {
+                "x": -0.1796720027923584,
+                "y": -0.501151978969574,
+                "z": -0.21660000085830689,
+                "w": -0.8183209896087647
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 12.276000022888184,
+                "y": -67.86100006103516,
+                "z": -127.39099884033203
+            },
+            "rightRotation": {
+                "x": -0.501151978969574,
+                "y": -0.1796720027923584,
+                "z": 0.8183209896087647,
+                "w": 0.21660000085830689
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/PPK/PPK.prefab|Slide|0",
+            "poseGuid": "c26efb7bde1fcb945ab838f37957a972",
+            "poseName": "HandsPack_PPK_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.09700000286102295,
+                "y": 75.81800079345703,
+                "z": 30.700000762939454
+            },
+            "leftRotation": {
+                "x": 0.8039810061454773,
+                "y": -0.06898000091314316,
+                "z": 0.5884780287742615,
+                "w": -0.05048999935388565
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.09700000286102295,
+                "y": 75.81800079345703,
+                "z": 30.700000762939454
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.6806210279464722,
+                "z": 0.0,
+                "w": 0.7326350212097168
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/PPK/PPK_mag.prefab|.|0",
+            "poseGuid": "54eb362619358be4092bc4fee7a0788e",
+            "poseName": "HandsPack_PPK_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -12.184000015258789,
+                "y": -44.090999603271487,
+                "z": -74.44200134277344
+            },
+            "leftRotation": {
+                "x": -0.1796720027923584,
+                "y": -0.501151978969574,
+                "z": -0.21660000085830689,
+                "w": -0.8183209896087647
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 12.184000015258789,
+                "y": -44.090999603271487,
+                "z": -74.44200134277344
+            },
+            "rightRotation": {
+                "x": -0.501151978969574,
+                "y": -0.1796720027923584,
+                "z": 0.8183209896087647,
+                "w": 0.21660000085830689
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/R08/R08.prefab|.|0",
+            "poseGuid": "9084214af7b1d1e4aa0bc7379a914f79",
+            "poseName": "Kinemation_R08_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -0.03500000014901161,
+                "y": -46.98899841308594,
+                "z": -57.75699996948242
+            },
+            "leftRotation": {
+                "x": 0.06028499826788902,
+                "y": -0.13203799724578858,
+                "z": -0.7235410213470459,
+                "w": 0.6748489737510681
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.003000000026077032,
+                "y": -46.917999267578128,
+                "z": -57.78099822998047
+            },
+            "rightRotation": {
+                "x": 0.13192400336265565,
+                "y": -0.0591449998319149,
+                "z": 0.6838060021400452,
+                "w": -0.7151979804039002
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/R08/R08.prefab|.|1",
+            "poseGuid": "fff20e71630e63d47aea4684a8b247d0",
+            "poseName": "Kinemation_R08_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -0.7789999842643738,
+                "y": -62.922000885009769,
+                "z": -50.65299987792969
+            },
+            "leftRotation": {
+                "x": 0.04832499846816063,
+                "y": -0.16545900702476502,
+                "z": 0.40661901235580447,
+                "w": -0.8971890211105347
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.8190000057220459,
+                "y": -62.85200119018555,
+                "z": -50.6609992980957
+            },
+            "rightRotation": {
+                "x": 0.1669989973306656,
+                "y": -0.04617200046777725,
+                "z": -0.9019349813461304,
+                "w": 0.39559200406074526
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/R08/R08.prefab|MeshContainer/MagAnchor/R08_mag|0",
+            "poseGuid": "2c56cbc415aa312498838b9c7093fc7f",
+            "poseName": "Kinemation_R08_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -39.900001525878909,
+                "y": 28.441999435424806,
+                "z": 4.618000030517578
+            },
+            "leftRotation": {
+                "x": 0.020912999287247659,
+                "y": -0.34282800555229189,
+                "z": 0.6624839901924133,
+                "w": -0.6656929850578308
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 39.900001525878909,
+                "y": 28.441999435424806,
+                "z": 4.618000030517578
+            },
+            "rightRotation": {
+                "x": 0.34282800555229189,
+                "y": -0.020912999287247659,
+                "z": -0.6656929850578308,
+                "w": 0.6624839901924133
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/R08/R08_mag.prefab|.|0",
+            "poseGuid": "2c56cbc415aa312498838b9c7093fc7f",
+            "poseName": "Kinemation_R08_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -39.900001525878909,
+                "y": -3.700000047683716,
+                "z": -10.100000381469727
+            },
+            "leftRotation": {
+                "x": 0.020912999287247659,
+                "y": -0.34282800555229189,
+                "z": 0.6624839901924133,
+                "w": -0.6656929850578308
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 39.900001525878909,
+                "y": -3.700000047683716,
+                "z": -10.100000381469727
+            },
+            "rightRotation": {
+                "x": 0.34282800555229189,
+                "y": -0.020912999287247659,
+                "z": -0.6656929850578308,
+                "w": 0.6624839901924133
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Revolver/Revolver.prefab|.|0",
+            "poseGuid": "f8be455c91bc8384fa783d95e1a3bbd7",
+            "poseName": "HandsPack_Revolver_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.3200000524520875,
+                "y": 70.80000305175781,
+                "z": -193.3459930419922
+            },
+            "leftRotation": {
+                "x": 0.06736499816179276,
+                "y": 0.051812998950481418,
+                "z": -0.7181839942932129,
+                "w": 0.6906440258026123
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.3200000524520875,
+                "y": 70.80000305175781,
+                "z": -193.3459930419922
+            },
+            "rightRotation": {
+                "x": -0.051812998950481418,
+                "y": -0.06736499816179276,
+                "z": 0.6906440258026123,
+                "w": -0.7181839942932129
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Revolver/Revolver.prefab|.|1",
+            "poseGuid": "63b5099894a4dd14d92eb2c63a9cb33a",
+            "poseName": "HandsPack_Revolver_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -16.399999618530275,
+                "y": 31.60700035095215,
+                "z": -197.7050018310547
+            },
+            "leftRotation": {
+                "x": -0.11160700023174286,
+                "y": 0.27799999713897707,
+                "z": -0.48092401027679446,
+                "w": 0.8239970207214356
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 16.399999618530275,
+                "y": 31.60700035095215,
+                "z": -197.7050018310547
+            },
+            "rightRotation": {
+                "x": -0.27799999713897707,
+                "y": 0.11160700023174286,
+                "z": 0.8239970207214356,
+                "w": -0.48092401027679446
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Revolver/Revolver.prefab|MeshContainer/MagAnchor/Revolver_mag|0",
+            "poseGuid": "43dc945fadbe83e468d0ad36c2d64e96",
+            "poseName": "HandsPack_Revolver_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -70.99600219726563,
+                "y": 169.19900512695313,
+                "z": -104.4739990234375
+            },
+            "leftRotation": {
+                "x": -0.014194999821484089,
+                "y": -0.42569100856781008,
+                "z": 0.7166110277175903,
+                "w": -0.5523170232772827
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 71.2040023803711,
+                "y": 169.19900512695313,
+                "z": -104.4739990234375
+            },
+            "rightRotation": {
+                "x": 0.42569100856781008,
+                "y": 0.014194999821484089,
+                "z": -0.5523170232772827,
+                "w": 0.7166110277175903
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Revolver/Revolver_mag.prefab|.|0",
+            "poseGuid": "43dc945fadbe83e468d0ad36c2d64e96",
+            "poseName": "HandsPack_Revolver_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -71.0999984741211,
+                "y": 0.800000011920929,
+                "z": -30.200000762939454
+            },
+            "leftRotation": {
+                "x": -0.014194999821484089,
+                "y": -0.42569100856781008,
+                "z": 0.7166110277175903,
+                "w": -0.5523170232772827
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 71.0999984741211,
+                "y": 0.800000011920929,
+                "z": -30.200000762939454
+            },
+            "rightRotation": {
+                "x": 0.42569100856781008,
+                "y": 0.014194999821484089,
+                "z": -0.5523170232772827,
+                "w": 0.7166110277175903
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab|.|0",
+            "poseGuid": "9fdcce4d685527345b58b8906e2e6602",
+            "poseName": "Kinemation_SRM12_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -3.759999990463257,
+                "y": -58.22800064086914,
+                "z": -55.428001403808597
+            },
+            "leftRotation": {
+                "x": -0.06862299889326096,
+                "y": 0.01292600017040968,
+                "z": -0.6961280107498169,
+                "w": 0.7145140171051025
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 3.759999990463257,
+                "y": -58.22800064086914,
+                "z": -55.428001403808597
+            },
+            "rightRotation": {
+                "x": -0.01292600017040968,
+                "y": 0.06862299889326096,
+                "z": 0.7145140171051025,
+                "w": -0.6961280107498169
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab|.|1",
+            "poseGuid": "4d5d74e6a95f68d49ad545bacac01e6a",
+            "poseName": "Kinemation_SRM12_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.9800000190734864,
+                "y": 9.28499984741211,
+                "z": 190.8000030517578
+            },
+            "leftRotation": {
+                "x": -0.07248099893331528,
+                "y": 0.22093400359153748,
+                "z": -0.3313469886779785,
+                "w": 0.9144089818000794
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.9800000190734864,
+                "y": 9.28499984741211,
+                "z": 190.8000030517578
+            },
+            "rightRotation": {
+                "x": 0.22093400359153748,
+                "y": -0.07248099893331528,
+                "z": -0.9144089818000794,
+                "w": 0.3313469886779785
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab|MeshContainer/MagAnchor/SRM12_mag|0",
+            "poseGuid": "ec0eb51e72021f642a1054a51f6086c1",
+            "poseName": "Kinemation_SRM12_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 10.20199966430664,
+                "y": -55.20399856567383,
+                "z": -192.0590057373047
+            },
+            "leftRotation": {
+                "x": 0.16866600513458253,
+                "y": -0.22217600047588349,
+                "z": 0.11397100239992142,
+                "w": -0.9535199999809265
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -10.201000213623047,
+                "y": -55.20399856567383,
+                "z": -192.0590057373047
+            },
+            "rightRotation": {
+                "x": -0.22217600047588349,
+                "y": 0.16866600513458253,
+                "z": 0.9535199999809265,
+                "w": -0.11397100239992142
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SRM12/SRM12.prefab|Slide|0",
+            "poseGuid": "adebffcc0cc45994cbe0d53ab14591fc",
+            "poseName": "Kinemation_SRM12_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 31.139999389648439,
+                "y": 12.097000122070313,
+                "z": -160.04299926757813
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 31.139999389648439,
+                "y": 12.097000122070313,
+                "z": -160.04299926757813
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SRM12/SRM12_mag.prefab|.|0",
+            "poseGuid": "ec0eb51e72021f642a1054a51f6086c1",
+            "poseName": "Kinemation_SRM12_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 10.201000213623047,
+                "y": -41.42100143432617,
+                "z": -19.77899932861328
+            },
+            "leftRotation": {
+                "x": 0.16866600513458253,
+                "y": -0.22217600047588349,
+                "z": 0.11397100239992142,
+                "w": -0.9535199999809265
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -10.201000213623047,
+                "y": -41.42100143432617,
+                "z": -19.77899932861328
+            },
+            "rightRotation": {
+                "x": -0.22217600047588349,
+                "y": 0.16866600513458253,
+                "z": 0.9535199999809265,
+                "w": -0.11397100239992142
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Scar/Scar.prefab|.|0",
+            "poseGuid": "ef35bc6ef404eac469931a0320dc8fa9",
+            "poseName": "HandsPack_Scar_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 5.46999979019165,
+                "y": -55.39699935913086,
+                "z": -70.69999694824219
+            },
+            "leftRotation": {
+                "x": 0.018983999267220498,
+                "y": 0.030160000547766687,
+                "z": -0.6950250267982483,
+                "w": 0.718101978302002
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -5.46999979019165,
+                "y": -55.39699935913086,
+                "z": -70.69999694824219
+            },
+            "rightRotation": {
+                "x": 0.030160000547766687,
+                "y": 0.018983999267220498,
+                "z": -0.718101978302002,
+                "w": 0.6950250267982483
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Scar/Scar.prefab|.|1",
+            "poseGuid": "02563df981715f640a5adf9df6c1ae05",
+            "poseName": "HandsPack_Scar_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -6.436999797821045,
+                "y": 36.900001525878909,
+                "z": 222.76100158691407
+            },
+            "leftRotation": {
+                "x": -0.03059300035238266,
+                "y": 0.34455499053001406,
+                "z": -0.43914899230003359,
+                "w": 0.8291530013084412
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 6.436999797821045,
+                "y": 36.900001525878909,
+                "z": 222.76100158691407
+            },
+            "rightRotation": {
+                "x": -0.34455499053001406,
+                "y": 0.03059300035238266,
+                "z": 0.8291530013084412,
+                "w": -0.43914899230003359
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Scar/Scar.prefab|MeshContainer/MagAnchor/Scar_mag|0",
+            "poseGuid": "c6e9c06240799c845ac839c128f18245",
+            "poseName": "HandsPack_Scar_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.9199999570846558,
+                "y": -97.86900329589844,
+                "z": 83.8499984741211
+            },
+            "leftRotation": {
+                "x": 0.25538399815559389,
+                "y": 0.03988499939441681,
+                "z": 0.6565210223197937,
+                "w": -0.7086380124092102
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -10.638999938964844,
+                "y": -97.86900329589844,
+                "z": 83.8499984741211
+            },
+            "rightRotation": {
+                "x": -0.03988499939441681,
+                "y": -0.25538399815559389,
+                "z": -0.7086380124092102,
+                "w": 0.6565210223197937
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Scar/Scar.prefab|Slide|0",
+            "poseGuid": "5034b37d595d9454fb86814b5fc2afd3",
+            "poseName": "HandsPack_Scar_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -30.34600067138672,
+                "y": 113.5719985961914,
+                "z": 203.5469970703125
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -30.34600067138672,
+                "y": 113.5719985961914,
+                "z": 203.5469970703125
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Scar/Scar_mag.prefab|.|0",
+            "poseGuid": "c6e9c06240799c845ac839c128f18245",
+            "poseName": "HandsPack_Scar_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.360000133514404,
+                "y": -51.46099853515625,
+                "z": -7.486000061035156
+            },
+            "leftRotation": {
+                "x": 0.25538399815559389,
+                "y": 0.03988499939441681,
+                "z": 0.6565210223197937,
+                "w": -0.7086380124092102
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.360000133514404,
+                "y": -51.46099853515625,
+                "z": -7.486000061035156
+            },
+            "rightRotation": {
+                "x": -0.03988499939441681,
+                "y": -0.25538399815559389,
+                "z": -0.7086380124092102,
+                "w": 0.6565210223197937
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab|.|0",
+            "poseGuid": "818530d9ea7b26d40add71cb256a521e",
+            "poseName": "HandsPack_SniperRifle_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 9.14900016784668,
+                "y": -36.801998138427737,
+                "z": -61.02399826049805
+            },
+            "leftRotation": {
+                "x": -0.04530499875545502,
+                "y": -0.024650000035762788,
+                "z": 0.6717450022697449,
+                "w": -0.738985002040863
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 6.639999866485596,
+                "y": -39.70000076293945,
+                "z": -52.5
+            },
+            "rightRotation": {
+                "x": -0.09006199985742569,
+                "y": 0.007098999805748463,
+                "z": 0.679938018321991,
+                "w": -0.7276830077171326
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab|.|1",
+            "poseGuid": "1458cdf0dd69b294391cc5415d7699a3",
+            "poseName": "HandsPack_SniperRifle_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -2.0999999046325685,
+                "y": 20.58300018310547,
+                "z": 183.4199981689453
+            },
+            "leftRotation": {
+                "x": -0.10910899937152863,
+                "y": 0.49205899238586428,
+                "z": 0.10927499830722809,
+                "w": 0.8567569851875305
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 3.9189999103546144,
+                "y": 20.58799934387207,
+                "z": 183.46099853515626
+            },
+            "rightRotation": {
+                "x": 0.443462997674942,
+                "y": -0.1102290004491806,
+                "z": -0.882207989692688,
+                "w": -0.11357399821281433
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab|MeshContainer/MagAnchor/SniperRifle_mag|0",
+            "poseGuid": "13cdb0626ab0b0e4891dc70e98776702",
+            "poseName": "HandsPack_SniperRifle_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.7139999866485596,
+                "y": -32.46200180053711,
+                "z": 62.17599868774414
+            },
+            "leftRotation": {
+                "x": -0.24946799874305726,
+                "y": 0.4576280117034912,
+                "z": -0.11966200172901154,
+                "w": 0.8449990153312683
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -0.7139999866485596,
+                "y": -32.46200180053711,
+                "z": 62.17599868774414
+            },
+            "rightRotation": {
+                "x": -0.4576280117034912,
+                "y": 0.24946799874305726,
+                "z": 0.8449990153312683,
+                "w": -0.11966200172901154
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle.prefab|Slide|0",
+            "poseGuid": "9cfb5a00a5f2ef647af81cb0ad46f86c",
+            "poseName": "HandsPack_SniperRifle_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.366000175476074,
+                "y": 54.56100082397461,
+                "z": -16.145000457763673
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 4.366000175476074,
+                "y": 54.56100082397461,
+                "z": -16.145000457763673
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifle/SniperRifle_mag.prefab|.|0",
+            "poseGuid": "13cdb0626ab0b0e4891dc70e98776702",
+            "poseName": "HandsPack_SniperRifle_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.7139999866485596,
+                "y": -34.63999938964844,
+                "z": -18.575000762939454
+            },
+            "leftRotation": {
+                "x": -0.24946799874305726,
+                "y": 0.4576280117034912,
+                "z": -0.11966200172901154,
+                "w": 0.8449990153312683
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -0.7139999866485596,
+                "y": -34.63999938964844,
+                "z": -18.575000762939454
+            },
+            "rightRotation": {
+                "x": -0.4576280117034912,
+                "y": 0.24946799874305726,
+                "z": 0.8449990153312683,
+                "w": -0.11966200172901154
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab|.|0",
+            "poseGuid": "818530d9ea7b26d40add71cb256a521e",
+            "poseName": "HandsPack_SniperRifle_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 9.14900016784668,
+                "y": -36.801998138427737,
+                "z": -61.02399826049805
+            },
+            "leftRotation": {
+                "x": -0.04530499875545502,
+                "y": -0.024650000035762788,
+                "z": 0.6717450022697449,
+                "w": -0.738985002040863
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 6.639999866485596,
+                "y": -39.70000076293945,
+                "z": -52.5
+            },
+            "rightRotation": {
+                "x": -0.09006199985742569,
+                "y": 0.007098999805748463,
+                "z": 0.679938018321991,
+                "w": -0.7276830077171326
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab|.|1",
+            "poseGuid": "1458cdf0dd69b294391cc5415d7699a3",
+            "poseName": "HandsPack_SniperRifle_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -2.0999999046325685,
+                "y": 20.58300018310547,
+                "z": 183.4199981689453
+            },
+            "leftRotation": {
+                "x": -0.10910899937152863,
+                "y": 0.49205899238586428,
+                "z": 0.10927499830722809,
+                "w": 0.8567569851875305
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 3.9189999103546144,
+                "y": 20.58799934387207,
+                "z": 183.46099853515626
+            },
+            "rightRotation": {
+                "x": 0.443462997674942,
+                "y": -0.1102290004491806,
+                "z": -0.882207989692688,
+                "w": -0.11357399821281433
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab|MeshContainer/MagAnchor/SniperRifleAuto_mag|0",
+            "poseGuid": "13cdb0626ab0b0e4891dc70e98776702",
+            "poseName": "HandsPack_SniperRifle_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.7139999866485596,
+                "y": -32.46200180053711,
+                "z": 62.17599868774414
+            },
+            "leftRotation": {
+                "x": -0.24946799874305726,
+                "y": 0.4576280117034912,
+                "z": -0.11966200172901154,
+                "w": 0.8449990153312683
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -0.7139999866485596,
+                "y": -32.46200180053711,
+                "z": 62.17599868774414
+            },
+            "rightRotation": {
+                "x": -0.4576280117034912,
+                "y": 0.24946799874305726,
+                "z": 0.8449990153312683,
+                "w": -0.11966200172901154
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto.prefab|Slide|0",
+            "poseGuid": "ff1232205a9349946955c52a10c7aadb",
+            "poseName": "HandsPack_SniperRifleAuto_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.366000175476074,
+                "y": 54.56100082397461,
+                "z": -16.145000457763673
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 4.366000175476074,
+                "y": 54.56100082397461,
+                "z": -16.145000457763673
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/SniperRifleAuto/SniperRifleAuto_mag.prefab|.|0",
+            "poseGuid": "13cdb0626ab0b0e4891dc70e98776702",
+            "poseName": "HandsPack_SniperRifle_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.7139999866485596,
+                "y": -34.63999938964844,
+                "z": -18.575000762939454
+            },
+            "leftRotation": {
+                "x": -0.24946799874305726,
+                "y": 0.4576280117034912,
+                "z": -0.11966200172901154,
+                "w": 0.8449990153312683
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -0.7139999866485596,
+                "y": -34.63999938964844,
+                "z": -18.575000762939454
+            },
+            "rightRotation": {
+                "x": -0.4576280117034912,
+                "y": 0.24946799874305726,
+                "z": 0.8449990153312683,
+                "w": -0.11966200172901154
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/TR15/TR15.prefab|.|0",
+            "poseGuid": "3eec75e099da7764d86285e218200477",
+            "poseName": "Kinemation_TR15_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -1.7799999713897706,
+                "y": -46.599998474121097,
+                "z": -45.5
+            },
+            "leftRotation": {
+                "x": -0.0461760014295578,
+                "y": 0.03150700032711029,
+                "z": -0.6986510157585144,
+                "w": 0.7132750153541565
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 1.7799999713897706,
+                "y": -46.599998474121097,
+                "z": -45.5
+            },
+            "rightRotation": {
+                "x": -0.03150700032711029,
+                "y": 0.0461760014295578,
+                "z": 0.7132750153541565,
+                "w": -0.6986510157585144
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/TR15/TR15.prefab|.|1",
+            "poseGuid": "150112ad7d049ca4a9de971e17ea84c5",
+            "poseName": "Kinemation_TR15_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 7.132999897003174,
+                "y": 30.336000442504884,
+                "z": 247.0659942626953
+            },
+            "leftRotation": {
+                "x": -0.21385399997234345,
+                "y": 0.4086500108242035,
+                "z": -0.2432360053062439,
+                "w": 0.8532919883728027
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -7.132999897003174,
+                "y": 30.336000442504884,
+                "z": 247.0659942626953
+            },
+            "rightRotation": {
+                "x": -0.4086500108242035,
+                "y": 0.21385399997234345,
+                "z": 0.8532919883728027,
+                "w": -0.2432360053062439
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/TR15/TR15.prefab|MeshContainer/MagAnchor/TR15_mag|0",
+            "poseGuid": "76a2fca34c3bc5d43be1785be7413409",
+            "poseName": "Kinemation_TR15_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 5.2170000076293949,
+                "y": -79.43800354003906,
+                "z": 73.8499984741211
+            },
+            "leftRotation": {
+                "x": -0.20676599442958833,
+                "y": -0.13960100710391999,
+                "z": -0.6947469711303711,
+                "w": 0.6746000051498413
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.627999782562256,
+                "y": -79.43800354003906,
+                "z": 73.8499984741211
+            },
+            "rightRotation": {
+                "x": -0.13960100710391999,
+                "y": -0.20676599442958833,
+                "z": -0.6746000051498413,
+                "w": 0.6947469711303711
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/TR15/TR15.prefab|Slide|0",
+            "poseGuid": "bd66c59a83e849349baa5c1ed0c43dc9",
+            "poseName": "Kinemation_TR15_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -4.0,
+                "y": 67.8550033569336,
+                "z": -60.641998291015628
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.0,
+                "y": 67.8550033569336,
+                "z": -60.641998291015628
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/TR15/TR15_mag.prefab|.|0",
+            "poseGuid": "76a2fca34c3bc5d43be1785be7413409",
+            "poseName": "Kinemation_TR15_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 4.922999858856201,
+                "y": -21.996999740600587,
+                "z": -6.261000156402588
+            },
+            "leftRotation": {
+                "x": -0.20676599442958833,
+                "y": -0.13960100710391999,
+                "z": -0.6947469711303711,
+                "w": 0.6746000051498413
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -4.921999931335449,
+                "y": -21.996999740600587,
+                "z": -6.261000156402588
+            },
+            "rightRotation": {
+                "x": -0.13960100710391999,
+                "y": -0.20676599442958833,
+                "z": -0.6746000051498413,
+                "w": 0.6947469711303711
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab|.|0",
+            "poseGuid": "9891b932290f75748843f8b6a6eef618",
+            "poseName": "HandsPack_Uzi_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 51.20399856567383,
+                "y": -197.13499450683595,
+                "z": -270.19500732421877
+            },
+            "leftRotation": {
+                "x": -0.010676000267267228,
+                "y": 0.011282999999821186,
+                "z": 0.7099499702453613,
+                "w": -0.7040799856185913
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -51.305999755859378,
+                "y": -196.7740020751953,
+                "z": -270.3070068359375
+            },
+            "rightRotation": {
+                "x": 0.010546999983489514,
+                "y": -0.010998999699950219,
+                "z": 0.7127410173416138,
+                "w": -0.7012619972229004
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab|MeshContainer/MagAnchor/Uzi_mag|0",
+            "poseGuid": "ac9e924e235059f48b952fe5aa117ee3",
+            "poseName": "HandsPack_Uzi_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 8.468000411987305,
+                "y": -504.364990234375,
+                "z": -225.85000610351563
+            },
+            "leftRotation": {
+                "x": 0.08822199702262879,
+                "y": 0.020462999120354654,
+                "z": -0.18197500705718995,
+                "w": 0.9791240096092224
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -25.131999969482423,
+                "y": -504.364990234375,
+                "z": -225.85000610351563
+            },
+            "rightRotation": {
+                "x": -0.020462999120354654,
+                "y": -0.08822199702262879,
+                "z": 0.9791240096092224,
+                "w": -0.18197500705718995
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Uzi/Uzi.prefab|Slide|0",
+            "poseGuid": "64ffd1584a8943f4591ae6751655f1d5",
+            "poseName": "HandsPack_Uzi_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 69.43199920654297,
+                "y": 236.18099975585938,
+                "z": -180.86700439453126
+            },
+            "leftRotation": {
+                "x": 0.3478820025920868,
+                "y": 0.04661399871110916,
+                "z": 0.9362189769744873,
+                "w": -0.01732099987566471
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 69.43199920654297,
+                "y": 236.18099975585938,
+                "z": -180.86700439453126
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.22022199630737306,
+                "z": 0.0,
+                "w": 0.9754499793052673
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Uzi/Uzi_mag.prefab|.|0",
+            "poseGuid": "ac9e924e235059f48b952fe5aa117ee3",
+            "poseName": "HandsPack_Uzi_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 16.799999237060548,
+                "y": -291.7179870605469,
+                "z": -78.0
+            },
+            "leftRotation": {
+                "x": 0.08822199702262879,
+                "y": 0.020462999120354654,
+                "z": -0.18197500705718995,
+                "w": 0.9791240096092224
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -16.799999237060548,
+                "y": -291.7179870605469,
+                "z": -78.0
+            },
+            "rightRotation": {
+                "x": -0.020462999120354654,
+                "y": -0.08822199702262879,
+                "z": 0.9791240096092224,
+                "w": -0.18197500705718995
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Viper/Viper.prefab|.|0",
+            "poseGuid": "d259549880877a845bd6780bc625eea3",
+            "poseName": "Kinemation_Viper_Grip",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": -0.0949999988079071,
+                "y": -41.29999923706055,
+                "z": -32.20000076293945
+            },
+            "leftRotation": {
+                "x": -0.06137299910187721,
+                "y": 0.013616000302135945,
+                "z": -0.7099170088768005,
+                "w": 0.7014740109443665
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.0949999988079071,
+                "y": -41.29999923706055,
+                "z": -32.20000076293945
+            },
+            "rightRotation": {
+                "x": -0.013616000302135945,
+                "y": 0.06137299910187721,
+                "z": 0.7014740109443665,
+                "w": -0.7099170088768005
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Viper/Viper.prefab|.|1",
+            "poseGuid": "abd7a0b24d1efb24e9bdfb9fd8cb009f",
+            "poseName": "Kinemation_Viper_Support",
+            "blend": 0.0,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 6.619999885559082,
+                "y": -54.542999267578128,
+                "z": -33.86000061035156
+            },
+            "leftRotation": {
+                "x": 0.17974799871444703,
+                "y": -0.11775299906730652,
+                "z": 0.45659300684928896,
+                "w": -0.8633350133895874
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -6.619999885559082,
+                "y": -54.542999267578128,
+                "z": -33.86000061035156
+            },
+            "rightRotation": {
+                "x": -0.11775299906730652,
+                "y": 0.17974799871444703,
+                "z": 0.8633350133895874,
+                "w": -0.45659300684928896
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Viper/Viper.prefab|MeshContainer/MagAnchor/Viper_mag|0",
+            "poseGuid": "5a4516bc5f223ed4db97acf3fb1d6162",
+            "poseName": "Kinemation_Viper_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 15.795999526977539,
+                "y": -86.7490005493164,
+                "z": -42.68000030517578
+            },
+            "leftRotation": {
+                "x": -0.33399298787117007,
+                "y": 0.14970800280570985,
+                "z": -0.08574199676513672,
+                "w": 0.9266520142555237
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -15.793000221252442,
+                "y": -86.7490005493164,
+                "z": -42.68000030517578
+            },
+            "rightRotation": {
+                "x": -0.14970800280570985,
+                "y": 0.33399298787117007,
+                "z": 0.9266520142555237,
+                "w": -0.08574199676513672
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Viper/Viper.prefab|Slide|0",
+            "poseGuid": "4f94aa78f837e4d43870a3cee855e3f9",
+            "poseName": "Kinemation_Viper_Slide_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 0.0,
+                "y": 43.446998596191409,
+                "z": -29.812000274658204
+            },
+            "leftRotation": {
+                "x": 0.8039810061454773,
+                "y": -0.06898000091314316,
+                "z": 0.5884780287742615,
+                "w": -0.05048999935388565
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": 0.0,
+                "y": 43.446998596191409,
+                "z": -29.812000274658204
+            },
+            "rightRotation": {
+                "x": 0.0,
+                "y": -0.6806210279464722,
+                "z": 0.0,
+                "w": 0.7326350212097168
+            }
+        },
+        {
+            "key": "Assets/Prefabs/Weapons/Viper/Viper_mag.prefab|.|0",
+            "poseGuid": "5a4516bc5f223ed4db97acf3fb1d6162",
+            "poseName": "Kinemation_Viper_Mag_Grip",
+            "blend": 0.33000001311302187,
+            "hasLeft": true,
+            "leftPositionMm": {
+                "x": 15.795000076293946,
+                "y": -57.347999572753909,
+                "z": -20.73200035095215
+            },
+            "leftRotation": {
+                "x": -0.33399298787117007,
+                "y": 0.14970800280570985,
+                "z": -0.08574199676513672,
+                "w": 0.9266520142555237
+            },
+            "hasRight": true,
+            "rightPositionMm": {
+                "x": -15.795000076293946,
+                "y": -57.347999572753909,
+                "z": -20.73200035095215
+            },
+            "rightRotation": {
+                "x": -0.14970800280570985,
+                "y": 0.33399298787117007,
+                "z": 0.9266520142555237,
+                "w": -0.08574199676513672
+            }
+        }
+    ]
 }

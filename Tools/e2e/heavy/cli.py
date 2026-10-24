@@ -66,7 +66,8 @@ def editmode_item(record):
     text = ""
     if summary.get("total"):
         text = (str(summary.get("total")) + " тестов, красных " + str(len(record.get("red", []))) + ": новых "
-                + str(len(record.get("newRed", []))) + ", известных " + str(len(record.get("stillRed", []))))
+                + str(len(record.get("newRed", []))) + ", известных " + str(len(record.get("stillRed", [])))
+                + ", предупреждений " + str(len(record.get("warnings", []))))
     return {"name": "EditMode", "topology": "", "verdict": record["verdict"], "reasons": record.get("reasons", []),
             "notes": record.get("notes", []), "summary": text, "editmode": record}
 

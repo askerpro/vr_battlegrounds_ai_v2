@@ -1,0 +1,46 @@
+{
+  "task_id": "lobby-decor-builders",
+  "owner": "lobby-decor-builders",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/lobby-decor-builders",
+  "base_sha": "93a5f0b6d7ea122becf7d4e9b3452ad46bea7257",
+  "doc_path": "tasks/lobby-decor-builders/Readme.md",
+  "title": "Сборщики декора Lobby не откатывают принятую арену",
+  "branch": "task/lobby-decor-builders",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/lobby-decor-builders/**",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration/**",
+        "Assets/Editor/VR_Battlegrounds/Maps/LobbyDecoration.meta",
+        "Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/**",
+        "Assets/Editor/VR_Battlegrounds/Performance/BoxUv/BoxUvTargetScanner.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/LobbyGpuSceneTweaks.cs",
+        "Assets/Editor/VR_Battlegrounds/Performance/LobbyGpuSceneTweaks.cs.meta",
+        "Assets/Scripts/Environment/LobbyZoneLayoutBinding.cs",
+        "Assets/Scripts/Environment/LobbyZoneLayoutBinding.cs.meta",
+        "Assets/Scripts/Debug/LobbyDetail/**",
+        "Assets/Scripts/Debug/LobbyDetail.meta",
+        "Assets/Prefabs/Environment/LobbyDecoration/FieldCamp.prefab",
+        "Assets/Prefabs/Environment/LobbyDecoration/FieldCamp.prefab.meta",
+        "Assets/Prefabs/Environment/LobbyDecoration/Watchtower_Lit.prefab",
+        "Assets/Materials/Lobby/Night/LobbyNightFloodFace.mat",
+        "Assets/Materials/Lobby/Night/LobbyNightFloodFace.mat.meta",
+        "Assets/Materials/Lobby/Night/LobbyNightWindowGlow.mat",
+        "Assets/Materials/Lobby/Night/LobbyNightWindowGlow.mat.meta",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
+        "Assets/Tests/EditMode/Maps/**",
+        "Assets/Tests/EditMode/AssetAudit/**",
+        "Tools/e2e/heavy/**",
+        "Docs/quest-performance-manifest.md",
+        "experts/level-design/journal/**",
+        "experts/performance/journal/**",
+        "experts/launch-infra/journal/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

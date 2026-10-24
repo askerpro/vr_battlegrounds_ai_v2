@@ -43,7 +43,10 @@ namespace VrBattlegrounds.Maps
         private bool _pending;
         private Vector3 _point;
         private readonly Dictionary<ShootingTarget, Texture2D> _idle = new Dictionary<ShootingTarget, Texture2D>();
+        // Отказ снимка без попадания запоминается: монитор «Обзора» спрашивает его каждый кадр.
+        private readonly HashSet<ShootingTarget> _idleFailed = new HashSet<ShootingTarget>();
         private ShootingTarget _defaultTarget;
+        private bool _defaultSearched;
 
         /// <summary>
         /// Снимок нужен только экрану, который кто-то видит. Снаряд симулирует каждая машина
@@ -118,30 +121,45 @@ namespace VrBattlegrounds.Maps
         /// <summary>
         /// Снимок мишени без попадания — монитор до первого выстрела: первая по имени мишень сцены.
         /// null без графического устройства, без мишеней или пока в этом кадре ждёт снимок попадания (студия занята им).
+        /// Сцена обходится один раз: мишени Lobby — объекты сцены, позже они не появляются.
         /// </summary>
         public Texture2D IdlePhoto()
         {
-            if(_defaultTarget==null)
+            if(!_defaultSearched)
+            {
+                _defaultSearched=true;
                 _defaultTarget=gameObject.scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<ShootingTarget>(false))
                     .OrderBy(t=>t.name,StringComparer.Ordinal).FirstOrDefault();
+                if(_defaultTarget==null)GameLog.WeaponSystem.Warning("[RangePhoto] В сцене нет активных мишеней — снимка без попадания не будет.",this);
+            }
             return IdlePhoto(_defaultTarget);
         }
 
-        /// <summary>Снимок мишени без попадания; снимается один раз на мишень.</summary>
+        /// <summary>
+        /// Снимок мишени без попадания; снимается один раз на мишень. Отказ (нет щита, нечего копировать в студию,
+        /// исключение) тоже запоминается — повторно мишень не копируется. Занятая снимком попадания студия — не отказ.
+        /// </summary>
         public Texture2D IdlePhoto(ShootingTarget target)
         {
-            if(target==null)return null;
+            if(target==null||_idleFailed.Contains(target))return null;
             if(_idle.TryGetValue(target,out var cached))return cached;
-            if(!CanRender||_pending||target.Pivot==null)return null;
+            if(!CanRender||_pending)return null;
+            if(target.Pivot==null){FailIdle(target,"нет Pivot");return null;}
             RenderTexture previous=RenderTexture.active;
             try
             {
-                if(!Freeze(target))return null;
+                if(!Freeze(target)){FailIdle(target,"нет видимой геометрии щита");return null;}
                 var texture=Capture("Мишень без попадания");texture.Apply(false,false);
                 _idle.Add(target,texture);return texture;
             }
-            catch(Exception exception){GameLog.WeaponSystem.Error("[RangePhoto] Idle: "+exception,this);return null;}
+            catch(Exception exception){_idleFailed.Add(target);GameLog.WeaponSystem.Error("[RangePhoto] Idle: "+exception,this);return null;}
             finally{RenderTexture.active=previous;foreach(var copy in _copies)copy.gameObject.SetActive(false);}
+        }
+
+        private void FailIdle(ShootingTarget target,string reason)
+        {
+            _idleFailed.Add(target);
+            GameLog.WeaponSystem.Warning("[RangePhoto] Снимок без попадания для "+target.name+" не снят: "+reason+".",this);
         }
 
         /// <summary>Копирует видимую геометрию мишени в студию и ставит камеру фронтально к щиту.</summary>

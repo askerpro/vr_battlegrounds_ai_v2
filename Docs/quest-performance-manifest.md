@@ -37,7 +37,7 @@
 |---|---|---|
 | Аудитор ассетов: `Assets/Editor/VR_Battlegrounds/Performance/AssetAudit/`, меню `Tools/VR Battlegrounds/Performance/Asset Audit/` (Audit Selection, Audit Active Scene, окно) | Механическая проверка правил с id из колонки «Аудитор» | влит в `origin/dev` (задача asset-audit, 2026-10-20) |
 | Box-UV при импорте: `Assets/Editor/VR_Battlegrounds/Performance/BoxUv/` | Переразвёртка UV вместо трипланарного шейдера; материалы переводит фиксер аудитора `BakedLitMaterialFixer` | влит с задачей scene-detail (2026-10-20); фиксер — scene-detail-followups |
-| Свой меш с UV2 для пола шатра: `LobbyTentFloorLightmap` | Пол в лайтмапе без правки общего FBX | влит (scene-detail) |
+| Свой меш с UV2 для сцены: фиксер `LightmapUv2Fixer` правила `mesh.lightmapped-without-uv2` (копия в `<сцена>/LightmapMeshes/`) | Меш в лайтмапе без правки общего FBX (QPM-LIGHT-003), для любой карты | задача lobby-decor-builders (пол Lobby — прежний `LobbyTentFloorLightmap`, удалён) |
 | Диагностические подмены `render_diag` (`PerfRenderDiagnosticControl`) | Рантайм-подмена шейдера/неба для A/B без правки ассетов | влит (scene-detail) |
 | Per-draw на шлеме: `Tools/Perf/gpu_diagnostics/capture_adapters/meta_renderdoc_quest.py`, `Run-QuestE2E.ps1 -MetaRenderDocCmd` | Такты и столлы каждого draw через Meta RenderDoc | влит (scene-detail) |
 
@@ -83,7 +83,7 @@ Lobby после правок scene-detail, тур по 8 видам 2026-10-22 
 
 | id | Правило | Почему | Цена | Аудитор |
 |---|---|---|---|---|
-| QPM-SKY-001 | Небо — сплошной цвет, градиент или статичный cubemap (Unlit). Дальний фон — запечённые карточки. | Procedural-скайбокс считается попиксельно. | A/B 2026-10-20: Procedural → сплошной цвет — **−0,05 мс** (подмена меняла и отражение в зеркале; в replay небо давало 8% тактов — доли replay не цена). Не приоритет | `scene.procedural-skybox` |
+| QPM-SKY-001 | Небо — сплошной цвет, градиент или статичный cubemap (Unlit). Дальний фон — запечённые карточки. | Procedural-скайбокс считается попиксельно. | A/B 2026-10-20: Procedural → сплошной цвет — **−0,05 мс** (подмена меняла и отражение в зеркале; в replay небо давало 8% тактов — доли replay не цена). Не приоритет: правило аудитора удалено (решение пользователя 2026-10-24), procedural-небо допустимо | — |
 
 ### Текстуры (TEX)
 
@@ -97,14 +97,15 @@ Lobby после правок scene-detail, тур по 8 видам 2026-10-22 
 
 | id | Правило | Почему | Цена | Аудитор |
 |---|---|---|---|---|
-| QPM-LIGHT-001 | Весь свет статичных сцен — Baked. Realtime-свет и realtime-тени — только с замером. Подвижные объекты не помечаются ContributeGI. | Realtime-свет — работа на каждом пикселе каждого кадра. | не измерено | — |
+| QPM-LIGHT-001 | Весь свет статичных сцен — Baked. Realtime-свет и realtime-тени — только с замером. Подвижные объекты не помечаются ContributeGI. | Realtime-свет — работа на каждом пикселе каждого кадра. | не измерено | `lighting.realtime-light`, `lighting.scene-not-baked`, `lighting.dynamic-in-gi` |
 | QPM-LIGHT-002 | Крупные поверхности (пол, стены, крыша) — в лайтмапе (UV2, ReceiveGI = Lightmaps), не на light probes. | Проба даёт один SH на весь объект: равномерная заливка из одной точки. | ≈ 0 (одна выборка лайтмапы вместо SH); не измерено. Качество: пол шатра Lobby в редакторе — средняя яркость 30 → 98 из 255 (scene-detail) | `lighting.large-without-lightmap` |
-| QPM-LIGHT-003 | Не включать `generateSecondaryUV` на общем FBX ради одной сцены — делать свой меш с UV2 для этой сцены. | Общий FBX меняет все карты, где он используется. Иначе — box-UV (QPM-SHADER-002): он меняет только сабмеши, которые везде рисуются материалом-целью, и одинаково для всех использований. | — | — |
+| QPM-LIGHT-003 | Не включать `generateSecondaryUV` на общем FBX ради одной сцены — делать свой меш с UV2 для этой сцены. | Общий FBX меняет все карты, где он используется. Иначе — box-UV (QPM-SHADER-002): он меняет только сабмеши, которые везде рисуются материалом-целью, и одинаково для всех использований. | — | `mesh.lightmapped-without-uv2` (фиксер — своя копия меша) |
 | QPM-LIGHT-004 | Range ламп помещения покрывает центр и середины между лампами. У каждого видимого светильника есть источник света. | Иначе «шатёр, освещённый одной свечкой». | ≈ 0 (baked) | — |
-| QPM-LIGHT-005 | Если у сцены есть пресет света (Lobby: `LobbyNightLighting`), параметры света меняются только через него, а не ручной правкой сцены. | Правка в сцене откатится при следующем запуске пресета. | — | — |
-| QPM-LIGHT-006 | У каждого бита StaticEditorFlags один писатель; маску целиком не перезаписывать. Сборщик декора меняет только свои биты (так уже делает `OcclusionBakeTool` с битами окклюзии). | Перезапись маски (например, одним OccludeeStatic) сбрасывает ContributeGI — поверхность молча выпадает из лайтмапы. | — | — |
+| QPM-LIGHT-005 | Сцена — источник правды о свете: параметры света правятся в сцене вручную, без пресетов и сборщиков, переписывающих сцену. Общие правила света (Baked, запекание есть, GI согласован, UV2, пробы в игровых зонах) сторожат правила аудитора и EditMode-проверка всех карт (пока предупреждения). | Пресет или сборщик молча откатывает ручную правку принятой сцены (Lobby: `LobbyNightLighting` при запуске возвращал Realtime-свет; удалён 2026-10-24). | — | правила `lighting.*` |
+| QPM-LIGHT-006 | У каждого бита StaticEditorFlags один писатель; маску целиком не перезаписывать. Инструмент меняет только свои биты (так уже делает `OcclusionBakeTool` с битами окклюзии; `DynamicObjectGiFixer` снимает только ContributeGI). ContributeGI ставит автор сцены вручную. | Перезапись маски (например, одним OccludeeStatic) сбрасывает ContributeGI — поверхность молча выпадает из лайтмапы. | — | — |
 | QPM-LIGHT-007 | Лайтмапы запекаются после явного подтверждения пользователем «карта готова» и после правок геометрии — в том же порядке, что окклюзия ([процесс карты](level-design/level-design-workflow.md), раздел 7). | Запекание до готовности устаревает после первой правки. | — | — |
 | QPM-LIGHT-008 | Зоны оружия (стена арсенала, место у неё, спавн) внутри запечённой Reflection Probe (Box Projection), если отражение окружения темнее рассеянного света в зоне (ночь, помещение). Одна проба на зону, Blend Distance 0 (смешивание проб в `Quest.asset` включено глобально, на одну пробу не влияет). | Цвет металла — почти целиком отражение: без пробы металл отражает ночное небо и становится чёрным рядом с освещёнными руками (Lobby, 2026-10-22: «револьвер полностью чёрный»). | ≈ 0: Lit и так читает кубмапу; память — одна кубмапа 128² | `lighting.dark-reflection-zone` |
+| QPM-LIGHT-009 | Игровые зоны запечённой сцены (пол арены, места у стен арсенала, спавны — на высоте рук) не дальше 3 м от light probe. | Подвижное (руки, оружие, аватары) освещают только пробы: в дыре сетки оно темнеет или берёт свет соседнего помещения. | ≈ 0 (baked) | `lighting.zone-without-probes` |
 
 ### Геометрия и LOD (LOD)
 
@@ -177,9 +178,11 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 | `material.texture-count` | QPM-SHADER-003 |
 | `material.hdrp-legacy` | QPM-SHADER-004 |
 | `material.emission-off` | QPM-SHADER-006 |
-| `scene.procedural-skybox` | QPM-SKY-001 |
 | `texture.no-mipmaps` / `texture.android-format` / `texture.size` | QPM-TEX-001 / 002 / 003 |
 | `lighting.large-without-lightmap` | QPM-LIGHT-002 |
+| `lighting.realtime-light` (фиксер `RealtimeLightBakeFixer`) / `lighting.scene-not-baked` / `lighting.dynamic-in-gi` (фиксер `DynamicObjectGiFixer`) | QPM-LIGHT-001 |
+| `mesh.lightmapped-without-uv2` (фиксер `LightmapUv2Fixer`) | QPM-LIGHT-002, QPM-LIGHT-003 |
+| `lighting.zone-without-probes` | QPM-LIGHT-009 |
 | `lighting.dark-reflection-zone` | QPM-LIGHT-008 |
 | `lod.far-not-reduced` / `mesh.no-lod` | QPM-LOD-001 / 002 |
 | `foliage.alpha-test` | QPM-ALPHA-001 |
@@ -188,9 +191,8 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 Ещё не автоматизированы — кандидаты в правила аудитора:
 - QPM-SHADER-005 — Simple Lit с бликами;
 - QPM-SHADER-007 — несколько писателей одного материала;
-- QPM-LIGHT-001 — realtime-свет в статичной сцене, ContributeGI у подвижных;
 - QPM-LIGHT-004 — светильник без источника; range ламп меньше расстояния до центра помещения;
-- QPM-LIGHT-006 — сборщик перезаписывает StaticEditorFlags целиком (например, `LobbyBarracksDressingBuilder`, `LobbyCheckpointZoneBuilder`);
+- QPM-LIGHT-006 — сборщик перезаписывает StaticEditorFlags целиком;
 - QPM-LOD-003 — дальние объекты без импосторов;
 - QPM-GLOBAL-001 — пост-обработка, HDR, render scale ≠ 1 в URP-ассете Quest.
 
@@ -198,6 +200,7 @@ Id правил аудитора — по `origin/dev` (`Assets/Editor/VR_Battle
 
 | Дата | id | Изменение | Доказательство |
 |---|---|---|---|
+| 2026-10-24 | QPM-LIGHT-001, -003, -005, -006, -009; QPM-SKY-001 | Сцена — источник правды о свете (решение пользователя): пресет и сборщики Lobby удалены, общие правила `lighting.realtime-light`, `lighting.scene-not-baked`, `lighting.dynamic-in-gi`, `mesh.lightmapped-without-uv2`, `lighting.zone-without-probes` с фиксерами; правило `scene.procedural-skybox` удалено (A/B −0,05 мс) | задача lobby-decor-builders: `tasks/lobby-decor-builders/Readme.md` |
 | 2026-10-22 | QPM-SHADER-008 (отменено) | Потолок металличности 0,3 проверен в шлеме и отменён решением пользователя: оружие выглядело пластиковым; при запечённой пробе отражений (QPM-LIGHT-008) металл с исходными картами читается. Правило и фиксер удалены | задача lobby-reflections: `tasks/lobby-reflections/Readme.md`, «Металличность оружия» |
 | 2026-10-22 | QPM-LIGHT-008 | Зона оружия без пробы отражений при тёмном окружении; правило аудитора `lighting.dark-reflection-zone` | задача lobby-reflections: `tasks/lobby-reflections/Readme.md`, раздел «Замер» |
 | 2026-10-22 | QPM-SHADER-004, QPM-SHADER-006 | Розовые HDRP Lit → `BakedLitMaterialFixer`; `material.emission-off` не ловит белый остаток конвертации (`EmissiveIsBlack` без карты) | задача lobby-material-fixes: `tasks/lobby-material-fixes/Readme.md` |

@@ -45,9 +45,8 @@ namespace VrBattlegrounds.Editor.Performance.AssetAudit.Fixers
 
         /// <summary>
         /// Материалы с другим писателем (QPM-SHADER-007), по префиксу имени: ни план, ни откат их не трогают.
-        /// Грунт Lobby — LobbyDecorationAuthoring.ApplyGroundMaterials (сам ставит Baked Lit); светящиеся плафоны —
-        /// ночной пресет LobbyNightLighting (Simple Lit/Unlit с эмиссией); дверную лампу создаёт тот же пресет, а её
-        /// свечение ведёт <see cref="EmissionOffFixer"/> (в userData .meta осталась старая запись отката яруса — не применять). Бетон и плитка пака идут через box-UV
+        /// Грунт Lobby (уже Baked Lit) и светящиеся плафоны (Simple Lit/Unlit с эмиссией) приняты и правятся вручную в сцене
+        /// (инструменты Lobby удалены в задаче lobby-decor-builders); свечение дверной лампы ведёт <see cref="EmissionOffFixer"/> (в userData .meta осталась старая запись отката яруса — не применять). Бетон и плитка пака идут через box-UV
         /// (<see cref="PlanWorldAligned"/>), их аудит-путь пропускает как world-aligned.
         /// </summary>
         public static readonly string[] OwnedElsewhere =

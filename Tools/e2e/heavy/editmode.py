@@ -4,6 +4,10 @@
 Новый красный тест, которого нет в списке, роняет вердикт. Известный красный, ставший зелёным, —
 подсказка убрать его из списка. Итоговый result.results get_test_job с include_failed_tests содержит все
 не прошедшие тесты (лимит 25 — только у progress.failures_so_far).
+
+Предупреждение — Inconclusive с маркером «[Warn:<область>]» (NUnit 3.5 в UTF 1.6 без Assert.Warn): вердикт не
+роняет, но попадает в warnings и заметки verdict.json, чтобы агент перечислил его в отчёте. Inconclusive без маркера
+(отказ окружения «[TestEnvironment]» и т.п.) — тоже заметка: summary MCP его не считает.
 """
 import asyncio
 from datetime import date
@@ -18,6 +22,7 @@ POLL_WAIT_SECONDS = 10
 CALL_SECONDS = 150
 OBSERVATION_BUDGET_SECONDS = 600
 MAX_LISTED = 15
+WARN_MARKER = "[Warn:"
 
 
 class KnownRedError(ValueError):
@@ -47,6 +52,10 @@ def is_red(state):
     return str(state or "").lower().startswith("failed")
 
 
+def is_inconclusive(state):
+    return str(state or "").lower().startswith("inconclusive")
+
+
 def compare(result, known):
     """result — result из get_test_job (summary + results не прошедших). Возвращает запись EditMode."""
     summary = (result or {}).get("summary") or {}
@@ -70,6 +79,17 @@ def compare(result, known):
     if len(new_red) > MAX_LISTED:
         reasons.append("… ещё новых красных: " + str(len(new_red) - MAX_LISTED))
     notes = []
+    inconclusive = [r for r in results if is_inconclusive(r.get("state"))]
+    warned = [r for r in inconclusive if WARN_MARKER in str(r.get("message") or "")]
+    record["warnings"] = [{"name": r.get("fullName") or r.get("name"), "message": str(r.get("message") or "").strip()[:300]}
+                          for r in warned]
+    for item in record["warnings"][:MAX_LISTED]:
+        notes.append("предупреждение: " + item["name"] + " — " + (item["message"].splitlines() or [""])[0])
+    if len(warned) > MAX_LISTED:
+        notes.append("… ещё предупреждений: " + str(len(warned) - MAX_LISTED))
+    other = sorted(r.get("fullName") or r.get("name") for r in inconclusive if r not in warned)
+    if other:
+        notes.append("Inconclusive без маркера (" + str(len(other)) + "): " + ", ".join(other[:5]) + (" …" if len(other) > 5 else ""))
     if fixed:
         notes.append("известные красные не красные в этом прогоне (" + str(len(fixed)) + ", зелёные или удалены) — "
                      "убрать из Tools/e2e/editmode-known-red.json: "

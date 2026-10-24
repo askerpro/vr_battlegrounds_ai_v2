@@ -27,7 +27,7 @@ namespace VrBattlegrounds.Editor.Performance.BoxUv
         /// Материалы Lobby на трипланарном S_VPWorldAligned, чьи сабмеши переразворачиваются box-UV (UV в метрах; аудит UV
         /// 2026-10-20, reports/uv-audit-20261020). После переразвёртки их переводит на Baked Lit фиксер аудитора
         /// (<see cref="BakedLitMaterialFixer.PlanWorldAligned"/>) — единственный писатель материалов (QPM-SHADER-007).
-        /// WornGround (пол шатра) — материал проекта: его пишет LobbyDecorationAuthoring.ApplyGroundMaterials.
+        /// WornGround (пол шатра) — материал проекта: правится вручную (уже Baked Lit).
         /// </summary>
         public static readonly string[] Materials =
         {

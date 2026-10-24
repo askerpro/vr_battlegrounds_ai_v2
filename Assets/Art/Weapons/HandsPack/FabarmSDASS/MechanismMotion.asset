@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponMechanismMotion
   Fire:
-    rid: 4468403692201312810
+    rid: 4468403705076777036
   Empty:
     rid: -2
   Manual:
-    rid: 4468403692201312811
+    rid: 4468403705076777037
   references:
     version: 2
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 4468403692201312810
+    - rid: 4468403705076777036
       type: {class: WeaponMechanismMotion/Cycle, ns: VrBattlegrounds.Weapons, asm: VrBattlegrounds}
       data:
         SourceGuid: 39f3df5c265d3024592467c8b6b96076
@@ -390,7 +390,7 @@ MonoBehaviour:
           - Time: 0.86666673
             Position: {x: 0.000000009089788, y: 0.18993148, z: 0.006309266}
             Rotation: {x: 4.692539e-15, y: 0.00000008940696, z: 0.000000066579055, w: 1}
-    - rid: 4468403692201312811
+    - rid: 4468403705076777037
       type: {class: WeaponMechanismMotion/Cycle, ns: VrBattlegrounds.Weapons, asm: VrBattlegrounds}
       data:
         SourceGuid: 39f3df5c265d3024592467c8b6b96076

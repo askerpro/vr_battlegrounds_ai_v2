@@ -13,8 +13,6 @@ MonoBehaviour:
   m_Name: ImpactSoundDefaults
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Interaction.ImpactSoundDefaults
   _weapon:
-  - {fileID: 8300000, guid: 5f198452fcd6c9d4fa84efc6398f0e8e, type: 3}
-  - {fileID: 8300000, guid: 4c6e67eb67a39c441865a5bacc83a4d5, type: 3}
-  - {fileID: 8300000, guid: 6608bcca349296e458e79e1a72bc779e, type: 3}
+  - {fileID: 8300000, guid: b46e4f4421c0dce4483c4e0e8aa68024, type: 3}
   _magazine:
   - {fileID: 8300000, guid: f8a730550a002244caa5bfb05dacbbd1, type: 3}

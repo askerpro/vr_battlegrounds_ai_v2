@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Weapons.WeaponMechanismMotion
   Fire:
-    rid: 4468403692201313269
+    rid: 4468403705076777035
   Empty:
     rid: -2
   Manual:
@@ -23,7 +23,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 4468403692201313269
+    - rid: 4468403705076777035
       type: {class: WeaponMechanismMotion/Cycle, ns: VrBattlegrounds.Weapons, asm: VrBattlegrounds}
       data:
         SourceGuid: bf017600bdf10534d8b207521b3451fa

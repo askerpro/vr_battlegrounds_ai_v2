@@ -36,6 +36,7 @@ Material:
     - _RingWidth: 0.0004
     - _ScopeActive: 0
     - _ScopeApparentHalfField: 0.1
+    - _ScopeClarity: 1
     - _ScopeEquipped: 0
     - _ScopeLensRadius: 0.02
     - _ScopePupil: 0.004

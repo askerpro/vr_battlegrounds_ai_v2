@@ -15,13 +15,13 @@ MonoBehaviour:
   _category: 3
   _audio:
     _actionBack:
-      _clip: {fileID: 8300000, guid: 52517715cb195da41940f3fbf3a7092f, type: 3}
+      _clip: {fileID: 8300000, guid: 7b7c945afc7ed0b478a067be3517ad0b, type: 3}
       _volume: 1
     _actionForwardChambered:
-      _clip: {fileID: 8300000, guid: dc32b8fc851caab4ab723c3a3bd08340, type: 3}
+      _clip: {fileID: 8300000, guid: 94fa69ef8c4165b47b3c6f5e65f24be1, type: 3}
       _volume: 1
     _actionForwardEmpty:
-      _clip: {fileID: 8300000, guid: dc32b8fc851caab4ab723c3a3bd08340, type: 3}
+      _clip: {fileID: 8300000, guid: 94fa69ef8c4165b47b3c6f5e65f24be1, type: 3}
       _volume: 1
     _chamberEjected:
       _clip: {fileID: 0}

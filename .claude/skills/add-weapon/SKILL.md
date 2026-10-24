@@ -7,12 +7,14 @@ description: Добавить в игру новое огнестрельное 
 
 Задача: $ARGUMENTS
 
-Эталон, собранный по этому маршруту: `Assets/Prefabs/Weapons/ShotgunReal/` (`Shotgun_real` +
-`Shotgun_real_mag`), рецепт — `HandsPackWeaponBuilder.ShotgunReal`. Им же собраны шесть стволов T-38
-(`Scar`, `Uzi`, `MP5K`, `PPK`, `Revolver`, `SniperRifle` — рецепты там же, меню
-`Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Сборка» → явный выбранный набор T-38). Вручную на глаз собраны
-`Gun_real` и M16 — **геометрию** они повторяют точно, а **механику** (ход затвора, угол
-спуска) нет: у `Gun_real` затвор 1.89 см против 4.23 в паке, спуск 40° против 18°.
+Эталон, собранный по этому маршруту: `Assets/Prefabs/Weapons/FabarmSDASS/` (`FabarmSDASS` + `FabarmSDASS_Ammo`),
+рецепт — `HandsPackWeaponBuilder.ShotgunReal`. Им же собраны стволы T-38 (`Scar`, `Uzi`, `MP5K`, `PPK`, `Revolver`,
+`SniperRifle`, `SniperRifleAuto`) и `AR15` — все рецепты там же (`HandsPackWeaponBuilder.Full`), меню
+`Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Сборка» → «Пересобрать выбранное оружие Hands из источника».
+Доноров нет (2026-10-23): снимки `LegacyBuildDonors` удалены, всё, что не выводится из пака и не баланс, — общие
+значения `HandsPackBuildDefaults`. Легаси-сборка осталась только у `BrowningHiPower` (`HandsPackLegacyRebuild.Browning`:
+затвор на задержке `Shot_end`, HoldOpen) — тоже без доноров. Чего нет в клипах пака (у AR15 затвор и спуск неподвижны),
+задаётся явными полями рецепта «нет в паке».
 
 ## 0. Окружение
 
@@ -79,11 +81,12 @@ SDK берёт хват по умолчанию (без позы кисти, о�
 «Зарегистрировать позы для выбранного аватара» (`Gameplay/AvatarGripRegistration`, весь каталог или выбранное
 оружие). Источник — готовые позы `_orig` и snap-точки `Orig`, которые экспортирует сборка (или «Экспортировать позы
 рук (все стволы)» на вкладке «Сборка»); клипы паков команда не читает. Точки: Grip → 0, Support → 1 оружия, точка 0
-магазина; у семейства кистей Cyborg запись и позы — в `CyborgHandsBase`. Временные записи с позами SDK (GrabClaw и т.п.) по умолчанию заменяются; ручные позы
+магазина, точка 0 затвора/помпы (`Slide`/`Pump`; нет руки на детали в паке — расчётная snap-точка, хват доводится в
+редакторе); у семейства кистей Cyborg запись и позы — в `CyborgHandsBase`. Поза кодируется на риге цели (пястные
+Cyborg) и сверяется «игра = редактор» ≤ 1° — иначе в шлеме пальцы выворачиваются (G6, `Docs/grip-known-issues.md`). Временные записи с позами SDK (GrabClaw и т.п.) по умолчанию заменяются; ручные позы
 проекта перезаписываются из пака только режимом «Пересоздать из пака выбранные точки» для выбранного оружия; магазин без
-`_orig` получает позу и align по шаблону AK105 (`Docs/grip-extraction.md`). Прежние кнопки «Зарегистрировать хваты для
-аватара MEF» из окна убраны (код `HandsPackPoseImporter`/`KinemationWeaponBuilder.ImportPoses` остался, `MEF_Base_Avatar`
-в игре не используется). Вторая рука — точка 1 корня (`SupportGrip`); ладони ближе 10 см — пистолетная поддержка,
+`_orig` получает позу и align по шаблону AK105 (`Docs/grip-extraction.md`). `MEF_Base_Avatar` выведен из хватов оружия
+(2026-10-23): сборщики, перенос хватов и импорт поз его записей не пишут. Вторая рука — точка 1 корня (`SupportGrip`); ладони ближе 10 см — пистолетная поддержка,
 сборщик ставит `MainGripAimLock` и `SupportGripRequiresMain`. Покрытие новой `WeaponInfo` показывает
 `GrabPoseCoverageTests` — по тест-кейсу на пару «предмет × семейство аватаров» (семейство Cyborg проверяется по
 `CyborgHandsBase`).
@@ -94,22 +97,27 @@ SDK берёт хват по умолчанию (без позы кисти, о�
 ## 4. Сборка
 
 Рецепт (`HandsPackWeaponRecipe`) — единственное, что пишется руками: детали пака, клипы,
-длина прототипа, теги, доноры. Образец — `HandsPackWeaponBuilder.ShotgunReal`. Сборщик:
+длина прототипа (или `RootScale`), теги, звуки пака (`PackSounds`), отличия механики и снаряда. Образец —
+`HandsPackWeaponBuilder.ShotgunReal`. Поля «нет в паке»: `StaticActionTravel` (ход затвора), `StaticTriggerDegrees`
+(угол спуска); `ManualCycle` — ручной цикл (помпа всегда); `MechanismMotion` — анимация механизма из клипа выстрела
+(`HandsPackMechanism`); `ClaimAllSourceParts` — каждая деталь источника названа или исключена. У KINEMATION —
+`KinemationWeaponRecipe`, в том числе `UniversalMagIn` (кусок вставки не звучит — гнезду дефолт категории). Сборщик:
 
-- корень: `Rigidbody` (от донора, `Continuous Dynamic`), `UxrGrabbableObject`,
+- корень: `Rigidbody` (`HandsPackBuildDefaults`, `Continuous Dynamic`), `UxrGrabbableObject`,
   `UxrProjectileSource`, `UxrFirearmWeapon`, `NetworkIdentity`, `AnchoredItemCollisionIgnore`,
   `OutOfWorldGuard`; помпа → `UxrShotgunPump`, затвор → `AutomaticWeaponSlideFeedback`;
 - `MeshContainer`: корпус с выпуклым `MeshCollider`, статичные детали, спуск (им вращает
   `UxrFirearmWeapon`, угол и ось — из клипа), `Tip`/`ShotSource` по кольцу вершин у дула,
   `RecoilSourceAxes` у рукояти (точка сборки; в руках шарнир отдачи сам встаёт в запястье держащей руки —
-  `RecoilAccumulator`, вручную не настраивается), `MagAnchor` у окна магазина со звуком донора;
+  `RecoilAccumulator`, вручную не настраивается), `MagAnchor` у окна магазина (`AnchorSound`, кусок вставки пака в
+  `AudioSource` гнезда; нет — дефолт категории в рантайме);
 - помпа/затвор — отдельный граббабл у корня с `RestrictLocalOffset` на ход из клипа и
   `GrabOnlyWhenParentHeld`. Помпа наводит ствол (`Control Parent Direction` вкл.,
   `Ignore Grabbable Parent Dependency` выкл. — как у сэмпла SDK, `PumpAimTests`), затвор —
   нет (наоборот, как рукоятка M16);
 - снаряд — `Effects/Tracer_Default`: тонкий светлый след (`TrailRenderer`), не меш — меш пули
-  в шлеме выглядит стрелкой (`TracerVisibilityTests`); скорость: винтовка 400 м/с, пистолет и
-  дробовик 300;
+  в шлеме выглядит стрелкой (`TracerVisibilityTests`); скорость и дальность снаряда — поля баланса `WeaponInfo`
+  (сборщик ставит дефолт SDK, `WeaponBalanceApplier` переписывает);
 - `ShotSource` — на 1 см позади `Tip`, `Tip` — на срезе ствола по вершинам модели
   (`ShotOriginTests`); `BarrelObstruction` с казённой точкой `BarrelCheck` в коробке — ствол в
   стене не стреляет (`BarrelObstructionTests`);
@@ -126,8 +134,11 @@ SDK берёт хват по умолчанию (без позы кисти, о�
   `Enable When Hand Near`: `WeaponGrabHighlight.Assign(grabbable, point, деталь)` кладёт под деталь
   неактивную копию её сетки с `MagGrabDecalMat` и ходит вместе с ней. Не блок-`Cube` и не
   материал корпуса (`WeaponFeedbackTests`); сборщик делает это сам для корпуса и помпы/затвора;
-- звуки — выстрел и «нет патронов» у спуска, оттягивание и обратный ход затвора/помпы, вставка и
-  снятие магазина (`AnchorSound` на `MagAnchor`) — `WeaponFeedbackTests`;
+- звуки — нарезка из набора пака ствола (`HandsPackAudio`/`KinemationAudio`, моно, без тишины до удара): выстрел у
+  спуска, оттягивание и обратный ход затвора/помпы, снятие и вставка магазина (`AnchorSound` на `MagAnchor`). Нет
+  куска или он тихий — поле пустое, звучит дефолт категории (`WeaponFeedbackDefaults`) или роли якоря; дефолты в
+  префаб не копируются (`Docs/sound-library.md`, «Звуковые дефолты»). «Нет патронов» — дефолт категории —
+  `WeaponFeedbackTests`;
 - магазин — **самостоятельный** префаб (не вариант; базы магазинов SDK удалены 2026-10-22): шаблон —
   текущий магазин ствола, у первой сборки — готовый магазин паков того же типа (`MagazineBase`:
   Scar_mag, PPK_mag, Herrington_mag) без его записей хвата и `_orig`. Сеть, физика, звуки — от
@@ -135,9 +146,9 @@ SDK берёт хват по умолчанию (без позы кисти, о�
   (поза руки — snap-точка `Grabs/Orig/*_Magazine_orig`); вложенный экземпляр в якоре без
   `NetworkIdentity`, со `Start Anchor` и `Rigid Body Source`.
 
-Настройки, не выводимые из пака (снаряд, урон, звук выстрела, отдача, физика хвата),
-копируются у доноров **по полям**, без `_uxrUniqueId`/`__prefabGuid` и без
-`m_CorrespondingSourceObject` (у донора-варианта он указывает на чужую базу).
+Настройки, не выводимые из пака: физика, хват, якорь, снаряд — общие значения `HandsPackBuildDefaults` по виду
+механики; урон, темп, отдача, скорость/дальность снаряда и режим огня (`FullAuto`) — баланс `WeaponInfo`. Ручной цикл —
+только рецепт: сборка отказывает, если механизм ручной, а паспорт просит автомат.
 
 ```csharp
 VrBattlegrounds.Editor.Gameplay.HandsPackWeaponBuilder.Build(recipe);
@@ -155,7 +166,7 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
 
 Без затвора (`ActionKind.None`, револьвер): спуск стреляет прямо из «магазина» (`Use Has Reloaded…`
 выключен), перезарядка — сменой барабана целиком; патроны и гильзы, которые вынимаются вместе с
-барабаном, — `MagazineExtraParts`. Болтовка-заглушка: затвор как у автомата, но огонь `ManualReload` —
+барабаном, — `MagazineExtraParts`. Болтовка-заглушка: затвор как у автомата, но `ManualCycle` (огонь `ManualReload`) —
 затвор после каждого выстрела.
 
 **Пак KINEMATION Tactical Shooter** (T-39) — свой источник `KinemationWeapon`, тот же сборщик: рецепт
@@ -174,8 +185,9 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
   (`KinemationWeaponRecipe.Attachments`), только нужные; с глушителем дуло — его срез (`HandsPackWeaponRecipe.MuzzlePart`),
   иначе снаряд и `BarrelObstruction` начинаются внутри глушителя (образец — `TR15`, тест
   `KinemationWeaponTests.Обвесы_на_месте_и_дуло_на_срезе_глушителя`);
-- звук выстрела без своего клипа уезжает от донора — у стволов реестра общего выстрела быть не должно
-  (`WeaponShotSoundTests`); новый ствол реестра — строка роли в `WeaponBalanceTests.Roster` (тест это требует).
+- у стволов реестра общего выстрела быть не должно — у каждого свой кусок пака (`WeaponShotSoundTests`); новый ствол
+  реестра — строка роли в `WeaponBalanceTests.Roster` (тест это требует) и строка `WeaponSystemAuthoring.Weapons`
+  (категория звуковых дефолтов; без неё сборка отказывает).
 
 Модель не из пака Hands и не из KINEMATION — шаги 2–3 делаются вручную, остальное то же; тест `HandsPackWeaponTests`
 к такому оружию не применим. Подсветку и тогда ставить через `WeaponGrabHighlight.Assign` — по
@@ -190,7 +202,7 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
 | реестр | `Assets/Data/Weapons/Resources/WeaponRegistry.asset` → `_weapons` |
 | сеть | `Assets/Prefabs/Managers/--- MANAGERS ---.prefab` → `GameNetworkManager.spawnPrefabs`: оружие **и** магазин |
 | стена | `Assets/Prefabs/Arsenal/StandardArsenalWall.prefab` → `FirearmSlotController._weaponInfo` слота |
-| баланс | раздел «Balance» в `WeaponInfo` (урон, спад, темп, магазин, дробь, картина отдачи `Recoil`) → строка роли CS2 в `WeaponBalanceTests.Roster` → `Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Каталог» → «Применить баланс выбранного оружия» (кладёт числа и `RecoilAccumulator` в префабы; урон/темп/ёмкость в префабе руками не править) |
+| баланс | раздел «Balance» в `WeaponInfo` (урон, спад, темп, магазин, дробь, картина отдачи `Recoil`, скорость и дальность снаряда, `FullAuto`) → строка роли CS2 в `WeaponBalanceTests.Roster` → `Tools/VR Battlegrounds/Arsenal/Редактор арсенала` → «Каталог» → «Применить баланс выбранного оружия» (кладёт числа и `RecoilAccumulator` в префабы; урон/темп/ёмкость в префабе руками не править) |
 | эталон размера | `WeaponScaleTests.RealLengths` — длина реального прототипа |
 | механика из пака | `HandsPackWeaponTests.Cases` — детали, помпа/затвор, спуск |
 
@@ -218,7 +230,7 @@ UltimateXR Unique Ids` (иначе красный `UxrUniqueIdOnDiskTests`) и `
 3. `AndroidCompileGate.Run()` — сборщик лежит в `Assets/Editor`, в билд не попадает.
 4. Чего тестом не проверить — хват в шлеме (форма кисти на рукояти/помпе) и вид на стене в
    игре. Точки хвата вычислены с точностью ~1 см / ~20°; подправить в инспекторе
-   `UxrGrabbableObject` (превью поз MEF) и прогнать тесты снова.
+   `UxrGrabbableObject` (превью поз Cyborg) или в редакторе поз и прогнать тесты снова.
 
 ## 7. Документация
 

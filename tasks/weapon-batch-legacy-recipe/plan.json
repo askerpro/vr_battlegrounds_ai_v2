@@ -48,6 +48,7 @@
         "Assets/Tests/EditMode/**",
         "Docs/Arsenal/editor-workbench-plan.md",
         "Docs/grip-extraction.md",
+        "Docs/grip-known-issues.md",
         "Docs/weapons/**",
         "Tools/e2e/editmode-known-red.json",
         "experts/avatar-grip/journal/2026-10-23-weapon-batch-legacy-recipe.md",

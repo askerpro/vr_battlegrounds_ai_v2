@@ -46,9 +46,8 @@ GripExtractionRequest (JSON)
   │    2. поза на риге цели — центр ладони по суставам в этой позе
   │    3. GripPlacement.Compute — опора профиля, масштаб k, сдвиг по нормали ладони
   │    4. сверки: прежняя формула (wrist, s=0), align с именем профиля, align текущей записи,
-  │       прямой вызов HandsPackGripAligner.Place (только опора wrist, для R0)
+  │       прямой вызов HandsPackGripAligner.Place (только опора wrist)
   │    5. рантайм против редактора, форма против источника, против существующего ассета позы
-  ├─ EvaluateR0
   ├─ Write (Preview | Apply):
   │    GripPoseAssets → HandsPackPoseImporter.RegisterOnPoseBase → GripRecordWriter.WriteWeapon
   │    → GripFitCheck (Apply и analyze=true)
@@ -57,7 +56,7 @@ GripExtractionRequest (JSON)
 
 | Часть | Что делает | Код |
 |---|---|---|
-| Вход | Разбор запроса, сторожа Play/compile/import, порядок шагов, R0, сводка | `GE/GripExtraction.cs`, `GE/GripExtractionRequest.cs` |
+| Вход | Разбор запроса, сторожа Play/compile/import, порядок шагов, сводка | `GE/GripExtraction.cs`, `GE/GripExtractionRequest.cs` |
 | Источник | Точки и кадр хвата | `GE/IGripSource.cs`, `GE/PackClipGripSource.cs` |
 | Нейтральный хват | Кадр без привязки к кисти цели | `GE/GripSample.cs` |
 | Профиль цели | Риг, GUID записи, база поз, папка поз, имя align, опора, кодирование | `GE/GripTargetProfile.cs` |
@@ -68,7 +67,7 @@ GripExtractionRequest (JSON)
 | Запись хвата | Align, `UxrGripPoseInfo`, сохранение префаба, `_assetId` | `GE/GripRecordWriter.cs` |
 | Сторож идентификаторов | Снимок `_uxrUniqueId`, `__prefabGuid`, `__isInPrefab`, `_assetId`, `sceneId` до/после | `GE/GripPrefabIdentityGuard.cs` |
 | Проверка результата | Hand Pose Fit по сохранённой точке, подсказки следующей итерации | `GE/GripFitCheck.cs` |
-| Отчёт | Метрики точек и рук, R0, предупреждения, записанное | `GE/GripExtractionResult.cs` |
+| Отчёт | Метрики точек и рук, предупреждения, записанное | `GE/GripExtractionResult.cs` |
 
 Второго писателя хватов нет: рецепты, регистрация поз в базе, создание align и удаление прежних align —
 общие с прежним импортёром `HandsPackPoseImporter`.
@@ -156,7 +155,7 @@ PPK 0,7116, Revolver 0,7058), у KINEMATION k = 1. Углы пальцев, дл
 
 | `encoding` | Профиль | Что пишется |
 |---|---|---|
-| `source` (`AsSource`) | MEF | Дескриптор источника как есть, вторая рука — `Mirrored()`; curl запрещён |
+| `source` (`AsSource`) | — (был у профиля MEF, выведен 2026-10-23) | Дескриптор источника как есть, вторая рука — `Mirrored()`; curl запрещён |
 | `rig` (`TargetRigWorld`) | MEF_cyborg_hands, CyborgHands | Риг в bind-позе → `UxrAvatarRig.UpdateHandUsingDescriptor` (мировой путь редактора) → curl → `new UxrHandDescriptor(avatar, side)`: поза получает пястные цели |
 
 Кодирование `rig` появилось после дефекта G6: поза без пястных на кисти с пястными в рантайме SDK
@@ -172,16 +171,19 @@ Curl (`curlDegByHand`) — один угол на палец `thumb…little` в
 
 ## Профили цели
 
-| Поле | `MEF` | `MEF_cyborg_hands` | `CyborgHands` |
-|---|---|---|---|
-| Риг (`RigPrefabPath`) | `Assets/Prefabs/Player/MEF_Base_Avatar.prefab` (из `HandsPackPoseImporter.GripAvatars`) | `…/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab` | тот же |
-| Запись по GUID (`RecordAvatarPath`) | тот же MEF | CyborgHandsBase, по GUID `71b74b0d…` | тот же |
-| База поз `_handPoses` | `Assets/Prefabs/Player/Avatars/Bases/PlayerBase_NonSdkHands.prefab` | CyborgHandsBase | CyborgHandsBase |
-| Папка поз | папка рецепта: `Assets/Art/HandPoses/HandsPack`, `…/Kinemation` | `Assets/Prefabs/Player/HandPoses/CyborgHands` | тот же |
-| Имя align (`AlignAvatarName`) | `MEF_Base_Avatar` | `MEF_cyborg_hands` | `MEF_cyborg_hands` |
-| Опора / кодирование | wrist / source | palm / rig | palm / rig |
-| `RegisterPoses` / `RemoveReplacedAligns` | true / true | **false** / false | **true** / false |
-| Обязательны пястные | нет | да | да |
+| Поле | `MEF_cyborg_hands` | `CyborgHands` (по умолчанию) |
+|---|---|---|
+| Риг (`RigPrefabPath`) | `…/Avatars/CyborgHands/MEF/MEF_cyborg_hands_Player.prefab` | тот же |
+| Запись по GUID (`RecordAvatarPath`) | CyborgHandsBase, по GUID `71b74b0d…` | тот же |
+| База поз `_handPoses` | CyborgHandsBase | CyborgHandsBase |
+| Папка поз | `Assets/Prefabs/Player/HandPoses/CyborgHands` | тот же |
+| Имя align (`AlignAvatarName`) | `MEF_cyborg_hands` | `MEF_cyborg_hands` |
+| Опора / кодирование | palm / rig | palm / rig |
+| `RegisterPoses` / `RemoveReplacedAligns` | **false** / false | **true** / false |
+| Обязательны пястные | да | да |
+
+Профиль `MEF` (риг `MEF_Base_Avatar`, база `PlayerBase_NonSdkHands`, wrist / source) и сверка R0 удалены
+2026-10-23 вместе с аватаром хвата MEF: `target=MEF` даёт понятный отказ (`GripTargetProfile.RetiredMefName`).
 
 `MEF_cyborg_hands` и `CyborgHands` отличаются только регистрацией поз: R2 шёл с `MEF_cyborg_hands`
 и `registerPoses=false` (позы уже были в базе). Путь базы разрешается по GUID (`ResolveCyborgBasePath`),
@@ -198,7 +200,7 @@ Curl (`curlDegByHand`) — один угол на палец `thumb…little` в
 1. Проверить кисть нового аватара [анализом рига](hand-rig-quality-tool.md) (раздел «Перед первым
    использованием на новом аватаре»): неверные фаланги перенос не исправит.
 2. Добавить фабрику в `GripTargetProfile` и ветку в `Get`; обновить текст ошибки `Get` и комментарий
-   поля `Target` в `GripExtractionRequest` (там до сих пор перечислены только `MEF | MEF_cyborg_hands`).
+   поля `Target` в `GripExtractionRequest`.
 3. Заполнить поля: риг с `UxrAvatar`, запястьями и `UxrGrabber` обеих рук; `RecordAvatarPath` — префаб,
    чей GUID будет ключом записи, и он должен быть в GUID-цепочке рига; `ExpectedRecordGuid`; база поз
    с `UxrAvatar` на корне; папка поз; **своё** `AlignAvatarName`, иначе align перезапишет чужие;
@@ -260,7 +262,7 @@ JSON в camelCase, регистр имён не важен.
 |---|---|---|
 | `source` | `pack` | Источник; других нет |
 | `recipes` | `["all"]` | Селекторы точек |
-| `target` | `MEF` | Профиль: `MEF`, `MEF_cyborg_hands`, `CyborgHands` |
+| `target` | `CyborgHands` | Профиль: `CyborgHands`, `MEF_cyborg_hands` (`MEF` выведен 2026-10-23) |
 | `anchor` | из профиля | `wrist` или `palm` (`palmcenter`) |
 | `encoding` | из профиля | `source` (`assource`) или `rig` (`targetrigworld`) |
 | `mode` | `measure` | `measure`, `preview`, `apply` |
@@ -271,7 +273,6 @@ JSON в camelCase, регистр имён не важен.
 | `maxNormalOffsetMm` | 15 | Предел сдвига |
 | `registerPoses`, `removeReplacedAligns` | из профиля | Переопределения профиля для Apply |
 | `analyze` | false | После Apply прогнать Fit по каждой руке |
-| `toleranceMm`, `toleranceDeg` | 0,5 / 0,5 | Пороги R0 |
 | `returnFull` | false | `RunJson` вернёт полный отчёт вместо сводки (полный всегда в `outDir`) |
 
 Пример Measure для текущей базы (не запускался в этой форме: см. «Перед следующим применением»):
@@ -306,15 +307,14 @@ worktree и профиль `MEF_cyborg_hands` в `Experimental/`. Драйвер
 
 ### Отчёт
 
-`grip-extraction-<mode>.json` (схема 1): запрос, профиль (риг, GUID записи, база поз), R0, точки, предупреждения,
+`grip-extraction-<mode>.json` (схема 1): запрос, профиль (риг, GUID записи, база поз), точки, предупреждения,
 записанное. По точке: `k`, `posePath`, `existingPose`; по руке: `alignLocalPosition/Rotation/Euler`,
 `palm.errorMm` и `palm.errorHandMm` (`[вправо, вверх (тыл), вперёд (пальцы)]` в осях кисти цели),
 `vsLegacyWrist`, `existingNamed`, `existingRecord`, `vsHandsPackAligner`, `runtimeVsWorldDeg`, `shapeDeg`,
 `poseVsExistingDeg`, `metacarpalInfo`, `curlDeg`, `fit`.
 
-**R0** применим только к `target=MEF, anchor=wrist, encoding=source` без сдвига и curl: новый расчёт должен
-совпасть с align и позами на префабах и с прямым вызовом `HandsPackGripAligner.Place` в пределах
-`toleranceMm`/`toleranceDeg`. Для остальных профилей `r0.applicable = false`.
+**R0** (сверка профиля `MEF` с прежним импортёром) удалена вместе с профилем 2026-10-23; поля `toleranceMm`/`toleranceDeg`
+из запроса убраны.
 
 ## Проверка результата
 
@@ -494,6 +494,7 @@ AK105 не подтверждено); у них тоже есть небольш
   CyborgHandsBase (2026-10-16), иерархии 2026-10-18 и каталогов 2026-10-19 конвейер не запускался;
   компиляция и совместимость с новыми путями в Unity не проверены.
 - Профиль `MEF` и R0 сломаны: риг `Assets/Prefabs/Player/MEF_Base_Avatar.prefab` перенесён в `Unused/`.
+  2026-10-23 (`weapon-batch-legacy-recipe`): оба удалены, цель по умолчанию — `CyborgHands`.
 - R2 в dev (вне хаба), производственно не принят; три позы R2 на dev в других версиях (см. «Что в dev»).
 - G1 (MKR9) открыт, данные хвата MKR9 не менялись с 2026-10-14. G4, G5 открыты.
 - Метрики точки фаланги и «Обхватить» в конвейере нет: обе живут в private-методах панели редактора поз;
@@ -514,8 +515,8 @@ AK105 не подтверждено); у них тоже есть небольш
      GUID базы разрешается) и **`Assets/Prefabs/Player/MEF_Base_Avatar.prefab`** — он теперь в
      `Assets/Prefabs/Player/Unused/` (GUID `b6fe59db941fa944696ece5e1aabc032`). Путь зашит в
      `HandsPackPoseImporter.GripAvatars`, поэтому профиль `MEF` упадёт на `GripTargetRig` («Нет префаба рига»);
-     тот же путь — в самом импортёре паков и ещё нескольких editor-инструментах. Починка или отказ от
-     профиля `MEF` — решение владельца avatar-grip.
+     тот же путь — в самом импортёре паков и ещё нескольких editor-инструментах. Решено 2026-10-23: профиль
+     `MEF` удалён (решение пользователя — вывести аватар хвата MEF).
 2. Обновить рабочую ветку на свежий `origin/dev`; через worker убедиться, что сборка компилируется, и
    прогнать Measure с `target=CyborgHands` на одной-двух точках: `palm.errorMm`, `runtimeVsWorldDeg`,
    `existingRecord`, `poseVsExistingDeg`.
@@ -533,7 +534,14 @@ AK105 не подтверждено); у них тоже есть небольш
 
 С 2026-10-22 сборщики оружия из паков (`HandsPackWeaponBuilder`, `KinemationWeaponBuilder`,
 `HandsPackLegacyRebuild`) не создают и не регистрируют позы и хваты аватаров. Записи хвата всех аватаров и их
-трансформы выравнивания переносятся из текущего префаба (`WeaponGripCarryOver`, режим только `KeepCurrent`).
+трансформы выравнивания переносятся из текущего префаба (`WeaponGripCarryOver`, режим только `KeepCurrent`), кроме
+выведенных аватаров `HandsPackWeaponBuilder.DroppedGripAvatars` (сэмплы SDK и с 2026-10-23 `MEF_Base_Avatar`).
+
+**MEF_Base_Avatar выведен из хватов оружия** (решение пользователя 2026-10-23): записи, папки `Grabs/MEF_Base_Avatar` и
+align MEF сняты со всех префабов `Assets/Prefabs/Weapons` (`Avatars/RetiredGripAvatarCleanup`, `DryRun`/`Apply`, без
+меню; узлы Cyborg из папок MEF перенесены в `CyborgHandsBase/<точка>`); сборщики, перенос хватов, `HandsPackPoseImporter`
+и Grip Extraction записей MEF больше не пишут. Префаб MEF остаётся (стенды, сборщик ног). Там же убрана вторая точка
+хвата `BrowningHiPower_Magazine` (наследие сэмпла SDK); сборщик снимает дополнительные точки магазина без записей.
 Калибровочного хвата MEF больше нет: точка отдачи, `MainGripAimLock`/`SupportGripRequiresMain` (порог 0,10 м
 между ладонями) и зоны подсветки хвата считаются от центра ладони руки пака (`HandsPackWeaponBuilder.PalmPoints`).
 У нового оружия до отдельной регистрации хватов нет записей, SDK берёт пустой хват по умолчанию.
@@ -559,8 +567,8 @@ AK105 не подтверждено); у них тоже есть небольш
 выбранное оружие, «Экспортировать позы рук (все стволы)») `Gameplay/PackOrigPoses` готовит сырьё для будущей
 регистрации:
 
-- позы `<Пак>_<Предмет>_<Точка>_orig` в `Assets/Art/HandPoses/Orig/<Пак>/` (на 2026-10-23: `HandsPack` — 22, из них
-  13 Grip/Support и 9 магазина/патрона; `Kinemation` — 23, из них 16 и 7), снятые теми же экстракторами с руки пака;
+- позы `<Пак>_<Предмет>_<Точка>_orig` в `Assets/Art/HandPoses/Orig/<Пак>/` (на 2026-10-24: `HandsPack` — 37, из них
+  18 Grip/Support, 10 магазина/патрона, 9 затвора/помпы; `Kinemation` — 31: 16, 8 и 7), снятые теми же экстракторами с руки пака;
   ни у одного аватара не регистрируются, перезапись на месте с тем же GUID только при изменении дескриптора;
 - пустые snap-точки `<Grabs>/Orig/<имя>_orig/Left|Right` в префабах оружия и магазина — рамка ладони руки пака
   (`GripSample.PalmInBody`), без компонентов UXR. Запись — `LoadPrefabContents`/`SaveAsPrefabAsset` от устоявшегося
@@ -568,6 +576,13 @@ AK105 не подтверждено); у них тоже есть небольш
   возвращается, а отказ называет первую различающуюся строку;
 - позы магазина/патрона (`_Magazine_orig`, `_Shell_orig`) — эксперимент: кадр клипа перезарядки, где деталь
   вынута и неподвижна в ладони; выбор кадра проверять глазами;
+- детали механики (с 2026-10-23, все стволы с затвором или помпой): поза `<Пак>_<Предмет>_<Slide|Pump>_orig`, snap
+  `<оружие>/<Slide|Pump>/Orig/<поза>/Left|Right` внутри граббабла детали; вторая рука — зеркало по боковой оси корпуса.
+  Затвор — середина самого длинного окна клипов, где рука жёстко ведёт сдвинутую деталь; без такого окна — запасное
+  окно (деталь стоит), в нём берётся рука, ближайшая к детали (AK105: левая на цевье перехватывала Support, шлем
+  2026-10-24). Помпа — кадр t=0 позы оружия, левая рука. Нет руки на детали ни в одном клипе — расчётная точка по
+  геометрии детали (`source: computed` в `<поза>_sources.json`, поза — шаблон SDK `Grab`/`GrabClaw`), хват доводит
+  пользователь. Отчёт поиска — `<поза>_sources.json`;
 - отчёт источников `Orig/<Пак>/<Пак>_<Предмет>_orig_sources.json`.
 
 Регистрация `_orig` у аватара — отдельная задача: поза в `_handPoses` базы, align = snap `_orig` · (рамка ладони →
@@ -587,17 +602,25 @@ expandDependencies: false)`): входы — только YAML (позы `_orig`
 ошибка, с разделением оружие и магазин.
 
 - Точки: оружие — Grip (точка хвата 0, snap `*_Grip_orig`) и Support (точка 1, `*_Support_orig`); магазин — точка 0
-  (`*_Magazine_orig`, у дробовиков `*_Shell_orig`). Нет точки у префаба — «нет точки хвата»; нет snap или позы `_orig`
-  (например TR15) — «нет источника».
+  (`*_Magazine_orig`, у дробовиков `*_Shell_orig`); деталь механики — точка 0 граббабла `Slide`/`Pump` у корня
+  (`*_Slide_orig`/`*_Pump_orig`, поза `<Пак>_<Предмет>_Slide_Grip|_Pump_Grip`, узлы внутри граббабла `Slide/Grabs/…`).
+  Нет точки у префаба — «нет точки хвата»; нет snap или позы `_orig` — «нет источника».
 - Цель: выбранный аватар; если в его цепочке `GetParentPrefabChain` есть `CyborgHandsBase`, запись и регистрация —
   в базе (правило `CyborgGripEntriesOwnershipTests`), рамка ладони и грабберы — риг профиля `CyborgHands`
   (`MEF_cyborg_hands_Player`), папка поз — `Assets/Prefabs/Player/HandPoses/CyborgHands`. Другой аватар: запись,
   регистрация и риг — он сам, папка — самая частая папка его зарегистрированных поз (или поз родителя).
 - Пропуск: `GetGripPoseInfo` точки для выбранного аватара по цепочке не default (как `GrabPoseCoverageTests`) или
   запись под GUID цели уже есть.
-- Поза: копия ассета `_orig` (оба дескриптора как есть) `<Пак>_<Предмет>_Grip|_Support|_Mag_Grip|_Shell_Grip` в
-  папке поз цели; существующий ассет с этим именем не перезаписывается, а используется (так же повторный запуск
-  берёт позы, созданные прерванным). Дескрипторы проверяются на вырожденные оси (копия правила патча 93).
+- Поза: ассет `<Пак>_<Предмет>_Grip|_Support|_Mag_Grip|_Shell_Grip|_Slide_Grip|_Pump_Grip` в папке поз цели —
+  `_orig`, **закодированная на риге цели** (`GripPoseEncoder.Encode(…, GripPoseEncoding.TargetRigWorld)`, с 2026-10-24):
+  у поз паков нет пястных, у кисти Cyborg они есть, и копия как есть в игре выворачивала пальцы (G6,
+  [grip-known-issues.md](grip-known-issues.md)). После кодирования — сверка рантайма SDK с редактором
+  (`GripPoseEncoder.RuntimeVsWorldDeg`) не хуже `AvatarGripRegistration.RuntimeToleranceDeg` (1°), иначе отказ точки.
+  Существующий ассет с этим именем не перезаписывается, а используется (так же повторный запуск берёт позы,
+  созданные прерванным); расхождение у него — заметка в отчёте. Перекодировать записанные позы с расхождением
+  (GUID и путь прежние; ручные позы с пястными не трогаются) — `AvatarGripRegistration.ReencodePoses(avatar, apply)`,
+  `apply=false` — только отчёт; 2026-10-24 так перекодированы 10 поз CyborgHands. Дескрипторы проверяются на
+  вырожденные оси (копия правила патча 93).
   Регистрация в `_handPoses` базы — `HandsPackPoseImporter.RegisterOnPoseBase`, без дублей; другой ассет под тем же
   именем у аватара — ошибка.
 - Запись: `UxrGripPoseInfo` под GUID цели (поза, blend 0,33 как у ручного AK105_mag) и snap-узлы
@@ -609,7 +632,9 @@ expandDependencies: false)`): входы — только YAML (позы `_orig`
 - Префаб пишется по точке за раз путём `PackOrigPoses` (канон `Converge`, `LoadPrefabContents` → `SaveAsPrefabAsset`,
   канон `_assetId`/флагов UXR) со сверкой YAML: новые и записанные snap-узлы, дописанные строки их родителя, а
   документ `UxrGrabbableObject` — ровно прежний плюс блок новой записи последним элементом списка
-  `_avatarGripPoseEntries` нужной точки (пустой `[]` раскрывается), сверка `AvatarGripYaml`. Любое другое отличие
+  `_avatarGripPoseEntries` нужной точки (пустой `[]` раскрывается), сверка `AvatarGripYaml`. Родитель, у которого
+  одновременно удалены прежние и дописаны новые узлы (папка точки после `RetiredGripAvatarCleanup`), допустим, если без
+  этих строк `m_Children` документ прежний. Любое другое отличие
   (`_selectedAvatarForGrips`, `__isInPrefab`, `_uxrUniqueId`, `m_EditorClassIdentifier`, прежние записи) — ошибка с
   перечнем строк, файл возвращается. Оружие с вложенным магазином сразу получает overrides `__prefabGuid` новых
   snap-компонентов магазина (`UxrUniqueIdPersister.Normalize`), как `AK105.prefab` в d7d73887e.
@@ -643,9 +668,13 @@ snap позиции и поворота), поэтому повороты бер
 `s'` — цели (нулевой размер оси — отношение 1). Статус «создано по шаблону AK105 (нет _orig)». Для точек оружия без
 `_orig` шаблона нет — «нет источника».
 
-Прежние кнопки «Зарегистрировать хваты для аватара MEF (позы KINEMATION / Hands)» из окна убраны (`MEF_Base_Avatar`
-в игре не используется; код `HandsPackPoseImporter` и `KinemationWeaponBuilder.ImportPoses` остался). Посадка —
-стартовая: доводка в редакторе поз и snap-точек, проверка в шлеме отдельно. Логика без записи —
+Прежние кнопки «Зарегистрировать хваты для аватара MEF (позы KINEMATION / Hands)» убраны, импорт поз MEF в префабы
+(`HandsPackPoseImporter.ImportAll`, `KinemationWeaponBuilder.ImportPoses`) удалён 2026-10-23; у `HandsPackPoseImporter`
+остались рецепты поз и помощники записи. Посадка — стартовая: доводка в редакторе поз и snap-точек, проверка в шлеме
+отдельно. Принятые хваты не должны уезжать при пересборке: snap-точки затворов и помпы 2026-10-24 возвращены из dev
+(решение пользователя), позы новые; хваты магазинов TR15/Viper — как в dev. Снимок принятых хватов Cyborg закрепляет
+`CyborgGripSnapshotTests` (после приёмки 2026-10-24); перезапись снимка — только явным тестом
+`Записать_снимок_хватов`. Логика без записи —
 `Gameplay/Tests/AvatarGripRegistrationTests` (EditMode, Assembly-CSharp-Editor), в том числе сверка YAML на строках
 документа `MKR9_mag`.
 

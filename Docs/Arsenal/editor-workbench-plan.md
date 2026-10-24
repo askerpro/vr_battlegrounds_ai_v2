@@ -148,8 +148,12 @@ source rebuild не подтверждает игровую готовность
 
 Bootstrap «20/10» и canonical demo policy доступны как восстановление исходной конфигурации.
 Развитие каталога использует явную регистрацию в каноническом менеджере; пользовательский preset
-и будущий single-source generator имеют отдельных владельцев. Hands bundle 3+3 остаётся
-поддержанным source rebuild; naming migration и подготовка baseline явно сервисные.
+и будущий single-source generator имеют отдельных владельцев. С 2026-10-23 набора Hands 3+3 нет: AR15 и
+FabarmSDASS пересобираются одиночным полным рецептом Hands («Пересобрать выбранное оружие Hands из источника»),
+BrowningHiPower — отдельной легаси-сборкой без доноров; снимки `LegacyBuildDonors`, подготовка baseline и калибровка
+размера AR-15 удалены (размер задаёт рецепт). Naming migration остаётся сервисной. Из вкладки «Взаимодействие» убраны
+«Обновить механические анимации KINEMATION» и «Обновить внутренний патрон двух дробовиков»: механику и патрон в гнезде
+(вложенный экземпляр префаба патрона) ставит полная пересборка.
 
 ### Старый menu path → рабочий маршрут
 
@@ -163,10 +167,10 @@ Bootstrap «20/10» и canonical demo policy доступны как восст�
 |---|---|---|
 | Gameplay/Apply Weapon Balance | Каталог → баланс выбранного / всего каталога | WeaponBalanceApplier.Apply / ApplyAll |
 | Gameplay/Weapons/Apply Interaction Regions | Взаимодействие → подсветка и напоминание выбранного | WeaponInteractionReview.Apply / ApplyAll / Preflight |
-| Gameplay/Build FABARM SDASS From Hands Pack | Сборка → набор Hands 3+3; одиночного FABARM route нет | HandsPackLegacyRebuild.RebuildAll, HandsPackWeaponBuilder.Build |
+| Gameplay/Build FABARM SDASS From Hands Pack | Сборка → выбранное оружие Hands из источника (с 2026-10-23) | HandsPackWeaponBuilder.BuildFull(ShotgunReal) |
 | Gameplay/Build T-38 Weapons From Hands Pack | Сборка → явный выбранный набор | HandsPackWeaponBuilder.BuildFull |
 | Gameplay/Hands Pack Weapon Report | Сборка → проверить источник Hands | HandsPackWeapon.Report |
-| Gameplay/Hands Pack/Rebuild Legacy Three | Сборка → набор Hands 3+3 | HandsPackLegacyRebuild.RebuildAll / PrepareBaseline |
+| Gameplay/Hands Pack/Rebuild Legacy Three | Сборка → «Пересобрать BrowningHiPower (легаси Hands)»; AR15/FabarmSDASS — полный рецепт | HandsPackLegacyRebuild.RebuildAll (только Browning); PrepareBaseline удалён |
 | Gameplay/Kinemation/Build TR15 | Сборка → выбранный TR15 из источника | KinemationWeaponBuilder.Build(TR15) |
 | Gameplay/Kinemation/Build SRM-12 | Сборка → выбранный Desert Tech SRS (ID SRM12) | KinemationWeaponBuilder.Build(SRM12) |
 | Gameplay/Kinemation/Build All | Сборка → явный набор поддержанных KIN recipes | KinemationWeaponBuilder.All / Build |
@@ -174,7 +178,7 @@ Bootstrap «20/10» и canonical demo policy доступны как восст�
 | Gameplay/Kinemation/Revolver Shot From R08 | Сборка → обслуживание → звук Hands Revolver | KinemationWeaponBuilder.MakeRevolverShot |
 | Gameplay/Kinemation/Review Fixes | Проверки → диагностика выбранного / поддержанных KIN | KinemationFixReview.Report / ArsenalWeaponDiagnostics.Capture |
 | Gameplay/Migrate Legacy Weapon Names | Каталог → обслуживание → восстановить старые имена | WeaponNamingMigration.Apply |
-| Avatars/Hand Poses/Import Hands Pack Poses | Взаимодействие → позы выбранного Hands, shared base объявлена | HandsPackPoseImporter.ImportAll / ImportFor / Import |
+| Avatars/Hand Poses/Import Hands Pack Poses | Удалено 2026-10-23 (аватар хвата MEF выведен); хваты — Взаимодействие → «Позы рук из паков» | AvatarGripRegistration.Register |
 
 Malformed writer input risks из inventory (баланс неполного prefab, магазин без mesh,
 частичный motion Apply) UI срез не исправляет; новые unrestricted writers не добавлены.

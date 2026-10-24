@@ -109,7 +109,11 @@ SDK           UxrFirearmWeapon(.Readiness/.AmmoAdmission), UxrFirearmMag, UxrPro
   нормализация `_assetId` → readback (GUID, fileID, масштаб, хваты не меняются) → повторный apply не меняет байты.
 - Сборщики (`HandsPackWeaponBuilder`, `KinemationWeaponBuilder`, …) берут профиль из той же таблицы.
 - Звуки: конвейер `Tools/Audio/audio_cut.py` (analyze/cut по рецепту, `--check`), импорт `SfxImportSettings`,
-  уровень `SfxClipLevel`. Описание — `Docs/sound-library.md`.
+  уровень `SfxClipLevel`. Звуки стволов из паков режут сборщики (`HandsPackAudio`, `KinemationAudio`); дефолты —
+  ассеты с подстановкой в момент проигрывания (`WeaponFeedbackDefaults`, `MagazineAnchorSoundDefaults`,
+  `ImpactSoundDefaults`). Описание — `Docs/sound-library.md`.
+- Сборщики паков без доноров (2026-10-23): не из пака и не баланс — `HandsPackBuildDefaults`; скорость, дальность
+  снаряда и режим огня — баланс `WeaponInfo` (`WeaponBalanceApplier`), ручной цикл — рецепт.
 
 ## Стволы (2026-10-09)
 
@@ -125,7 +129,8 @@ SDK           UxrFirearmWeapon(.Readiness/.AmmoAdmission), UxrFirearmMag, UxrPro
 Обзорных копий `*_SightReview` больше нет (удалены 2026-10-20): правка оружия либо применяется к игровому префабу,
 либо отклоняется ([decisions.md](decisions.md), «Без копий»).
 Категории: дробовик — Herrington, FABARM, SDK Shotgun; пистолет — Browning, Viper, PPK, Uzi, SDKGun, Revolver, R08;
-снайперская винтовка — SniperRifle (в арсенале AX-50), SRM12 (в арсенале Desert Tech SRS — снайперская, не дробовик);
+снайперская винтовка — SniperRifle (болтовой AX-50, с 2026-10-23 вне игры), SRM12 (в арсенале Desert Tech SRS —
+снайперская, не дробовик); `SniperRifleAuto` (AX-50 Auto) — категория автомата;
 остальное — автомат. Имя префаба не равно названию в арсенале: категорию сверять по `WeaponInfo._displayName`.
 
 ## Отладка

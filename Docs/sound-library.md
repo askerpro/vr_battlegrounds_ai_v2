@@ -42,9 +42,59 @@ git/Plastic. В сборку всё равно ушло бы только то, 
 
 ## Что уже взято (2026-09-29)
 
-`Assets/Audio/SFX/Arsenal/` — стена (решётка, полки, засов), жетон; `Impacts/` — падение стволов и магазинов;
-`Ambience/` — `AMBIENCE_City_Street_Calm_Day_loop`. Выбор — по названию и длительности, не на слух: не понравится —
-заменить клип в `StandardArsenalWall` (`ArsenalWallSounds`), `DogTagPanel`, `ImpactSoundInstaller`, `Environment.prefab/Ambience`.
+`Assets/Audio/SFX/Arsenal/` — стена (решётка, полки, засов), жетон; `Ambience/` — `AMBIENCE_City_Street_Calm_Day_loop`.
+Выбор — по названию и длительности, не на слух: не понравится — заменить клип в `StandardArsenalWall`
+(`ArsenalWallSounds`), `DogTagPanel`, `Environment.prefab/Ambience`. Звуки оружия, якорей, падения и попадания с
+2026-10-24 — ассеты дефолтов (следующий раздел); `ImpactSoundInstaller` клипов больше не пишет.
+
+## Звуковые дефолты — ассеты (2026-10-23/24, принято в шлеме 2026-10-24)
+
+Решение пользователя: дефолты — данные в ассетах, не константы в коде и не копии в префабах. Компонент подставляет
+клип в момент проигрывания, поэтому замена на слух — правка ассета без пересборки. Пустое поле объекта = дефолт.
+
+**Вставка и снятие в якоре** (`AnchorSound` приёмника; предмет сам не звучит): `AnchorSoundOverride` предмета →
+свой клип якоря (нарезка пака в `AudioSource` гнезда `MagAnchor`) → у гнезда магазина и окна приёма патрона —
+категория ствола (`WeaponFeedbackDefaults._magazineInsert` / `_magazineTakeOut`, ссылка хоста `WeaponSystem`) →
+роль якоря (`MagazineAnchorSoundDefaults`, роли World / Primary / Secondary / Magazine / WeaponMagazine) → общий
+звук вставки `_insertClip` (у снятия общего нет — тишина). **Падение** (`ImpactSound`): свои клипы → у оружия
+`WeaponFeedbackDefaults._dropImpacts` → `ImpactSoundDefaults` по виду (`Weapon`, `Magazine`). Гильза или патрон,
+попавшие в лежащий предмет, звук его падения не будят. **Касание гильз** (`WeaponEjecta`): свои → `_ejectaImpacts`.
+**«Нет патронов»** — `_audio._dryFire` категории; своих щелчков в паках нет, у всех SDK `TriggerNoAmmo`.
+
+| Ассет | Поле / роль | Клип |
+|---|---|---|
+| `Assets/Data/WeaponSystem/{Rifle,Shotgun,Pistol,Sniper}FeedbackDefaults.asset` | `_magazineInsert` (все) | `Handling/Magazine_attach_mono` |
+| то же | `_magazineTakeOut` (все) | `Handling/HANDLING_B_FS92_9mm_Remove_Empty_Magazine_mono` |
+| то же | `_ejectaImpacts` | Pistol `CASING_9mm_Hard_Surface_RR4_mono`, Rifle `CASING_7-62_mm_Hard_Surface_RR3_mono`, Shotgun `CASING_Shotgun_Shell_Hard_Surface_RR1_mono`, Sniper `CASING_45_Hard_Surface_RR2_mono` (`Casings/`) |
+| то же | `_dropImpacts` | Pistol `Impacts/Weapon_Fall_Pistol_mono`, остальные `Impacts/Weapon_Fall_Rifle_mono` |
+| `SniperFeedbackDefaults.asset` | затвор назад / вперёд | `Handling/HandsPack_Sniper_BoltBack_mono` / `_BoltForward_mono` |
+| `Assets/Resources/MagazineAnchorSoundDefaults.asset` | World (стойка, слот) положить / взять | `S_Aim_Out_mono` / `S_Aim_In_mono` |
+| то же | Primary (спина) | `S_UnEquip_mono` / `S_Equip_mono` |
+| то же | Secondary (бедро) | `S_HolsterPistolWithHolster_mono` / `S_DrawPistolWithHolster_mono` |
+| то же | Magazine (карман магазинов) | `S_Pickup_mono` / `S_Jump_mono` |
+| то же | WeaponMagazine; общий `_insertClip` | пусто (хватает категории); `Handling/MagPlace_mono` |
+| `Assets/Resources/ImpactSoundDefaults.asset` | `_weapon` / `_magazine` | `Weapon_Fall_Rifle_mono` / `Magazine_Fall_mono` |
+| `Assets/Resources/PlayerHitEffects.prefab` | тело / голова / голова в шлеме | `Hit_Body_01_mono` / `Hit_Head_mono` / `Hit_Head_Helmet_mono` (запас: шлемов нет, не звучит) |
+
+Карманы и стойка — моно-нарезки `SFX/General` пака KINEMATION; падение и попадание — файлы пользователя.
+`HitEffectBuilder` путей клипов не держит: пересборка переносит их из прежнего префаба.
+
+**Где лежит.** Библиотечные и ручные — `Assets/Audio/SFX/<категория>/<имя источника>_mono.wav` (`Handling/`,
+`Casings/`, `Impacts/`), моно WAV, импорт `SfxImportSettings`. Нарезки сборщиков — `Weapons/HandsPack/<ствол>/` и
+`Weapons/Kinemation/<ствол>/` (`<ствол>_Shot|MagOut|MagIn|BoltBack|BoltForward|Load.wav`); эти папки входят в откат
+пересборки, поэтому производные выстрелы `Weapons/Revolver/Revolver_Shot.wav` и
+`Weapons/SniperRifleAuto/SniperRifleAuto_Shot.wav` лежат вне них. Ранние ручные звуки `Universal/` переименованы в
+`Handling/` или удалены (решение пользователя 2026-10-24); остался `Universal/Weapon_Select.flac`.
+
+**Нарезчик** `KinemationAudio` (им же режет `HandsPackAudio` для пака Hands): кусок моно; тишина до основного удара
+срезается — начало за 10 мс (`LeadIn`) до первого окна 10 мс громче 30 % пика куска (`OnsetShare`; зарядка Herrington
+580 → 10 мс); `Shot` — до спада ниже 1 % пика, с опцией плавного квадратичного хвоста (AX-50 Auto, 0,3 с). Кусок тише
+порога «почти тишина» не пишется в рецепт (`HandsPackAudio.Audible`) — звучит дефолт категории (вставка Scar, PPK, Uzi,
+AR15; у TR15 — `KinemationWeaponRecipe.UniversalMagIn`). Uzi оставлен прежний выстрел, AX-50 — прежний затвор.
+
+**Установщики.** `AnchorSoundInstaller` ставит только `AnchorSound` и источник, клипов не пишет; старую пару
+карманов снимает `AnchorSoundRoleDefaultsCleanup`. `ImpactSoundInstaller` ставит вид, источник и громкость; копию
+набора по умолчанию снимает. Копии дефолтов в прочих префабах — `SoundDefaultsCleanup` (`DryRun`/`Apply`).
 
 ## Попадания пуль по поверхностям
 
@@ -98,6 +148,9 @@ GUID бетонной пары сохранены: существующие сс
 `BoltBack.wav` и `BoltForward.wav` побайтно одинаковы. Это предупреждение preflight, звук пока не заменён.
 
 ## Кандидаты под известные дыры (пользователь, 2026-09-29)
+
+Падение, гильзы, магазин и карманы выбраны 2026-10-23/24 — раздел «Звуковые дефолты». Паки звуков оружия с
+нарезкой по событиям (покупка не решена) — `tasks/weapon-batch-legacy-recipe/research/I-weapon-sound-packs.md`.
 
 | Событие | Кандидаты |
 |---|---|

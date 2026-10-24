@@ -32,6 +32,7 @@ namespace VrBattlegrounds.Editor.Gameplay
         public string BoltSound;      // отдельный звук затвора (SRM-12: ShotBoltOnly) — делится по паузе на «назад» и «вперёд»
         public string MagOutSound;    // готовый звук снятия магазина (R08: открыть барабан) — вместо нарезки перезарядки
         public string MagInSound;     // готовый звук вставки (R08: закрыть барабан; 11-87: патрон в трубку)
+        public bool UniversalMagIn;   // кусок вставки не попадает в звук (TR15, шлем 2026-10-24) — гнезду дефолт категории
         public string BoltClip;       // клип оружия, где ходит затвор для нарезки звука (по умолчанию ReloadClip)
         public string BoltSoundSource; // файл, из которого режется затвор (по умолчанию ReloadSound)
     }
@@ -246,7 +247,9 @@ namespace VrBattlegrounds.Editor.Gameplay
                     Attachments = new[] { Silencer },
                     Excluded = new[] { "Cartridge_*", "Follower", "Spring" }, ReloadClip = "A_W_TR15_Reload_Empty",
                     ShotSound = Sfx + "TR15/Fire/S_TR15_V1_Suppressed_With_Tail_0.WAV",
-                    ReloadSound = Sfx + "TR15/Actions/S_TR15_Reload_Empty.WAV"
+                    ReloadSound = Sfx + "TR15/Actions/S_TR15_Reload_Empty.WAV",
+                    // Кусок перезарядки в момент «магазин встал» — два коротких щелчка, вставки на слух нет (шлем 2026-10-24).
+                    UniversalMagIn = true
                 };
             }
         }
@@ -398,7 +401,7 @@ namespace VrBattlegrounds.Editor.Gameplay
             }
             // Вставка магазина — тот же кусок, в гнездо оружия (решение пользователя 2026-10-23); у трубки (Herrington)
             // гнездо скрыто, кусок остаётся окну приёма патронов.
-            if (!r.MagazineIsInternal) r.InsertAudio = r.LoadAudio;
+            if (!r.MagazineIsInternal && !k.UniversalMagIn) r.InsertAudio = r.LoadAudio;
 
             if (r.Action == HandsPackWeaponRecipe.ActionKind.None) return;
             if (k.BoltSound != null)

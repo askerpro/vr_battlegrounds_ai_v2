@@ -14,5 +14,5 @@
   `tasks/arsenal-slot-lighting/tools/lobby_slot_lighting_bake.cs` вызывает удалённый `PrepareBake()` — инструмент закрытой задачи.
 - LOD вышек `.95/.85/.75/.65` перенесены из оверрайдов сцены в префаб `Watchtower_Lit` (три экземпляра в Lobby, другие
   карты его не используют).
-- На новых правилах Lobby чиста. TestMap1, ServiceYard, ReferenceMap04 — реалтайм-источник и незапечённый свет
-  (предупреждения); TestMap2/3 без источников и GI-объектов.
+- На новых правилах Lobby чиста. MilitaryBase (бывш. TestMap1), ServiceYard, ReferenceMap04 — реалтайм-источник и
+  незапечённый свет (предупреждения); Warehouse и BlockStand (бывш. TestMap2/3) без источников и GI-объектов.

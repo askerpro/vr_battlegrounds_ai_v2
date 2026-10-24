@@ -187,6 +187,9 @@ namespace VrBattlegrounds.Editor.Gameplay
             trigger.boxedValue = Activator.CreateInstance(TriggerType, true);
             trigger.FindPropertyRelative("_useHasReloadedForSemiAndFullAuto").boolValue = hasAction;
             trigger.FindPropertyRelative("_shotAudio._volume").floatValue = 1f;
+            // Вибрация выстрела — ShotBig, как у всех стволов до отказа от доноров (дефолт SDK — Shot, слабее; ревью
+            // weapon-system 2026-10-24). Своего клипа нет — выбор по типу.
+            trigger.FindPropertyRelative("_shotHapticClip._fallbackClipType").intValue = (int)UltimateXR.Haptics.UxrHapticClipType.ShotBig;
             trigger.FindPropertyRelative("_shotAudioNoAmmo._clip").objectReferenceValue = noAmmo;
             trigger.FindPropertyRelative("_shotAudioNoAmmo._volume").floatValue = NoAmmoVolume;
             return trigger;

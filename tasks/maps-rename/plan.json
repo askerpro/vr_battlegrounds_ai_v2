@@ -1,6 +1,6 @@
 {
   "task_id": "maps-rename",
-  "owner": "maps-rename",
+  "owner": "level-design",
   "client": "claude",
   "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
   "base_sha": "93a5f0b6d7ea122becf7d4e9b3452ad46bea7257",

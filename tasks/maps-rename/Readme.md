@@ -1,6 +1,6 @@
 # maps-rename — имена карт по темам, Maps/Game и Maps/Dev
 
-Обновлено 2026-10-24. Владелец `maps-rename` (Claude), основной checkout по указанию пользователя,
+Обновлено 2026-10-24. Владелец задачи — owner `level-design` (Claude; основной checkout закреплён за ним в хабе), основной checkout по указанию пользователя,
 ветка `task/maps-rename` от `origin/dev` 93a5f0b6d.
 
 ## Цель и мотивация

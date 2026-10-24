@@ -225,7 +225,7 @@ API лазера. Настройки доступны из кода, включ�
 
 | Раздел колонки | Экран | Префаб | Кому |
 |---|---|---|---|
-| Обзор | `MenuOverview` (`Main`) | `Screen_Overview` | всем — аналог TAB: ситуация матча, счёт, игроки, хп, время; у админа — кнопки ситуации ([T-33](tasks/T-33-tablet-overview-screen.md)); «Матч с ботами» — игроку, если он один из людей на сервере, и админу ([T-48](tasks/T-48-bots-match.md)) |
+| Обзор | `MenuOverview` (`Main`) | `Screen_Overview` | всем — аналог TAB: ситуация матча, счёт, игроки, хп, время; у админа — кнопки ситуации ([T-33](tasks/T-33-tablet-overview-screen.md)); на карте со стрельбищем (лобби) — блок «Стрельбище» `OverviewRangeMonitor`: снимок своего последнего попадания, урон и зона, до попадания — мишень; «Матч с ботами» — игроку, если он один из людей на сервере, и админу ([T-48](tasks/T-48-bots-match.md)) |
 | Команда | `MenuTeamSelection` | `Screen_Team` | всем |
 | Статистика | `MenuStatistics` | `Screen_Statistics` | всем |
 | Калибровка | `MenuPhysicalSpaceSync` | `Screen_Calibration` | всем |

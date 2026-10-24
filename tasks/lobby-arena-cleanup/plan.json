@@ -1,0 +1,45 @@
+{
+  "task_id": "lobby-arena-cleanup",
+  "owner": "lobby-arena-cleanup",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/lobby-arena-cleanup",
+  "base_sha": "97df9b6c9744fbd44490bb26678602e0692bfd69",
+  "doc_path": "tasks/lobby-arena-cleanup/Readme.md",
+  "title": "Lobby: чистка арены (граница, надписи, табло, мусор сцены)",
+  "branch": "task/lobby-arena-cleanup",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/lobby-arena-cleanup/**",
+        "Assets/Scenes/Lobby.unity",
+        "Assets/Scenes/Lobby/**",
+        "Assets/Materials/Arsenal/Reflections/**",
+        "Assets/Prefabs/Arsenal/Slots/FireArmSlotPrefab.prefab",
+        "Assets/Prefabs/Environment/Lobby/ShootingTarget.prefab",
+        "Assets/Scripts/Maps/ShootingRangeDisplay.cs",
+        "Assets/Scripts/Maps/ShootingRangeDisplay.cs.meta",
+        "Assets/Scripts/Maps/ShootingRangePhotoCapture.cs",
+        "Assets/Scripts/Maps/ShootingTargetZone.cs",
+        "Assets/Scripts/Maps/ShootingTargetZone.cs.meta",
+        "Assets/Scripts/UI/Menu/Kit/MenuKit.cs",
+        "Assets/Scripts/UI/Menu/MenuOverview.cs",
+        "Assets/Scripts/UI/Menu/Overview/OverviewRangeMonitor.cs",
+        "Assets/Scripts/UI/Menu/Overview/OverviewRangeMonitor.cs.meta",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/OcclusionBakeTool.cs",
+        "Assets/Tests/EditMode/Maps/LobbyArenaCleanupTests.cs",
+        "Assets/Tests/EditMode/Maps/LobbyArenaCleanupTests.cs.meta",
+        "Assets/Tests/EditMode/Maps/ShootingRangeMonitorTests.cs",
+        "Assets/Tests/EditMode/Maps/ShootingRangeMonitorTests.cs.meta",
+        "Docs/gameplay.md",
+        "Docs/ui-design-system.md",
+        "Docs/ui-menu-architecture.md",
+        "experts/level-design/journal/2026-10-24-lobby-arena-cleanup.md",
+        "experts/ui/journal/2026-10-24-lobby-arena-cleanup.md",
+        "experts/gameplay/journal/2026-10-24-lobby-arena-cleanup.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

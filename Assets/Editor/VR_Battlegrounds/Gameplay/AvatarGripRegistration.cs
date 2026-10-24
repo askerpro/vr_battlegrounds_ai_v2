@@ -606,8 +606,7 @@ namespace VrBattlegrounds.Editor.Gameplay
                     string name = pose.name;
                     EditorUtility.CopySerialized(source, pose);
                     pose.name = name;
-                    EditorUtility.SetDirty(pose);
-                    AssetDatabase.SaveAssetIfDirty(pose);
+                    EncodeOnTarget(pose, rig, posePath);
                 }
                 else
                 {
@@ -622,11 +621,14 @@ namespace VrBattlegrounds.Editor.Gameplay
                         defect = PoseDefect(pose);
                         if (defect != null) throw new InvalidOperationException($"существующая поза {posePath}: {defect}");
                         if (pose.PoseType != UxrHandPoseType.Fixed) notes.Add($"{posePath}: существующая поза не Fixed ({pose.PoseType}) — используется как есть");
+                        else if (RuntimeMismatch(pose, rig) is string mismatch)
+                            notes.Add($"{posePath}: существующая поза — {mismatch}; перекодировать на риге цели (ReencodePoses)");
                     }
                     else
                     {
                         pose = CreatePose(source, target.PoseFolder, poseName, posePath);
                         poseCreated = true;
+                        EncodeOnTarget(pose, rig, posePath);
                     }
                 }
 
@@ -821,6 +823,84 @@ namespace VrBattlegrounds.Editor.Gameplay
         {
             Transform snap = PackOrigPoses.FindSnap(weapon.transform, GripPoint, UxrHandSide.Right) ?? PackOrigPoses.FindSnap(weapon.transform, GripPoint, UxrHandSide.Left);
             return snap != null && TryParseOrigName(snap.parent.name, out _, out _, out _) ? snap.parent.name : null;
+        }
+
+        /// <summary>Допуск «игра = редактор» для позы цели (<see cref="GripPoseEncoder.RuntimeVsWorldDeg" />), градусы.</summary>
+        public const float RuntimeToleranceDeg = 1f;
+
+        /// <summary>
+        /// Поза на риге цели (<see cref="GripPoseEncoding.TargetRigWorld" />): у позы пака нет пястных, а у кисти Cyborg они есть
+        /// (развёрнуты к запястью почти на 180°) — скопированная как есть поза в редакторе верна (мировой путь), а в игре
+        /// рантайм SDK ставит проксимальную фалангу под пястную и пальцы 2–5 выворачиваются назад (G6,
+        /// Docs/grip-known-issues.md; шлем 2026-10-24). Кодирование пишет дескриптор с пястными цели; после — сверка рантайма.
+        /// </summary>
+        private static void EncodeOnTarget(UxrHandPoseAsset pose, GripTargetRig rig, string posePath)
+        {
+            if (pose.PoseType != UxrHandPoseType.Fixed) throw new InvalidOperationException($"поза {posePath}: тип {pose.PoseType}, кодируется только Fixed");
+            pose.HandDescriptorLeft = GripPoseEncoder.Encode(rig, UxrHandSide.Left, pose.HandDescriptorLeft, GripPoseEncoding.TargetRigWorld, null);
+            pose.HandDescriptorRight = GripPoseEncoder.Encode(rig, UxrHandSide.Right, pose.HandDescriptorRight, GripPoseEncoding.TargetRigWorld, null);
+            EditorUtility.SetDirty(pose);
+            AssetDatabase.SaveAssetIfDirty(pose);
+            string mismatch = RuntimeMismatch(pose, rig);
+            if (mismatch != null) throw new InvalidOperationException($"поза {posePath} после кодирования на риге цели: {mismatch}");
+        }
+
+        /// <summary>Расхождение игры с редактором у Fixed-позы цели или null, если не больше <see cref="RuntimeToleranceDeg" />.</summary>
+        private static string RuntimeMismatch(UxrHandPoseAsset pose, GripTargetRig rig)
+        {
+            float left = GripPoseEncoder.RuntimeVsWorldDeg(rig, UxrHandSide.Left, pose);
+            float right = GripPoseEncoder.RuntimeVsWorldDeg(rig, UxrHandSide.Right, pose);
+            return Mathf.Max(left, right) <= RuntimeToleranceDeg ? null
+                : $"в игре расходится с редактором: левая {left:0.#}°, правая {right:0.#}° (допуск {RuntimeToleranceDeg:0.#}°)";
+        }
+
+        /// <summary>
+        /// Перекодирование на риге цели уже записанных Fixed-поз папки цели, у которых игра расходится с редактором
+        /// (копии поз пака без пястных до исправления регистрации). GUID и путь прежние, форма пальцев — как в редакторе;
+        /// позы без расхождения (ручные, с пястными) не трогаются. <paramref name="apply" />=false — только отчёт.
+        /// </summary>
+        public static string ReencodePoses(UxrAvatar avatar, bool apply)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException($"{LogTag} Запись запрещена в Play Mode.");
+            Target target = ResolveTarget(avatar);
+            var lines = new List<string>();
+            int checkedCount = 0, mismatched = 0, fixedCount = 0;
+            using (var rig = new GripTargetRig(target.RigPath))
+            {
+                foreach (string path in AssetDatabase.FindAssets("t:UxrHandPoseAsset", new[] { target.PoseFolder }).Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal))
+                {
+                    var pose = AssetDatabase.LoadAssetAtPath<UxrHandPoseAsset>(path);
+                    if (pose == null || pose.PoseType != UxrHandPoseType.Fixed) continue;
+                    checkedCount++;
+                    string mismatch = RuntimeMismatch(pose, rig);
+                    if (mismatch == null) continue;
+                    mismatched++;
+                    if (!apply)
+                    {
+                        lines.Add($"  {path}: {mismatch}");
+                        continue;
+                    }
+
+                    byte[] backup = File.ReadAllBytes(path);
+                    try
+                    {
+                        EncodeOnTarget(pose, rig, path);
+                        fixedCount++;
+                        lines.Add($"  {path}: перекодирована (было: {mismatch})");
+                    }
+                    catch (Exception e)
+                    {
+                        File.WriteAllBytes(path, backup);
+                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                        lines.Add($"  {path}: ОТКАЗ, файл возвращён — {e.Message}");
+                    }
+                }
+            }
+
+            string text = $"{LogTag} Перекодирование поз {target.PoseFolder} на риге цели ({(apply ? "применение" : "сухой прогон")}): " +
+                          $"Fixed-поз {checkedCount}, расходятся в игре {mismatched}{(apply ? $", перекодировано {fixedCount}" : "")}.\n" + string.Join("\n", lines);
+            GameLog.Debug.Info(text);
+            return text;
         }
 
         /// <summary>Копия ассета позы (оба дескриптора, тип и версия) под новым именем в папке поз цели.</summary>

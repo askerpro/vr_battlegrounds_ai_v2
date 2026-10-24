@@ -93,7 +93,7 @@ PH = `tasks/vr-test-stand/pilot-handoff/snapshot.json`.
    вызова на Quest с avatar-ik (ввод, ноги) и manipulation; `ProjectSettings` — моя зона, решение — совместное.
 0b. `stand-multiprocess-sceneid` — находка bots 5080 (2026-10-12, bots-fix net-round1 attempt-2, тикет 517): BotCombatStand в
    мультипроцессе PlayLaunch (S2C, H1C) — на каждом клиенте 21 «Spawn scene object not found for <sceneId>» / «Could not spawn
-   assetId=0». Гипотеза bots: сервер открывает Assets/Scenes/Debug/BotCombatStand.unity напрямую, клиенты — через Offline→карта,
+   assetId=0». Гипотеза bots: сервер открывает Assets/Scenes/Stands/Bots/BotCombatStand.unity напрямую, клиенты — через Offline→карта,
    sceneId расходятся. Связано с `stands-migration`. Плюс: логи клонов MPPM (Library/VP/*/Logs/Editor.log) перезаписываются
    каждым Play — PlayLaunch должен архивировать лог клона на RunId/фазу (брокер --output Library/VP не принимает).
    Отчёты: worktree bots tasks/bots-fix/reports/net-round1/runtime/attempt-2/.

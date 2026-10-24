@@ -266,7 +266,7 @@ GameModeData.modePrefab
 | Карта | `supportedModes` | Старт | «Начать матч» |
 |---|---|---|---|
 | Лобби (`MapData_Lobby`, `MapRegistry.lobby`) | `[]` | разминка | отказ: режимов матча нет |
-| `TestMap1`, `TestMap2` | `[elimination, respawn]` | разминка | выбор админа, если совместим, иначе первый совместимый |
+| `MilitaryBase`, `Warehouse` | `[elimination, respawn]` | разминка | выбор админа, если совместим, иначе первый совместимый |
 | Сцена не из реестра | — | разминка | выбор админа или первый режим матча реестра |
 
 Поле «режим сцены» (`MapReferee._sceneGameMode`) и `GameModeCatalog` удалены.

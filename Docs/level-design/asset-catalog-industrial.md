@@ -223,7 +223,7 @@ LOD0, деревянные ящики только Soft, стабильные GU
 - [Результат технической проверки](../../Temp/LevelDesign/IndustrialAnalysis/verification.json)
 
 Сцена в основном проекте:
-`Assets/Scenes/Tools/IndustrialCandidateReview.unity`.
+`Assets/Scenes/Stands/LevelDesign/IndustrialCandidateReview.unity`.
 Сцена с копиями демо хранится в Git LFS из-за размера; после клонирования
 репозитория получить её содержимое через `git lfs pull`, прежде чем открывать в Unity.
 **23 стенда, 32 рецепта, 61 деталь моделей**: эталон слева, все подобранные

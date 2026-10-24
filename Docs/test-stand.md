@@ -121,7 +121,7 @@ PlayLaunch сам выбирает стартовую сцену и возвра
 ```csharp
 var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
     Enabled = true, Role = "host", ClientCount = 0, HostIsAdmin = true,
-    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/TestMap1.unity",
+    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/Game/MilitaryBase.unity",
     ModeId = "elimination", AutoGoLive = false, BotCount = 0,
     PauseOnFocusLoss = false, Readiness = "map-playable"
 };
@@ -133,7 +133,7 @@ return VrBattlegrounds.EditorTools.TestStand.PlayLaunch.Plan(UnityEngine.JsonUti
 ```csharp
 var config = new VrBattlegrounds.DevTools.PlayLaunchConfiguration {
     Enabled = true, Role = "server", ClientCount = 2, HostIsAdmin = false,
-    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/TestMap2.unity",
+    SceneSource = "scene", ScenePath = "Assets/Scenes/Maps/Game/Warehouse.unity",
     ModeId = "elimination", AutoGoLive = false, BotCount = 0,
     PauseOnFocusLoss = false, Readiness = "map-playable"
 };

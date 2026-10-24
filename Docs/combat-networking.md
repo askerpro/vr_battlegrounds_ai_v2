@@ -126,11 +126,11 @@ UxrFirearmWeapon: спуск (TryToShootRound — только у стрелка
 ## Замерено на этой машине
 
 Сценарий яруса C `shot-pipeline-budget` (см. [`testing.md`](testing.md#ярус-c--два-процесса-настоящий-e2e)).
-Конфигурация: выделенный сервер + 1 клиент, карта `TestMap1`, три прогона подряд.
+Конфигурация: выделенный сервер + 1 клиент, карта `MilitaryBase`, три прогона подряд.
 
 ```
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
-  -Scenario shot-pipeline-budget -Map TestMap1 -Clients 1
+  -Scenario shot-pipeline-budget -Map MilitaryBase -Clients 1
 ```
 
 | Величина | Прогон 1 | Прогон 2 | Прогон 3 |
@@ -487,7 +487,7 @@ timelineOffset». Ошибка в метрах = это время × скоро
 ```
 # ярус C, три прогона подряд — числа должны совпадать в пределах разброса CPU
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
-  -Scenario shot-pipeline-budget -Map TestMap1 -Clients 1
+  -Scenario shot-pipeline-budget -Map MilitaryBase -Clients 1
 
 # сторож попаданий: красный, пока маски в префабах нулевые
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `

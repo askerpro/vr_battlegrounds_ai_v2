@@ -71,12 +71,12 @@ scripts на игровых префабах не очищаются.
 Animator, позу задаёт PlayableGraph стенда без Foot IK, как в состоянии покоя контроллера ног (`PosePuppet`). Списки
 клипов — ассеты рядом со сценой, переживают пересборку; строку можно добавить на лету, манекен появится сам.
 
-- `Tools/VR Battlegrounds/Debug/Sit Candidates Stand` (`SitCandidateStand`, список `Scenes/Dev/SitCandidates.asset`) —
+- `Tools/VR Battlegrounds/Debug/Sit Candidates Stand` (`SitCandidateStand`, список `Scenes/Stands/Avatar/SitCandidates.asset`) —
   кандидаты позы сидения (клип + кадр). Каждый манекен смешивает стоя → колено → свой кандидат как 1D blend tree
   `Legs_Crouch`. Управление — манипулятор как у стенда-кукловода: `PuppetBody` двигает и поворачивает ряд, высота
   `PuppetHead` над полом — присед; шкала у каждого своя, по высоте кости головы манекена в трёх позах.
   Над манекеном — уровень и клипы с весами.
-- `Tools/VR Battlegrounds/Debug/Clip Scrub Stand` (`ClipScrubStand`, список `Scenes/Dev/ClipScrub.asset`) — подбор
+- `Tools/VR Battlegrounds/Debug/Clip Scrub Stand` (`ClipScrubStand`, список `Scenes/Stands/Avatar/ClipScrub.asset`) — подбор
   кандидатов ниже приседа. У каждого манекена — **цепочка поз аватара** (общая, сверху вниз: стоя → присед/колено →
   промежуточные; как уровни `Legs_Crouch`, клип + кадр позы), ниже её последней позы — свой кандидат. Позы цепочки —
   клипы аватара, отдельными строками их нет; промежуточная фаза добавляется строкой цепочки.

@@ -434,7 +434,7 @@ clientIdentity.DeserializeClient(new NetworkReader(observers.ToArray()), true);
 `round-readiness-match` (T-29/RDY-01 плюс последний пункт T-09, зелёный, `-Clients 2`),
 `weapon-hit-damage` (T-28, **зелёный** — маски в префабах исправлены 2026-08-23, `-Clients 1`),
 `avatar-spawn-point` (WPN-03, зелёный после правки `AvatarManager`, `-Clients 1`),
-`calibrated-position-persists` (CAL-01, зелёный после T-30, `-Clients 2`, гоняется на паре `TestMap1` → `TestMap2`),
+`calibrated-position-persists` (CAL-01, зелёный после T-30, `-Clients 2`, гоняется на паре `MilitaryBase` → `Warehouse`),
 `connect-place-across-map` (CAL-02, зелёный после правки пути подключения, `-Clients 1`, та же пара карт),
 `map-run-relay-barrier` (барьер начального снимка Relay, `-Clients 2 -LateClientDelay 40`: второй клиент входит на
 идущую карту, затем сервер перезагружает ту же карту; клиенты проверяют, что снимок применён только для ключа своего
@@ -454,7 +454,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1
 
 Дирижёр проверяет свежесть билда, выбирает пару UDP-портов прогона, поднимает сервер
 и клиентов, ждёт вердикты, гасит процессы и сводит отчёт. Параметры: `-Scenario`,
-`-Map` (по умолчанию `TestMap1`), `-Clients`, `-Timeout`, `-SkipStaleCheck`, `-LateClientDelay` (пауза в секундах
+`-Map` (по умолчанию `MilitaryBase`), `-Clients`, `-Timeout`, `-SkipStaleCheck`, `-LateClientDelay` (пауза в секундах
 перед запуском последнего клиента — поздний вход на идущую карту), `-NetworkPort`/`-DiscoveryPort`.
 
 **Изоляция прогона.** Каждый прогон получает свою пару портов KCP и Discovery: по умолчанию две свободные
@@ -806,8 +806,8 @@ for (int i = 1; i <= 2; i++)
 `e2e-ready`; сервер дедуплицирует. Таймауты барьеров вокруг загрузки карты — с запасом: 120–240 с на сборке, общий
 `-Timeout` прогона — сумма всех с запасом. Поздний клиент ждите отдельным барьером (`includeLate: true`).
 
-**Параметры.** `Run-E2E.ps1 -Arg map1=TestMap1,map2=TestMap2` → `-e2eArg` всем процессам; в сценарии —
-`ctx.Arg("map1", "TestMap1")`. Пары — через запятую, без пробелов и кавычек.
+**Параметры.** `Run-E2E.ps1 -Arg map1=MilitaryBase,map2=Warehouse` → `-e2eArg` всем процессам; в сценарии —
+`ctx.Arg("map1", "MilitaryBase")`. Пары — через запятую, без пробелов и кавычек.
 
 **Журнал шагов.** В результате процесса — `steps [{name, role, data, utc, outcome}]` и `stepsDropped`; `outcome`:
 `reached`, `updated`, `received` (шаг другой стороны), `failed`, `aborted`, `barrier-passed`, `barrier-failed`. Пока
@@ -820,7 +820,7 @@ for (int i = 1; i <= 2; i++)
 участнику — разрешён любой сценарий из `E2ERunner`; роль `client-N` — по индексу участника, `-e2eClients` — число
 клиентов стенда; `-e2eArg` и поздний клиент в редакторе не передаются.
 
-**Самопроверка каркаса.** `Run-E2E.ps1 -Scenario e2e-kit-selftest -Map TestMap1 -Clients 2 -Timeout 300` — сервер и
+**Самопроверка каркаса.** `Run-E2E.ps1 -Scenario e2e-kit-selftest -Map MilitaryBase -Clients 2 -Timeout 300` — сервер и
 клиенты проходят барьеры `client-on-map-1` / `client-on-map-2` через перезагрузку той же карты; сервер проверяет, что
 пересланные после смены сцены шаги клиентов приняты без дублей. Красный — сначала чините каркас, потом игровые сценарии.
 
@@ -1037,7 +1037,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
 железа, и его перестают читать. Красным он становится только когда замер невозможен:
 не нашлось оружия, выстрел не состоялся, клиент не подключился.
 
-Запуск: `-Scenario shot-pipeline-budget -Map TestMap1 -Clients 1`.
+Запуск: `-Scenario shot-pipeline-budget -Map MilitaryBase -Clients 1`.
 
 Что снимает:
 
@@ -1071,7 +1071,7 @@ Unity за процессор, а не сеть, и как нижнюю гран
 
 ```
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
-    -Scenario calibrated-position-persists -Clients 2 -Map TestMap1 -Timeout 420 -SkipStaleCheck
+    -Scenario calibrated-position-persists -Clients 2 -Map MilitaryBase -Timeout 420 -SkipStaleCheck
 ```
 
 Сторож требования «после калибровки место игрока задано физически и переживает смену
@@ -1082,7 +1082,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
 
 | Проверка | Что делает сервер | До правки |
 |---|---|---|
-| откалиброванный остался на своём месте в арене | уводит его на известную точку арены, затем `LoadMap(TestMap2)` | **красная**: игрок в своей зоне, 12,06 м от своего места |
+| откалиброванный остался на своём месте в арене | уводит его на известную точку арены, затем `LoadMap(Warehouse)` | **красная**: игрок в своей зоне, 12,06 м от своего места |
 | неоткалиброванный оказался в зоне своей команды | ничего дополнительно | зелёная, это контроль |
 | ветки различаются | сравнивает расстояние откалиброванного до его зоны | **красная**: 0,00 м при нужных 4,5 м |
 
@@ -1090,7 +1090,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
 
 | Приём | Зачем |
 |---|---|
-| **Две разные карты, а не перезагрузка одной** | обе карты — одна и та же арена, но в `TestMap1` она была повёрнута на 90° вокруг Y. Перезагрузка одной карты не отличила бы «позиция сохранена относительно якорей» от «позиция сохранена в мировых координатах». **С 2026-09 арены выровнены** (`MapAlignmentTests`), и сценарий отвечает «вердикт вынести нельзя»; перенос по якорям проверяет `SpawnPlaceRegistryTests` |
+| **Две разные карты, а не перезагрузка одной** | обе карты — одна и та же арена, но в `MilitaryBase` она была повёрнута на 90° вокруг Y. Перезагрузка одной карты не отличила бы «позиция сохранена относительно якорей» от «позиция сохранена в мировых координатах». **С 2026-09 арены выровнены** (`MapAlignmentTests`), и сценарий отвечает «вердикт вынести нельзя»; перенос по якорям проверяет `SpawnPlaceRegistryTests` |
 | **Точка замера сдвинута от центра арены на 4 м** | первая версия брала сам центр — и это была дыра: арену поворачивали вокруг её собственного начала координат, поэтому центр у карт общий и в мировых координатах тоже, и наивное сохранение мировой позиции проходило проверку. Сдвинутая точка расходится на 5,66 м, втрое больше допуска |
 | Эталон вычисляется **из зон спавна**, а не из якорей | сравнивать место откалиброванного игрока с тем же кодом, который его и посчитал, значит проверять код им самим. Зоны ставит художник, к калибровке они отношения не имеют |
 | Направление сдвига задано **командой игрока** («от своей базы к чужой») | только так одна и та же точка арены получается на обеих картах и у сервера, и у клиента — порядок объектов на сцене для этого не годится |
@@ -1105,7 +1105,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
 
 ```
 powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
-    -Scenario connect-place-across-map -Clients 1 -Map TestMap1 -Timeout 420 -SkipStaleCheck
+    -Scenario connect-place-across-map -Clients 1 -Map MilitaryBase -Timeout 420 -SkipStaleCheck
 ```
 
 Сторож того же правила, что и `calibrated-position-persists`, но на **пути подключения**,
@@ -1190,7 +1190,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
 | **После разрыва клиент вообще не может переподключиться** | новый `NetworkManager` из перезагруженной сцены `Offline` оказывался выключенным (`isActiveAndEnabled == false`), его `LateUpdate` не вызывался, `NetworkClient.isLoadingScene` навсегда `true`, а при взведённом флаге входящие сообщения не разбираются вовсе | это была находка **NET-20**, а не свойство харнесса. **Исправлено 2026-08-21**: отсев дубликата ветки менеджеров переехал в `PersistentRoot.Start`. Обход из сценария снят, сценарий зелёный без него. Если симптом вернётся — первым делом смотреть в `client-N.log` строку «Состояние клиента после возврата в Offline» |
 | **Сборка под Standalone пачкает три файла** | после сборки плеера в `git status` появляются `ProjectSettings/ProjectSettings.asset` (`preloadedAssets` от XR-плагина, `m_BuildTargetBatching` для Standalone), `Assets/URPDefaultResources/PC.asset` и `Assets/Settings/Graphics/UniversalRenderPipelineGlobalSettings.asset` (пересчёт стриппинга шейдеров под PC) | это штатный побочный эффект Unity, не правка кода. В коммит e2e-прогона их не включать; при следующей сборке под Android значения пересчитаются обратно |
 
-Отдельно: карту брать **`TestMap1` или `TestMap2`**, не `Lobby`. `MapReferee` живёт
+Отдельно: карту брать **`MilitaryBase` или `Warehouse`**, не `Lobby`. `MapReferee` живёт
 в `MapReferee.prefab`, а тот стоит только в сценах карт — в `Lobby` матч запускать нечем.
 
 #### Дефекты, вскрытые самим харнессом
@@ -1205,13 +1205,13 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
   при каждом заходе в фазу `Setup` заспавнил бы оружие во **все** слоты заново.
   Роли процесса это не касается — врёт везде, включая хост.
   Занятость слота проверять по `WeaponComponent` под `slot.ItemAnchor`.
-- **`TestMap2` не собирается корректно как сетевая сцена.** Сборка плеера даёт
+- **`Warehouse` не собирается корректно как сетевая сцена.** Сборка плеера даёт
   `InvalidOperationException: Scene ... needs to be opened and resaved before building,
   because the scene object ArsenalWall (N) has no valid sceneId yet` — по одной на каждую
   из четырёх стен. Без `sceneId` Mirror не заспавнит объект, то есть арсенала на карте
   не будет ни у сервера, ни у клиентов. Лечится открытием и пересохранением сцены
-  (нужен человек или MCP со сценой). На `TestMap1` этого нет.
-- **На `TestMap1` восемь стен арсенала.** Не дефект сам по себе, но проверки про арсенал
+  (нужен человек или MCP со сценой). На `MilitaryBase` этого нет.
+- **На `MilitaryBase` восемь стен арсенала.** Не дефект сам по себе, но проверки про арсенал
   обязаны агрегировать по всем стенам, а не брать `FindFirstObjectByType`.
 
 #### Что в headless доступно вопреки ожиданиям
@@ -1382,7 +1382,7 @@ powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 `
   Перед `RestartAsHost` поменять `KcpTransport.port` (например, 7790); реклама discovery упадёт
   с `SocketException`, хост при этом поднимется.
 - **Игрок редактора без шлема**: камера на полу, тело в позе префаба; бот целится в твёрдые
-  коллайдеры, а не в голову-камеру. Между зонами на `TestMap1` стоят бочки — игрока редактора
+  коллайдеры, а не в голову-камеру. Между зонами на `MilitaryBase` стоят бочки — игрока редактора
   для дуэли переносят `UxrManager.MoveAvatarTo` на открытое место (например, `(2, 0, 0)`).
 
 ---

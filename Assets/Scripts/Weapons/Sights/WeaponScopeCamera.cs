@@ -1,4 +1,6 @@
 using UltimateXR.Avatar;
+using UltimateXR.Core;
+using UltimateXR.Manipulation;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -42,8 +44,12 @@ namespace VrBattlegrounds.Weapons.Sights
         // Текстура содержит кадр, отрисованный после включения (шлем 2026-10-24: при повторном поднесении первым
         // показывался застывший кадр прошлого раза).
         private bool _fresh;
-        private float _nextNearLog;
-        private const float NearLogInterval = 2f;
+        // Оружие этого прицела (корневой граббабл): камера работает только у оружия в руке локального игрока — прицелы на
+        // стене арсенала, стенде и у чужих игроков камеру и RT не получают (ревью performance 2026-10-24).
+        private UxrGrabbableObject _weapon;
+        private bool _blurLogged;
+        // Гистерезис границ включения: без мигания пятна и лога при дрожании руки на границе (ревью 2026-10-24).
+        private const float CullHysteresis = 0.05f, FrontEnter = -0.02f, FrontExit = -0.04f;
         // Решение пользователя 2026-10-24: картинка появляется и уходит плавно. Полосы размытия за порогами чёткости, м.
         private const float LateralFade = 0.04f;
         // Чёткость догоняет цель за это время, с: без скачка при входе и выходе.
@@ -132,7 +138,7 @@ namespace VrBattlegrounds.Weapons.Sights
         {
             UxrAvatar avatar = LocalAvatar();
             Transform head = avatar != null ? avatar.CameraTransform : null;
-            if (head == null || _view == null || !_view.TryGetZero(out Vector3 zero, out Transform muzzle, out _)
+            if (head == null || !HeldBy(avatar) || _view == null || !_view.TryGetZero(out Vector3 zero, out Transform muzzle, out _)
                 || !_view.TryGetLens(out Vector3 eyepiece, out float lensRadius))
             {
                 SetActive(false);
@@ -147,7 +153,7 @@ namespace VrBattlegrounds.Weapons.Sights
             LensRadius = lensRadius;
             float enterDistance = EnterDistance;
             float fadeDistance = enterDistance + WeaponSightCalibrationSettings.ScopeFadeBand;
-            float cull = fadeDistance + HeadCullMargin;
+            float cull = fadeDistance + HeadCullMargin + (_active ? CullHysteresis : 0f);
             if ((eyepiece - head.position).sqrMagnitude > cull * cull)
             {
                 SetActive(false);
@@ -159,7 +165,7 @@ namespace VrBattlegrounds.Weapons.Sights
             Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
             if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
             // Глаз перед окуляром (смотрит в объектив или сбоку на корпус) — картинки нет.
-            if (behind <= -0.02f)
+            if (behind <= (_active ? FrontExit : FrontEnter))
             {
                 SetActive(false);
                 return;
@@ -168,18 +174,20 @@ namespace VrBattlegrounds.Weapons.Sights
             // Чёткость: 1 у окуляра на оси, плавно к 0 за полосой по расстоянию и по смещению вбок.
             float target = (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(enterDistance, fadeDistance, behind)))
                            * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_enterOffset, _enterOffset + LateralFade, offset)));
-            bool wasActive = _active;
             SetActive(true);
             Clarity = _fresh ? Mathf.MoveTowards(Clarity, target, Time.unscaledDeltaTime / ClarityResponse) : 0f;
-            // Чёткая картинка — каждый кадр; размытая — раз в PreviewInterval кадров (и сразу после включения).
-            _camera.enabled = target > 0f || Clarity > 0f || !_fresh || Time.frameCount % PreviewInterval == 0;
-            // Диагностика порога: окуляр рядом с глазом, а чёткость нулевая — чего не хватило (не чаще раза в 2 с).
-            if (wasActive && target <= 0f && behind < fadeDistance && Time.unscaledTime >= _nextNearLog)
+            // Чёткая картинка — каждый кадр; размытая — раз в PreviewInterval кадров со своим сдвигом у экземпляра
+            // (и сразу после включения).
+            _camera.enabled = target > 0f || Clarity > 0f || !_fresh
+                              || (Time.frameCount + (GetInstanceID() & 3)) % PreviewInterval == 0;
+            // Диагностика: картинка ушла в размытие у окуляра — чего не хватило; один раз на переход, не покадрово.
+            bool blurred = target <= 0f;
+            if (blurred && !_blurLogged && behind < fadeDistance)
             {
-                _nextNearLog = Time.unscaledTime + NearLogInterval;
                 GameLog.WeaponSystem.Info($"{name}: глаз в {behind * 100f:0.0} см за окуляром, в {offset * 100f:0.0} см от оси — картинка " +
                                           $"размыта (чётко ≤ {enterDistance * 100f:0} см и ≤ {_enterOffset * 100f:0.0} см от оси).", this);
             }
+            _blurLogged = blurred && (_blurLogged || behind < fadeDistance);
 
             // Поле окуляра — угол, под которым глаз видит стекло; камера — то же поле, делённое на кратность.
             ApparentHalfField = Mathf.Clamp(lensRadius / Mathf.Max(behind, MinEyeRelief), MinField, MaxField);
@@ -197,6 +205,20 @@ namespace VrBattlegrounds.Weapons.Sights
             if (_localAvatar == null || !_localAvatar.isActiveAndEnabled || _localAvatar.AvatarMode != UxrAvatarMode.Local)
                 _localAvatar = UxrAvatar.LocalAvatar;
             return _localAvatar;
+        }
+
+        /// <summary>Оружие прицела в руке (или его деталь — затвор, помпа) у аватара; без выделений: граббер каждой руки.</summary>
+        private bool HeldBy(UxrAvatar avatar)
+        {
+            if (_weapon == null) _weapon = GetComponentInParent<UxrGrabbableObject>();
+            if (_weapon == null) return false;
+            return Holds(avatar.GetGrabber(UxrHandSide.Left)) || Holds(avatar.GetGrabber(UxrHandSide.Right));
+        }
+
+        private bool Holds(UxrGrabber grabber)
+        {
+            UxrGrabbableObject grabbed = grabber != null ? grabber.GrabbedObject : null;
+            return grabbed != null && (grabbed == _weapon || grabbed.transform.IsChildOf(_weapon.transform));
         }
 
         /// <summary>Позиции глаз в мире без выделений: стерео-матрицы камеры головы, иначе оба — центр головы.</summary>
@@ -225,6 +247,7 @@ namespace VrBattlegrounds.Weapons.Sights
             if (active) EnsureCamera();
             _active = active;
             _fresh = false;
+            _blurLogged = false;
             Clarity = 0f;
             if (_camera != null) _camera.enabled = active;
             GameLog.WeaponSystem.Info($"{name}: камера прицела {(active ? "включена" : "выключена")} (×{_magnification:0.##}).", this);

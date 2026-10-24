@@ -48,6 +48,7 @@ namespace VrBattlegrounds.Weapons.Sights
         private static readonly int ScopeAxisId = Shader.PropertyToID("_ScopeAxisWS");
         private static readonly int ScopePupilId = Shader.PropertyToID("_ScopePupil");
         private static readonly int ScopeLensRadiusId = Shader.PropertyToID("_ScopeLensRadius");
+        private static readonly int ScopeClarityId = Shader.PropertyToID("_ScopeClarity");
 
         private void OnEnable() => RenderPipelineManager.beginCameraRendering += HandleBeginCameraRendering;
         private void OnDisable()
@@ -90,6 +91,7 @@ namespace VrBattlegrounds.Weapons.Sights
                 _properties.SetVector(ScopeAxisId, _scope.Axis);
                 _properties.SetFloat(ScopePupilId, _scope.ExitPupil);
                 _properties.SetFloat(ScopeLensRadiusId, _scope.LensRadius);
+                _properties.SetFloat(ScopeClarityId, _scope.Clarity);
             }
             _lensRenderer.SetPropertyBlock(_properties, _lensMaterialIndex);
             return valid;

@@ -1,5 +1,6 @@
 using UltimateXR.Avatar;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using VrBattlegrounds.Core;
 
@@ -7,10 +8,10 @@ namespace VrBattlegrounds.Weapons.Sights
 {
     /// <summary>
     /// Кратность увеличивающего прицела (решение пользователя 2026-10-23): своя моно-камера с узким полем рендерит сцену
-    /// в малую текстуру, только пока окуляр у глаза локального игрока. Владеет камерой, текстурой и условием «у глаза»;
-    /// параметры линзы пишет только <see cref="WeaponOpticView"/> (берёт отсюда <see cref="Texture"/> и <see cref="IsViewing"/>).
-    /// Точка сведения — тоже у <see cref="WeaponOpticView"/>: камера смотрит из центра линзы на неё, поэтому центр
-    /// картинки совпадает с сеткой. Выстрел и Transform оружия не меняются.
+    /// в малую текстуру, пока окуляр у головы локального игрока. Владеет камерой, текстурой, условием «у глаза» и чёткостью
+    /// картинки; параметры линзы пишет только <see cref="WeaponOpticView"/> (берёт отсюда <see cref="Texture"/>,
+    /// <see cref="IsViewing"/> и <see cref="Clarity"/>). Точка сведения — тоже у <see cref="WeaponOpticView"/>: камера
+    /// смотрит из центра линзы на неё, поэтому центр картинки совпадает с сеткой. Выстрел и Transform оружия не меняются.
     /// </summary>
     public sealed class WeaponScopeCamera : MonoBehaviour
     {
@@ -24,27 +25,34 @@ namespace VrBattlegrounds.Weapons.Sights
         [Tooltip("Дальняя плоскость камеры прицела, м.")]
         [SerializeField, Min(5f)] private float _farClip = 80f;
 
-        [Header("У глаза (гистерезис)")]
+        [Header("У глаза")]
         // Шлем 2026-10-23: корпус гарнитуры не даёт поднести окуляр ближе ~5 см к глазу; угол к оси у самого окуляра
         // скачет на 20–30° от сдвига на пару сантиметров — условие по углу заменено смещением глаза от оси прицела.
-        // Дистанция включения (глаз позади окуляра вдоль оси) — ползунок общих настроек прицелов, EnterDistance.
-        [Tooltip("Смещение ближнего глаза от оси прицела, м: в этих пределах камера работает, а картинку открывает зрачок выхода.")]
+        // Дистанция чёткой картинки (глаз позади окуляра вдоль оси) — ползунок общих настроек прицелов, EnterDistance.
+        [Tooltip("Смещение ближнего глаза от оси прицела, м, до которого картинка чёткая (дальше — плавно размывается за " +
+                 "LateralFade); внутри неё яркое поле ещё сужает зрачок выхода.")]
         [SerializeField, Min(0.001f)] private float _enterOffset = 0.02f;
-        [SerializeField, Min(0.001f)] private float _exitOffset = 0.03f;
-        [Tooltip("Минимальное время, на которое включается камера: без дребезга на границе и без повторных выделений.")]
-        [SerializeField, Min(0f)] private float _minHoldSeconds = 0.5f;
 
         private Camera _camera;
         private RenderTexture _texture;
         // UxrAvatar.LocalAvatar — LINQ по компонентам с выделением на каждый вызов: берётся заново, только когда
         // закешированный аватар пропал, выключен или перестал быть локальным.
         private UxrAvatar _localAvatar;
-        private bool _viewing;
-        private float _viewingSince;
+        private bool _active;
+        // Текстура содержит кадр, отрисованный после включения (шлем 2026-10-24: при повторном поднесении первым
+        // показывался застывший кадр прошлого раза).
+        private bool _fresh;
         private float _nextNearLog;
         private const float NearLogInterval = 2f;
-        // Прицелы дальше дистанции выхода + этого запаса от головы (стена арсенала, пол, чужие руки) отсекаются до расчёта
-        // глаз — onBeforeRender идёт каждый кадр у каждого экземпляра. Запас же — окно диагностики «почти у глаза».
+        // Решение пользователя 2026-10-24: картинка появляется и уходит плавно. Полосы размытия за порогами чёткости, м.
+        private const float LateralFade = 0.04f;
+        // Чёткость догоняет цель за это время, с: без скачка при входе и выходе.
+        private const float ClarityResponse = 0.15f;
+        // Размытая картинка вне зоны чёткости (решение 2026-10-24: «всегда размытая картинка по центру») — камера рисует
+        // раз в столько кадров: размытие скрывает низкую частоту, цена камеры — четверть.
+        private const int PreviewInterval = 4;
+        // Прицелы дальше зоны размытия + этого запаса от головы (стена арсенала, пол, чужие руки) отсекаются до расчёта
+        // глаз — onBeforeRender идёт каждый кадр у каждого экземпляра.
         private const float HeadCullMargin = 0.15f;
         // Поле окуляра: глаз ближе 3 см к стеклу не подходит (гарнитура), пределы — от узкого до широкого окуляра.
         private const float MinEyeRelief = 0.03f, MinField = 0.1f, MaxField = 0.8f;
@@ -54,8 +62,9 @@ namespace VrBattlegrounds.Weapons.Sights
         public float ExitPupil => _view != null && _view.Settings != null
             ? _view.Settings.ScopeEyeTolerance : WeaponSightCalibrationSettings.DefaultScopeEyeTolerance;
         /// <summary>
-        /// Дистанция включения — глаз не дальше этого позади окуляра, м; ползунок в <see cref="WeaponSightCalibrationSettings"/>
-        /// (решение пользователя 2026-10-24). Выключение — на <see cref="WeaponSightCalibrationSettings.ScopeExitHysteresis"/> дальше.
+        /// Дистанция чёткой картинки — глаз не дальше этого позади окуляра, м; ползунок в <see cref="WeaponSightCalibrationSettings"/>
+        /// (решение пользователя 2026-10-24). Дальше на <see cref="WeaponSightCalibrationSettings.ScopeFadeBand"/> картинка
+        /// плавно размывается.
         /// </summary>
         public float EnterDistance => _view != null && _view.Settings != null
             ? _view.Settings.ScopeEnterDistance : WeaponSightCalibrationSettings.DefaultScopeEnterDistance;
@@ -69,8 +78,10 @@ namespace VrBattlegrounds.Weapons.Sights
         /// </summary>
         public float ApparentHalfField { get; private set; } = 0.3f;
         public float LensRadius { get; private set; }
-        /// <summary>Камера прицела активна и текстура содержит текущий кадр.</summary>
-        public bool IsViewing => _viewing && _texture != null;
+        /// <summary>Чёткость картинки 0..1: 1 — глаз у окуляра на оси, 0 — размытая тусклая картинка (сетки нет).</summary>
+        public float Clarity { get; private set; }
+        /// <summary>Камера прицела работает и текстура содержит кадр, отрисованный после её включения.</summary>
+        public bool IsViewing => _active && _fresh && _texture != null;
         public Texture Texture => _texture;
 
         private static readonly System.Collections.Generic.HashSet<Camera> ScopeCameras = new System.Collections.Generic.HashSet<Camera>();
@@ -78,12 +89,17 @@ namespace VrBattlegrounds.Weapons.Sights
         /// <summary>Камера принадлежит прицелу (не глазу игрока): линзы для неё параметры не пишут.</summary>
         public static bool IsScopeCamera(Camera camera) => ScopeCameras.Count > 0 && ScopeCameras.Contains(camera);
 
-        private void OnEnable() => Application.onBeforeRender += HandleBeforeRender;
+        private void OnEnable()
+        {
+            Application.onBeforeRender += HandleBeforeRender;
+            RenderPipelineManager.endCameraRendering += HandleEndCameraRendering;
+        }
 
         private void OnDisable()
         {
             Application.onBeforeRender -= HandleBeforeRender;
-            SetViewing(false);
+            RenderPipelineManager.endCameraRendering -= HandleEndCameraRendering;
+            SetActive(false);
             ReleaseCamera();
         }
 
@@ -106,6 +122,11 @@ namespace VrBattlegrounds.Weapons.Sights
             _texture = null;
         }
 
+        private void HandleEndCameraRendering(ScriptableRenderContext context, Camera camera)
+        {
+            if (camera == _camera && _camera != null) _fresh = true;
+        }
+
         // После позы трекинга и SDK, до рендера кадра: та же поза, что увидит WeaponOpticView.
         private void HandleBeforeRender()
         {
@@ -114,7 +135,7 @@ namespace VrBattlegrounds.Weapons.Sights
             if (head == null || _view == null || !_view.TryGetZero(out Vector3 zero, out Transform muzzle, out _)
                 || !_view.TryGetLens(out Vector3 eyepiece, out float lensRadius))
             {
-                SetViewing(false);
+                SetActive(false);
                 return;
             }
 
@@ -125,11 +146,11 @@ namespace VrBattlegrounds.Weapons.Sights
             Axis = dir;
             LensRadius = lensRadius;
             float enterDistance = EnterDistance;
-            float exitDistance = enterDistance + WeaponSightCalibrationSettings.ScopeExitHysteresis;
-            float cull = exitDistance + HeadCullMargin;
+            float fadeDistance = enterDistance + WeaponSightCalibrationSettings.ScopeFadeBand;
+            float cull = fadeDistance + HeadCullMargin;
             if ((eyepiece - head.position).sqrMagnitude > cull * cull)
             {
-                SetViewing(false);
+                SetActive(false);
                 return;
             }
             // Ближний к оси глаз: в стерео смотрит один глаз, центр головы смещён от оси на полглаза.
@@ -137,19 +158,28 @@ namespace VrBattlegrounds.Weapons.Sights
             Offset(left, eyepiece, dir, out float behind, out float offset);
             Offset(right, eyepiece, dir, out float behindRight, out float offsetRight);
             if (offsetRight < offset) { offset = offsetRight; behind = behindRight; }
-            bool near = _viewing
-                ? behind > -0.02f && behind <= exitDistance && offset <= _exitOffset
-                : behind > -0.02f && behind <= enterDistance && offset <= _enterOffset;
-            if (!near && _viewing && Time.unscaledTime - _viewingSince < _minHoldSeconds) near = true;
-            SetViewing(near);
-            // Диагностика порога: окуляр рядом с глазом, а увеличение не включилось — чего не хватило (не чаще раза в 2 с).
-            if (!_viewing && Mathf.Abs(behind) < cull && offset < cull && Time.unscaledTime >= _nextNearLog)
+            // Глаз перед окуляром (смотрит в объектив или сбоку на корпус) — картинки нет.
+            if (behind <= -0.02f)
+            {
+                SetActive(false);
+                return;
+            }
+
+            // Чёткость: 1 у окуляра на оси, плавно к 0 за полосой по расстоянию и по смещению вбок.
+            float target = (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(enterDistance, fadeDistance, behind)))
+                           * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(_enterOffset, _enterOffset + LateralFade, offset)));
+            bool wasActive = _active;
+            SetActive(true);
+            Clarity = _fresh ? Mathf.MoveTowards(Clarity, target, Time.unscaledDeltaTime / ClarityResponse) : 0f;
+            // Чёткая картинка — каждый кадр; размытая — раз в PreviewInterval кадров (и сразу после включения).
+            _camera.enabled = target > 0f || Clarity > 0f || !_fresh || Time.frameCount % PreviewInterval == 0;
+            // Диагностика порога: окуляр рядом с глазом, а чёткость нулевая — чего не хватило (не чаще раза в 2 с).
+            if (wasActive && target <= 0f && behind < fadeDistance && Time.unscaledTime >= _nextNearLog)
             {
                 _nextNearLog = Time.unscaledTime + NearLogInterval;
-                GameLog.WeaponSystem.Info($"{name}: глаз в {behind * 100f:0.0} см за окуляром, в {offset * 100f:0.0} см от оси — увеличение " +
-                                          $"не включено (вход ≤ {enterDistance * 100f:0} см и ≤ {_enterOffset * 100f:0.0} см от оси).", this);
+                GameLog.WeaponSystem.Info($"{name}: глаз в {behind * 100f:0.0} см за окуляром, в {offset * 100f:0.0} см от оси — картинка " +
+                                          $"размыта (чётко ≤ {enterDistance * 100f:0} см и ≤ {_enterOffset * 100f:0.0} см от оси).", this);
             }
-            if (!_viewing) return;
 
             // Поле окуляра — угол, под которым глаз видит стекло; камера — то же поле, делённое на кратность.
             ApparentHalfField = Mathf.Clamp(lensRadius / Mathf.Max(behind, MinEyeRelief), MinField, MaxField);
@@ -188,14 +218,16 @@ namespace VrBattlegrounds.Weapons.Sights
             lateral = (w + axis * behind).magnitude;
         }
 
-        private void SetViewing(bool viewing)
+        /// <summary>Камера работает (чётко или размыто) или выключена; после выключения кадр в текстуре считается устаревшим.</summary>
+        private void SetActive(bool active)
         {
-            if (viewing == _viewing) return;
-            if (viewing) EnsureCamera();
-            _viewing = viewing;
-            if (viewing) _viewingSince = Time.unscaledTime;
-            if (_camera != null) _camera.enabled = viewing;
-            GameLog.WeaponSystem.Info($"{name}: камера прицела {(viewing ? "включена" : "выключена")} (×{_magnification:0.##}).", this);
+            if (active == _active) return;
+            if (active) EnsureCamera();
+            _active = active;
+            _fresh = false;
+            Clarity = 0f;
+            if (_camera != null) _camera.enabled = active;
+            GameLog.WeaponSystem.Info($"{name}: камера прицела {(active ? "включена" : "выключена")} (×{_magnification:0.##}).", this);
         }
 
         private void EnsureCamera()

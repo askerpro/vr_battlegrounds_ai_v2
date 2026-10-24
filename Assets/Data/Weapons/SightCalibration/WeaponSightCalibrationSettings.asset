@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _defaultZeroDistance: 15
   _scopeEyeTolerance: 0.005
+  _scopeEnterDistance: 0.35

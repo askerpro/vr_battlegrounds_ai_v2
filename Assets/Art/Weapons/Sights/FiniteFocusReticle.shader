@@ -17,6 +17,7 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
         [HideInInspector] _ScopeAxisWS("Scope axis", Vector) = (0,0,1,0)
         [HideInInspector] _ScopePupil("Scope exit pupil", Float) = 0.004
         [HideInInspector] _ScopeLensRadius("Scope lens radius", Float) = 0.02
+        [HideInInspector] _ScopeClarity("Scope clarity", Float) = 1
         [HideInInspector] _OpticValid("Valid", Float) = 0
         [HideInInspector] _OpticZeroWS("Zero point", Vector) = (0,0,15,15)
         [HideInInspector] _OpticForwardWS("Forward", Vector) = (0,0,1,0)
@@ -43,7 +44,7 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _GlassTint, _ReticleColor, _DotColor;
-                float _RingRadius, _RingWidth, _DotRadius, _OpticValid, _ReticleStyle, _ScopeActive, _ScopeEquipped, _ScopeApparentHalfField, _ScopePupil, _ScopeLensRadius;
+                float _RingRadius, _RingWidth, _DotRadius, _OpticValid, _ReticleStyle, _ScopeActive, _ScopeEquipped, _ScopeApparentHalfField, _ScopePupil, _ScopeLensRadius, _ScopeClarity;
                 float4 _OpticZeroWS, _OpticForwardWS, _OpticRightWS, _OpticUpWS, _ScopeEyepieceWS, _ScopeAxisWS;
             CBUFFER_END
             // Кадр камеры кратности (WeaponScopeCamera): моно, центр — точка сведения, оси — оси ShotSource.
@@ -114,7 +115,25 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
                     float field = max(_ScopeApparentHalfField, 0.000001);
                     float3 onGlass = input.positionWS - _ScopeEyepieceWS.xyz;
                     float2 lens = float2(dot(onGlass, _OpticRightWS.xyz), dot(onGlass, _OpticUpWS.xyz)) / max(_ScopeLensRadius, 0.00001);
-                    half3 image = SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, 0.5 + 0.5 * lens).rgb;
+                    // Чёткость (WeaponScopeCamera.Clarity, решение пользователя 2026-10-24): вдали от окуляра и вбок от оси
+                    // картинка размыта и тусклее, по мере выравнивания плавно становится чёткой; сетка — только при чёткой.
+                    float clarity = saturate(_ScopeClarity);
+                    float2 uv = 0.5 + 0.5 * lens;
+                    float blur = (1.0 - clarity) * 0.06;
+                    half3 image = SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv).rgb;
+                    if (blur > 0.001)
+                    {
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv + float2(blur, 0)).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv - float2(blur, 0)).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv + float2(0, blur)).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv - float2(0, blur)).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv + float2(blur, blur) * 0.7).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv - float2(blur, blur) * 0.7).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv + float2(blur, -blur) * 0.7).rgb;
+                        image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv - float2(blur, -blur) * 0.7).rgb;
+                        image /= 9.0;
+                    }
+                    image *= lerp(0.4, 1.0, clarity);
                     // Зрачок выхода (решение пользователя 2026-10-24): светлое поле всегда в центре стекла, вокруг — затенение
                     // с мягким затуханием к краям. Смещение глаза от оси (в долях допуска ракурса) сужает светлое поле;
                     // чем ровнее ракурс, тем дальше затенение отступает к трубе, на оси его нет.
@@ -126,8 +145,9 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
                     half inside = 1.0 - smoothstep(open - 0.35, open, length(lens));
                     half tube = 1.0 - smoothstep(0.92, 1.0, length(lens));
                     half4 background = half4(image * lerp(0.1, 1.0, inside) * tube, 1.0);
-                    half coverage = Reticle(lens * field, centre) * inside * tube;
-                    return Compose(background, coverage, centre * inside * tube);
+                    half sharp = smoothstep(0.5, 1.0, clarity);
+                    half coverage = Reticle(lens * field, centre) * inside * tube * sharp;
+                    return Compose(background, coverage, centre * inside * tube * sharp);
                 }
 
                 // Коллиматор (и оптика без картинки): сетка конечного фокуса по лучу глаза к точке сведения.

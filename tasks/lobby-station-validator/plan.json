@@ -1,0 +1,23 @@
+{
+  "task_id": "lobby-station-validator",
+  "owner": "level-design",
+  "client": "claude",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "2648853652c5251af3f20aa8299cc765df22d758",
+  "doc_path": "tasks/lobby-station-validator/Readme.md",
+  "title": "Валидатор иерархии карт: в Lobby одна станция",
+  "branch": "task/lobby-station-validator",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/lobby-station-validator/**",
+        "Assets/Editor/VR_Battlegrounds/Gameplay/MapGameplayHierarchy.cs",
+        "Docs/level-design/level-design.md",
+        "Docs/troubleshooting.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

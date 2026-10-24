@@ -14,7 +14,7 @@ namespace VrBattlegrounds.Tests.DevTools
     public class BuildSceneResolverTests
     {
         private const string CatalogPath = "Assets/Data/Maps/MapRuntimeCatalog.asset";
-        private const string EditorOnlyScene = "Assets/Scenes/Debug/BotCombatStand.unity";
+        private const string EditorOnlyScene = "Assets/Scenes/Stands/Bots/BotCombatStand.unity";
         private const string EditorOnlyScript = "Assets/Scripts/Debug/BotCombatStand/BotCombatStand.cs";
 
         [Test]
@@ -63,8 +63,8 @@ namespace VrBattlegrounds.Tests.DevTools
         [Test]
         public void Совместимая_fixture_включается_только_по_явному_automation_запросу()
         {
-            const string sceneName = "TestMap1";
-            const string scenePath = "Assets/Scenes/Maps/TestMap1.unity";
+            const string sceneName = "MilitaryBase";
+            const string scenePath = "Assets/Scenes/Maps/Game/MilitaryBase.unity";
             var catalog = AssetDatabase.LoadAssetAtPath<MapRuntimeCatalog>(CatalogPath);
             Assert.IsNotNull(catalog);
             Assert.IsTrue(EditorBuildSettings.scenes.Any(scene => scene.enabled && scene.path == scenePath));

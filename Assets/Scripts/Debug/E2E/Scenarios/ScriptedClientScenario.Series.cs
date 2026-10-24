@@ -14,7 +14,7 @@ using VrBattlegrounds.Player;
 namespace VrBattlegrounds.DevTools.E2E.Scenarios
 {
     /// <summary>
-    /// <c>scripted-series-next-map</c> (S + 2): клиент-админ начинает серию [TestMap2 → TestMap1] командой «Новая серия»
+    /// <c>scripted-series-next-map</c> (S + 2): клиент-админ начинает серию [Warehouse → MilitaryBase] командой «Новая серия»
     /// планшета, из разминки жмёт «Следующая карта» дважды одним кадром (повтор во время перехода), на второй карте
     /// начинает матч; клиенты доходят до своих зон. Сервер только читает: серия и её карта, сессии, команды и права
     /// пережили смену карты, повтор команды не сдвинул серию, на новой карте — своя экономика.
@@ -24,11 +24,11 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         public const string SeriesNextMapName = "scripted-series-next-map";
         public const string SeriesStopName = "scripted-series-stop";
 
-        private const string FirstMap = "TestMap2";
-        private const string SecondMap = "TestMap1";
+        private const string FirstMap = "Warehouse";
+        private const string SecondMap = "MilitaryBase";
 
-        private const string CheckSeriesStarted = "сервер: админ начал серию TestMap2 → TestMap1 — карта 1 загружена заново в разминке";
-        private const string CheckNextMap = "сервер: «Следующая карта» — TestMap1 в разминке, серия идёт (карта 2/2), повтор команды отклонён";
+        private const string CheckSeriesStarted = "сервер: админ начал серию Warehouse → MilitaryBase — карта 1 загружена заново в разминке";
+        private const string CheckNextMap = "сервер: «Следующая карта» — MilitaryBase в разминке, серия идёт (карта 2/2), повтор команды отклонён";
         private const string CheckSessionsKept = "сервер: сессии, команды и права пережили обе загрузки карт";
         private const string CheckSecondMapLive = "сервер: на карте 2 админ начал матч, все в своих зонах — Equipment, деньги новой карты";
         private const string CheckStopLive = "сервер: матч начал админ, все в своих зонах — Equipment";

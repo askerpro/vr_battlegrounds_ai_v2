@@ -157,16 +157,16 @@ namespace VrBattlegrounds.Tests.Network
             SessionSnapshot snapshot = new SessionSnapshot
             {
                 NeedsPhysicalRestore = true,
-                CapturedOnMap = "TestMap1",
+                CapturedOnMap = "MilitaryBase",
                 Position = new Vector3(5f, 1f, 7f)
             };
 
-            Assert.IsTrue(snapshot.CanRestorePlaceOn("TestMap1"),
+            Assert.IsTrue(snapshot.CanRestorePlaceOn("MilitaryBase"),
                 "Карта та же — вернуть игрока туда, где он стоял, точнее любого пересчёта.");
 
-            Assert.IsFalse(snapshot.CanRestorePlaceOn("TestMap2"),
+            Assert.IsFalse(snapshot.CanRestorePlaceOn("Warehouse"),
                 "Карта сменилась, а мировая позиция из снимка применяется как есть. " +
-                "Арена в TestMap1 повёрнута на 90° относительно TestMap2: та же мировая точка " +
+                "Арена в MilitaryBase повёрнута на 90° относительно Warehouse: та же мировая точка " +
                 "означает там другое место арены — разворот относительно баз и геометрии (CAL-02).");
         }
 
@@ -176,10 +176,10 @@ namespace VrBattlegrounds.Tests.Network
             SessionSnapshot snapshot = new SessionSnapshot
             {
                 NeedsPhysicalRestore = false,
-                CapturedOnMap = "TestMap1"
+                CapturedOnMap = "MilitaryBase"
             };
 
-            Assert.IsFalse(snapshot.CanRestorePlaceOn("TestMap1"),
+            Assert.IsFalse(snapshot.CanRestorePlaceOn("MilitaryBase"),
                 "Проверка карты не должна отменять прежнее условие: мёртвого игрока " +
                 "на место гибели не возвращают.");
         }

@@ -55,8 +55,8 @@ internal static class E2EKitTests
         test("e2e: Create отклоняет позднего вне набора, -e2eArg прежний", () =>
         {
             Throws<ArgumentException>(() => E2EContext.Create("s", "server", expectedClients: 2, lateRole: "client-5"));
-            var ctx = Parse("p", "-e2eScenario", "s", "-e2eArg", "maps=TestMap1;TestMap2", "-e2eArg", "rounds=2");
-            Check(ctx.ArgError == null && ctx.Arg("maps") == "TestMap1;TestMap2" && ctx.Arg("rounds") == "2" && ctx.Arg("x", "d") == "d", "Arg");
+            var ctx = Parse("p", "-e2eScenario", "s", "-e2eArg", "maps=MilitaryBase;Warehouse", "-e2eArg", "rounds=2");
+            Check(ctx.ArgError == null && ctx.Arg("maps") == "MilitaryBase;Warehouse" && ctx.Arg("rounds") == "2" && ctx.Arg("x", "d") == "d", "Arg");
         });
     }
 
@@ -67,7 +67,7 @@ internal static class E2EKitTests
             var result = new E2EResult { Status = E2EResult.StatusCompleted };
             result.Declare("first"); result.Set("first", true, "done");
             var at = new DateTime(2026, 10, 14, 9, 30, 0, DateTimeKind.Utc);
-            result.AddStep("map-1-ready", "client-1", "TestMap1 \"q\"", at, E2EStepOutcome.Reached);
+            result.AddStep("map-1-ready", "client-1", "MilitaryBase \"q\"", at, E2EStepOutcome.Reached);
             result.AddStep("map-1-ready", "server", "", at.AddSeconds(1), E2EStepOutcome.BarrierPassed);
             using var document = JsonDocument.Parse(result.ToJson());
             var root = document.RootElement;
@@ -75,7 +75,7 @@ internal static class E2EKitTests
             Check(steps.GetArrayLength() == 2, "две записи");
             var first = steps[0];
             Check(first.GetProperty("name").GetString() == "map-1-ready" && first.GetProperty("role").GetString() == "client-1" &&
-                  first.GetProperty("data").GetString() == "TestMap1 \"q\"" && first.GetProperty("outcome").GetString() == "reached" &&
+                  first.GetProperty("data").GetString() == "MilitaryBase \"q\"" && first.GetProperty("outcome").GetString() == "reached" &&
                   first.GetProperty("utc").GetString() == "2026-10-14T09:30:00.0000000Z", "запись шага: " + first);
             Check(steps[1].GetProperty("outcome").GetString() == "barrier-passed", "исход барьера");
             Check(root.GetProperty("stepsDropped").GetInt32() == 0 && root.GetProperty("checks").GetArrayLength() == 1 &&
@@ -287,7 +287,7 @@ internal static class E2EKitTests
         {
             var (core, ctx, journal) = Server();
             var broadcast = new List<E2EStepState>();
-            Check(core.ReachServer(ctx, "series-start", "TestMap1", DateTime.UtcNow), "шаг сервера");
+            Check(core.ReachServer(ctx, "series-start", "MilitaryBase", DateTime.UtcNow), "шаг сервера");
             Check(core.Reach(ctx, "local-note", null, DateTime.UtcNow), "Step сервера");
             core.TakeServerBroadcast(broadcast);
             Check(broadcast.Count == 1 && broadcast[0].Name == "series-start" && core.ServerSteps.Count == 1, "рассылается только ServerStep");

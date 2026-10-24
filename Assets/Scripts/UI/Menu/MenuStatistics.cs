@@ -38,7 +38,7 @@ namespace VrBattlegrounds.UI.Menu
         {
             base.Show();
             var sections = new List<SeriesStatsTable.Section>();
-            string[] maps = { "TestMap1", "TestMap2", SeriesStatsTable.TotalTitle };
+            string[] maps = { "MilitaryBase", "Warehouse", SeriesStatsTable.TotalTitle };
             string[] names = { "Асланбек", "Марат", "Игрок_07", "ОченьДлинныйНикИгрока", "Залим", "Рустам", "Тимур", "Кантемир" };
             for (int m = 0; m < maps.Length; m++)
             {

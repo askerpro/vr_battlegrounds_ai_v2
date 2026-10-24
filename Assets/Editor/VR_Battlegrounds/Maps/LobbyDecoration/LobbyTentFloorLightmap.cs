@@ -12,7 +12,7 @@ using Object = UnityEngine.Object;
 namespace VrBattlegrounds.EditorTools
 {
     /// <summary>
-    /// Пол шатра Lobby в лайтмапе. Меш floor общего nalchik_tolst.fbx (им пользуются TestMap1–3, ServiceYard,
+    /// Пол шатра Lobby в лайтмапе. Меш floor общего nalchik_tolst.fbx (им пользуются MilitaryBase, Warehouse, BlockStand, ServiceYard,
     /// ReferenceMap04, префабы Nalchick) не имеет UV2, и пол освещался одной пробой из центра шатра, куда прямой
     /// свет ламп не доходит. Общий FBX не меняется: копия меша с исходной UV0 и сгенерированной UV2 сохраняется
     /// ассетом лобби и назначается MeshFilter пола; коллайдер остаётся на исходном меше. ReceiveGI → Lightmaps

@@ -16,8 +16,8 @@ namespace VrBattlegrounds.Editor.PuppetStand
     /// </summary>
     public static class SitCandidatesStandMenu
     {
-        public const string ScenePath = "Assets/Scenes/Dev/SitCandidates.unity";
-        public const string ListPath = "Assets/Scenes/Dev/SitCandidates.asset";
+        public const string ScenePath = "Assets/Scenes/Stands/Avatar/SitCandidates.unity";
+        public const string ListPath = "Assets/Scenes/Stands/Avatar/SitCandidates.asset";
         // MEF_Base_Avatar — по GUID (как HandsPackPoseImporter.MefBaseAvatarGuid: своя сборка его не видит);
         // префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
         private static string PuppetPrefab => AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032");

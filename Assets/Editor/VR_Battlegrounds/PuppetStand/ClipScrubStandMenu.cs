@@ -15,8 +15,8 @@ namespace VrBattlegrounds.Editor.PuppetStand
     /// </summary>
     public static class ClipScrubStandMenu
     {
-        public const string ScenePath = "Assets/Scenes/Dev/ClipScrub.unity";
-        public const string ListPath = "Assets/Scenes/Dev/ClipScrub.asset";
+        public const string ScenePath = "Assets/Scenes/Stands/Avatar/ClipScrub.unity";
+        public const string ListPath = "Assets/Scenes/Stands/Avatar/ClipScrub.asset";
         // MEF_Base_Avatar — по GUID (как HandsPackPoseImporter.MefBaseAvatarGuid: своя сборка его не видит);
         // префаб переносили (2026-10-17 в Player/Unused), путь устаревал.
         private static string PuppetPrefab => AssetDatabase.GUIDToAssetPath("b6fe59db941fa944696ece5e1aabc032");

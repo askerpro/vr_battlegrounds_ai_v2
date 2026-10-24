@@ -29,7 +29,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
 
         /// <summary>
         /// Карты, к которым применяются правила боя: все карты реестра, кроме лобби и стендов для отладки
-        /// (<see cref="MapData.debugOnly"/>, <c>TestMap3</c> — стенд блоков).
+        /// (<see cref="MapData.debugOnly"/>, <c>BlockStand</c> — стенд блоков).
         /// </summary>
         public static IEnumerable<MapData> BattleMaps(MapRegistry registry) =>
             registry.maps.Where(m => m != null && m != registry.lobby && !m.debugOnly);

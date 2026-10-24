@@ -15,7 +15,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     /// <summary>Визуальное сравнение эталонов и рецептов; не игровая карта и не утверждение замен.</summary>
     public static class AssetCandidateReviewScene
     {
-        public const string ScenePath = "Assets/Scenes/Tools/IndustrialCandidateReview.unity";
+        public const string ScenePath = "Assets/Scenes/Stands/LevelDesign/IndustrialCandidateReview.unity";
         private const string DataPath = "Assets/Editor/VR_Battlegrounds/LevelDesign/Data/IndustrialCandidateRecipes.json";
         private const string MaterialPath = "Assets/Art/Materials/CatalogReview/Floor.mat";
 

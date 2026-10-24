@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f53179de82da78042a99d0d76f7956e4, type: 3}
-  m_Name: MapData_TestMap3
+  m_Name: MapData_BlockStand
   m_EditorClassIdentifier: VrBattlegrounds::VrBattlegrounds.Maps.MapData
   displayName: "\u0421\u0442\u0435\u043D\u0434 \u0431\u043B\u043E\u043A\u043E\u0432"
-  sceneName: TestMap3
+  sceneName: BlockStand
   kind: 2
   debugExemptions: 0
   preview: {fileID: 0}

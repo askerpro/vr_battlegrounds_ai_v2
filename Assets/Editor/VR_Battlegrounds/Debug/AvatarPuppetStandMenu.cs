@@ -18,7 +18,7 @@ namespace VrBattlegrounds.Editor
     /// </summary>
     public static class AvatarPuppetStandMenu
     {
-        public const string ScenePath = "Assets/Scenes/Dev/AvatarPuppetStand.unity";
+        public const string ScenePath = "Assets/Scenes/Stands/Avatar/AvatarPuppetStand.unity";
         /// <summary>
         /// Аватары стенда — три версии MEF: ноги UltimateXR (решатель ноги и клипы Mixamo, раздел «Ноги» контроллера), те же
         /// ноги на клипах Final IK и эталон VRIK (Final IK целиком). Heavy и киборг из ряда убраны (2026-10-01).

@@ -231,10 +231,10 @@ namespace VrBattlegrounds.Tests.DevTools
             int rights = Index(script, s => s.op == "admin-rights");
             int teams = Index(script, s => s.op == "wait-server" && s.name == "teams-ok");
             int start = Index(script, s => s.op == "admin-start-series");
-            int first = Index(script, s => s.op == "expect-map" && s.target == "TestMap2");
+            int first = Index(script, s => s.op == "expect-map" && s.target == "Warehouse");
             int verified = Index(script, s => s.op == "wait-server" && s.name == "series-verified");
             int next = Index(script, s => s.op == "admin-command" && s.target == "NextMap");
-            int second = Index(script, s => s.op == "expect-map" && s.target == "TestMap1");
+            int second = Index(script, s => s.op == "expect-map" && s.target == "MilitaryBase");
             int mapVerified = Index(script, s => s.op == "wait-server" && s.name == "map-verified");
             int goLive = Index(script, s => s.op == "admin-command" && s.target == "GoLive");
             int zone = Index(script, s => s.op == "walk" && s.target == "own-spawn-zone", goLive);
@@ -243,7 +243,7 @@ namespace VrBattlegrounds.Tests.DevTools
             Assert.That(start, Is.GreaterThan(teams), "серию начинают после выбора команд: команды переживают переход");
             Assert.That(script.steps[start].client, Is.EqualTo(1), "серию начинает админ");
             Assert.That(script.steps[start].target, Is.EqualTo("elimination"));
-            Assert.That(script.steps[start].maps, Is.EqualTo(new[] { "TestMap2", "TestMap1" }),
+            Assert.That(script.steps[start].maps, Is.EqualTo(new[] { "Warehouse", "MilitaryBase" }),
                 "карта стенда первой — серия грузит её заново, вторая — смена сцены");
             Assert.That(first, Is.GreaterThan(start).And.LessThan(verified));
             Assert.That(next, Is.GreaterThan(verified).And.LessThan(second), "«Следующая карта» — из разминки карты 1");

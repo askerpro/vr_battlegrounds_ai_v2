@@ -312,7 +312,7 @@ namespace VrBattlegrounds.Editor.Arsenal
             var scene = SceneManager.GetActiveScene();
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(scene.path)))
                 Command("Обновить ниши активной карты: " + scene.name, new[] { scene.path }, "Геометрия активной сцены; сцена станет dirty и не сохранится автоматически. Затем Bake Occlusion (all maps).", () => { string report = ArsenalMapMigration.UpdateLayout(scene); EditorSceneManager.MarkSceneDirty(scene); return report; }, new[] { "Assets/Art/ArsenalBoundary" }, scene, false);
-            var review = AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/Scenes/Debug/CommonArsenalReview.unity");
+            var review = AssetDatabase.LoadAssetAtPath<SceneAsset>("Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity");
             if (review != null && GUILayout.Button("Открыть стенд CommonArsenalReview")) Try(() => ArsenalEditorActions.Run("Открыть стенд арсенала", Array.Empty<string>(), () => { EditorSceneManager.OpenScene(AssetDatabase.GetAssetPath(review)); return "Открыт стенд."; }, false));
             maintenance = EditorGUILayout.Foldout(maintenance, "Обслуживание всех карт и общих карточек", true);
             if (!maintenance) return;

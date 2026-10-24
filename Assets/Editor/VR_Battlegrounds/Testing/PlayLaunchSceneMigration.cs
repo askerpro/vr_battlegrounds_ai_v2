@@ -13,6 +13,9 @@ namespace VrBattlegrounds.EditorTools.TestStand
     /// <summary>Одноразовая принятая разметка standalone fixtures. Не вызывается при каждом Play.</summary>
     public static class PlayLaunchSceneMigration
     {
+        private const string AvatarStandsFolder = "Assets/Scenes/Stands/Avatar";
+        private const string ArsenalReviewScene = "Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity";
+
         [Serializable] public sealed class Result { public bool Passed; public int Marked; public string[] Paths; public string[] Skipped; }
         public static Result ApplyStandaloneMarkers()
         {
@@ -23,11 +26,14 @@ namespace VrBattlegrounds.EditorTools.TestStand
             var changed = new List<string>(); var skipped = new List<string>();
             try
             {
-                var folders = new[] { "Assets/Scenes/Dev", "Assets/Scenes/Tools" }.Where(AssetDatabase.IsValidFolder).ToArray();
-                if (folders.Length > 0)
-                    foreach (string guid in AssetDatabase.FindAssets("t:Scene", folders))
+                // Прежний охват (бывшие Scenes/Dev и Scenes/Tools): стенды аватара и обзор арсенала.
+                // Пустая ArsenalLayoutAuthoring в той же папке Stands/Arsenal разметке не подлежит.
+                var paths = AssetDatabase.IsValidFolder(AvatarStandsFolder)
+                    ? AssetDatabase.FindAssets("t:Scene", new[] { AvatarStandsFolder }).Select(AssetDatabase.GUIDToAssetPath).ToList()
+                    : new List<string>();
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArsenalReviewScene) != null) paths.Add(ArsenalReviewScene);
+                    foreach (string path in paths)
                     {
-                        string path = AssetDatabase.GUIDToAssetPath(guid);
                         var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
                         var roots = scene.GetRootGameObjects();
                         if (roots.Any(r => r.GetComponentInChildren<MapRoot>(true) != null || r.GetComponentInChildren<GameNetworkDiscovery>(true) != null))

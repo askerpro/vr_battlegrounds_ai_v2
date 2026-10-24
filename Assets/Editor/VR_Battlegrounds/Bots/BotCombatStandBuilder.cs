@@ -14,8 +14,9 @@ namespace VrBattlegrounds.EditorTools
     /// <summary>Собственная диагностическая сцена; исходные карты и префабы не меняются.</summary>
     public static class BotCombatStandBuilder
     {
-        public const string ScenePath = "Assets/Scenes/Debug/BotCombatStand.unity";
-        private const string DataPath = "Assets/Scenes/Debug/BotCombatStandMap.asset";
+        private const string StandFolder = "Assets/Scenes/Stands/Bots";
+        public const string ScenePath = StandFolder + "/BotCombatStand.unity";
+        private const string DataPath = StandFolder + "/BotCombatStandMap.asset";
 
         [MenuItem("Tools/VR Battlegrounds/Bots/Stand/Build Scene")]
         private static void MenuBuild() => GameLog.Debug.Info(Build());
@@ -25,16 +26,17 @@ namespace VrBattlegrounds.EditorTools
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Сборка только вне Play.");
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
                 return "Сцена уже существует: " + ScenePath;
-            if (!AssetDatabase.IsValidFolder("Assets/Scenes/Debug")) AssetDatabase.CreateFolder("Assets/Scenes", "Debug");
+            if (!AssetDatabase.IsValidFolder("Assets/Scenes/Stands")) AssetDatabase.CreateFolder("Assets/Scenes", "Stands");
+            if (!AssetDatabase.IsValidFolder(StandFolder)) AssetDatabase.CreateFolder("Assets/Scenes/Stands", "Bots");
             MapData source = AssetDatabase.FindAssets("t:MapData").Select(AssetDatabase.GUIDToAssetPath)
-                .Select(AssetDatabase.LoadAssetAtPath<MapData>).First(m => m != null && m.sceneName == "TestMap1");
+                .Select(AssetDatabase.LoadAssetAtPath<MapData>).First(m => m != null && m.sceneName == "MilitaryBase");
             var map = UnityEngine.Object.Instantiate(source);
             map.name = "BotCombatStandMap"; map.sceneName = "BotCombatStand"; map.displayName = "Стенд ботов";
             map.supportedModes = AssetDatabase.FindAssets("t:GameModeData").Select(AssetDatabase.GUIDToAssetPath).Select(AssetDatabase.LoadAssetAtPath<VrBattlegrounds.GameModes.GameModeData>).Where(m => m != null).ToArray();
             map.debugOnly = true; map.arenaSizeMeters = new Vector2(24, 20);
             map.kind = VrBattlegrounds.Maps.Runtime.MapRunKind.Debug;
             AssetDatabase.CreateAsset(map, DataPath);
-            if (!AssetDatabase.CopyAsset("Assets/Scenes/Maps/TestMap1.unity", ScenePath))
+            if (!AssetDatabase.CopyAsset("Assets/Scenes/Maps/Game/MilitaryBase.unity", ScenePath))
                 throw new InvalidOperationException("Не удалось создать копию сцены.");
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
             try
@@ -124,7 +126,7 @@ namespace VrBattlegrounds.EditorTools
 
         private static Material Material(string name, Color color)
         {
-            string path = "Assets/Scenes/Debug/" + name + ".mat";
+            string path = StandFolder + "/" + name + ".mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");

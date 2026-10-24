@@ -6,7 +6,7 @@ from heavy import suite as S
 
 VALID = {
     "version": 1,
-    "defaults": {"map": "Assets/Scenes/Maps/TestMap2.unity", "mode": "elimination",
+    "defaults": {"map": "Assets/Scenes/Maps/Game/Warehouse.unity", "mode": "elimination",
                  "readyTimeoutSeconds": 180, "scenarioTimeoutSeconds": 240},
     "scenarios": [
         {"name": "scripted-input-smoke", "clients": 1, "profiles": ["editor"]},
@@ -36,7 +36,7 @@ class SuiteTests(unittest.TestCase):
         smoke, purchase = parse().scenarios
         self.assertEqual(smoke.scenario_timeout, 240)
         self.assertEqual(purchase.scenario_timeout, 300)
-        self.assertEqual(purchase.scene_name, "TestMap2")
+        self.assertEqual(purchase.scene_name, "Warehouse")
 
     def test_unknown_field_is_error(self):
         with self.assertRaisesRegex(S.SuiteError, "неизвестные поля clientz"):
@@ -56,7 +56,7 @@ class SuiteTests(unittest.TestCase):
 
     def test_map_must_be_scene_path(self):
         with self.assertRaisesRegex(S.SuiteError, "Assets/"):
-            parse(lambda d: d["defaults"].update(map="TestMap2"))
+            parse(lambda d: d["defaults"].update(map="Warehouse"))
 
     def test_unknown_profile_is_error(self):
         with self.assertRaisesRegex(S.SuiteError, "profiles"):

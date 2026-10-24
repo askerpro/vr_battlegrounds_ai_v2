@@ -5,8 +5,8 @@
   "source": "heavy --editmode also на кандидате weapon-rebuild-docs-followups (20261023-094344, поверх origin/dev 47135fae0): 2964 тестов, 69 красных — все известные; затем a2c2f7e51 сняла позеленевшие GrabPoseCoverage (хваты магазинов CyborgHandsBase)",
   "tests": [
     {
-      "name": "VrBattlegrounds.Tests.Arsenal.ArsenalMapGeometryTests.WalletAndDogTagAreVisibleAndEquipmentPathIsClear(\"Assets/Scenes/Maps/TestMap1.unity\",8)",
-      "reason": "карты: геометрия арсенала TestMap1"
+      "name": "VrBattlegrounds.Tests.Arsenal.ArsenalMapGeometryTests.WalletAndDogTagAreVisibleAndEquipmentPathIsClear(\"Assets/Scenes/Maps/Game/MilitaryBase.unity\",8)",
+      "reason": "карты: геометрия арсенала MilitaryBase"
     },
     {
       "name": "VrBattlegrounds.Tests.Interaction.WeaponSpreadTests.Дробь_включая_первую_в_своём_конусе_без_неточности_залпа",

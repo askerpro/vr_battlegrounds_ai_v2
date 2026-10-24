@@ -33,7 +33,7 @@ namespace VrBattlegrounds.Tests.UI
             {
                 Online = true,
                 MapState = MapState.Live,
-                MapTitle = "TestMap2",
+                MapTitle = "Warehouse",
                 ModeTitle = "Elimination",
                 Viewer = new OverviewViewer { PlayerKey = "me", TeamIndex = A },
                 Elimination = new EliminationRoundInput
@@ -43,7 +43,7 @@ namespace VrBattlegrounds.Tests.UI
                 },
                 Series = new OverviewSeriesInput
                 {
-                    Running = true, Maps = { "TestMap1", "TestMap2", "TestMap1" }, CurrentIndex = 1, Results = { A },
+                    Running = true, Maps = { "MilitaryBase", "Warehouse", "MilitaryBase" }, CurrentIndex = 1, Results = { A },
                     MapWins = { [A] = 1 }
                 }
             };
@@ -94,7 +94,7 @@ namespace VrBattlegrounds.Tests.UI
             OverviewSnapshot s = Build(Combat());
 
             Assert.AreEqual(OverviewContext.Live, s.Context);
-            Assert.AreEqual("TestMap2", s.Header.Title);
+            Assert.AreEqual("Warehouse", s.Header.Title);
             Assert.AreEqual("Раунд 5 из 12 · Бой", s.Header.Status);
             Assert.AreEqual("Военные 3 : 2 Повстанцы", s.Header.Score);
             Assert.AreEqual("Бой", s.Header.ClockLabel);
@@ -184,7 +184,7 @@ namespace VrBattlegrounds.Tests.UI
             OverviewSection series = s.Find("series");
             Assert.NotNull(series);
             Assert.AreEqual(s.Sections.Count - 1, s.Sections.IndexOf(series), "Серия — справка, внизу.");
-            CollectionAssert.AreEqual(new[] { "Карта 2 из 3 · TestMap2", "По картам: Военные 1 : 0 Повстанцы" },
+            CollectionAssert.AreEqual(new[] { "Карта 2 из 3 · Warehouse", "По картам: Военные 1 : 0 Повстанцы" },
                 series.Rows.Select(r => r.Cells[0]).ToArray());
         }
 
@@ -219,7 +219,7 @@ namespace VrBattlegrounds.Tests.UI
         {
             var input = new OverviewInput
             {
-                Online = true, MapTitle = "TestMap1", MinPlayersToStart = 2,
+                Online = true, MapTitle = "MilitaryBase", MinPlayersToStart = 2,
                 Viewer = new OverviewViewer { PlayerKey = "me", TeamIndex = A }
             };
             input.Teams.Add(new OverviewTeamInput { Index = A, Name = "Военные" });
@@ -276,7 +276,7 @@ namespace VrBattlegrounds.Tests.UI
             Assert.AreEqual(OverviewTone.Winner, s.Find("team:" + B).Tone);
             OverviewSection next = s.Find("next");
             Assert.NotNull(next);
-            StringAssert.Contains("TestMap1", next.Rows[0].Cells[0], "Дальше — следующая карта серии.");
+            StringAssert.Contains("MilitaryBase", next.Rows[0].Cells[0], "Дальше — следующая карта серии.");
 
             input.Series.Results[1] = -1;
             Assert.AreEqual("Ничья", Build(input).Header.Status);
@@ -324,7 +324,7 @@ namespace VrBattlegrounds.Tests.UI
             {
                 Online = true, IsLobby = true,
                 Viewer = new OverviewViewer { PlayerKey = "me" },
-                Plan = new OverviewPlanInput { ModeTitle = "Elimination", Maps = { "TestMap1", "TestMap2" } }
+                Plan = new OverviewPlanInput { ModeTitle = "Elimination", Maps = { "MilitaryBase", "Warehouse" } }
             };
             input.Teams.Add(new OverviewTeamInput { Index = A, Name = "Военные" });
             input.Teams.Add(new OverviewTeamInput { Index = B, Name = "Повстанцы" });

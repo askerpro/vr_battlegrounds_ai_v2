@@ -86,11 +86,11 @@ namespace VrBattlegrounds.Tests.Maps
         }
 
         [TestCase("Assets/Scenes/Lobby.unity", 1)]
-        [TestCase("Assets/Scenes/Maps/TestMap1.unity", 2)]
-        [TestCase("Assets/Scenes/Maps/TestMap2.unity", 2)]
-        [TestCase("Assets/Scenes/Maps/TestMap3.unity", 2)]
-        [TestCase("Assets/Scenes/Maps/ReferenceMap04.unity", 2)]
-        [TestCase("Assets/Scenes/Maps/ServiceYard.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/Game/MilitaryBase.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/Game/Warehouse.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/Dev/BlockStand.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/Dev/ReferenceMap04.unity", 2)]
+        [TestCase("Assets/Scenes/Maps/Game/ServiceYard.unity", 2)]
         public void SpawnZones_RemainTriggers(string scenePath, int expectedZones)
         {
             // Общий Environment больше не владеет спавнами: они принадлежат Gameplay каждой карты.

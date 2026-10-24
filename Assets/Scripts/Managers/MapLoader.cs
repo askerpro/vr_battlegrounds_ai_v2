@@ -81,7 +81,7 @@ namespace VrBattlegrounds.Managers
         ///
         /// Только сервер.
         /// </summary>
-        /// <param name="sceneName">Имя сцены карты (например "TestMap1").</param>
+        /// <param name="sceneName">Имя сцены карты (например "MilitaryBase").</param>
         /// <param name="onAccepted">
         /// Разрушительное действие вызывающего, которое допустимо только под принятую загрузку (серия изымает
         /// снаряжение). Выполняется синхронно после принятия и до <see cref="MapLoadStarted"/>; отклонённый

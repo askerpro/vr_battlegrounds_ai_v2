@@ -19,9 +19,9 @@ namespace VrBattlegrounds.EditorTools
         public const string EnvironmentPath = "Assets/Prefabs/Arenas/Nalchick/Tolstogo_street/Environment.prefab";
         private static readonly string[] ScenePaths =
         {
-            "Assets/Scenes/Lobby.unity", "Assets/Scenes/Maps/TestMap1.unity",
-            "Assets/Scenes/Maps/TestMap2.unity", "Assets/Scenes/Maps/TestMap3.unity",
-            "Assets/Scenes/Maps/ReferenceMap04.unity", "Assets/Scenes/Maps/ServiceYard.unity"
+            "Assets/Scenes/Lobby.unity", "Assets/Scenes/Maps/Game/MilitaryBase.unity",
+            "Assets/Scenes/Maps/Game/Warehouse.unity", "Assets/Scenes/Maps/Dev/BlockStand.unity",
+            "Assets/Scenes/Maps/Dev/ReferenceMap04.unity", "Assets/Scenes/Maps/Game/ServiceYard.unity"
         };
 
         public static Transform GameplayRoot(Scene scene, bool undo = false)

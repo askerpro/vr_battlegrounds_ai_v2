@@ -13,7 +13,7 @@ namespace VrBattlegrounds.Editor.Arsenal
     [DisallowMultipleComponent]
     public sealed class ArsenalLayoutAuthoringStand : MonoBehaviour
     {
-        public const string ScenePath = "Assets/Scenes/Debug/ArsenalLayoutAuthoring.unity";
+        public const string ScenePath = "Assets/Scenes/Stands/Arsenal/ArsenalLayoutAuthoring.unity";
         public const string OwnerId = "arsenal-layout-authoring-v1";
         [Serializable] public sealed class SupportHandle
         {

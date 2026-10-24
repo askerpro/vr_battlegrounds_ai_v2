@@ -32,7 +32,7 @@ namespace VrBattlegrounds.Editor.LevelDesign
     {
         public const string Path = "Tools/LevelDesign/ContactCatalog/reviews.json";
         public const string PrefabFolder = "Assets/Prefabs/LevelDesign/ContactCatalog";
-        public const string LabPath = "Assets/Scenes/Tools/ContactCatalogLab.unity";
+        public const string LabPath = "Assets/Scenes/Stands/LevelDesign/ContactCatalogLab.unity";
 
         public static ContactReviewDatabase Load(string path = Path)
         {

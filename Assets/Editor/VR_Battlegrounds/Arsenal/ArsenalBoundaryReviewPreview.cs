@@ -30,7 +30,7 @@ namespace VrBattlegrounds.EditorTools
                 {
                     _animating=false;
                     var scene=SceneManager.GetActiveScene();
-                    if(scene.path=="Assets/Scenes/Tools/CommonArsenalReview.unity") Apply(scene,1f,false);
+                    if(scene.path=="Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity") Apply(scene,1f,false);
                 }
             };
         }
@@ -39,7 +39,7 @@ namespace VrBattlegrounds.EditorTools
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             var scene = SceneManager.GetActiveScene();
-            if (scene.path != "Assets/Scenes/Tools/CommonArsenalReview.unity") return;
+            if (scene.path != "Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity") return;
             var wall = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<ArsenalBoundaryWall>(true)).FirstOrDefault();
             if (wall == null) return;
             Handles.BeginGUI();
@@ -131,7 +131,7 @@ namespace VrBattlegrounds.EditorTools
         // Следим за маркерами, а не за hasChanged: не сбрасываем флаги, используемые другими редакторами.
         private static void RefreshMarkerPreview(Scene scene)
         {
-            if(!scene.IsValid()||!scene.isLoaded||scene.path!="Assets/Scenes/Tools/CommonArsenalReview.unity")return;
+            if(!scene.IsValid()||!scene.isLoaded||scene.path!="Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity")return;
             if(_markerScene!=scene.handle){MarkerMatrices.Clear();_markerScene=scene.handle;}
             float progress=GetPose(scene);
             Progress[scene.handle]=progress;

@@ -15,22 +15,22 @@ EditorBuildSettings:
     path: Assets/Scenes/Lobby.unity
     guid: c22e7a6000e9ae04084851d7befadb60
   - enabled: 1
-    path: Assets/Scenes/Maps/TestMap1.unity
+    path: Assets/Scenes/Maps/Game/MilitaryBase.unity
     guid: 36e927488d4c5664b97e0d523de1e232
   - enabled: 1
-    path: Assets/Scenes/Maps/TestMap2.unity
+    path: Assets/Scenes/Maps/Game/Warehouse.unity
     guid: 39ea13d8e4e286c4e942c5a17b9de85b
   - enabled: 1
-    path: Assets/Scenes/Maps/TestMap3.unity
+    path: Assets/Scenes/Maps/Dev/BlockStand.unity
     guid: e0e2b2232fea2bc4db4ff98389b6e00d
   - enabled: 1
-    path: Assets/Scenes/Maps/ServiceYard.unity
+    path: Assets/Scenes/Maps/Game/ServiceYard.unity
     guid: 17212361eb43d1247b1749998e56d784
   - enabled: 1
-    path: Assets/Scenes/Maps/ReferenceMap04.unity
+    path: Assets/Scenes/Maps/Dev/ReferenceMap04.unity
     guid: 399c9e633b2e5334097da9cb98b96294
   - enabled: 1
-    path: Assets/Scenes/Debug/BotCombatStand.unity
+    path: Assets/Scenes/Stands/Bots/BotCombatStand.unity
     guid: 2a50bfbed3b4c1641bedb4f6b523bdaa
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 9f9c2f9685095974c94c16cd4c07194e, type: 2}

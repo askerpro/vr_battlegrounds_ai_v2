@@ -42,7 +42,7 @@ namespace VrBattlegrounds.EditorTools
         /// </summary>
         private static readonly (string MapPath, string ScenePath)[] DebugStands =
         {
-            ("Assets/Scenes/Debug/BotCombatStandMap.asset", "Assets/Scenes/Debug/BotCombatStand.unity"),
+            ("Assets/Scenes/Stands/Bots/BotCombatStandMap.asset", "Assets/Scenes/Stands/Bots/BotCombatStand.unity"),
         };
 
         private static readonly string[] StationPrefabPaths =
@@ -296,7 +296,7 @@ namespace VrBattlegrounds.EditorTools
             if (string.IsNullOrWhiteSpace(key) || keys.Contains(key))
             {
                 // Ключ назначается один раз и дальше хранится сериализованным: переименование объекта
-                // или зоны его не меняет. Зона базы делает ключ читаемым: "TestMap1.MilitaryZone.ArsenalWall-1".
+                // или зоны его не меняет. Зона базы делает ключ читаемым: "MilitaryBase.MilitaryZone.ArsenalWall-1".
                 var anchor = wall.GetComponent<ArsenalStationAnchor>();
                 string zone = anchor != null && anchor.Zone != null ? Slug(anchor.Zone.name) + "." : string.Empty;
                 string stem = sceneName + "." + zone + Slug(wall.name);

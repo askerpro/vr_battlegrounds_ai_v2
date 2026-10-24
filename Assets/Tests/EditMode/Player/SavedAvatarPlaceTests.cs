@@ -16,8 +16,8 @@ namespace VrBattlegrounds.Tests.Player
     /// Что доказывают тесты. <c>PhysicalSpaceSyncManager</c> копил <b>мировую</b> позу
     /// аватара, а <c>GamePlayerConnectMessage</c> клал её в сообщение подключения как есть.
     /// Мировая точка осмысленна только на своей карте: обе карты проекта собраны из одного
-    /// префаба арены, но в <c>TestMap1</c> он повёрнут на 90° вокруг Y относительно
-    /// <c>TestMap2</c> и <c>Lobby</c>. Теперь поза копится <b>в координатах якорей</b> —
+    /// префаба арены, но в <c>MilitaryBase</c> он повёрнут на 90° вокруг Y относительно
+    /// <c>Warehouse</c> и <c>Lobby</c>. Теперь поза копится <b>в координатах якорей</b> —
     /// и переводится там, где старая сцена ещё жива, а не в момент отправки сообщения,
     /// когда клиент уже переехал на карту сервера.
     /// </para>
@@ -36,7 +36,7 @@ namespace VrBattlegrounds.Tests.Player
         [TearDown]
         public void ClearPlacementCache() => LocalPlayerCalibration.Reset();
 
-        // ── Расстановка арены проекта (TestMap2, без поворота) ───────────────
+        // ── Расстановка арены проекта (Warehouse, без поворота) ───────────────
 
         private static readonly Vector3 AnchorZero = new Vector3(-2.74f, -0.01f, -3.60f);
         private static readonly Vector3 AnchorOne = new Vector3(2.75f, -0.01f, -3.60f);

@@ -18,7 +18,7 @@ namespace VrBattlegrounds.DevTools.E2E
     /// -e2eRole          &lt;роль&gt;  server | client-1 | client-2 (по умолчанию — по IsHeadless)
     /// -e2eResult        &lt;путь&gt;  куда писать JSON-вердикт; относительный путь — от Application.persistentDataPath
     /// -e2eTimeout       &lt;сек&gt;   общий таймаут сценария, по умолчанию 240
-    /// -e2eMap           &lt;сцена&gt; карта, которую грузит сервер, по умолчанию TestMap2
+    /// -e2eMap           &lt;сцена&gt; карта, которую грузит сервер, по умолчанию Warehouse
     /// -e2eClients       &lt;N&gt;     сколько клиентов в прогоне (client-1..client-N), по умолчанию 2
     /// -e2eLate          &lt;роль&gt;  поздний клиент прогона (client-N); всем процессам, см. ниже
     /// -e2eServerAddress &lt;ip&gt;    фоллбэк прямого подключения, если Discovery молчит
@@ -185,7 +185,7 @@ namespace VrBattlegrounds.DevTools.E2E
             string argError = ReadScenarioArgs(args, out Dictionary<string, string> scenarioArgs);
             string topologyError = ReadLate(args, (int)clients, out string lateRole);
             E2EContext context = Create(scenario, role, ResolveResultPath(Read(args, "-e2eResult")), timeout,
-                ReadOr(args, "-e2eMap", "TestMap2"), (int)clients,
+                ReadOr(args, "-e2eMap", "Warehouse"), (int)clients,
                 Read(args, "-e2eServerAddress"), Read(args, "-e2eDeviceToken"),
                 networkPort: portsValid ? networkPort : 0,
                 discoveryPort: portsValid ? discoveryPort : 0,
@@ -217,7 +217,7 @@ namespace VrBattlegrounds.DevTools.E2E
 
         /// <summary>Общий контекст для CLI и Editor; не запускает сеть и не меняет профиль.</summary>
         public static E2EContext Create(string scenario, string role, string resultPath = null, float timeout = 240f,
-            string map = "TestMap2", int expectedClients = 2, string serverAddress = null, string deviceToken = null, bool externallyLaunched = false,
+            string map = "Warehouse", int expectedClients = 2, string serverAddress = null, string deviceToken = null, bool externallyLaunched = false,
             int networkPort = 0, int discoveryPort = 0, IReadOnlyDictionary<string, string> args = null, bool quitOnFinish = false,
             string lateRole = null)
         {

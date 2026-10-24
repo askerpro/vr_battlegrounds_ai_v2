@@ -2,7 +2,7 @@
   "version": 1,
   "description": "Набор перед вливанием: скриптовые сетевые клиенты — ввод, закупка, бой, раунды, админ и серия (Editor-стенд); каркас и маршрут старта в собранных Windows-плеерах.",
   "defaults": {
-    "map": "Assets/Scenes/Maps/TestMap2.unity",
+    "map": "Assets/Scenes/Maps/Game/Warehouse.unity",
     "mode": "elimination",
     "readyTimeoutSeconds": 180,
     "scenarioTimeoutSeconds": 240
@@ -52,21 +52,21 @@
       "name": "e2e-kit-selftest",
       "clients": 2,
       "profiles": ["windows"],
-      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "map": "Assets/Scenes/Maps/Game/MilitaryBase.unity",
       "scenarioTimeoutSeconds": 300
     },
     {
       "name": "dedicated-server-arsenal",
       "clients": 2,
       "profiles": ["windows"],
-      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "map": "Assets/Scenes/Maps/Game/MilitaryBase.unity",
       "scenarioTimeoutSeconds": 300
     },
     {
       "name": "map-run-startup-route",
       "clients": 2,
       "profiles": ["windows"],
-      "map": "Assets/Scenes/Maps/TestMap1.unity",
+      "map": "Assets/Scenes/Maps/Game/MilitaryBase.unity",
       "scenarioTimeoutSeconds": 300,
       "lateClientDelaySeconds": 40
     }

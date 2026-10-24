@@ -25,7 +25,7 @@ namespace VrBattlegrounds.DevTools
     /// <summary>
     /// Точки телепорта режима отладки на загруженной карте: зоны спавна команд
     /// (<see cref="TeamSpawnZone"/>), места перед стенами арсенала (<see cref="ArsenalWallController"/>) и
-    /// точки, поставленные на карту (<see cref="DebugTeleportPoint"/>, стенды <c>TestMap3</c>).
+    /// точки, поставленные на карту (<see cref="DebugTeleportPoint"/>, стенды <c>BlockStand</c>).
     ///
     /// <para>
     /// Список строят обе стороны по одной сцене и одному правилу: клиент — для кнопок, сервер —

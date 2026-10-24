@@ -115,7 +115,7 @@ namespace VrBattlegrounds.EditorTools
 
         /// <summary>
         /// Собирает плеер. Сцены берутся из EditorBuildSettings — те же,
-        /// что и в обычном билде (Offline, Lobby, TestMap1, TestMap2).
+        /// что и в обычном билде (Offline, Lobby, MilitaryBase, Warehouse).
         /// </summary>
         public static Result Run()
         {

@@ -37,9 +37,9 @@
 #
 # Запуск:
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1
-#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Map TestMap2 -Timeout 420
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Map Warehouse -Timeout 420
 #   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -NetworkPort 27778 -DiscoveryPort 27777
-#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Scenario <имя> -Clients 3 -LateClientDelay 60 -Arg map1=TestMap1,map2=TestMap2
+#   powershell -ExecutionPolicy Bypass -File Tools\e2e\Run-E2E.ps1 -Scenario <имя> -Clients 3 -LateClientDelay 60 -Arg map1=MilitaryBase,map2=Warehouse
 
 [CmdletBinding()]
 param(
@@ -47,8 +47,8 @@ param(
     [string] $Scenario = 'dedicated-server-arsenal',
 
     # Сцена карты. Нужна карта с GameplayManager (MatchManager.prefab)
-    # и стеной арсенала: TestMap1 или TestMap2.
-    [string] $Map = 'TestMap1',
+    # и стеной арсенала: MilitaryBase или Warehouse.
+    [string] $Map = 'MilitaryBase',
 
     # Сколько клиентских процессов поднять. Для dedicated-server-arsenal нужно 2:
     # EliminationMode не выйдет из WaitingForPlayers, пока в каждой из двух команд

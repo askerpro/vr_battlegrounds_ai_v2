@@ -35,13 +35,13 @@ namespace VrBattlegrounds.Tests.ArsenalWall
         private static readonly string[] Scenes =
         {
             "Assets/Scenes/Lobby.unity",
-            "Assets/Scenes/Maps/TestMap1.unity",
-            "Assets/Scenes/Maps/TestMap2.unity",
-            "Assets/Scenes/Maps/TestMap3.unity",
-            "Assets/Scenes/Maps/ServiceYard.unity",
-            "Assets/Scenes/Maps/ReferenceMap04.unity",
-            "Assets/Scenes/Debug/BotCombatStand.unity",
-            "Assets/Scenes/Tools/CommonArsenalReview.unity"
+            "Assets/Scenes/Maps/Game/MilitaryBase.unity",
+            "Assets/Scenes/Maps/Game/Warehouse.unity",
+            "Assets/Scenes/Maps/Dev/BlockStand.unity",
+            "Assets/Scenes/Maps/Game/ServiceYard.unity",
+            "Assets/Scenes/Maps/Dev/ReferenceMap04.unity",
+            "Assets/Scenes/Stands/Bots/BotCombatStand.unity",
+            "Assets/Scenes/Stands/Arsenal/CommonArsenalReview.unity"
         };
 
         [Test]

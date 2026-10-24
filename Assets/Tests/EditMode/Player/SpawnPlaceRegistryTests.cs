@@ -33,7 +33,7 @@ namespace VrBattlegrounds.Tests.Player
         private static readonly Vector3 AnchorZero = new Vector3(-2.74f, -0.01f, -3.60f);
         private static readonly Vector3 AnchorOne  = new Vector3(2.75f, -0.01f, -3.60f);
 
-        /// <summary>Поворот арены в <c>TestMap1</c> относительно <c>TestMap2</c>.</summary>
+        /// <summary>Поворот арены в <c>MilitaryBase</c> относительно <c>Warehouse</c>.</summary>
         private static readonly Quaternion Map1Rotation = Quaternion.Euler(0f, 90f, 0f);
 
         [SetUp]
@@ -122,7 +122,7 @@ namespace VrBattlegrounds.Tests.Player
 
             // Место, снятое на прошлой карте: центр арены в координатах якорей.
             Vector3 place = SceneFrame().ToLocal(Vector3.zero);
-            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap1");
+            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "MilitaryBase");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
 
@@ -138,7 +138,7 @@ namespace VrBattlegrounds.Tests.Player
         {
             SilenceMirrorNoise();
 
-            // Первая карта: арена без поворота (как TestMap2).
+            // Первая карта: арена без поворота (как Warehouse).
             PlaceAnchors(Quaternion.identity);
 
             TeamData red = CreateTeam("Красные", 1);
@@ -148,9 +148,9 @@ namespace VrBattlegrounds.Tests.Player
 
             Vector3 stood = new Vector3(1.5f, 0f, 4f);
             Vector3 place = SceneFrame().ToLocal(stood);
-            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "TestMap2");
+            SpawnPlaceRegistry.Remember(session.netId, place, Quaternion.identity, "Warehouse");
 
-            // Вторая карта: та же арена, повёрнутая на 90° (как TestMap1).
+            // Вторая карта: та же арена, повёрнутая на 90° (как MilitaryBase).
             DestroyAnchorsAndZones();
             PlaceAnchors(Map1Rotation);
             CreateZone("ЗонаКрасных", red, Map1Rotation * new Vector3(0f, 0f, 8.06f));
@@ -252,7 +252,7 @@ namespace VrBattlegrounds.Tests.Player
 
             // Место относительно якорей (так его приносит клиент при подключении), но игрок
             // калибровку не объявлял: связи с ареной у него нет, и такое место к нему не применимо.
-            SpawnPlaceRegistry.Remember(session.netId, Vector3.zero, Quaternion.identity, "TestMap1");
+            SpawnPlaceRegistry.Remember(session.netId, Vector3.zero, Quaternion.identity, "MilitaryBase");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
 
@@ -291,7 +291,7 @@ namespace VrBattlegrounds.Tests.Player
 
             PlayerSession session = CreateSession("Откалиброванный", true);
             SpawnPlaceRegistry.Remember(session.netId, new Vector3(2.74f, 0f, 3.6f),
-                                             Quaternion.identity, "TestMap1");
+                                             Quaternion.identity, "MilitaryBase");
 
             AvatarSpawnPoint point = AvatarSpawnPointResolver.Resolve(red, session);
 

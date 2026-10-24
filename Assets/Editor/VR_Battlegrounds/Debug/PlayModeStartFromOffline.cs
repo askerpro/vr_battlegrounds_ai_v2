@@ -73,7 +73,7 @@ namespace VrBattlegrounds.Editor
         }
 
         /// <summary>Папка сцен стендов: Play в открытой сцене стенда стартует её саму, мимо штатного Offline → Lobby.</summary>
-        private const string StandScenesFolder = "Assets/Scenes/Dev/";
+        private const string StandScenesFolder = "Assets/Scenes/Stands/Avatar/";
 
         /// <summary>
         /// Открыта сцена стенда (<see cref="StandScenesFolder"/>). Штатный старт через Offline поднимает сеть и Lobby, и в стенд
@@ -96,7 +96,7 @@ namespace VrBattlegrounds.Editor
         public enum StartKind { Temporary, ActiveScene, Offline }
 
         /// <summary>
-        /// Единое правило старта Play. Временная сцена стенда — её владелец решил сам. Сцена стенда (Dev) — сама
+        /// Единое правило старта Play. Временная сцена стенда — её владелец решил сам. Сцена стенда (Stands/Avatar) — сама
         /// себя. Карта с MapRoot — всегда через Offline: её запускает MapBootstrap общим серверным путём, а процессный
         /// корень создаёт только Offline; личная галочка «Start from Offline Scene» карту не обходит. Прочие сцены —
         /// по галочке.

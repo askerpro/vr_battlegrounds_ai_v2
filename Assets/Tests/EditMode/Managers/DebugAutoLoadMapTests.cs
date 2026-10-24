@@ -19,7 +19,7 @@ namespace VrBattlegrounds.Tests.Managers
         [Test]
         public void Другая_карта_грузится()
         {
-            Assert.IsFalse(VrBattlegrounds.DevTools.DebugOrchestrator.IsAlreadyLoaded("TestMap1", "Lobby"));
+            Assert.IsFalse(VrBattlegrounds.DevTools.DebugOrchestrator.IsAlreadyLoaded("MilitaryBase", "Lobby"));
             Assert.IsFalse(VrBattlegrounds.DevTools.DebugOrchestrator.IsAlreadyLoaded("", "Lobby"));
         }
     }

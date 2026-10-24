@@ -9,7 +9,7 @@ from heavy import verdict as V
 
 def participant(pid, server, **extra):
     base = {"ParticipantId": pid, "RunId": "r", "ProcessSessionId": pid + "-s", "Active": True, "Playing": True,
-            "LastSeenAgeSeconds": 0.5, "Scene": "TestMap2", "MapPlayable": True, "MapRunValid": True,
+            "LastSeenAgeSeconds": 0.5, "Scene": "Warehouse", "MapPlayable": True, "MapRunValid": True,
             "Server": server, "Client": not server, "Connected": not server,
             "SessionNetId": 0 if server else 7, "AvatarNetId": 0 if server else 9, "ServerSessions": 2 if server else 0}
     base.update(extra)
@@ -28,21 +28,21 @@ READY = status(participant("main", True), participant("Player 2", False), partic
 
 class ReadyTests(unittest.TestCase):
     def test_server_and_two_clients_with_avatars_is_ready(self):
-        self.assertTrue(E.is_ready(READY, "heavy-1", "r", 2, "TestMap2"))
+        self.assertTrue(E.is_ready(READY, "heavy-1", "r", 2, "Warehouse"))
 
     def test_foreign_owner_missing_client_or_avatar_is_not_ready(self):
-        self.assertFalse(E.is_ready(READY, "heavy-2", "r", 2, "TestMap2"))
+        self.assertFalse(E.is_ready(READY, "heavy-2", "r", 2, "Warehouse"))
         two = status(participant("main", True, ServerSessions=1), participant("Player 2", False))
-        self.assertFalse(E.is_ready(two, "heavy-1", "r", 2, "TestMap2"))
+        self.assertFalse(E.is_ready(two, "heavy-1", "r", 2, "Warehouse"))
         no_avatar = status(participant("main", True), participant("Player 2", False),
                            participant("Player 3", False, AvatarNetId=0))
-        self.assertFalse(E.is_ready(no_avatar, "heavy-1", "r", 2, "TestMap2"))
+        self.assertFalse(E.is_ready(no_avatar, "heavy-1", "r", 2, "Warehouse"))
 
     def test_stale_heartbeat_or_wrong_scene_is_not_ready(self):
         stale = status(participant("main", True), participant("Player 2", False),
                        participant("Player 3", False, LastSeenAgeSeconds=12))
-        self.assertFalse(E.is_ready(stale, "heavy-1", "r", 2, "TestMap2"))
-        self.assertFalse(E.is_ready(READY, "heavy-1", "r", 2, "TestMap1"))
+        self.assertFalse(E.is_ready(stale, "heavy-1", "r", 2, "Warehouse"))
+        self.assertFalse(E.is_ready(READY, "heavy-1", "r", 2, "MilitaryBase"))
 
     def test_finished_requires_same_sessions_all_finished(self):
         expected = {(p["ParticipantId"], p["ProcessSessionId"]) for p in READY["Participants"]}

@@ -30,14 +30,14 @@ class SuiteWindowsTests(unittest.TestCase):
     def test_default_windows_scenarios(self):
         chosen = S.select(S.load("default"), "windows")
         self.assertEqual([(s.name, s.scene_name, s.clients, s.late_client_delay) for s in chosen],
-                         [("e2e-kit-selftest", "TestMap1", 2, 0), ("dedicated-server-arsenal", "TestMap1", 2, 0),
-                          ("map-run-startup-route", "TestMap1", 2, 40)])
+                         [("e2e-kit-selftest", "MilitaryBase", 2, 0), ("dedicated-server-arsenal", "MilitaryBase", 2, 0),
+                          ("map-run-startup-route", "MilitaryBase", 2, 40)])
 
     def test_args_must_be_plain_tokens(self):
-        data = {"version": 1, "defaults": {"map": "Assets/Scenes/Maps/TestMap1.unity", "mode": "elimination",
+        data = {"version": 1, "defaults": {"map": "Assets/Scenes/Maps/Game/MilitaryBase.unity", "mode": "elimination",
                                            "readyTimeoutSeconds": 180, "scenarioTimeoutSeconds": 300},
-                "scenarios": [{"name": "x", "clients": 1, "args": {"map1": "TestMap1"}}]}
-        self.assertEqual(S.parse(data, "t").scenarios[0].args, (("map1", "TestMap1"),))
+                "scenarios": [{"name": "x", "clients": 1, "args": {"map1": "MilitaryBase"}}]}
+        self.assertEqual(S.parse(data, "t").scenarios[0].args, (("map1", "MilitaryBase"),))
         data["scenarios"][0]["args"] = {"map1": "Test Map,1"}
         with self.assertRaisesRegex(S.SuiteError, "args"):
             S.parse(data, "t")
@@ -129,10 +129,10 @@ class Fix1Tests(unittest.TestCase):
 class RunTests(unittest.TestCase):
     def test_run_e2e_command(self):
         scenario = S.Scenario(name="map-run-startup-route", clients=2, profiles=("windows",),
-                              map="Assets/Scenes/Maps/TestMap1.unity", mode="elimination", ready_timeout=180,
+                              map="Assets/Scenes/Maps/Game/MilitaryBase.unity", mode="elimination", ready_timeout=180,
                               scenario_timeout=300, args=(("a", "1"), ("b", "2")), late_client_delay=40)
         command = W.run_e2e_command(Path("R"), scenario, Path("P.exe"), Path("out"))
-        for pair in (["-Map", "TestMap1"], ["-Clients", "2"], ["-Timeout", "300"], ["-LateClientDelay", "40"],
+        for pair in (["-Map", "MilitaryBase"], ["-Clients", "2"], ["-Timeout", "300"], ["-LateClientDelay", "40"],
                      ["-Arg", "a=1,b=2"], ["-ResultsDir", "out"]):
             index = command.index(pair[0])
             self.assertEqual(command[index + 1], pair[1])

@@ -10,7 +10,7 @@ namespace VrBattlegrounds.Editor
     /// </summary>
     public static class ClipScrubStandPlayMenu
     {
-        private const string ScenePath = "Assets/Scenes/Dev/ClipScrub.unity";
+        private const string ScenePath = "Assets/Scenes/Stands/Avatar/ClipScrub.unity";
         private const string PlayOwner = "clip-scrub-stand";
 
         [MenuItem("Tools/VR Battlegrounds/Debug/Clip Scrub Stand Play")]

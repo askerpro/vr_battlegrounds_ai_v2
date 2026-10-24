@@ -10,12 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f53179de82da78042a99d0d76f7956e4, type: 3}
-  m_Name: MapData_TestMap1
+  m_Name: MapData_MilitaryBase
   m_EditorClassIdentifier: 
-  displayName: TestMap1
-  sceneName: TestMap1
+  displayName: "\u0412\u043E\u0435\u043D\u043D\u0430\u044F \u0431\u0430\u0437\u0430"
+  sceneName: MilitaryBase
+  kind: 1
+  debugExemptions: 0
   preview: {fileID: 0}
-  description: TestMap1
+  description: "\u0412\u043E\u0435\u043D\u043D\u0430\u044F \u0431\u0430\u0437\u0430"
   arenaSizeMeters: {x: 10, y: 10}
   maxPlayers: 10
   arsenalPreset: {fileID: 11400000, guid: e6521305c7a5eb142a42593e31dc4e8c, type: 2}

@@ -80,7 +80,7 @@ namespace VrBattlegrounds.Tests.DevTools
                 Assert.AreEqual(profilePath, PlayLaunchSettings.ProfilePath, "Тест должен использовать только собственный JSON.");
 
                 DebugBootstrapSettings.BotCount = 7;
-                DebugBootstrapSettings.AutoLoadMapScene = "TestMap2";
+                DebugBootstrapSettings.AutoLoadMapScene = "Warehouse";
 
                 // Независимый store проверяет запись на диск, минуя кэш PlayLaunchSettings.
                 PlayLaunchConfiguration persisted = ProfileStore(profilePath).Read();
@@ -88,8 +88,8 @@ namespace VrBattlegrounds.Tests.DevTools
                 Assert.AreEqual("active", persisted.SceneSource);
                 Assert.IsEmpty(persisted.ScenePath, "Сессионная карта не должна попадать в постоянный профиль.");
                 Assert.AreEqual(7, DebugBootstrapSettings.BotCount);
-                Assert.AreEqual("TestMap2", DebugBootstrapSettings.AutoLoadMapScene);
-                Assert.AreEqual("TestMap2", SessionState.GetString(mapKey, ""),
+                Assert.AreEqual("Warehouse", DebugBootstrapSettings.AutoLoadMapScene);
+                Assert.AreEqual("Warehouse", SessionState.GetString(mapKey, ""),
                     "Карта автозапуска — только на текущую сессию редактора.");
                 Assert.IsEmpty(AssetDatabase.FindAssets("t:ScriptableObject DebugBootstrapConfig"),
                     "Ассета с отладочными настройками быть не должно.");

@@ -72,7 +72,7 @@ namespace VrBattlegrounds.Editor
             ("LD_Wall_Tall_Soft",  Shape.Cube,   SoftCover),
             ("LD_Wall_Mid_Soft",   Shape.Cube,   SoftCover),
             ("LD_Net_Tall_Visual", Shape.Cube,   VisualCover),
-            // Плитка пола 10×10 м на слое Ground — стенды вне арены (TestMap3), по ней телепорт.
+            // Плитка пола 10×10 м на слое Ground — стенды вне арены (BlockStand), по ней телепорт.
             ("LD_Floor_Tile",      Shape.Cube,   Walls),
         };
 

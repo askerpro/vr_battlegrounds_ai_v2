@@ -53,7 +53,7 @@ namespace VrBattlegrounds.Maps
         public GameModeData[] supportedModes;
 
         [Header("Назначение")]
-        [Tooltip("Стенд для отладки, не для игры (TestMap3 — стенд блоков). Грузится обычным выбором карты, " +
+        [Tooltip("Стенд для отладки, не для игры (BlockStand — стенд блоков). Грузится обычным выбором карты, " +
                  "но правила боевой карты (MapPrinciplesTests, отчёт о принципах) к нему не применяются.")]
         public bool debugOnly;
     }

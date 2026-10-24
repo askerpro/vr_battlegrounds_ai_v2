@@ -31,8 +31,8 @@ namespace VrBattlegrounds.Tests.Prefabs
         private static readonly string[] Scenes =
         {
             "Assets/Scenes/Lobby.unity",
-            "Assets/Scenes/Maps/TestMap1.unity",
-            "Assets/Scenes/Maps/TestMap2.unity"
+            "Assets/Scenes/Maps/Game/MilitaryBase.unity",
+            "Assets/Scenes/Maps/Game/Warehouse.unity"
         };
 
         // Бросок сверху вниз и под углом: 25 м/с — с запасом выше реального броска рукой.

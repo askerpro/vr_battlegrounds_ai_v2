@@ -20,31 +20,31 @@ MonoBehaviour:
   _coordinatorPrefab: {fileID: 5476845416789196474, guid: f23541848a356704c91ef319b42d5a00, type: 3}
   _content:
   - Map: {fileID: 11400000, guid: c836ec814acc21a4e82f9cae9b2b3df2, type: 2}
-    ScenePath: Assets/Scenes/Maps/TestMap1.unity
-    ContentFingerprint: c24947600b86d0f89808218fd4ef1f7b7c6a6d38c76fbc6253d57124cfb7c955
+    ScenePath: Assets/Scenes/Maps/Game/MilitaryBase.unity
+    ContentFingerprint: 887e65ee5256d6510d994f68815a5949982ec254f0cf1ea737bf9ee571325a09
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 42dbd48ebf8c61d4d9ff696663519780, type: 2}
-    ScenePath: Assets/Scenes/Maps/TestMap2.unity
-    ContentFingerprint: 0656b154c9b1bb2a922b8505751649cec59e82162105bad5ecb74e18eeb23435
+    ScenePath: Assets/Scenes/Maps/Game/Warehouse.unity
+    ContentFingerprint: 362d0c48331fa9b468cc12b82c84dc891958d1f8de2f62f4bd3131ea094a29d7
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 4fd1a4cc3f42c4045a45e634233bb6c0, type: 2}
-    ScenePath: Assets/Scenes/Maps/TestMap3.unity
-    ContentFingerprint: 32d5b09d06de175e240bd9a8c8acb80bb6d0575b21d2ce01a0d107b095c4e747
+    ScenePath: Assets/Scenes/Maps/Dev/BlockStand.unity
+    ContentFingerprint: fb6593ea1d0ad4a0af6c23bd91ed63ddb333afeced2ddb1961e5da30a2ac76ac
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
-    ContentFingerprint: 2a05c5c72c8b136786c6c63648e05321609016393548f50174f19fe71f27e8c9
+    ContentFingerprint: 165acc7efbd58bff31289b2dc1c3b2708391c343b8793cbcf214462482f62648
     ArsenalFingerprint: 2e770345005ecd64204ab8f13ae613d944f6d8e6e277e9b5f903119fefbf02e0
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
-    ScenePath: Assets/Scenes/Maps/ServiceYard.unity
+    ScenePath: Assets/Scenes/Maps/Game/ServiceYard.unity
     ContentFingerprint: 8f4b8e1cc298ccc6c1b27dd2a17bcf35986186c40cc412c3d82641aa321b0f65
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 757969f4d7c8e9544935e2be06549423, type: 2}
-    ScenePath: Assets/Scenes/Maps/ReferenceMap04.unity
+    ScenePath: Assets/Scenes/Maps/Dev/ReferenceMap04.unity
     ContentFingerprint: 49b28b12efa1fc0c20e6fe6894443f1533a354297c3dbe5c2988e2aa74b7c364
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: ba23eb4a40326604aab4f4aa44ccbf3f, type: 2}
-    ScenePath: Assets/Scenes/Debug/BotCombatStand.unity
+    ScenePath: Assets/Scenes/Stands/Bots/BotCombatStand.unity
     ContentFingerprint: 45f6b02b77ae079c23319059fdaa7e11e67c7938f811e8ed9adf58abb2829193
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   _compositionVersion: 1

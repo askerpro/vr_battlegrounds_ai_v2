@@ -50,8 +50,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     ///
     /// <para>
     /// <b>Почему две разные карты, а не перезагрузка одной.</b> Обе карты проекта собраны
-    /// из одного префаба арены, но в <c>TestMap1</c> он повёрнут на 90° вокруг Y
-    /// относительно <c>TestMap2</c>. Мировые координаты якорей у карт поэтому не совпадают,
+    /// из одного префаба арены, но в <c>MilitaryBase</c> он повёрнут на 90° вокруг Y
+    /// относительно <c>Warehouse</c>. Мировые координаты якорей у карт поэтому не совпадают,
     /// и «сохранить позицию» в мировых координатах означало бы развернуть игрока
     /// на 90° относительно арены. Перезагрузка одной и той же карты этой разницы
     /// не показала бы: там наивное сохранение мировой позиции прошло бы проверку.
@@ -1104,7 +1104,7 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         // ══════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Вторая карта прогона. Пара <c>TestMap1</c> / <c>TestMap2</c> взята намеренно:
+        /// Вторая карта прогона. Пара <c>MilitaryBase</c> / <c>Warehouse</c> взята намеренно:
         /// это одна и та же арена, повёрнутая на 90°, — то есть та самая ситуация,
         /// в которой мировая позиция врёт, а позиция относительно якорей нет.
         /// Любая другая карта означает перезагрузку самой себя: проверка останется
@@ -1112,8 +1112,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         /// </summary>
         private static string SecondMapFor(string firstMap)
         {
-            if (string.Equals(firstMap, "TestMap1", StringComparison.OrdinalIgnoreCase)) return "TestMap2";
-            if (string.Equals(firstMap, "TestMap2", StringComparison.OrdinalIgnoreCase)) return "TestMap1";
+            if (string.Equals(firstMap, "MilitaryBase", StringComparison.OrdinalIgnoreCase)) return "Warehouse";
+            if (string.Equals(firstMap, "Warehouse", StringComparison.OrdinalIgnoreCase)) return "MilitaryBase";
 
             return firstMap;
         }

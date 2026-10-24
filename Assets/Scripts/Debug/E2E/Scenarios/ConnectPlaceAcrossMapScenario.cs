@@ -26,8 +26,8 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
     /// карты (T-30): <b>откалиброванный</b> сохраняет своё физическое место,
     /// <b>неоткалиброванный</b> появляется в зоне своей команды. Чего он не вправе
     /// увидеть ни в одном из двух случаев — это старую <b>мировую</b> точку с прошлой
-    /// карты: арена в <c>TestMap1</c> повёрнута на 90° вокруг Y относительно
-    /// <c>TestMap2</c>, и та же мировая точка означает там другое место арены.
+    /// карты: арена в <c>MilitaryBase</c> повёрнута на 90° вокруг Y относительно
+    /// <c>Warehouse</c>, и та же мировая точка означает там другое место арены.
     /// </para>
     ///
     /// <para>
@@ -984,14 +984,14 @@ namespace VrBattlegrounds.DevTools.E2E.Scenarios
         // ══════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Вторая карта прогона. Пара <c>TestMap1</c> / <c>TestMap2</c> взята намеренно:
+        /// Вторая карта прогона. Пара <c>MilitaryBase</c> / <c>Warehouse</c> взята намеренно:
         /// это одна и та же арена, повёрнутая на 90°, — то есть та самая ситуация,
         /// в которой мировая позиция врёт, а позиция относительно якорей нет.
         /// </summary>
         private static string SecondMapFor(string firstMap)
         {
-            if (string.Equals(firstMap, "TestMap1", StringComparison.OrdinalIgnoreCase)) return "TestMap2";
-            if (string.Equals(firstMap, "TestMap2", StringComparison.OrdinalIgnoreCase)) return "TestMap1";
+            if (string.Equals(firstMap, "MilitaryBase", StringComparison.OrdinalIgnoreCase)) return "Warehouse";
+            if (string.Equals(firstMap, "Warehouse", StringComparison.OrdinalIgnoreCase)) return "MilitaryBase";
 
             return firstMap;
         }

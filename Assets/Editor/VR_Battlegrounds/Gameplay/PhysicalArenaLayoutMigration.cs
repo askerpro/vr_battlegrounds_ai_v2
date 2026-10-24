@@ -21,8 +21,8 @@ namespace VrBattlegrounds.EditorTools
         public const string LayoutPath = "Assets/Prefabs/Arenas/Nalchick/Tolstogo_street/PhysicalArenaLayout.prefab";
         public const string MaterialPath = "Assets/Art/PhysicalArenaLayout/Diagnostic.mat";
         private static readonly string[] Paths = {
-            "Assets/Scenes/Lobby.unity", "Assets/Scenes/Maps/TestMap1.unity", "Assets/Scenes/Maps/TestMap2.unity",
-            "Assets/Scenes/Maps/TestMap3.unity", "Assets/Scenes/Maps/ReferenceMap04.unity", "Assets/Scenes/Maps/ServiceYard.unity"
+            "Assets/Scenes/Lobby.unity", "Assets/Scenes/Maps/Game/MilitaryBase.unity", "Assets/Scenes/Maps/Game/Warehouse.unity",
+            "Assets/Scenes/Maps/Dev/BlockStand.unity", "Assets/Scenes/Maps/Dev/ReferenceMap04.unity", "Assets/Scenes/Maps/Game/ServiceYard.unity"
         };
 
         [MenuItem("Tools/VR Battlegrounds/Gameplay/Validate Physical Arena Layout")]

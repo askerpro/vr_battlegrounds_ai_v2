@@ -41,7 +41,7 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void Чужая_сцена_и_несобранный_запуск_не_принимаются()
         {
-            Assert.IsFalse(MapBootstrap.AcceptsClientRun(Descriptor("TestMap1", 2, MapBootstrapStatus.Ready), "Lobby", default),
+            Assert.IsFalse(MapBootstrap.AcceptsClientRun(Descriptor("MilitaryBase", 2, MapBootstrapStatus.Ready), "Lobby", default),
                 "Descriptor другой сцены принят.");
             foreach (MapBootstrapStatus status in new[] { MapBootstrapStatus.Preparing, MapBootstrapStatus.Closing,
                          MapBootstrapStatus.Retiring, MapBootstrapStatus.Failed })
@@ -52,7 +52,7 @@ namespace VrBattlegrounds.Tests.Maps
         [Test]
         public void Устаревший_descriptor_той_же_сцены_не_принимается_новым_экземпляром()
         {
-            // Lobby (1) → TestMap1 (2) → Lobby: новый экземпляр лобби видит запоздавший descriptor первого лобби.
+            // Lobby (1) → MilitaryBase (2) → Lobby: новый экземпляр лобби видит запоздавший descriptor первого лобби.
             var highest = new MapRunKey(Session, 2);
             Assert.IsFalse(MapBootstrap.AcceptsClientRun(Descriptor("Lobby", 1, MapBootstrapStatus.Ready), "Lobby", highest),
                 "Descriptor первого лобби принят вторым — снимок попросили бы для старого запуска.");

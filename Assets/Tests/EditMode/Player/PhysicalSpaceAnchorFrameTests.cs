@@ -10,8 +10,8 @@ namespace VrBattlegrounds.Tests.Player
     /// <para>
     /// Что доказывают тесты. Место откалиброванного игрока обязано пережить смену карты,
     /// а мировые координаты для этого не годятся: обе карты проекта собраны из одного
-    /// префаба арены, но в <c>TestMap1</c> он повёрнут на 90° вокруг Y относительно
-    /// <c>TestMap2</c>. Ключевой тест — <see cref="Место_в_арене_не_зависит_от_поворота_карты"/>:
+    /// префаба арены, но в <c>MilitaryBase</c> он повёрнут на 90° вокруг Y относительно
+    /// <c>Warehouse</c>. Ключевой тест — <see cref="Место_в_арене_не_зависит_от_поворота_карты"/>:
     /// одна и та же точка арены на двух картах даёт одни и те же координаты относительно
     /// якорей, хотя в мировых расходится на метры.
     /// </para>
@@ -29,7 +29,7 @@ namespace VrBattlegrounds.Tests.Player
         private static readonly Vector3 AnchorZero = new Vector3(-2.74f, -0.01f, -3.60f);
         private static readonly Vector3 AnchorOne  = new Vector3(2.75f, -0.01f, -3.60f);
 
-        /// <summary>Поворот арены в <c>TestMap1</c> относительно <c>TestMap2</c>.</summary>
+        /// <summary>Поворот арены в <c>MilitaryBase</c> относительно <c>Warehouse</c>.</summary>
         private static readonly Quaternion Map1Rotation = Quaternion.Euler(0f, 90f, 0f);
 
         private static PhysicalSpaceAnchorFrame Build(Vector3 first, Vector3 second)
@@ -83,8 +83,8 @@ namespace VrBattlegrounds.Tests.Player
         [Test]
         public void Место_в_арене_не_зависит_от_поворота_карты()
         {
-            // Та же арена, повёрнутая на 90° вокруг Y: ровно так TestMap1 отличается
-            // от TestMap2. Мировые координаты одной и той же точки арены при этом другие.
+            // Та же арена, повёрнутая на 90° вокруг Y: ровно так MilitaryBase отличается
+            // от Warehouse. Мировые координаты одной и той же точки арены при этом другие.
             PhysicalSpaceAnchorFrame map2 = Build(AnchorZero, AnchorOne);
             PhysicalSpaceAnchorFrame map1 = Build(Map1Rotation * AnchorZero, Map1Rotation * AnchorOne);
 
@@ -108,7 +108,7 @@ namespace VrBattlegrounds.Tests.Player
             PhysicalSpaceAnchorFrame map2 = Build(AnchorZero, AnchorOne);
             PhysicalSpaceAnchorFrame map1 = Build(Map1Rotation * AnchorZero, Map1Rotation * AnchorOne);
 
-            // Игрок стоял здесь на TestMap2 — это и есть «его место», снятое калибровкой.
+            // Игрок стоял здесь на Warehouse — это и есть «его место», снятое калибровкой.
             Vector3 stoodOnMap2 = new Vector3(1.5f, 0f, 4f);
 
             Vector3 restoredOnMap1 = map1.ToWorld(map2.ToLocal(stoodOnMap2));

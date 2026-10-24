@@ -42,9 +42,13 @@ namespace VrBattlegrounds.Tests.AssetAudit
             {
                 "shader.non-mobile", "shadergraph.heavy-sampling", "material.hdrp-legacy", "material.texture-count",
                 "texture.no-mipmaps", "texture.android-format", "texture.size", "lod.far-not-reduced", "mesh.no-lod",
-                "lighting.large-without-lightmap", "reflection.planar", "foliage.alpha-test", "scene.procedural-skybox",
+                "lighting.large-without-lightmap", "reflection.planar", "foliage.alpha-test",
+                "lighting.realtime-light", "lighting.scene-not-baked", "lighting.dynamic-in-gi",
+                "mesh.lightmapped-without-uv2", "lighting.zone-without-probes",
             };
             Assert.That(rules.Select(r => r.Id), Is.SupersetOf(expected));
+            // Процедурное небо стоит −0,05 мс (A/B 2026-10-20): правило удалено решением пользователя 2026-10-24.
+            Assert.That(rules.Select(r => r.Id), Has.No.Member("scene.procedural-skybox"));
             foreach (AuditRule rule in rules)
             {
                 Assert.That(rule.WhyBadOnQuest, Is.Not.Empty, rule.Id);

@@ -50,6 +50,15 @@ class CompareTests(unittest.TestCase):
         self.assertEqual([r["name"] for r in record["newRed"]], ["N.New"])
         self.assertIn("новый красный: N.New — boom", record["reasons"])
 
+    def test_warn_inconclusive_is_warning_note_and_keeps_pass(self):
+        record = M.compare(result(("A.Old", "Failed", "x"),
+                                  ("L.Map", "Inconclusive", "[Warn:lighting] Assets/Scenes/Maps/M.unity: 2\nдетали"),
+                                  ("E.Env", "Inconclusive", "[TestEnvironment] нет Quest")), KNOWN)
+        self.assertEqual(record["verdict"], V.PASS)
+        self.assertEqual([w["name"] for w in record["warnings"]], ["L.Map"])
+        self.assertIn("предупреждение: L.Map — [Warn:lighting] Assets/Scenes/Maps/M.unity: 2", record["notes"])
+        self.assertTrue(any(n.startswith("Inconclusive без маркера (1): E.Env") for n in record["notes"]))
+
     def test_skipped_and_inconclusive_are_not_red(self):
         self.assertFalse(M.is_red("Skipped"))
         self.assertFalse(M.is_red("Inconclusive"))

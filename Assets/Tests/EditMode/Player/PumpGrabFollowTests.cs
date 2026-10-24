@@ -23,14 +23,15 @@ namespace VrBattlegrounds.Tests.Player
     /// </para>
     ///
     /// <para>
-    /// Аватар — база семейства Cyborg <c>CyborgHandsBase</c>: записи хвата MEF_Base_Avatar сняты с оружия
-    /// (задача weapon-batch-legacy-recipe), хваты стволов хранятся под GUID этой базы.
+    /// Аватар — игровой аватар Cyborg <c>PlayerControllersCyborgAvatar</c> (вариант <c>CyborgHandsBase</c>): записи хвата
+    /// MEF_Base_Avatar сняты с оружия (задача weapon-batch-legacy-recipe), хваты стволов хранятся под GUID базы и
+    /// наследуются вариантом. Сама база не годится: у её грабберов не назначены кости кистей (риг — в варианте).
     /// </para>
     /// </summary>
     public class PumpGrabFollowTests
     {
         private const string Weapon = "Assets/Prefabs/Weapons/FabarmSDASS/FabarmSDASS.prefab";
-        private const string CyborgAvatarGuid = "71b74b0d08444f49bbb7aa2828d0890a";
+        private const string CyborgAvatarGuid = "8e0e06323e4754f479a9f19788554652"; // PlayerControllersCyborgAvatar
         private const float MissedBy = 0.08f;
 
         [Test]

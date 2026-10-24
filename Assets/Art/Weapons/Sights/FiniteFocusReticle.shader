@@ -133,7 +133,7 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
                         image += SAMPLE_TEXTURE2D(_ScopeTex, sampler_ScopeTex, uv - float2(blur, -blur) * 0.7).rgb;
                         image /= 9.0;
                     }
-                    image *= lerp(0.4, 1.0, clarity);
+                    half centreLight = lerp(0.4, 1.0, clarity);
                     // Зрачок выхода (решение пользователя 2026-10-24): светлое пятно всегда в центре стекла, вокруг — затенение
                     // с мягким краем. Не в ракурсе — размытое пятно около половины радиуса линзы; по мере выравнивания
                     // (чёткость по расстоянию и углу и смещение глаза в долях допуска ракурса) оно расширяется до всей линзы.
@@ -142,9 +142,12 @@ Shader "VR Battlegrounds/Weapons/Finite Focus Reticle"
                     float2 offset = float2(dot(lateral, _OpticRightWS.xyz), dot(lateral, _OpticUpWS.xyz)) / max(_ScopePupil, 0.00001);
                     float miss = length(offset);
                     float open = clamp(min(lerp(0.5, 1.3, clarity), 1.3 - 0.4 * miss), 0.5, 1.3);
-                    half inside = 1.0 - smoothstep(open - 0.3, open, length(lens));
+                    // Край пятна: в размытии узкий (вокруг пятна не видно деталей), при прицеливании мягкий.
+                    half soft = lerp(0.12, 0.3, clarity);
+                    half inside = 1.0 - smoothstep(open - soft, open, length(lens));
                     half tube = 1.0 - smoothstep(0.92, 1.0, length(lens));
-                    half4 background = half4(image * lerp(0.05, 1.0, inside) * tube, 1.0);
+                    // Периферия вокруг пятна — затемнение 90% (решение пользователя 2026-10-24): 10% яркости картинки.
+                    half4 background = half4(image * lerp(0.1, centreLight, inside) * tube, 1.0);
                     half sharp = smoothstep(0.5, 1.0, clarity);
                     half coverage = Reticle(lens * field, centre) * inside * tube * sharp;
                     return Compose(background, coverage, centre * inside * tube * sharp);

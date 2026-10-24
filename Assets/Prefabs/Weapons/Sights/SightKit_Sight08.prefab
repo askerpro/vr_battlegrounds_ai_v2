@@ -133,8 +133,6 @@ MonoBehaviour:
   _antiAliasing: 4
   _farClip: 80
   _enterOffset: 0.02
-  _exitOffset: 0.03
-  _minHoldSeconds: 0.5
 --- !u!1 &5768839823647715281
 GameObject:
   m_ObjectHideFlags: 0

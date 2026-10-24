@@ -103,6 +103,25 @@ namespace VrBattlegrounds.Tests.Sights
             Assert.AreEqual(WeaponSightCalibrationSettings.DefaultScopeEyeTolerance, settings.ScopeEyeTolerance, 1e-6f);
         }
 
+        /// <summary>Удобство оптики (решение пользователя 2026-10-24, задача scope-enter-distance): чёткая картинка с 35 см.</summary>
+        [Test]
+        public void Дистанция_включения_принятая_35_см()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<WeaponSightCalibrationSettings>(SettingsPath);
+            Assert.IsNotNull(settings);
+            Assert.AreEqual(0.35f, settings.ScopeEnterDistance, 1e-6f);
+            Assert.AreEqual(WeaponSightCalibrationSettings.DefaultScopeEnterDistance, settings.ScopeEnterDistance, 1e-6f);
+            Assert.Greater(WeaponSightCalibrationSettings.ScopeFadeBand, 0f, "картинка уходит плавно, а не обрывом");
+        }
+
+        [TestCaseSource(nameof(ScopeKits))]
+        public void Линза_с_кратностью_умеет_плавную_чёткость(string name)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(Spec(name).ReticleMaterialPath);
+            Assert.IsNotNull(material);
+            Assert.IsTrue(material.HasProperty("_ScopeClarity"), "шейдер линзы без чёткости — картинка появится обрывом");
+        }
+
         [Test]
         public void AX50_Auto_автомат_с_призмой_и_коротким_выстрелом()
         {

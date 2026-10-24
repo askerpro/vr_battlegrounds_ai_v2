@@ -32,18 +32,18 @@ namespace VrBattlegrounds.EditorTools.TestStand
                     ? AssetDatabase.FindAssets("t:Scene", new[] { AvatarStandsFolder }).Select(AssetDatabase.GUIDToAssetPath).ToList()
                     : new List<string>();
                 if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArsenalReviewScene) != null) paths.Add(ArsenalReviewScene);
-                    foreach (string path in paths)
-                    {
-                        var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-                        var roots = scene.GetRootGameObjects();
-                        if (roots.Any(r => r.GetComponentInChildren<MapRoot>(true) != null || r.GetComponentInChildren<GameNetworkDiscovery>(true) != null))
-                        { skipped.Add(path); continue; }
-                        if (roots.Any(r => r.GetComponentInChildren<StandaloneSceneMarker>(true) != null)) continue;
-                        new GameObject("__StandaloneSceneMarker").AddComponent<StandaloneSceneMarker>();
-                        EditorSceneManager.MarkSceneDirty(scene);
-                        if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("SceneSaveFailed:" + path);
-                        changed.Add(path);
-                    }
+                foreach (string path in paths)
+                {
+                    var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                    var roots = scene.GetRootGameObjects();
+                    if (roots.Any(r => r.GetComponentInChildren<MapRoot>(true) != null || r.GetComponentInChildren<GameNetworkDiscovery>(true) != null))
+                    { skipped.Add(path); continue; }
+                    if (roots.Any(r => r.GetComponentInChildren<StandaloneSceneMarker>(true) != null)) continue;
+                    new GameObject("__StandaloneSceneMarker").AddComponent<StandaloneSceneMarker>();
+                    EditorSceneManager.MarkSceneDirty(scene);
+                    if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("SceneSaveFailed:" + path);
+                    changed.Add(path);
+                }
                 return new Result { Passed = true, Marked = changed.Count, Paths = changed.ToArray(), Skipped = skipped.ToArray() };
             }
             finally

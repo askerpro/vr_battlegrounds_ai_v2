@@ -1,7 +1,7 @@
-# maps-rename — имена карт по темам, Maps/Game и Maps/Dev
+# maps-rename — имена карт по темам, Maps/Game и Maps/Dev, стенды в Stands/
 
 Обновлено 2026-10-24. Владелец задачи — owner `level-design` (Claude; основной checkout закреплён за ним в хабе), основной checkout по указанию пользователя,
-ветка `task/maps-rename` от `origin/dev` 93a5f0b6d.
+ветка `task/maps-rename`, после rebase на `origin/dev` 7020fb6c9.
 
 ## Цель и мотивация
 
@@ -37,7 +37,6 @@
 - Подпапки внутри `Maps/`: инструменты и тесты ищут по префиксу `Assets/Scenes/Maps/` рекурсивно, логика не менялась.
 - Ключи станций в сценах (`TestMap1.SpawnZone.ArsenalWall-1` и т.п.) не меняются: по контракту они назначаются
   один раз и стабильны при переименовании.
-- `Scenes/Debug`, `Scenes/Dev`, `Scenes/Tools` (стенды launch-infra/bots) не трогались.
 - Самостарт стендов мимо Offline (`PlayModeStartFromOffline.StandScenesFolder`) — теперь `Stands/Avatar/`: те же три
   сцены, что были в `Dev/`. `PlayLaunchSceneMigration` размечает прежний охват (стенды аватара + CommonArsenalReview),
   пустая ArsenalLayoutAuthoring не размечается.
@@ -54,14 +53,16 @@
 - [x] Проверка пользователем в Unity 2026-10-24: структура, карты, стенды в порядке. BotCombatStand шёл через Lobby —
   не регрессия: toolbar Play с профилем `SceneSource=active` идёт Offline → Lobby → автозагрузка DebugOrchestrator
   для любой карты; маршрут `ServerStartupRoute` для нового пути стенда валиден (план и Validate проверены в Editor)
-- [ ] Существующие EditMode-тесты карт; heavy `--profile editor` и `--profile windows`
-- [ ] Ревью зон level-design, gameplay, launch-infra; журнал level-design; коммит и вливание
+- [x] Существующие EditMode-тесты затронутых классов в Editor: 203/204, красный — известный `testmap1-beam-overlap`
+- [x] Коммиты на `task/maps-rename`; журнал level-design; задача зарегистрирована (owner level-design)
+- [ ] Ревью зон gameplay, launch-infra, bots, avatar-ik на итоговом SHA (level-design — зона писателя)
+- [ ] heavy `--profile windows` и `--profile editor` на итоговом SHA; вливание
 
 ## Известное, не из этой задачи
 
 - `MapGameplayHierarchy.ValidateAll` падает на Lobby: «неверное количество зон/станций: 1/1» — ожидание валидатора
   (4 станции в лобби) расходится с текущей сценой; передать владельцу lobby-arena-cleanup / level-design.
-- `Assets/Scenes/Debug/BotCombatStandMap.asset` — `description: TestMap1` (зона bots, не менялось).
+- `Assets/Scenes/Stands/Bots/BotCombatStandMap.asset` — `description: TestMap1` (копия сборщика, зона bots, не менялось).
 - `Docs/README.md` (общий индекс, правка вне обычной задачи) ещё называет TestMap1/2 и `Scenes/Dev/` — нужна правка
   владельцем индекса. CHANGELOG, журналы, датированные планы и отчёты сохраняют старые имена как историю.
 - `Docs/weapons/sight-calibration.md` описывает `Scenes/Tools/WeaponSight*`; таких сцен в репозитории нет, путь не менялся.

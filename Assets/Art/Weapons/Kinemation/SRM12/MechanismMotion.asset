@@ -17,13 +17,13 @@ MonoBehaviour:
   Empty:
     rid: -2
   Manual:
-    rid: 4468403705076777024
+    rid: 4468403705076777898
   references:
     version: 2
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 4468403705076777024
+    - rid: 4468403705076777898
       type: {class: WeaponMechanismMotion/Cycle, ns: VrBattlegrounds.Weapons, asm: VrBattlegrounds}
       data:
         SourceGuid: c93dc1c5ef8ee274c81085d1bc66cd47

@@ -18,13 +18,17 @@ namespace VrBattlegrounds.DevTools
     /// <para>
     /// <b>Власть — у сервера.</b> Права админа выдаёт он по <see cref="DebugAdminPolicy"/>,
     /// телепорт выполняет только для админа (<see cref="SessionPermissions.IsAdmin"/>: хост или
-    /// права, выданные режимом) и только собственного аватара отправителя, точку ищет сам.
+    /// права, выданные режимом) <b>с включённым режимом отладки на его устройстве</b> (последний
+    /// <see cref="DebugAdminRequestMessage"/>), только собственного аватара отправителя, точку ищет сам.
     /// </para>
     /// </summary>
     public static class DebugModeNetwork
     {
         /// <summary>Сервер: netId сессий, которым права админа выдал режим отладки.</summary>
         private static readonly HashSet<uint> Granted = new HashSet<uint>();
+
+        /// <summary>Сервер: netId сессий, чьё устройство сообщило о включённом режиме отладки.</summary>
+        private static readonly HashSet<uint> DebugEnabled = new HashSet<uint>();
 
         /// <summary>Клиент: последний ответ сервера — строка статуса на планшете.</summary>
         public static string LastReply { get; private set; } = string.Empty;
@@ -35,6 +39,7 @@ namespace VrBattlegrounds.DevTools
         public static void RegisterServerHandlers()
         {
             Granted.Clear();
+            DebugEnabled.Clear();
             NetworkServer.ReplaceHandler<DebugAdminRequestMessage>(HandleAdminRequest);
             NetworkServer.ReplaceHandler<DebugTeleportRequestMessage>(HandleTeleportRequest);
         }
@@ -84,6 +89,9 @@ namespace VrBattlegrounds.DevTools
             PlayerSession session = SessionOf(conn);
             if (session == null) return;
 
+            if (msg.enable) DebugEnabled.Add(session.netId);
+            else DebugEnabled.Remove(session.netId);
+
             bool allows = DebugAdminPolicy.ServerAllows(Debug.isDebugBuild, Environment.GetCommandLineArgs());
             DebugAdminDecision decision = DebugAdminPolicy.Decide(msg.enable, SessionPermissions.IsAdmin(session), Granted.Contains(session.netId), allows);
 
@@ -123,6 +131,14 @@ namespace VrBattlegrounds.DevTools
             {
                 GameLog.Debug.Warning($"[DebugMode] {session.PlayerName}: телепорт без прав админа отклонён.");
                 Reply(conn, false, "Телепорт: нет прав админа.");
+                return;
+            }
+
+            // Права админа телепорт не открывают: нужен ещё режим отладки на устройстве.
+            if (!DebugEnabled.Contains(session.netId))
+            {
+                GameLog.Debug.Warning($"[DebugMode] {session.PlayerName}: телепорт без режима отладки на устройстве отклонён.");
+                Reply(conn, false, "Телепорт: режим отладки на устройстве выключен.");
                 return;
             }
 

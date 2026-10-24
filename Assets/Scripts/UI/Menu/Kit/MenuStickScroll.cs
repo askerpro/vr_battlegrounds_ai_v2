@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UltimateXR.Avatar;
 using UltimateXR.Core;
 using UltimateXR.Devices;
@@ -6,14 +5,16 @@ using UltimateXR.Locomotion;
 using UnityEngine;
 using UnityEngine.UI;
 using VrBattlegrounds.Core;
+using VrBattlegrounds.DevTools;
 
 namespace VrBattlegrounds.UI.Menu.Kit
 {
     /// <summary>
     /// Скролл содержимого планшета стиком (T-32): <b>пока меню открыто</b>, стик любой руки листает
     /// <see cref="ScrollRect"/> каркаса. Стик ведёт и телепорт (<see cref="UxrTeleportLocomotionBase"/>),
-    /// поэтому на время открытого меню телепорт выключается и возвращается при закрытии. Включаются
-    /// только те компоненты, которые выключил этот скрипт.
+    /// поэтому на время открытого меню телепорт приглушается через его владельца
+    /// (<see cref="DebugTeleportLocomotion.Suppress"/>) и отпускается при закрытии; включён ли телепорт
+    /// вообще (только режим отладки), решает владелец.
     ///
     /// <para>
     /// Раньше стик работал только пока на планшет наведён луч — а по планшету водят пальцем, и
@@ -29,24 +30,18 @@ namespace VrBattlegrounds.UI.Menu.Kit
 
         [SerializeField] private ScrollRect _scroll;
 
-        private readonly List<UxrTeleportLocomotionBase> _suppressed = new List<UxrTeleportLocomotionBase>();
-        private UxrAvatar _suppressedAvatar;
+        private bool _suppressing;
 
         public void Bind(ScrollRect scroll) => _scroll = scroll;
 
-        private void OnDisable() => RestoreTeleport();
+        private void OnDisable() => ReleaseTeleport();
 
         private void Update()
         {
             // Каркас активен только у открытого меню (контроллер выключает весь планшет при закрытии).
             if (!Application.isPlaying) return;
 
-            UxrAvatar avatar = UxrAvatar.LocalAvatar;
-            if (avatar != _suppressedAvatar)
-            {
-                RestoreTeleport();
-                SuppressTeleport(avatar);
-            }
+            SuppressTeleport();
 
             UxrControllerInput input = UxrAvatar.LocalAvatarInput;
             if (input == null || _scroll == null || _scroll.content == null) return;
@@ -65,27 +60,19 @@ namespace VrBattlegrounds.UI.Menu.Kit
             }
         }
 
-        private void SuppressTeleport(UxrAvatar avatar)
+        private void SuppressTeleport()
         {
-            _suppressedAvatar = avatar;
-            if (avatar == null) return;
-
-            foreach (UxrTeleportLocomotionBase teleport in avatar.GetComponentsInChildren<UxrTeleportLocomotionBase>())
-            {
-                if (!teleport.enabled) continue;
-                teleport.enabled = false;
-                _suppressed.Add(teleport);
-            }
-            if (_suppressed.Count > 0)
-                GameLog.UI.Verbose($"[MenuStickScroll] Меню открыто: телепорт выключен ({_suppressed.Count}), стик листает планшет.", this);
+            if (_suppressing) return;
+            _suppressing = true;
+            DebugTeleportLocomotion.Suppress(this);
+            GameLog.UI.Verbose("[MenuStickScroll] Меню открыто: телепорт приглушён, стик листает планшет.", this);
         }
 
-        private void RestoreTeleport()
+        private void ReleaseTeleport()
         {
-            foreach (UxrTeleportLocomotionBase teleport in _suppressed)
-                if (teleport != null) teleport.enabled = true;
-            _suppressed.Clear();
-            _suppressedAvatar = null;
+            if (!_suppressing) return;
+            _suppressing = false;
+            DebugTeleportLocomotion.Release(this);
         }
     }
 }

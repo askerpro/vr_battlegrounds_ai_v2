@@ -87,19 +87,44 @@ namespace VrBattlegrounds.Tests.DevTools
         // ── Права админа на сервере ─────────────────────────────────────────
 
         [Test]
-        public void ServerAllows_DevelopmentOrFlag()
+        public void ServerAllows_AnyServerIncludingProd()
         {
             Assert.IsTrue(DebugAdminPolicy.ServerAllows(true, new string[0]));
-            Assert.IsFalse(DebugAdminPolicy.ServerAllows(false, new[] { "server.exe", "-logFile", "x.log" }));
-            Assert.IsTrue(DebugAdminPolicy.ServerAllows(false, new[] { "server.exe", DebugAdminPolicy.CommandLineFlag }));
-            Assert.IsFalse(DebugAdminPolicy.ServerAllows(false, null));
+            Assert.IsTrue(DebugAdminPolicy.ServerAllows(false, new[] { "server.exe", "-logFile", "x.log" }), "Прод без флага тоже разрешает (решение 2026-10-24).");
+            Assert.IsTrue(DebugAdminPolicy.ServerAllows(false, null));
+        }
+
+        // ── Телепорт дугой: только в режиме отладки ─────────────────────────
+
+        [Test]
+        public void TeleportLocomotion_AllowedOnlyInDebugModeAndNotSuppressed()
+        {
+            var owner = new object();
+            try
+            {
+                DebugMode.Set(false, "тест");
+                Assert.IsFalse(DebugTeleportLocomotion.Allowed, "Без режима отладки телепорта нет.");
+
+                DebugMode.Set(true, "тест");
+                Assert.IsTrue(DebugTeleportLocomotion.Allowed);
+
+                DebugTeleportLocomotion.Suppress(owner);
+                Assert.IsFalse(DebugTeleportLocomotion.Allowed, "Открытое меню приглушает телепорт.");
+
+                DebugTeleportLocomotion.Release(owner);
+                Assert.IsTrue(DebugTeleportLocomotion.Allowed);
+            }
+            finally
+            {
+                DebugTeleportLocomotion.Release(owner);
+            }
         }
 
         [Test]
         public void Decide_GrantsOnlyWhenServerAllows()
         {
             Assert.AreEqual(DebugAdminDecision.Grant, DebugAdminPolicy.Decide(true, false, false, true));
-            Assert.AreEqual(DebugAdminDecision.Rejected, DebugAdminPolicy.Decide(true, false, false, false), "Прод без флага — права не выдаются.");
+            Assert.AreEqual(DebugAdminDecision.Rejected, DebugAdminPolicy.Decide(true, false, false, false), "Сервер не разрешает — права не выдаются.");
             Assert.AreEqual(DebugAdminDecision.AlreadyAdmin, DebugAdminPolicy.Decide(true, true, false, false), "Хост — админ и так.");
         }
 

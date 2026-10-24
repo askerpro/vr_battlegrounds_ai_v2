@@ -1,0 +1,49 @@
+{
+  "task_id": "maps-rename",
+  "owner": "maps-rename",
+  "client": "claude",
+  "worktree": "F:/UnityProjects/Vr_Battlegrounds_ai",
+  "base_sha": "93a5f0b6d7ea122becf7d4e9b3452ad46bea7257",
+  "doc_path": "tasks/maps-rename/Readme.md",
+  "title": "Сцены: имена карт по темам, Maps/Game и Maps/Dev, стенды в Stands/",
+  "branch": "task/maps-rename",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/maps-rename/**",
+        "Assets/Scenes/**",
+        "Assets/Data/Maps/MapData_MilitaryBase.asset*",
+        "Assets/Data/Maps/MapData_Warehouse.asset*",
+        "Assets/Data/Maps/MapData_BlockStand.asset*",
+        "Assets/Data/Maps/MapRuntimeCatalog.asset",
+        "ProjectSettings/EditorBuildSettings.asset",
+        "Assets/Editor/VR_Battlegrounds/**/*.cs",
+        "Assets/Scripts/**/*.cs",
+        "Assets/Scripts/Debug/E2E/Input/Scripts/series-next-map.json",
+        "Assets/Tests/EditMode/**/*.cs",
+        "Tools/e2e/**",
+        "Tools/TestStand/E2EKitTests.cs",
+        "Docs/level-design/**",
+        "Docs/testing.md",
+        "Docs/test-stand.md",
+        "Docs/gameplay.md",
+        "Docs/game-manager.md",
+        "Docs/troubleshooting.md",
+        "Docs/combat-networking.md",
+        "Docs/Arsenal/arsenal-presets.md",
+        "Docs/Arsenal/Arsenal_Code_Architecture_RU.md",
+        "experts/level-design/backlog.md",
+        "experts/gameplay/backlog.md",
+        "experts/level-design/journal/2026-10-24-maps-rename.md",
+        "Docs/avatar-animation.md",
+        "Docs/Arsenal/layout-authoring-stand.md",
+        "Docs/Arsenal/common-boundary-wall-2026-10-02.md",
+        "experts/bots/expert.json",
+        "experts/launch-infra/backlog.md"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

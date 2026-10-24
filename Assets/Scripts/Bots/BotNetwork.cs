@@ -19,8 +19,8 @@ namespace VrBattlegrounds.Bots
     ///
     /// <para>
     /// <b>Решает сервер.</b> Ботов добавляет только админ (<see cref="SessionPermissions.IsAdmin"/>) и только
-    /// на сервере, разрешающем отладку (<see cref="DebugAdminPolicy.ServerAllows"/>: Development или
-    /// <c>-vrb-debug-admin</c>) — на прод-сервере без флага ботов не будет.
+    /// на сервере, разрешающем отладку (<see cref="DebugAdminPolicy.ServerAllows"/>; с 2026-10-24 — любой
+    /// сервер, прод тоже).
     /// </para>
     /// </summary>
     public static class BotNetwork

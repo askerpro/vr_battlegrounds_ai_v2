@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace VrBattlegrounds.DevTools
@@ -23,11 +22,11 @@ namespace VrBattlegrounds.DevTools
     /// админа (кнопки «Матч», «Игроки и команды», «Играть», телепорт).
     ///
     /// <para>
-    /// Права выдаёт <b>только сервер</b>, и только если он сам разрешает отладку: сборка
-    /// Development (в том числе редактор — <c>Debug.isDebugBuild</c>) или флаг командной строки
-    /// <see cref="CommandLineFlag"/>. Прод-сервер без флага отказывает, и жест режима отладки
-    /// на любом шлеме админом не делает. Снимается только то, что выдал режим: админ по другой
-    /// причине (хост) выключением режима прав не теряет.
+    /// Права выдаёт <b>только сервер</b>. Решение пользователя 2026-10-24: отладку разрешает
+    /// <b>любой сервер, прод тоже</b> — жест режима отладки на шлеме даёт права админа без
+    /// Development-сборки и без флага <see cref="CommandLineFlag"/> (флаг больше ничего не меняет).
+    /// Снимается только то, что выдал режим: админ по другой причине (хост) выключением режима
+    /// прав не теряет.
     /// </para>
     /// </summary>
     public static class DebugAdminPolicy
@@ -35,18 +34,11 @@ namespace VrBattlegrounds.DevTools
         /// <summary>Флаг запуска прод-сервера, разрешающий режим отладки: <c>VrBattlegroundsServer.exe -vrb-debug-admin</c>.</summary>
         public const string CommandLineFlag = "-vrb-debug-admin";
 
-        /// <summary>Разрешает ли этот сервер режим отладки.</summary>
-        public static bool ServerAllows(bool isDebugBuild, IReadOnlyList<string> commandLineArgs)
-        {
-            if (isDebugBuild) return true;
-            if (commandLineArgs == null) return false;
-
-            foreach (string arg in commandLineArgs)
-            {
-                if (string.Equals(arg, CommandLineFlag, StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            return false;
-        }
+        /// <summary>
+        /// Разрешает ли этот сервер режим отладки: всегда, в том числе прод. Аргументы оставлены
+        /// для прежних вызовов (права режима, боты) — от сборки и командной строки ответ больше не зависит.
+        /// </summary>
+        public static bool ServerAllows(bool isDebugBuild, IReadOnlyList<string> commandLineArgs) => true;
 
         /// <param name="enable">Режим на устройстве включён.</param>
         /// <param name="isAdmin">Сессия сейчас админ (<c>SessionPermissions.IsAdmin</c>).</param>

@@ -246,6 +246,8 @@ namespace VrBattlegrounds.Network
             if (Availability != ServerAvailability.Failed) Availability = ServerAvailability.Stopped;
             _serverSceneChangePending = false;
             _publishReadyFrame = -1;
+            _serverConnectedAt.Clear();
+            _serverLastError.Clear();
             base.OnStopServer();
         }
 
@@ -313,6 +315,30 @@ namespace VrBattlegrounds.Network
             }
         }
 
+        // ── Журнал соединений (только для лога) ──────────────────────────────
+        // Время подключения и последняя ошибка транспорта по connectionId: из них строка
+        // «[Net] disconnect» берёт длительность сессии и причину. На игру не влияют.
+
+        private readonly Dictionary<int, double> _serverConnectedAt = new Dictionary<int, double>();
+        private readonly Dictionary<int, TransportError> _serverLastError = new Dictionary<int, TransportError>();
+
+        public override void OnServerConnect(NetworkConnectionToClient conn)
+        {
+            base.OnServerConnect(conn);
+            _serverConnectedAt[conn.connectionId] = Time.realtimeSinceStartupAsDouble;
+            _serverLastError.Remove(conn.connectionId);
+        }
+
+        /// <summary>
+        /// Ошибка транспорта по соединению. Mirror сам пишет её строкой «Server Transport Error»;
+        /// здесь она только запоминается — следом обычно приходит отключение (таймаут KCP).
+        /// </summary>
+        public override void OnServerError(NetworkConnectionToClient conn, TransportError error, string reason)
+        {
+            base.OnServerError(conn, error, reason);
+            if (conn != null) _serverLastError[conn.connectionId] = error;
+        }
+
         public override void OnServerDisconnect(NetworkConnectionToClient conn)
         {
             if (PlayersManager.Instance != null)
@@ -322,6 +348,7 @@ namespace VrBattlegrounds.Network
                 // Снимок сессии (UnregisterSession) снимается уже после: здоровье и место
                 // от сброса снаряжения не зависят.
                 PlayerSession session = PlayersManager.Instance.GetSession(conn);
+                LogServerDisconnect(conn, session);
                 if (session != null)
                 {
                     AvatarTeardown.ReleaseBeforeDestroy(session.ActiveAvatar, "отключение");
@@ -329,8 +356,58 @@ namespace VrBattlegrounds.Network
 
                 PlayersManager.Instance.UnregisterSession(conn);
             }
+            else
+            {
+                LogServerDisconnect(conn, null);
+            }
+
+            _serverConnectedAt.Remove(conn.connectionId);
+            _serverLastError.Remove(conn.connectionId);
 
             base.OnServerDisconnect(conn); // Mirror автоматически уничтожает Owned objects (сессию и аватар)
+        }
+
+        /// <summary>
+        /// Одна строка на отключение: кто, почему (по последней ошибке транспорта), сколько был
+        /// подключён и в какой момент матча. Кика в игре нет: без ошибки транспорта — «closed»
+        /// (клиент вышел сам или соединение закрыл сервер).
+        /// </summary>
+        private void LogServerDisconnect(NetworkConnectionToClient conn, PlayerSession session)
+        {
+            if (!GameLog.Network.IsEnabled(LogLevel.Info)) return;
+
+            string reason = _serverLastError.TryGetValue(conn.connectionId, out TransportError error)
+                ? (error == TransportError.Timeout ? "timeout" : error.ToString())
+                : "closed";
+            string after = _serverConnectedAt.TryGetValue(conn.connectionId, out double connectedAt)
+                ? FormatDuration(Time.realtimeSinceStartupAsDouble - connectedAt)
+                : "неизвестно";
+            string alive = session == null || session.Role != GameRole.Player
+                ? "—"
+                : session.ActiveAvatar != null && session.ActiveAvatar.IsAlive ? "да" : "нет";
+
+            GameLog.Network.Info($"[Net] disconnect conn={conn.connectionId} player={PlayerLogName.Of(session)} " +
+                                 $"reason={reason} after={after} phase={DescribeMatchPhase()} alive={alive}");
+        }
+
+        private static string FormatDuration(double seconds)
+        {
+            int total = Mathf.Max(0, (int)seconds);
+            return $"{total / 60:00}:{total % 60:00}";
+        }
+
+        /// <summary>Карта, состояние матча и, если режим раундовый, раунд и его фаза — для строк лога.</summary>
+        private static string DescribeMatchPhase()
+        {
+            string map = SceneManager.GetActiveScene().name;
+            MapReferee referee = MapReferee.Instance;
+            if (referee == null) return $"{map}/нет судьи";
+
+            VrBattlegrounds.GameModes.GameMode mode = referee.ActiveGameMode;
+            string text = $"{map}/{referee.CurrentState}/{(mode != null ? mode.GetType().Name : "нет режима")}";
+            if (mode is VrBattlegrounds.GameModes.EliminationMode elimination)
+                text += $" раунд {elimination.CurrentRoundNumber}/{elimination.TotalRounds} {elimination.CurrentRoundPhase}";
+            return text;
         }
 
         // ==============================================================================

@@ -81,6 +81,12 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
         private Vector3 _forwardBase;
         private float _eyesBaseHeight;
 
+        /// <summary>Строка лога о применении к этому аватару уже была (первое применение пишется всегда).</summary>
+        private bool _logged;
+
+        /// <summary>Допуск сравнения пола и роста для строки лога, метры.</summary>
+        private const float CalibrationLogTolerance = 0.001f;
+
         /// <summary>Наблюдатель SDK не публикует обратно позу, которую сейчас ставит применитель.</summary>
         public bool IsApplyingPlacement { get; private set; }
 
@@ -187,19 +193,32 @@ namespace VrBattlegrounds.PhysicalSpaceUtils
                 }
             }
 
-            if (applyPlacement && calibration.Placement.HasValue)
+            bool placementApplied = applyPlacement && calibration.Placement.HasValue;
+            if (placementApplied)
                 ApplyPlacement(calibration, ownAvatar, synchronizePlacement);
 
-            if (Applied != calibration || !Mathf.Approximately(previousAppliedScale, scale))
+            // Строка — при первом применении к аватару, значимой смене пола/роста/признака/масштаба или переносе
+            // по запомненному месту. Одна лишь смена места в калибровке (каждый SDK-перенос корня, PlayerSession
+            // ObservedPlacement) аватару ничего не меняет — раньше она давала строку на каждый перенос.
+            if (!_logged || placementApplied || !SameBodyCalibration(Applied, calibration) ||
+                Mathf.Abs(previousAppliedScale - scale) > ScaleChangeEpsilon)
             {
+                _logged = true;
                 GameLog.PhysicalSpace.Verbose(
                     $"[AvatarCalibrationApplier] {name}: {calibration}, масштаб {scale:F3} (EyesBaseHeight {_eyesBaseHeight:F2}), " +
-                    $"{(ownAvatar ? "свой" : "чужой")}.", this);
+                    $"{(ownAvatar ? "свой" : "чужой")}" +
+                    (placementApplied ? $", место применено: {calibration.Placement}" : "") + ".", this);
             }
 
             Applied = calibration;
             AppliedScale = scale;
         }
+
+        /// <summary>Для лога: пол, рост и признак якорей совпадают с допуском; место не сравнивается.</summary>
+        private static bool SameBodyCalibration(PlayerCalibration a, PlayerCalibration b) =>
+            a.IsCalibrated == b.IsCalibrated &&
+            Mathf.Abs(a.FloorOffset - b.FloorOffset) <= CalibrationLogTolerance &&
+            Mathf.Abs(a.EyeHeight - b.EyeHeight) <= CalibrationLogTolerance;
 
         /// <summary>
         /// Все вызывающие <see cref="Apply" /> — на верхнем уровне (команда, хук калибровки, подключение, связь с

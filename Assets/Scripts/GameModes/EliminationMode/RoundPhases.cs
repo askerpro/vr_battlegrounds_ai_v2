@@ -254,8 +254,11 @@ namespace VrBattlegrounds.GameModes
             // второго раунда кончалась бы, не начавшись (T-29).
             _readiness.Reset(_teams);
 
+            // Номер раунда пишет владелец машины строкой выше («[EliminationMode] Раунд i/n»).
+            // Телепорта в Setup нет: подготовка ждёт, пока игроки сами вернутся на свои базы.
             GameLog.Match.Info(
-                "[RoundPhases] Раунд начат: очистка и телепортация (Setup)");
+                $"[RoundPhases] Раунд начат (карта '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}'): " +
+                $"Setup — ждём возвращения игроков на свои базы (не дольше {SetupDuration + ReturnToBaseLimit:F0} с)");
         }
 
         /// <summary>

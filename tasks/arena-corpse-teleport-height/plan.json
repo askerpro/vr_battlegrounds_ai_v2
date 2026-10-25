@@ -1,0 +1,20 @@
+{
+  "task_id": "arena-corpse-teleport-height",
+  "owner": "arena-corpse-teleport-height",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/arena-corpse-teleport-height",
+  "base_sha": "8f985a849df26823fdefffe9c3a95fa7e89dd5f6",
+  "doc_path": "tasks/arena-corpse-teleport-height/Readme.md",
+  "title": "Арена: труп не на месте смерти, высота после телепорта",
+  "branch": "task/arena-corpse-teleport-height",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/arena-corpse-teleport-height/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

@@ -208,7 +208,8 @@ namespace VrBattlegrounds.Arsenal
                 ReturnToRack();
             }
 
-            GameLog.Arsenal.Info("[Arsenal] Dog tag reset — ready for new prep phase.");
+            // Сброс — часть открытия стены, а его строку пишет ArsenalWallController (с состоянием жетона).
+            GameLog.Arsenal.Verbose($"[Arsenal] Жетон панели '{name}' сброшен — снова можно взять.", this);
         }
 
         /// <summary>

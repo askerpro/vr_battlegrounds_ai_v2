@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UltimateXR.Manipulation;
 using UnityEngine;
 using VrBattlegrounds.Interaction;
@@ -47,20 +48,40 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Погиб <paramref name="body"/>: всё его снаряжение — в руках и в кобурах — получит толчок, как
-        /// только станет физическим. Зовётся на каждой машине до отпускания.
+        /// только станет физическим. Зовётся на каждой машине до отпускания. Центр разлёта — тело
+        /// (<see cref="PlayerBodyCenter"/>), не корень аватара: тот при физической ходьбе стоит в стороне.
         /// </summary>
         public static void ScheduleFor(PlayerController body)
         {
             if (body == null) return;
 
-            Vector3 center = body.transform.position + Vector3.up;
+            Vector3 center = PlayerBodyCenter.Of(body);
             Vector3 forward = body.transform.forward;
 
+            var carried = new List<UxrGrabbableObject>();
+            CollectCarried(body, carried);
+            foreach (UxrGrabbableObject item in carried) Schedule(item, center, forward);
+        }
+
+        /// <summary>
+        /// Что несёт <paramref name="body"/>: предметы в руках и в кобурах (карманах аватара). Тот же список
+        /// видит труп (<see cref="Corpse"/>) — с ним он не сталкивается, где бы предмет ни оказался.
+        /// </summary>
+        public static void CollectCarried(PlayerController body, List<UxrGrabbableObject> into)
+        {
+            if (body == null || into == null) return;
+
             foreach (UxrGrabber grabber in body.GetComponentsInChildren<UxrGrabber>(true))
-                Schedule(grabber != null ? grabber.GrabbedObject : null, center, forward);
+            {
+                UxrGrabbableObject item = grabber != null ? grabber.GrabbedObject : null;
+                if (item != null && !into.Contains(item)) into.Add(item);
+            }
 
             foreach (UxrGrabbableObjectAnchor anchor in body.GetComponentsInChildren<UxrGrabbableObjectAnchor>(true))
-                if (AnchorRole.IsAvatarPocket(anchor)) Schedule(anchor.CurrentPlacedObject, center, forward);
+            {
+                UxrGrabbableObject item = AnchorRole.IsAvatarPocket(anchor) ? anchor.CurrentPlacedObject : null;
+                if (item != null && !into.Contains(item)) into.Add(item);
+            }
         }
 
         private static void Schedule(UxrGrabbableObject item, Vector3 center, Vector3 forward)

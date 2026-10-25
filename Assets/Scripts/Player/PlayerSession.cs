@@ -428,15 +428,31 @@ namespace VrBattlegrounds.Player
 
             if (accepted)
             {
-                if (normalized != requested)
+                // Границы — только у пола и роста. Нормализация места (перенормировка кватерниона поворота)
+                // выходом за границы не является: раньше она давала ложное предупреждение с одинаковыми «до → после».
+                if (!SameBodyCalibration(normalized, requested))
                 {
                     GameLog.PhysicalSpace.Warning(
                         $"[PlayerSession] {PlayerName}: калибровка вне границ (пол ±{PlayerCalibrationRules.MaxFloorOffset:F1} м, " +
                         $"рост {PlayerCalibrationRules.MinEyeHeight:F1}–{PlayerCalibrationRules.MaxEyeHeight:F1} м): {requested} → {normalized}.");
                 }
 
+                PlayerCalibration previous = _calibration;
                 _calibration = normalized;
-                GameLog.PhysicalSpace.Info($"[PlayerSession] {PlayerName}: калибровка принята ({origin}) — {normalized}.");
+
+                // Калибровка — пол, рост, признак якорей. Подключение и запрос игрока — редкие события, пишем всегда;
+                // наблюдение места (каждый SDK-перенос корня: телепорт, поворот, смена тела) пишем, только если
+                // калибровка значимо изменилась. Само место — отдельной строкой и лишь при смене карты или системы
+                // координат: на каждый перенос это была тысяча «повторных калибровок» за сессию.
+                if (origin != CalibrationOrigin.ObservedPlacement || !SameBodyCalibration(previous, normalized))
+                {
+                    GameLog.PhysicalSpace.Info(
+                        $"[PlayerSession] {PlayerName}: калибровка принята ({origin}) — {normalized}; место: {normalized.Placement}.");
+                }
+                else if (PlacementSourceChanged(previousPlacement, normalized.Placement))
+                {
+                    GameLog.PhysicalSpace.Info($"[PlayerSession] {PlayerName}: запомнено место ({origin}) — {normalized.Placement}.");
+                }
             }
 
             if (origin == CalibrationOrigin.Connect) _initialCalibrationReceived = true;
@@ -449,6 +465,23 @@ namespace VrBattlegrounds.Player
                                                      _calibration.Placement != previousPlacement);
             return accepted;
         }
+
+        /// <summary>Допуск сравнения пола и роста для строк лога, метры.</summary>
+        private const float CalibrationLogTolerance = 0.001f;
+
+        /// <summary>
+        /// Для лога: совпадают ли пол, рост и признак якорей с допуском. Место (<see cref="PlayerCalibration.Placement" />)
+        /// не сравнивается — оно меняется при каждом переносе корня и калибровкой не является.
+        /// </summary>
+        private static bool SameBodyCalibration(PlayerCalibration a, PlayerCalibration b) =>
+            a.IsCalibrated == b.IsCalibrated &&
+            Mathf.Abs(a.FloorOffset - b.FloorOffset) <= CalibrationLogTolerance &&
+            Mathf.Abs(a.EyeHeight - b.EyeHeight) <= CalibrationLogTolerance;
+
+        /// <summary>Для лога: сменилась ли карта снимка места или его система координат (мир / якоря / нет).</summary>
+        private static bool PlacementSourceChanged(PlayerPlacement previous, PlayerPlacement current) =>
+            previous.Space != current.Space ||
+            !string.Equals(previous.CapturedOnMap ?? string.Empty, current.CapturedOnMap ?? string.Empty, StringComparison.Ordinal);
 
         /// <summary>Единый захват для смены тела/карты/отключения; принятая привязка защищена от задержки NT.</summary>
         public bool ServerCapturePlacement(Vector3 position, Quaternion rotation, string reason, bool preferAccepted = true)

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using Mirror;
 using UltimateXR.Core;
 using UltimateXR.Core.Settings;
@@ -90,6 +92,23 @@ namespace VrBattlegrounds.Network
         internal AvatarRootAdmissionCounters ServerAvatarRootCounters => _serverAvatarRootCounters;
         internal AvatarRootAdmissionCounters ClientAvatarRootCounters => _clientAvatarRootCounters;
 
+        /// <summary>
+        ///     Отладка канала: строка на каждое отправленное событие. По умолчанию выключена — вместо потока
+        ///     строк не чаще раза в <see cref="NetworkStateRelaySendSummary.Interval" /> секунд пишется сводка по
+        ///     видам событий. Включается явно на время расследования (отладчиком, отладочным кодом), а не уровнем
+        ///     канала: Network в настройках стоит на Verbose, и построчный вывод давал пятую часть лога сервера.
+        ///     Поле экземпляра, как и всё состояние канала (статику релея запрещает NetworkStateRelayTests).
+        /// </summary>
+        public bool LogEachSend { get; set; }
+
+        /// <summary>Счётчики сводки: вид события — тип компонента и метод/свойство UltimateXR.</summary>
+        private readonly Dictionary<(Type Component, string Member), int> _sentByKind =
+            new Dictionary<(Type Component, string Member), int>();
+
+        private int _sentEvents;
+        private long _sentBytes;
+        private float _sentSince;
+
 
         // ── Жизненный цикл ────────────────────────────────────────────────
 
@@ -167,6 +186,9 @@ namespace VrBattlegrounds.Network
         {
             if (_clientSubscribed && !_barrier.IsOpen && _barrier.PendingRequest == 0)
                 EvaluateInitialState();
+
+            if (_sentEvents > 0 && Time.realtimeSinceStartup - _sentSince >= NetworkStateRelaySendSummary.Interval)
+                FlushSendSummary();
         }
 
         // ── Отправка ──────────────────────────────────────────────────────
@@ -185,6 +207,7 @@ namespace VrBattlegrounds.Network
 
             UxrManager.ComponentStateChanged -= HandleComponentStateChanged;
             _subscribed = false;
+            FlushSendSummary();
             _gate?.Clear();
             _serverAvatarRootCounters = default;
             _clientAvatarRootCounters = default;
@@ -249,19 +272,21 @@ namespace VrBattlegrounds.Network
             if (!AcceptOutgoingAvatarRoot(AvatarRootEventAdmission.RevalidateOutgoing(in capture, spawned), capture.Scope))
                 return;
 
-            // Событие на каждый хват/отпускание/выстрел: строку не собираем, если Verbose
-            // выключен — иначе интерполяция и component.name аллоцируют на каждом событии.
-            if (GameLog.Network.IsEnabled(LogLevel.Verbose))
+            // Событие на каждый хват/отпускание/выстрел: построчно — только по явному отладочному
+            // флагу (иначе интерполяция и component.name аллоцируют на каждом событии), обычно —
+            // счётчик вида события и сводка раз в минуту (CountSent / FlushSendSummary).
+            if (LogEachSend)
             {
-                GameLog.Network.Verbose(
+                GameLog.Network.Info(
                     $"[NetworkStateRelay] Отправка состояния: {component.Component.name} " +
-                    $"({eventArgs.GetType().Name}), {serializedEvent.Length} Б, isServer={isServer}");
+                    $"({DescribeMember(eventArgs)}), {serializedEvent.Length} Б, isServer={isServer}");
             }
 
             if (isServer)
             {
                 RpcComponentStateChanged(serializedEvent, 0u, capture.Scope.NetId, capture.Scope.UniqueId);
                 StateEventAuthority.MarkAmmoAdmissionPublished(component, eventArgs);
+                CountSent(component, eventArgs, serializedEvent.Length);
             }
             else if (NetworkClient.active && NetworkClient.ready)
             {
@@ -270,6 +295,7 @@ namespace VrBattlegrounds.Network
                 // идёт своим scope (v1), его событие предметным не помечается.
                 uint itemNetId = capture.Scope.NetId == 0 ? ItemEventAdmission.CaptureOutgoing(component, spawned) : 0u;
                 CmdComponentStateChanged(serializedEvent, capture.Scope.NetId, capture.Scope.UniqueId, itemNetId);
+                CountSent(component, eventArgs, serializedEvent.Length);
             }
             else
             {
@@ -280,6 +306,73 @@ namespace VrBattlegrounds.Network
                     "[NetworkStateRelay] Изменение состояния не отправлено: клиент ещё не готов (смена сцены).");
             }
         }
+
+        // ── Сводка отправки ───────────────────────────────────────────────
+
+        /// <summary>Учитывает отправленное событие в сводке. Ключ — ссылки на тип и имя члена: без аллокаций.</summary>
+        private void CountSent(IUxrStateSync component, UxrSyncEventArgs eventArgs, int bytes)
+        {
+            if (_sentEvents == 0) _sentSince = Time.realtimeSinceStartup;
+
+            var kind = (component?.Component != null ? component.Component.GetType() : null, MemberOf(eventArgs));
+            _sentByKind.TryGetValue(kind, out int count);
+            _sentByKind[kind] = count + 1;
+            _sentEvents++;
+            _sentBytes += bytes;
+        }
+
+        /// <summary>
+        ///     Одна строка за интервал: сколько событий ушло и каких видов, по убыванию. Пусто — молчим.
+        /// </summary>
+        private void FlushSendSummary()
+        {
+            if (_sentEvents == 0) return;
+
+            float seconds = Mathf.Max(0f, Time.realtimeSinceStartup - _sentSince);
+            var kinds = new List<KeyValuePair<(Type Component, string Member), int>>(_sentByKind);
+            kinds.Sort((a, b) => b.Value.CompareTo(a.Value));
+
+            var text = new StringBuilder(256);
+            text.Append("[NetworkStateRelay] за ").Append(Mathf.RoundToInt(seconds)).Append(" с отправлено ")
+                .Append(_sentEvents).Append(" событий (").Append(_sentBytes).Append(" Б, ")
+                .Append(isServer ? "сервер" : "клиент").Append("): ");
+
+            int shown = Math.Min(kinds.Count, NetworkStateRelaySendSummary.TopKinds);
+            for (int i = 0; i < shown; i++)
+            {
+                if (i > 0) text.Append(", ");
+                (Type type, string member) = kinds[i].Key;
+                text.Append(type != null ? type.Name : "?").Append('.').Append(member).Append('×').Append(kinds[i].Value);
+            }
+
+            if (kinds.Count > shown)
+            {
+                int rest = 0;
+                for (int i = shown; i < kinds.Count; i++) rest += kinds[i].Value;
+                text.Append(", ещё ").Append(kinds.Count - shown).Append(" видов×").Append(rest);
+            }
+
+            GameLog.Network.Info(text.Append('.').ToString());
+
+            _sentByKind.Clear();
+            _sentEvents = 0;
+            _sentBytes = 0;
+        }
+
+        /// <summary>Метод или свойство UltimateXR, которые передаёт событие; иначе — тип аргументов.</summary>
+        private static string MemberOf(UxrSyncEventArgs eventArgs)
+        {
+            switch (eventArgs)
+            {
+                case UxrMethodInvokedSyncEventArgs method:   return method.MethodName;
+                case UxrPropertyChangedSyncEventArgs property: return property.PropertyName;
+                default:                                     return eventArgs?.GetType().Name ?? "?";
+            }
+        }
+
+        /// <summary>Для построчной отладки: вид аргументов и метод/свойство.</summary>
+        private static string DescribeMember(UxrSyncEventArgs eventArgs) =>
+            $"{eventArgs.GetType().Name} {MemberOf(eventArgs)}";
 
         /// <summary>
         ///     Клиент прислал изменение состояния. Сервер применяет его у себя
@@ -635,5 +728,18 @@ namespace VrBattlegrounds.Network
                 "Канал состояния открыт.");
 
         }
+    }
+
+    /// <summary>
+    ///     Параметры сводки отправленных событий <see cref="NetworkStateRelay" />. Отдельный класс: константы
+    ///     тоже статические поля, а статику самого релея запрещает NetworkStateRelayTests.
+    /// </summary>
+    internal static class NetworkStateRelaySendSummary
+    {
+        /// <summary>Сводка пишется не чаще раза в столько секунд (и при остановке канала).</summary>
+        public const float Interval = 60f;
+
+        /// <summary>Сколько видов событий перечислять в сводке; остальные — одним хвостом.</summary>
+        public const int TopKinds = 12;
     }
 }

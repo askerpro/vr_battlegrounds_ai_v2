@@ -25,7 +25,7 @@ namespace VrBattlegrounds.Player
 
             Corpse corpse = Instantiate(_corpse, _modelRoot.position, _modelRoot.rotation);
             corpse.name = $"{_corpse.name} ({name})";
-            corpse.Launch(_modelRoot, impact);
+            corpse.Launch(_modelRoot, impact, GetComponent<PlayerController>());
             return corpse;
         }
     }

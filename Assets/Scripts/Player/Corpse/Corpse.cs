@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using UltimateXR.Avatar;
+using UltimateXR.Manipulation;
 using UnityEngine;
 using VrBattlegrounds.Core;
 using VrBattlegrounds.GameModes;
@@ -57,7 +59,21 @@ namespace VrBattlegrounds.Player
 
         private const float LootPingInterval = 0.25f;
 
+        /// <summary>
+        /// Таз ушёл от места появления по горизонтали дальше — подозрительно (труп «не на месте смерти»):
+        /// лог с предупреждением и первыми контактами. По вертикали не считается: падение с роста само
+        /// по себе даёт около метра.
+        /// </summary>
+        public const float SuspiciousShift = 1.5f;
+
+        /// <summary>Сколько первых контактов падения запоминать для лога.</summary>
+        private const int MaxNotedContacts = 5;
+
         private float _sunk;
+
+        private Vector3 _launchHips;
+        private float _launchTime;
+        private List<string> _contacts;
 
         private static readonly List<Corpse> Alive = new List<Corpse>();
         private static bool _subscribed;
@@ -71,14 +87,21 @@ namespace VrBattlegrounds.Player
 
         /// <summary>
         /// Уронить: встать в позу модели аватара <paramref name="modelRoot"/>, отключить столкновения
-        /// с телами игроков, толкнуть кость, ближайшую к точке попадания.
+        /// с телами игроков и снаряжением погибшего, толкнуть кость, ближайшую к точке попадания.
+        /// <paramref name="owner"/> — погибший (его снаряжение и лог); null — без них (тест).
         /// </summary>
-        public void Launch(Transform modelRoot, DeathImpact impact)
+        public void Launch(Transform modelRoot, DeathImpact impact, PlayerController owner = null)
         {
             Register(this);
 
             if (modelRoot != null) CopyPose(modelRoot);
-            IgnoreEverythingButStaticWorld();
+
+            // CopyPose двигал только Transform, а автосинхронизация в проекте выключена
+            // (m_AutoSyncTransforms: 0): без этого PhysX видел бы бинд-позу в точке корня Instantiate —
+            // OverlapSphere, ClosestPoint и AddForceAtPosition ниже считали бы от неё, а не от тела.
+            Physics.SyncTransforms();
+
+            int ignored = IgnoreEverythingButStaticWorld(owner, out int carried);
 
             foreach (Rigidbody body in _bodies)
             {
@@ -88,13 +111,22 @@ namespace VrBattlegrounds.Player
                 body.angularVelocity = Vector3.zero;
             }
 
+            Rigidbody hit = null;
             if (impact.HasImpulse)
             {
-                Rigidbody hit = NearestBody(impact.Point);
+                hit = NearestBody(impact.Point);
                 if (hit != null) hit.AddForceAtPosition(impact.Impulse, impact.Point, ForceMode.Impulse);
             }
 
-            if (Application.isPlaying) StartCoroutine(FreezeWhenSettled());
+            _launchHips = HipsPosition;
+            _launchTime = Time.time;
+            LogLaunch(modelRoot, owner, impact, hit, ignored, carried);
+
+            if (Application.isPlaying)
+            {
+                WatchContacts();
+                StartCoroutine(FreezeWhenSettled());
+            }
         }
 
         /// <summary>Застыть: кости кинематические, коллайдеры выключены.</summary>
@@ -157,28 +189,57 @@ namespace VrBattlegrounds.Player
             }
         }
 
-        /// <summary>Радиус, в котором труп при появлении ищет, с чем не сталкиваться.</summary>
+        /// <summary>Радиус вокруг таза, в котором труп при появлении ищет, с чем не сталкиваться.</summary>
         private const float IgnoreRadius = 4f;
 
+        /// <summary>Таз трупа (первое тело рэгдолла); без тел — корень.</summary>
+        private Vector3 HipsPosition =>
+            _bodies.Length > 0 && _bodies[0] != null ? _bodies[0].transform.position : transform.position;
+
         /// <summary>
-        /// Труп никак не влияет на игру: столкновения выключаются со всем подвижным рядом — телами
-        /// игроков (их хитбоксы на том же слое, что и карта, <see cref="CorpsePhysics"/>), оружием,
-        /// выпавшим из рук погибшего, магазинами и предметами. Остаётся статичная геометрия карты —
-        /// на неё он и падает. За время падения новых тел рядом не появится (возрождение — в закупке),
-        /// а замёрзший труп коллайдеров не держит.
+        /// Труп никак не влияет на игру: столкновения выключаются со всем подвижным рядом — частями
+        /// игроков (хитбоксы труп не видит и так — у них свой слой, <see cref="CorpsePhysics"/>), оружием
+        /// и предметами на <c>Default</c>, магазинами. Центр поиска — таз трупа, не корень: корень аватара
+        /// при физической ходьбе стоит в стороне от тела. Снаряжение погибшего (в руках и кобурах,
+        /// <see cref="DeathDropEjection.CollectCarried"/>) — явно, на любом расстоянии. Остаётся статичная
+        /// геометрия карты — на неё он и падает. За время падения новых тел рядом не появится
+        /// (возрождение — в закупке), а замёрзший труп коллайдеров не держит.
         /// </summary>
-        private void IgnoreEverythingButStaticWorld()
+        /// <returns>Сколько чужих коллайдеров выключено; <paramref name="carried"/> — из них снаряжения погибшего.</returns>
+        private int IgnoreEverythingButStaticWorld(PlayerController owner, out int carried)
         {
+            carried = 0;
             var own = new List<Collider>();
             foreach (Rigidbody body in _bodies)
                 if (body != null) own.AddRange(body.GetComponents<Collider>());
-            if (own.Count == 0) return;
+            if (own.Count == 0) return 0;
 
-            foreach (Collider other in Physics.OverlapSphere(transform.position, IgnoreRadius, ~0, QueryTriggerInteraction.Ignore))
+            var ignored = new HashSet<Collider>();
+
+            if (owner != null)
             {
-                if (other == null || own.Contains(other) || IsStaticWorld(other)) continue;
+                var items = new List<UxrGrabbableObject>();
+                DeathDropEjection.CollectCarried(owner, items);
+                foreach (UxrGrabbableObject item in items)
+                {
+                    if (item == null) continue;
+                    // Только включённые: на выключенном коллайдере IgnoreCollision падает с ошибкой.
+                    foreach (Collider other in item.GetComponentsInChildren<Collider>())
+                    {
+                        if (other == null || !other.enabled || other.isTrigger || own.Contains(other) || !ignored.Add(other)) continue;
+                        foreach (Collider mine in own) Physics.IgnoreCollision(mine, other, true);
+                        carried++;
+                    }
+                }
+            }
+
+            foreach (Collider other in Physics.OverlapSphere(HipsPosition, IgnoreRadius, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (other == null || own.Contains(other) || IsStaticWorld(other) || !ignored.Add(other)) continue;
                 foreach (Collider mine in own) Physics.IgnoreCollision(mine, other, true);
             }
+
+            return ignored.Count;
         }
 
         /// <summary>Статичный мир: без Rigidbody и не часть игрока.</summary>
@@ -195,6 +256,7 @@ namespace VrBattlegrounds.Player
                 yield return null;
             }
             Freeze();
+            LogSettled(Time.time - _launchTime);
 
             // Лежит — показывает силуэт снаряжения под собой, затем уходит под пол.
             until = Time.time + _lingerSeconds;
@@ -238,6 +300,72 @@ namespace VrBattlegrounds.Player
             Alive.Remove(this);
             DestroyCorpse(this);
             return true;
+        }
+
+        /// <summary>Контакт падающего тела (<see cref="CorpseContactProbe"/>): первые — в лог смещения.</summary>
+        internal void NoteContact(Collider other)
+        {
+            if (IsFrozen || other == null) return;
+            if (_contacts == null) _contacts = new List<string>(MaxNotedContacts);
+            if (_contacts.Count >= MaxNotedContacts) return;
+
+            string kind = IsStaticWorld(other) ? "статика" : "подвижный";
+            string entry = $"{other.name} [{LayerMask.LayerToName(other.gameObject.layer)}, {kind}]";
+            if (!_contacts.Contains(entry)) _contacts.Add(entry);
+        }
+
+        /// <summary>Слушать контакты костей на время падения: замёрзший труп коллайдеры выключает.</summary>
+        private void WatchContacts()
+        {
+            foreach (Rigidbody body in _bodies)
+            {
+                if (body == null) continue;
+                CorpseContactProbe probe = body.GetComponent<CorpseContactProbe>();
+                if (probe == null) probe = body.gameObject.AddComponent<CorpseContactProbe>();
+                probe.Bind(this);
+            }
+        }
+
+        /// <summary>Лог появления — одна строка на труп, на каждой машине.</summary>
+        private void LogLaunch(Transform modelRoot, PlayerController owner, DeathImpact impact, Rigidbody hit, int ignored, int carried)
+        {
+            if (!GameLog.Player.IsEnabled(LogLevel.Info)) return;
+
+            Vector3 root = owner != null ? owner.transform.position : modelRoot != null ? modelRoot.position : transform.position;
+            Vector3 rootToHips = _launchHips - root;
+            rootToHips.y = 0f;
+            UxrAvatar avatar = owner != null ? owner.GetComponent<UxrAvatar>() : null;
+            string copy = avatar == null ? "неизвестно" : avatar.AvatarMode == UxrAvatarMode.Local ? "своя" : "чужая";
+            string push = impact.HasImpulse
+                ? $"толчок в {(hit != null ? hit.name : "никуда (нет костей)")}, точка={impact.Point:F2}, импульс={impact.Impulse.magnitude:F1}"
+                : "без толчка";
+
+            GameLog.Player.Info($"[Corpse] {name}: труп — root={root:F2}, hips={_launchHips:F2} " +
+                                $"(от корня по горизонтали {rootToHips.magnitude:F2} м), {push}, " +
+                                $"игнор столкновений: {ignored} коллайдеров (снаряжение погибшего — {carried}), копия={copy}.", this);
+        }
+
+        /// <summary>
+        /// Лог заморозки: где лёг таз и насколько ушёл от места появления. Дальше <see cref="SuspiciousShift"/> —
+        /// предупреждение с первыми контактами падения.
+        /// </summary>
+        private void LogSettled(float seconds)
+        {
+            Vector3 hips = HipsPosition;
+            Vector3 shift = hips - _launchHips;
+            float horizontal = new Vector2(shift.x, shift.z).magnitude;
+            string text = $"[Corpse] {name}: застыл через {seconds:F1} с — hips={hips:F2}, смещение от старта " +
+                          $"{shift.magnitude:F2} м (по горизонтали {horizontal:F2} м)";
+
+            if (horizontal > SuspiciousShift)
+            {
+                string contacts = _contacts != null && _contacts.Count > 0 ? string.Join("; ", _contacts) : "нет";
+                GameLog.Player.Warning($"{text} — по горизонтали больше {SuspiciousShift:F1} м, первые контакты: {contacts}.", this);
+            }
+            else
+            {
+                GameLog.Player.Info(text + ".", this);
+            }
         }
 
         private bool AllSleeping()

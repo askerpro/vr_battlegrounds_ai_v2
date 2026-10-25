@@ -651,8 +651,9 @@ namespace VrBattlegrounds.Weapons
 
         /// <summary>
         /// Повтор Initialize без спама: первый отказ — предупреждение с причиной (видимые условия порта), следующие — Verbose;
-        /// успех — Info один раз на инициализацию: номер попытки, дослан ли патрон и где оружие (в руке / в якоре) — по этой
-        /// строке видно, почему ствол требует досылания (bot-input, прогон 3: недосланный пистолет из кобуры).
+        /// успех — Verbose один раз на инициализацию (строка на каждый ствол каждого пополнения стены): номер попытки, дослан
+        /// ли патрон и где оружие (в руке / в якоре) — по этой строке видно, почему ствол требует досылания (bot-input,
+        /// прогон 3: недосланный пистолет из кобуры).
         /// </summary>
         private void LogInitialize(bool accepted)
         {
@@ -660,8 +661,8 @@ namespace VrBattlegrounds.Weapons
             if (accepted)
             {
                 string chamberNote = _port.LastInitializeChamberNote;
-                GameLog.WeaponSystem.Info($"[WeaponSystem] {name}: учёт инициализирован (попытка {_initAttempts}) — {DescribeReadiness()}" +
-                                          (chamberNote != null ? $"; патронник пуст: {chamberNote}" : "") + ".", this);
+                GameLog.WeaponSystem.Verbose($"[WeaponSystem] {name}: учёт инициализирован (попытка {_initAttempts}) — {DescribeReadiness()}" +
+                                             (chamberNote != null ? $"; патронник пуст: {chamberNote}" : "") + ".", this);
                 _initAttempts = _initRejects = 0;
                 return;
             }

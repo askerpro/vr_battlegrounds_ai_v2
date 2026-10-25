@@ -75,10 +75,37 @@ namespace VrBattlegrounds.Player.Avatars
             string map = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             if (!place.TryResolve(session.IsCalibrated, map, frame, out Vector3 position, out Quaternion rotation, out diagnosis))
                 return false;
+            position = OnFloor(session, position);
+            rotation = Quaternion.Euler(0f, rotation.eulerAngles.y, 0f);
             point = new AvatarSpawnPoint(position, rotation,
                 place.IsAnchored ? AvatarSpawnPointSource.CalibratedPlace : AvatarSpawnPointSource.PreviousWorldPlace,
                 place.CapturedOnMap);
             return true;
+        }
+
+        /// <summary>
+        /// Место берётся с корня прежнего тела вместе с высотой, а при физической ходьбе корень стоит —
+        /// ошибка высоты переходила бы в каждое новое тело (смерть, раунд, карта, переподключение).
+        /// Поэтому высота всегда — пол карты под местом (<see cref="FloorProbe"/>); X/Z не меняются.
+        /// </summary>
+        private static Vector3 OnFloor(PlayerSession session, Vector3 position)
+        {
+            if (!FloorProbe.TryFindFloor(position, out float floorY, out Collider floor))
+            {
+                GameLog.PhysicalSpace.Warning(
+                    $"[SpawnPlaceRegistry] {session.PlayerName}: под местом {position} нет пола (Ground) — высота оставлена как есть.");
+                return position;
+            }
+
+            if (Mathf.Abs(position.y - floorY) > FloorProbe.Tolerance)
+            {
+                GameLog.PhysicalSpace.Warning(
+                    $"[SpawnPlaceRegistry] {session.PlayerName}: корень прежнего тела не на полу — y={position.y:F2}, " +
+                    $"пол '{floor.name}' y={floorY:F2}; новое тело ставится на пол.");
+            }
+
+            position.y = floorY;
+            return position;
         }
 
         /// <summary>Совместимость старого харнесса: очищает placement у владельцев, самостоятельной памяти нет.</summary>

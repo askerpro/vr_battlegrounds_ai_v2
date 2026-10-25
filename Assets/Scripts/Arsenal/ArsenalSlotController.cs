@@ -318,7 +318,8 @@ namespace VrBattlegrounds.Arsenal
                 body.isKinematic = true;
             }
 
-            GameLog.Arsenal.Info($"[Arsenal] Assigned network weapon '{_weaponInfo.DisplayName}' to slot '{name}'.");
+            // Строки на слот нет: выдачу сводит стена — одна строка на пополнение (сервер) или на
+            // проход привязок (клиент), см. ArsenalWallController.ReplenishSlotsWhere / ResolvePendingSlotBindings.
 
             // Оружие приезжает позже, чем стена успевает заблокировать слоты: закрытая
             // стена блокирует их в Start(), а пополнение идёт из OnStartServer и из фазы
@@ -361,7 +362,7 @@ namespace VrBattlegrounds.Arsenal
 
             SetGlowState(false);
             SetDimmed(IsItemPresent);
-            GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' locked.");
+            // Строку на слот не пишем: блокировку всей стены сводит ArsenalWallController — одна строка на фазу.
         }
 
         /// <summary>
@@ -374,7 +375,7 @@ namespace VrBattlegrounds.Arsenal
             SetItemGrabbable(AllowsGrabNow);
 
             ApplyOfferVisuals();
-            GameLog.Arsenal.Info($"[Arsenal] Slot '{DisplayName}' unlocked.");
+            // Строку на слот не пишем: открытие всей стены сводит ArsenalWallController — одна строка на фазу.
         }
 
         /// <summary>

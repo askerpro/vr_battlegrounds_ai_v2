@@ -100,8 +100,11 @@ namespace VrBattlegrounds.Managers
 
         public void HandlePlayerConnect(NetworkConnectionToClient conn, GamePlayerConnectMessage msg)
         {
-            GameLog.Network.Info($"[PlayersManager] Получен GamePlayerConnectMessage. Device: {msg.deviceType}");
-            if (conn.identity != null) return;
+            if (conn.identity != null)
+            {
+                GameLog.Network.Verbose($"[PlayersManager] conn={conn.connectionId}: повторный GamePlayerConnectMessage — сессия уже есть.");
+                return;
+            }
 
             SessionSnapshot snapshot = null;
             if (SessionRecoveryManager.Instance != null)
@@ -118,6 +121,14 @@ namespace VrBattlegrounds.Managers
             PlayerSession session = CreatePlayerSession(conn, GameRole.Player, msg.deviceToken, msg.deviceType, false, snapshot,
                                                         msg.teamId, msg.avatarId, InitialCalibration(msg, snapshot));
 
+            // Одна строка на подключение: netId сессии есть только после AddPlayerForConnection.
+            string restore = snapshot != null
+                ? System.FormattableString.Invariant(
+                    $"да (снимок {Time.realtimeSinceStartupAsDouble - snapshot.SavedAtSeconds:F0} с назад, карта '{snapshot.CapturedOnMap}')")
+                : "нет";
+            GameLog.Network.Info($"[Net] connect conn={conn.connectionId} addr={conn.address} player={PlayerLogName.Of(session)} " +
+                                 $"role=Player device={msg.deviceType} restore={restore}");
+
             // Спавним физический аватар
             if (AvatarManager.Instance != null)
             {
@@ -131,12 +142,17 @@ namespace VrBattlegrounds.Managers
 
         public void HandleSpectatorConnect(NetworkConnectionToClient conn, SpectatorConnectMessage msg)
         {
-            GameLog.Network.Info($"[PlayersManager] Получен SpectatorConnectMessage. Device: {msg.deviceType}, Admin: {msg.isAdmin}");
-            if (conn.identity != null) return;
+            if (conn.identity != null)
+            {
+                GameLog.Network.Verbose($"[PlayersManager] conn={conn.connectionId}: повторный SpectatorConnectMessage — сессия уже есть.");
+                return;
+            }
 
             // Клиентский флаг не выдаёт права: хост и серверная политика проверяются общим путём сессии.
-            CreatePlayerSession(conn, GameRole.Spectator, msg.deviceToken, msg.deviceType, false,
-                                snapshot: null, initialTeamId: 0, initialAvatarId: 0);
+            PlayerSession session = CreatePlayerSession(conn, GameRole.Spectator, msg.deviceToken, msg.deviceType, false,
+                                                        snapshot: null, initialTeamId: 0, initialAvatarId: 0);
+            GameLog.Network.Info($"[Net] connect conn={conn.connectionId} addr={conn.address} player={PlayerLogName.Of(session)} " +
+                                 $"role=Spectator device={msg.deviceType} adminRequested={(msg.isAdmin ? "да" : "нет")} restore=нет");
         }
 
         /// <summary>

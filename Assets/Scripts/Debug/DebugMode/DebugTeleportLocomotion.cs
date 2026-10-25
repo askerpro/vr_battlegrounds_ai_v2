@@ -67,6 +67,11 @@ namespace VrBattlegrounds.DevTools
                 _avatar = avatar;
                 _teleports.Clear();
                 if (avatar != null) avatar.GetComponentsInChildren(true, _teleports);
+
+                // Шаг назад (стик вниз) отключён (решение пользователя 2026-10-25): он искал пол по
+                // BlockingTargetLayers без Ground и сквозь пол не находил опоры.
+                foreach (UxrTeleportLocomotionBase teleport in _teleports)
+                    if (teleport != null) teleport.AllowJoystickBackStep = false;
             }
 
             bool allowed = Allowed;

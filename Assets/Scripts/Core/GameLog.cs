@@ -36,7 +36,11 @@ namespace VrBattlegrounds.Core
         /// </summary>
         public LogLevel Level
         {
-            get { return _resolveLevel != null ? _resolveLevel() : LogLevel.Info; }
+            get
+            {
+                LogLevel level = _resolveLevel != null ? _resolveLevel() : LogLevel.Info;
+                return level > LogLevel.Info && !GameLogVerbosity.VerboseAllowed ? LogLevel.Info : level;
+            }
         }
 
         /// <summary>
@@ -114,6 +118,36 @@ namespace VrBattlegrounds.Core
     /// Это единственное место в игровом коде, где допустим прямой <c>UnityEngine.Debug.Log*</c>.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Verbose в prod: ассет <see cref="GameSettings" /> один на dev и prod, и его Verbose забивал лог
+    /// prod-сессии служебными подробностями. В редакторе и Development-сборке уровень — как в ассете;
+    /// в prod-сборке не выше Info, пока процесс не запущен с <see cref="CommandLineFlag" />
+    /// (расследование на prod-сервере: <c>Start-Server.cmd -vrb-verbose-log</c>).
+    /// </summary>
+    public static class GameLogVerbosity
+    {
+        public const string CommandLineFlag = "-vrb-verbose-log";
+
+        /// <summary>Решение принимается один раз на главном потоке при старте; до него Verbose разрешён.</summary>
+        public static bool VerboseAllowed { get; private set; } = true;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Resolve()
+        {
+            VerboseAllowed = Application.isEditor || UnityEngine.Debug.isDebugBuild || HasFlag(Environment.GetCommandLineArgs());
+            if (!VerboseAllowed)
+                UnityEngine.Debug.Log($"[GameLog] Prod-сборка: подробные (Verbose) логи выключены, включить — флагом запуска {CommandLineFlag}.");
+        }
+
+        private static bool HasFlag(string[] args)
+        {
+            if (args == null) return false;
+            foreach (string arg in args)
+                if (string.Equals(arg, CommandLineFlag, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+    }
+
     public static class GameLog
     {
         /// <summary>Сетевые системы: GameNetworkManager, MapLoader, Discovery, NetworkStateRelay.</summary>

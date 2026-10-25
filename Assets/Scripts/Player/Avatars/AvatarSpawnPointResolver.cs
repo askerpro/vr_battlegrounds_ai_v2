@@ -52,18 +52,27 @@ namespace VrBattlegrounds.Player.Avatars
             SourceName = sourceName;
         }
 
+        /// <summary>
+        /// Строка для лога. Каждый источник назван явно: раньше прежнее место уходило в ветку
+        /// «по умолчанию» и печаталось как «начало координат», хотя аватар вставал на своё место.
+        /// </summary>
         public override string ToString()
         {
+            string position = Position.ToString("F2");
             switch (Source)
             {
                 case AvatarSpawnPointSource.CalibratedPlace:
-                    return $"место, заданное калибровкой (снято на карте '{SourceName}'), в {Position}";
+                    return $"на откалиброванное место (снято на карте '{SourceName}') в {position}";
+                case AvatarSpawnPointSource.PreviousWorldPlace:
+                    return $"на своё прежнее место (карта '{SourceName}') в {position}";
                 case AvatarSpawnPointSource.TeamSpawnZone:
-                    return $"зона спавна '{SourceName}' в {Position}";
+                    return $"зона спавна '{SourceName}' в {position}";
                 case AvatarSpawnPointSource.NetworkStartPosition:
-                    return $"точка Mirror '{SourceName}' в {Position}";
+                    return $"точка Mirror '{SourceName}' в {position}";
+                case AvatarSpawnPointSource.WorldOrigin:
+                    return $"начало координат {position} (точек спавна не нашлось)";
                 default:
-                    return "начало координат (точек спавна не нашлось)";
+                    return $"неизвестный источник {Source} в {position}";
             }
         }
     }

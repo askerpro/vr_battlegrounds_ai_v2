@@ -37,10 +37,14 @@ namespace VrBattlegrounds.Player
         public readonly Vector3 Point;
         public readonly Vector3 Impulse;
 
-        public DeathImpact(Vector3 point, Vector3 impulse)
+        /// <summary>Тип смертельного урона — только для лога сервера, по сети не едет; null — неизвестен.</summary>
+        public readonly UxrDamageType? DamageType;
+
+        public DeathImpact(Vector3 point, Vector3 impulse, UxrDamageType? damageType = null)
         {
             Point = point;
             Impulse = impulse;
+            DamageType = damageType;
         }
 
         public static DeathImpact None => new DeathImpact(Vector3.zero, Vector3.zero);
@@ -53,23 +57,25 @@ namespace VrBattlegrounds.Player
                       BaseImpulse + Mathf.Max(0f, damage) * ImpulsePerDamage + Mathf.Max(0f, impactForce) * PhysicsStep * ForceImpulseScale);
 
         /// <summary>
-        /// Толчок по попаданию. <paramref name="bodyCenter"/> — центр тела жертвы (взрыв, пуля без стрелка).
+        /// Толчок по попаданию. <paramref name="bodyCenter"/> — центр тела жертвы для взрыва: точка толчка
+        /// и направление от центра взрыва. Брать <see cref="PlayerBodyCenter.Of"/>, не корень аватара — при
+        /// физической ходьбе корень стоит в стороне от тела.
         /// </summary>
         public static DeathImpact From(UxrDamageEventArgs e, Vector3 bodyCenter)
         {
             if (e == null) return None;
 
             if (e.DamageType == UxrDamageType.Explosive)
-                return Along(bodyCenter, bodyCenter - e.ExplosionPosition, Magnitude(e.Damage, 0f));
+                return Along(bodyCenter, bodyCenter - e.ExplosionPosition, Magnitude(e.Damage, 0f), e.DamageType);
 
-            if (e.RaycastHit.collider == null) return None;
+            if (e.RaycastHit.collider == null) return new DeathImpact(Vector3.zero, Vector3.zero, e.DamageType);
 
             Vector3 point = e.RaycastHit.point;
             Vector3 direction = e.ImpactForce.sqrMagnitude > 0f ? e.ImpactForce
                 : e.ActorSource != null ? point - e.ActorSource.transform.position
                 : -e.RaycastHit.normal;
 
-            return Along(point, direction, Magnitude(e.Damage, e.ImpactForce.magnitude));
+            return Along(point, direction, Magnitude(e.Damage, e.ImpactForce.magnitude), e.DamageType);
         }
 
         /// <summary>
@@ -79,13 +85,14 @@ namespace VrBattlegrounds.Player
         {
             if (!first.HasImpulse) return second;
             if (!second.HasImpulse) return first;
-            return new DeathImpact(second.Point, Vector3.ClampMagnitude(first.Impulse + second.Impulse, MaxImpulse));
+            return new DeathImpact(second.Point, Vector3.ClampMagnitude(first.Impulse + second.Impulse, MaxImpulse),
+                                   second.DamageType ?? first.DamageType);
         }
 
-        private static DeathImpact Along(Vector3 point, Vector3 direction, float magnitude)
+        private static DeathImpact Along(Vector3 point, Vector3 direction, float magnitude, UxrDamageType damageType)
         {
-            if (direction.sqrMagnitude < 1e-6f) return new DeathImpact(point, Vector3.zero);
-            return new DeathImpact(point, direction.normalized * magnitude);
+            if (direction.sqrMagnitude < 1e-6f) return new DeathImpact(point, Vector3.zero, damageType);
+            return new DeathImpact(point, direction.normalized * magnitude, damageType);
         }
     }
 }

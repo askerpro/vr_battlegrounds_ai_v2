@@ -199,6 +199,31 @@ namespace VrBattlegrounds.Player
 
         private int _lastImpactFrame = -1;
 
+        /// <summary>
+        /// Строка «[Hit]», копящаяся до конца кадра (сервер): дробины одного выстрела попадают
+        /// в одном кадре от одного стрелка и пишутся одной строкой с их числом. Только для лога.
+        /// </summary>
+        private struct PendingHitLog
+        {
+            public int Frame;
+            public int Count;
+            public UxrActor Source;
+            public string Attacker;
+            public string Weapon;
+            public string Parts;
+            public int PartCount;
+            public float Damage;
+            public float HealthAfter;
+            public float Distance;
+            public UxrDamageType DamageType;
+        }
+
+        private PendingHitLog _pendingHit;
+
+        /// <summary>Кто и чем ранил последним (сервер, для строки смерти). Сброс — в <see cref="Die"/> и <see cref="Respawn"/>.</summary>
+        private string _lastHitAttacker;
+        private string _lastHitWeapon;
+
         private void Awake()
         {
             _actor = GetComponent<UxrActor>();
@@ -216,8 +241,15 @@ namespace VrBattlegrounds.Player
             }
         }
 
+        private void LateUpdate()
+        {
+            if (_pendingHit.Count > 0) FlushHitLog();
+        }
+
         private void OnDestroy()
         {
+            if (_pendingHit.Count > 0) FlushHitLog();
+
             if (_actor != null)
             {
                 _actor.DamageReceiving -= OnDamageReceiving;
@@ -315,9 +347,11 @@ namespace VrBattlegrounds.Player
                     Ledger.Record(e.ActorSource);
                     // Последний прошедший урон перед Died — смертельный: его толчком падает труп.
                     // Попадания одного кадра (дробины одного выстрела) складываются.
-                    DeathImpact impact = DeathImpact.From(e, transform.position + Vector3.up);
+                    // Центр тела — таз, не корень: при физической ходьбе корень стоит в стороне от тела.
+                    DeathImpact impact = DeathImpact.From(e, PlayerBodyCenter.Of(this));
                     _lastImpact = Time.frameCount == _lastImpactFrame ? DeathImpact.Combine(_lastImpact, impact) : impact;
                     _lastImpactFrame = Time.frameCount;
+                    QueueHitLog(e);
                 }
                 HitReceivedLocal?.Invoke(this, e);
                 return;
@@ -357,6 +391,9 @@ namespace VrBattlegrounds.Player
         [Server]
         public void Die()
         {
+            // Смертельное попадание этого кадра — строкой «[Hit]» раньше строк смерти.
+            if (_pendingHit.Count > 0) FlushHitLog();
+
             GameLog.Player.Info($"[PlayerController] {name}: смерть подтверждена на сервере. Переход в режим наблюдателя.", this);
 
             if (Session != null) Session.ServerSetEliminated(true);
@@ -370,8 +407,11 @@ namespace VrBattlegrounds.Player
 
             // Тело падает трупом у каждого клиента — до смены на призрака: RPC уходит раньше
             // сообщения об уничтожении, и клиент снимает позу с живого ещё аватара.
+            LogDeathPose(_lastImpact, killer, assists);
             ServerBecomeCorpse(_lastImpact);
             _lastImpact = DeathImpact.None;
+            _lastHitAttacker = null;
+            _lastHitWeapon = null;
 
             // Последним: режим и статистика смотрели на погибшее тело. Мы внутри синхронизации
             // смерти — AvatarManager не меняет тело сейчас, а ставит запрос до LateUpdate.
@@ -396,6 +436,8 @@ namespace VrBattlegrounds.Player
             _actor.Life = 100f;
             if (Session != null) Session.ServerSetEliminated(false);
             Ledger.Clear();
+            _lastHitAttacker = null;
+            _lastHitWeapon = null;
 
             ReconcileBody("возрождение");
         }
@@ -429,6 +471,149 @@ namespace VrBattlegrounds.Player
         {
             if (isClient) SpawnCorpse(impact);
             RpcBecomeCorpse(impact.Point, impact.Impulse);
+        }
+
+        /// <summary>
+        /// Лог сервера в момент смерти — одна строка: где корень, голова и тело (при физической ходьбе
+        /// корень стоит в стороне) и с каким толчком падает труп. С ним сверяются логи трупа на клиентах.
+        /// Кто убил — по <see cref="DamageLedger"/>; чем — по последнему попаданию (<see cref="QueueHitLog"/>).
+        /// </summary>
+        private void LogDeathPose(DeathImpact impact, PlayerSession killer,
+                                  System.Collections.Generic.List<PlayerSession> assists)
+        {
+            if (!GameLog.Player.IsEnabled(LogLevel.Info)) return;
+
+            // Убийцы нет — урон без источника (мир), от не-игрока или от самого себя: показываем последний источник.
+            string killerText = killer != null
+                ? PlayerLogName.Of(killer)
+                : $"нет (последний источник: {_lastHitAttacker ?? "неизвестен"})";
+            string assistText = "нет";
+            if (assists != null && assists.Count > 0)
+            {
+                var names = new string[assists.Count];
+                for (int i = 0; i < assists.Count; i++) names[i] = PlayerLogName.Of(assists[i]);
+                assistText = string.Join(", ", names);
+            }
+
+            Transform hips = PlayerBodyCenter.HipsOf(this);
+            string head = PlayerBodyCenter.TryGetHead(this, out Vector3 headPosition) ? headPosition.ToString("F2") : "нет";
+            string hipsText = hips != null ? hips.position.ToString("F2") : $"нет (центр тела {PlayerBodyCenter.Of(this):F2})";
+            string push = impact.HasImpulse
+                ? $"точка удара={impact.Point:F2}, импульс={impact.Impulse:F1} ({impact.Impulse.magnitude:F1})"
+                : "без толчка";
+            string damage = impact.DamageType.HasValue ? impact.DamageType.Value.ToString() : "неизвестен";
+
+            GameLog.Player.Info($"[Corpse] {name}: смерть — player={PlayerLogName.Of(this)}, killer={killerText}, " +
+                                $"weapon={_lastHitWeapon ?? "неизвестно"}, assists={assistText}, " +
+                                $"root={transform.position:F2}, head={head}, hips={hipsText}, " +
+                                $"{push}, тип урона {damage}.", this);
+        }
+
+        // ── Лог попаданий (сервер) ───────────────────────────────────────────
+
+        /// <summary>Сколько разных частей тела перечислять в строке дробового попадания.</summary>
+        private const int MaxLoggedHitParts = 3;
+
+        /// <summary>
+        /// Копит попадание в строку «[Hit]» (сервер, урон прошёл правило режима). Попадания одного кадра
+        /// от одного источника — дробины выстрела — складываются; строка уходит в <see cref="LateUpdate"/>,
+        /// в <see cref="Die"/> или при уничтожении. Здоровье «после» — то, что останется после этого урона:
+        /// SDK вычитает его сразу после события.
+        /// </summary>
+        private void QueueHitLog(UxrDamageEventArgs e)
+        {
+            if (!GameLog.Player.IsEnabled(LogLevel.Info)) return;
+
+            if (_pendingHit.Count > 0 && (_pendingHit.Frame != Time.frameCount || _pendingHit.Source != e.ActorSource))
+                FlushHitLog();
+
+            string part = DescribeHitPart(e);
+            if (_pendingHit.Count == 0)
+            {
+                string weapon = DescribeWeapon(e.ActorSource, e.DamageType, out Vector3? origin);
+                Vector3 point = e.RaycastHit.collider != null ? e.RaycastHit.point
+                    : e.DamageType == UxrDamageType.Explosive ? e.ExplosionPosition
+                    : PlayerBodyCenter.Of(this);
+
+                _pendingHit = new PendingHitLog
+                {
+                    Frame = Time.frameCount,
+                    Source = e.ActorSource,
+                    Attacker = PlayerLogName.OfSource(e.ActorSource),
+                    Weapon = weapon,
+                    Parts = part,
+                    PartCount = 1,
+                    Distance = origin.HasValue ? Vector3.Distance(origin.Value, point) : -1f,
+                    DamageType = e.DamageType
+                };
+                _lastHitAttacker = _pendingHit.Attacker;
+                _lastHitWeapon = weapon;
+            }
+            else if (_pendingHit.PartCount < MaxLoggedHitParts && !_pendingHit.Parts.Contains(part))
+            {
+                _pendingHit.Parts += "+" + part;
+                _pendingHit.PartCount++;
+            }
+
+            _pendingHit.Count++;
+            _pendingHit.Damage += e.Damage;
+            _pendingHit.HealthAfter = Mathf.Max(0f, _actor.Life - e.Damage);
+        }
+
+        private void FlushHitLog()
+        {
+            PendingHitLog hit = _pendingHit;
+            _pendingHit = default;
+            if (hit.Count == 0) return;
+
+            string distance = hit.Distance >= 0f
+                ? hit.Distance.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                : "—";
+            string pellets = hit.Count > 1 ? $" hits={hit.Count}" : string.Empty;
+            GameLog.Player.Info(
+                FormattableString.Invariant($"[Hit] victim={PlayerLogName.Of(this)} attacker={hit.Attacker} weapon={hit.Weapon} part={hit.Parts} ") +
+                FormattableString.Invariant($"dmg={hit.Damage:F1}{pellets} hp={hit.HealthAfter:F1} dist={distance} type={hit.DamageType}"), this);
+        }
+
+        /// <summary>Часть тела по коллайдеру попадания: «Head(имя коллайдера)»; не хитбокс — имя коллайдера.</summary>
+        private static string DescribeHitPart(UxrDamageEventArgs e)
+        {
+            Collider collider = e.RaycastHit.collider;
+            if (collider == null) return e.DamageType == UxrDamageType.Explosive ? "взрыв" : "—";
+            return Hitbox.TryGetPart(collider, out HitZone zone) ? $"{zone}({collider.name})" : collider.name;
+        }
+
+        /// <summary>
+        /// Чем нанесён урон: огнестрел в руках источника (имя объекта без «(Clone)»), откуда считать дистанцию —
+        /// от оружия, иначе от тела источника. Оружия в руках нет (бот, урон без источника) — тип урона.
+        /// Пуля летит, поэтому оружие — то, что в руках в момент попадания: для лога этого достаточно.
+        /// </summary>
+        private static string DescribeWeapon(UxrActor source, UxrDamageType type, out Vector3? origin)
+        {
+            origin = null;
+            if (source == null) return type.ToString();
+
+            PlayerController shooter = source.GetComponent<PlayerController>();
+            origin = shooter != null ? PlayerBodyCenter.Of(shooter) : source.transform.position;
+
+            UltimateXR.Avatar.UxrAvatar avatar = source.GetComponent<UltimateXR.Avatar.UxrAvatar>();
+            if (avatar == null || !UltimateXR.Manipulation.UxrGrabManager.HasInstance) return type.ToString();
+
+            UltimateXR.Manipulation.UxrGrabManager grab = UltimateXR.Manipulation.UxrGrabManager.Instance;
+            UltimateXR.Core.UxrHandSide[] sides = { UltimateXR.Core.UxrHandSide.Right, UltimateXR.Core.UxrHandSide.Left };
+            foreach (UltimateXR.Core.UxrHandSide side in sides)
+            {
+                if (!grab.GetObjectBeingGrabbed(avatar, side, out UltimateXR.Manipulation.UxrGrabbableObject grabbable) ||
+                    grabbable == null) continue;
+
+                UxrFirearmWeapon firearm = grabbable.GetComponentInParent<UxrFirearmWeapon>();
+                if (firearm == null) continue;
+
+                origin = firearm.transform.position;
+                return firearm.name.Replace("(Clone)", string.Empty).Trim();
+            }
+
+            return type.ToString();
         }
 
         [ClientRpc]

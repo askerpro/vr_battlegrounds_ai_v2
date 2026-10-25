@@ -125,7 +125,12 @@ namespace VrBattlegrounds.DevTools
         private static void HandleTeleportRequest(NetworkConnectionToClient conn, DebugTeleportRequestMessage msg)
         {
             PlayerSession session = SessionOf(conn);
-            if (session == null) return;
+            if (session == null)
+            {
+                GameLog.Debug.Warning($"[DebugMode] conn={(conn != null ? conn.connectionId.ToString() : "нет")}: " +
+                                      $"телепорт к '{msg.targetId}' отклонён — у соединения нет сессии.");
+                return;
+            }
 
             if (!SessionPermissions.IsAdmin(session))
             {
@@ -145,17 +150,27 @@ namespace VrBattlegrounds.DevTools
             PlayerController avatar = session.ActiveAvatar;
             if (avatar == null)
             {
+                GameLog.Debug.Warning($"[DebugMode] {PlayerLogName.Of(session)}: телепорт к '{msg.targetId}' отклонён — у игрока нет аватара.");
                 Reply(conn, false, "Телепорт: у игрока нет аватара.");
                 return;
             }
 
             if (!DebugTeleportTargets.TryResolve(msg.targetId, out DebugTeleportTarget target))
             {
+                GameLog.Debug.Warning($"[DebugMode] {PlayerLogName.Of(session)}: телепорт отклонён — точки '{msg.targetId}' " +
+                                      $"на карте сервера '{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}' нет.");
                 Reply(conn, false, $"Телепорт: точки '{msg.targetId}' на карте сервера нет.");
                 return;
             }
 
-            GameLog.Debug.Info($"[DebugMode] {session.PlayerName}: телепорт к «{target.Label}» ({target.Position}).");
+            // Корень «после» — цель: переносит владелец аватара (RPC → MoveAvatarTo), сервер видит
+            // итог позже через NetworkTransform. Голова «до» — чтобы сверить её с корнем после переноса.
+            string headBefore = PlayerBodyCenter.TryGetHead(avatar, out Vector3 head) ? head.ToString("F2") : "нет";
+            Vector3 rootBefore = avatar.transform.position;
+            GameLog.Debug.Info($"[DebugMode] {PlayerLogName.Of(session)}: телепорт к «{target.Label}» — " +
+                               $"корень до={rootBefore:F2} → после={target.Position:F2} " +
+                               $"(Δy={(target.Position.y - rootBefore.y).ToString("+0.00;-0.00", System.Globalization.CultureInfo.InvariantCulture)}), " +
+                               $"голова до={headBefore}.");
             avatar.ServerDevTeleport(target.Position, target.Rotation);
             Reply(conn, true, "Телепорт: " + target.Label + ".");
         }

@@ -619,6 +619,7 @@ namespace VrBattlegrounds.Arsenal
             if (!SlotsInstalled) return; // Ждём установки массива слотов, индексы не по чему разбирать.
 
             _resolvedSlotBindings.Clear();
+            int bound = 0;
 
             foreach (int slotIndex in _pendingSlotBindings)
             {
@@ -651,7 +652,10 @@ namespace VrBattlegrounds.Arsenal
                 ArsenalSlotController slot = _allSlots[slotIndex];
 
                 if (slot != null && slot.CurrentItem != item.gameObject)
+                {
                     slot.AssignNetworkItem(item.gameObject);
+                    bound++;
+                }
 
                 _resolvedSlotBindings.Add(slotIndex);
             }
@@ -660,6 +664,10 @@ namespace VrBattlegrounds.Arsenal
                 _pendingSlotBindings.Remove(slotIndex);
 
             _resolvedSlotBindings.Clear();
+
+            // Одна строка на проход вместо строки на слот (ArsenalSlotController.AssignNetworkItem молчит).
+            if (bound > 0)
+                GameLog.Arsenal.Verbose($"[Arsenal] {name}: привязано к слотам предметов: {bound}, ждут: {_pendingSlotBindings.Count}.", this);
         }
 
         // ── Жетон: выдача и привязка ──────────────────────────
@@ -859,7 +867,7 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         public void ServerReplenishLostSlots()
         {
-            ReplenishSlotsWhere(IsSlotLost);
+            ReplenishSlotsWhere(IsSlotLost, "замена пропавшего");
         }
 
         /// <summary>Есть ли слот, чьё оружие пропало и которому нужна замена.</summary>
@@ -923,14 +931,17 @@ namespace VrBattlegrounds.Arsenal
         [Server]
         private void ReplenishWeaponsNetwork(bool forceAll = false)
         {
-            GameLog.Arsenal.Info($"[Arsenal DEBUG] ReplenishWeaponsNetwork. ForceAll: {forceAll}");
-
-            ReplenishSlotsWhere(i => forceAll || _allSlots[i].NeedsReplenishment());
+            ReplenishSlotsWhere(i => forceAll || _allSlots[i].NeedsReplenishment(),
+                                forceAll ? "все слоты" : "пустые слоты");
         }
 
+        /// <param name="reason">Для строки лога: какие слоты пополняются.</param>
         [Server]
-        private void ReplenishSlotsWhere(System.Func<int, bool> needsWeapon)
+        private void ReplenishSlotsWhere(System.Func<int, bool> needsWeapon, string reason)
         {
+            // Одна строка на пополнение стены вместо строки на слот; пустое пополнение не пишется.
+            System.Collections.Generic.List<string> issued = null;
+
             // Единственная точка выдачи: до server Ready карты и после Closing (принята следующая загрузка)
             // стена не создаёт предметов, кто бы ни попросил — первичное, раунд или замена потерянного.
             if (!MapRunAdmission.CanActivateMapGameplay(gameObject.scene)) return;
@@ -972,7 +983,15 @@ namespace VrBattlegrounds.Arsenal
                         _slotItems[i] = identity.netId;
                         _homeItems[i] = identity;
                     }
+
+                    (issued ??= new System.Collections.Generic.List<string>()).Add(slot.DisplayName);
                 }
+            }
+
+            if (issued != null)
+            {
+                GameLog.Arsenal.Info(
+                    $"[Arsenal] {name}: пополнение ({reason}) — выдано {issued.Count}: {string.Join(", ", issued)}.", this);
             }
         }
 
@@ -1034,10 +1053,10 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Open Arsenal")]
         public void OpenArsenal(bool immediate = false)
         {
-            GameLog.Arsenal.Info($"[Arsenal DEBUG] OpenArsenal called! Current state: {_currentState}, Immediate: {immediate}");
+            GameLog.Arsenal.Verbose($"[Arsenal] {name}: запрошено открытие (фаза {_currentState}, сразу={immediate}).", this);
             if (_currentState == ArsenalState.Open || _currentState == ArsenalState.Opening)
             {
-                GameLog.Arsenal.Warning("[Arsenal] Arsenal is already open/opening.");
+                GameLog.Arsenal.Warning($"[Arsenal] {name}: уже открыта или открывается.", this);
                 return;
             }
 
@@ -1050,7 +1069,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Force Close")]
         public void ForceClose()
         {
-            GameLog.Arsenal.Info($"[Arsenal DEBUG] ForceClose called! Current state: {_currentState}");
+            GameLog.Arsenal.Verbose($"[Arsenal] {name}: запрошено закрытие (фаза {_currentState}).", this);
             if (_currentState == ArsenalState.Closed || _currentState == ArsenalState.Closing) return;
 
             SetState(ArsenalState.Closing);
@@ -1062,7 +1081,7 @@ namespace VrBattlegrounds.Arsenal
         [ContextMenu("Set Closed Immediate")]
         public void SetClosedImmediate()
         {
-            GameLog.Arsenal.Info($"[Arsenal DEBUG] SetClosedImmediate called! Current state: {_currentState}");
+            GameLog.Arsenal.Verbose($"[Arsenal] {name}: закрыть сразу (фаза {_currentState}).", this);
 
             SetState(ArsenalState.Closed);
 
@@ -1144,7 +1163,7 @@ namespace VrBattlegrounds.Arsenal
 
         private void PlayOpening()
         {
-            GameLog.Arsenal.Info("[Arsenal] Arsenal OPENING — prep phase starting...");
+            GameLog.Arsenal.Info($"[Arsenal] {name}: фаза Opening — анимация открытия, начинается закупка.", this);
 
             if (_animator != null)
             {
@@ -1182,17 +1201,21 @@ namespace VrBattlegrounds.Arsenal
                 if (tagInUse) _dogTagController.ResetTag();
             }
 
-            GameLog.Arsenal.Info("[Arsenal] Arsenal OPENED — prep phase started.");
+            // Одна строка на стену и смену фазы: слоты по отдельности не пишутся (ArsenalSlotController.Unlock).
+            GameLog.Arsenal.Info(
+                $"[Arsenal] {name}: слоты открыты ({_allSlots.Length}), фаза Open, " +
+                $"жетон: {(_dogTagController == null ? "нет" : IsDogTagInUse() ? "готов" : "скрыт")}.", this);
             OnArsenalOpened?.Invoke();
         }
 
         private void PlayClosing()
         {
-            GameLog.Arsenal.Info("[Arsenal] Arsenal CLOSING — locking all slots...");
-
             // Слоты блокируются сразу: возвращать оружие на стену уже нельзя.
             foreach (var slot in _allSlots)
                 slot.Lock();
+
+            // Одна строка на стену и смену фазы: слоты по отдельности не пишутся (ArsenalSlotController.Lock).
+            GameLog.Arsenal.Info($"[Arsenal] {name}: слоты заблокированы ({_allSlots.Length}), фаза Closing.", this);
 
             if (_dogTagController != null)
                 _dogTagController.Disable();
@@ -1225,7 +1248,7 @@ namespace VrBattlegrounds.Arsenal
             if (!_alwaysOpenPresentation && _animator != null && !_animator.IsAnimating)
                 _animator.SetClosedImmediate();
 
-            GameLog.Arsenal.Info("[Arsenal] Arsenal CLOSED.");
+            GameLog.Arsenal.Info($"[Arsenal] {name}: слоты заблокированы ({_allSlots.Length}), фаза Closed.", this);
 
             if (raiseEvent)
                 OnArsenalClosed?.Invoke();

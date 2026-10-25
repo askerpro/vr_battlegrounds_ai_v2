@@ -17,6 +17,13 @@ namespace VrBattlegrounds.Player.WallPass
     public sealed class WallPassMonitor : MonoBehaviour
     {
         private const double SampleInterval = 0.05;
+
+        /// <summary>Допустимая высота шлема над виртуальным полом, м: вне коридора поза не наблюдается.</summary>
+        private const float MinHeadAboveFloor = 0.1f;
+        private const float MaxHeadAboveFloor = 3.5f;
+
+        private const string InvalidHeadHeight = "некорректная высота шлема";
+
         private readonly WallPassTracker _tracker = new WallPassTracker();
         private PlayerSession _session;
         private PlayerController _avatar;
@@ -141,9 +148,14 @@ namespace VrBattlegrounds.Player.WallPass
                 _serverTeleportTarget = null;
             }
 
-            if (head.y < _floorY + 0.1f || head.y > _floorY + 3.5f)
+            if (head.y < _floorY + MinHeadAboveFloor || head.y > _floorY + MaxHeadAboveFloor)
             {
-                ReportWaiting("некорректная высота шлема");
+                // Подробности строятся только при входе в ожидание: строка пишется один раз на причину.
+                ReportWaiting(InvalidHeadHeight, _waitingReason == InvalidHeadHeight ? null :
+                    System.FormattableString.Invariant(
+                        $"head.y={head.y:F3}, floorY={_floorY:F3}, root.y={avatar.transform.position.y:F3}, ") +
+                    System.FormattableString.Invariant(
+                        $"над полом {head.y - _floorY:F3}, допустимо [{MinHeadAboveFloor:F1}; {MaxHeadAboveFloor:F1}] м"));
                 return;
             }
 
@@ -175,10 +187,20 @@ namespace VrBattlegrounds.Player.WallPass
             _session.ServerSetWallPassStatus(decision.Status);
 
             if (decision.Status.Stage != previous.Stage || decision.Kill)
+            {
+                // Без опоры дистанция наклона бесконечна, а точка возврата — нулевой вектор:
+                // печатать их числами значило бы «вернуть в начало координат».
+                string lean = float.IsInfinity(observation.LeanDistance)
+                    ? "нет опоры"
+                    : observation.LeanDistance.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
+                string returnPoint = decision.Status.HasReturnPoint
+                    ? decision.Status.ReturnPoint.ToString("F3")
+                    : "точки возврата нет";
                 GameLog.Player.Info($"[WallPass] {_session.PlayerName}: {previous.Stage} → {decision.Status.Stage}, " +
                     $"cause={decision.Status.Cause}, head={head:F3}, depth={observation.HeadDepth:F3}, " +
-                    $"lean={observation.LeanDistance:F3}, support={observation.HasOriginalSupport}, " +
-                    $"return={decision.Status.ReturnPoint:F3}, punitive={punitive}, kill={decision.Kill}.", this);
+                    $"lean={lean}, support={observation.HasOriginalSupport}, " +
+                    $"return={returnPoint}, punitive={punitive}, kill={decision.Kill}.", this);
+            }
 
             // ReceiveDamage может синхронно заменить тело на призрака. После вызова
             // больше не обращаться к прежнему аватару и не наносить второй штраф.
@@ -211,13 +233,18 @@ namespace VrBattlegrounds.Player.WallPass
             _session.ServerSetWallPassStatus(default);
         }
 
-        private void ReportWaiting(string reason)
+        /// <summary>
+        /// Наблюдение приостановлено. Строка — одна на смену причины; <paramref name="detail"/>
+        /// (замеры на входе в ожидание) в сравнение причин не входит.
+        /// </summary>
+        private void ReportWaiting(string reason, string detail = null)
         {
             _tracker.SuspendObservation();
             _lastObservation = double.NaN;
             if (_waitingReason == reason) return;
             _waitingReason = reason;
-            GameLog.Player.Info($"[WallPass] {_session.PlayerName}: ожидание — {reason}.", this);
+            string suffix = string.IsNullOrEmpty(detail) ? string.Empty : $" ({detail})";
+            GameLog.Player.Info($"[WallPass] {_session.PlayerName}: ожидание — {reason}{suffix}.", this);
         }
 
         private static bool Finite(Vector3 value) =>

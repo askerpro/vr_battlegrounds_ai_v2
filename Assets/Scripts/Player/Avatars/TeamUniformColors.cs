@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
+using VrBattlegrounds.Core;
 
 namespace VrBattlegrounds.Player
 {
@@ -33,9 +35,28 @@ namespace VrBattlegrounds.Player
         private Color _additional;
         private Color _helmet;
 
+        /// <summary>Строка «без графики форма не красится» уже написана — она одна на процесс.</summary>
+        private static bool _headlessReported;
+
         private void Awake()
         {
             _player = GetComponent<PlayerController>();
+
+            // Без графики (выделенный сервер, -nographics) рисовать нечего, а сборка Dedicated Server
+            // не содержит шейдеров: каждое обращение к Material.shader пишет предупреждение движка
+            // «Trying to access a shader…» — по одному на рендерер каждого заспавненного аватара.
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                _uniform = System.Array.Empty<Renderer>();
+                enabled = false;
+                if (!_headlessReported)
+                {
+                    _headlessReported = true;
+                    GameLog.Player.Verbose("[TeamUniformColors] Графики нет — форма команды не красится, шейдеры не читаются.");
+                }
+                return;
+            }
+
             _uniform = UniformRenderers(gameObject);
         }
 

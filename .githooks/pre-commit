@@ -1,0 +1,35 @@
+#!/bin/sh
+# Каталог карт (Assets/Data/Maps/MapRuntimeCatalog.asset) не должен устаревать: если коммит меняет
+# сцену, MapData, реестр режимов или пресет арсенала карты из каталога, отпечатки в каталоге должны
+# совпадать с содержимым коммита. Иначе сборка пересчитает их, оставит diff в build-checkout и
+# следующий Build-Game.ps1 -Ref откажет. Проверка читает индекс и файлов не меняет; исправление —
+# python Tools/LevelDesign/map_catalog_fingerprints.py --fix (без Unity).
+
+root=$(git rev-parse --show-toplevel) || exit 0
+script="$root/Tools/LevelDesign/map_catalog_fingerprints.py"
+[ -f "$script" ] || exit 0
+
+# На Windows python3 часто — заглушка Microsoft Store, поэтому сначала python.
+py=
+for candidate in python python3; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import sys; sys.exit(sys.version_info < (3, 8))" >/dev/null 2>&1; then
+        py=$candidate
+        break
+    fi
+done
+if [ -z "$py" ]; then
+    printf >&2 'pre-commit: Python 3 не найден — проверка каталога карт пропущена.\n'
+    exit 0
+fi
+
+"$py" "$script" --check --source index --staged-only
+status=$?
+case $status in
+    0) exit 0 ;;
+    1) exit 1 ;;
+    *)
+        # Сбой самой проверки (не устаревший каталог) коммит не блокирует.
+        printf >&2 'pre-commit: проверка каталога карт не выполнена (код %s) — коммит не заблокирован.\n' "$status"
+        exit 0
+        ;;
+esac

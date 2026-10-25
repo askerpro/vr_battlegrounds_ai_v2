@@ -1,0 +1,20 @@
+{
+  "task_id": "map-catalog-precommit",
+  "owner": "map-catalog-precommit",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/map-catalog-precommit",
+  "base_sha": "8d7dd518f79ca235e41e285e6226463396bcc2ce",
+  "doc_path": "tasks/map-catalog-precommit/Readme.md",
+  "title": "Pre-commit: каталог карт не устаревает",
+  "branch": "task/map-catalog-precommit",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/map-catalog-precommit/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

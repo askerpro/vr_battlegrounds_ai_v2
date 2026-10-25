@@ -18,8 +18,13 @@ Plastic стоил дорого: каждый коммит ждал `cm ci` по
 ## Хуки
 
 `Assets/Editor/VR_Battlegrounds/VersionControl/GitHooksInitializer.cs` при
-загрузке редактора выполняет `git config core.hooksPath .githooks`. В `.githooks`
-остались только хуки Git LFS (`post-checkout`, `pre-push`).
+загрузке редактора выполняет `git config core.hooksPath .githooks`. В `.githooks` —
+хуки Git LFS (`post-checkout`, `post-merge`, `post-rewrite`, `pre-push`; `pre-push` ещё проверяет EOL)
+и `pre-commit`: каталог карт `Assets/Data/Maps/MapRuntimeCatalog.asset` не должен устаревать.
+Коммит, который меняет сцену, MapData, реестр режимов или пресет арсенала карты из каталога и не
+обновляет её отпечатки, отклоняется (иначе сборка пересчитает их и оставит diff в build-checkout).
+Исправление без Unity — `python Tools/LevelDesign/map_catalog_fingerprints.py --fix`, затем
+`git add Assets/Data/Maps/MapRuntimeCatalog.asset`. Алгоритм — копия `MapRunPreflight.ContentFingerprint`.
 
 ## Пакет collab-proxy
 

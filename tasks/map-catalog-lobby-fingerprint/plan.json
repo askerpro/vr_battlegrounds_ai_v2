@@ -1,0 +1,20 @@
+{
+  "task_id": "map-catalog-lobby-fingerprint",
+  "owner": "map-catalog-lobby-fingerprint",
+  "client": "claude",
+  "worktree": "F:/CodexWorktrees/map-catalog-lobby-fingerprint",
+  "base_sha": "8f985a849df26823fdefffe9c3a95fa7e89dd5f6",
+  "doc_path": "tasks/map-catalog-lobby-fingerprint/Readme.md",
+  "title": "Каталог карт: отпечаток Lobby",
+  "branch": "task/map-catalog-lobby-fingerprint",
+  "stages": [
+    {
+      "id": "work",
+      "writes": [
+        "tasks/map-catalog-lobby-fingerprint/**"
+      ],
+      "after": [],
+      "needs": []
+    }
+  ]
+}

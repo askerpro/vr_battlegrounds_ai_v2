@@ -33,7 +33,7 @@ MonoBehaviour:
     ArsenalFingerprint: c602881818733aeec3db92ed558420a84c99fa53e4a7a4185537b1c1f02872e6
   - Map: {fileID: 11400000, guid: 3cb6e2d8f6b78f6459e99216bc9d5831, type: 2}
     ScenePath: Assets/Scenes/Lobby.unity
-    ContentFingerprint: 165acc7efbd58bff31289b2dc1c3b2708391c343b8793cbcf214462482f62648
+    ContentFingerprint: 5f25ca4879e8b12171108511049e18328a299d217f8664e0aa99b58e71b0d519
     ArsenalFingerprint: 2e770345005ecd64204ab8f13ae613d944f6d8e6e277e9b5f903119fefbf02e0
   - Map: {fileID: 11400000, guid: 16a3be3dbee18c9469db1ed1b0bb7224, type: 2}
     ScenePath: Assets/Scenes/Maps/Game/ServiceYard.unity
